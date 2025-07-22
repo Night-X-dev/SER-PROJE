@@ -74,7 +74,7 @@ DB_PORT = int(os.getenv("MYSQL_PORT") or 3306) # Port değeri int olmalı
 DB_USER = os.getenv("MYSQL_USER") or "root"
 DB_PASSWORD = os.getenv("MYSQL_PASSWORD") or ""
 DB_NAME = os.getenv("MYSQL_DATABASE") or "ser" # Railway'de bu 'ser' olarak ayarlı olmalı
-
+    
 # Şifre Değiştirme API
 
 def get_db_connection():
