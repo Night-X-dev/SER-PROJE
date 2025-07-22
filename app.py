@@ -7,11 +7,13 @@ import os
 import json
 import datetime
 import dotenv
-# Eğer dotenv kütüphanesini kullanıyorsanız aşağıdaki satırın yorumunu kaldırın:
 from dotenv import load_dotenv
+import urllib.parse # <-- Bu satırı ekledik
+
 load_dotenv()
 
 app = Flask(__name__)
+
 @app.route('/')
 def serve_login_page():
     """Kök URL'ye (/) gelen istekleri login.html sayfasına yönlendirir."""
@@ -69,22 +71,60 @@ def serve_yeni_musteri_page():
 
 # CORS (Cross-Origin Resource Sharing) ayarları
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
-DB_HOST = os.getenv("MYSQL_HOST") or "localhost"
-DB_PORT = int(os.getenv("MYSQL_PORT") or 3306) # Port değeri int olmalı
-DB_USER = os.getenv("MYSQL_USER") or "root"
-DB_PASSWORD = os.getenv("MYSQL_PASSWORD") or ""
-DB_NAME = os.getenv("MYSQL_DATABASE") or "ser" # Railway'de bu 'ser' olarak ayarlı olmalı
-    
-# Şifre Değiştirme API
+
+# DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME değişkenlerini doğrudan kullanmak yerine,
+# get_db_connection fonksiyonu içinde dinamik olarak belirleyeceğiz.
+# Bu satırlar artık gerekli değil, fonksiyon içinde dinamik olarak belirlenecekler.
+# DB_HOST = os.getenv("MYSQL_HOST") or "localhost"
+# DB_PORT = int(os.getenv("MYSQL_PORT") or 3306)
+# DB_USER = os.getenv("MYSQL_USER") or "root"
+# DB_PASSWORD = os.getenv("MYSQL_PASSWORD") or ""
+# DB_NAME = os.getenv("MYSQL_DATABASE") or "ser"
 
 def get_db_connection():
     connection = None
     try:
+        host = None
+        port = None
+        user = None
+        password = None
+        database = None
+
+        # MYSQL_PUBLIC_URL'den bağlantı bilgilerini almaya çalış
+        public_url = os.getenv("MYSQL_PUBLIC_URL")
+        if public_url:
+            try:
+                parsed_url = urllib.parse.urlparse(public_url)
+                host = parsed_url.hostname
+                port = parsed_url.port if parsed_url.port else 3306 # URL'de port belirtilmemişse varsayılan 3306
+                user = parsed_url.username
+                password = parsed_url.password
+                database = parsed_url.path.lstrip('/') # Baştaki '/' karakterini kaldır
+                print(f"Using public URL: Host={host}, Port={port}, User={user}, DB={database}")
+            except Exception as url_parse_e:
+                print(f"Error parsing MYSQL_PUBLIC_URL: {url_parse_e}. Falling back to individual env vars.")
+                # URL ayrıştırma hatası durumunda tekil ortam değişkenlerine geri dön
+                host = os.getenv("MYSQL_HOST") or "localhost"
+                port = int(os.getenv("MYSQL_PORT") or 3306)
+                user = os.getenv("MYSQL_USER") or "root"
+                password = os.getenv("MYSQL_PASSWORD") or ""
+                database = os.getenv("MYSQL_DATABASE") or "ser"
+                print(f"Using individual env vars fallback: Host={host}, Port={port}, User={user}, DB={database}")
+        else:
+            # MYSQL_PUBLIC_URL yoksa tekil ortam değişkenlerini veya varsayılanları kullan
+            host = os.getenv("MYSQL_HOST") or "localhost"
+            port = int(os.getenv("MYSQL_PORT") or 3306)
+            user = os.getenv("MYSQL_USER") or "root"
+            password = os.getenv("MYSQL_PASSWORD") or ""
+            database = os.getenv("MYSQL_DATABASE") or "ser"
+            print(f"Using individual env vars: Host={host}, Port={port}, User={user}, DB={database}")
+
         connection = pymysql.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_NAME,
+            host=host,
+            user=user,
+            password=password,
+            database=database,
+            port=port, # <-- ÖNEMLİ DÜZELTME: Port parametresini ekledik
             cursorclass=pymysql.cursors.DictCursor # Sorgu sonuçlarını sözlük olarak almak için
         )
         print("MySQL veritabanına başarıyla bağlandı!")
