@@ -1347,9 +1347,12 @@
     let currentPage = 1;
     const rowsPerPage = 10; // Sayfa başına gösterilecek kullanıcı sayısı
 
+    // API Base URL'i buraya gelecek - Lütfen kendi Railway Flask uygulamanızın URL'si ile değiştirin
+    const API_BASE_URL = "ballast.proxy.rlwy.net:42617"; 
+
     // Tüm kullanıcıları API'den çeken ve tabloyu dolduran fonksiyon
     function loadUsersTable() {
-        fetch('http://localhost:3001/api/users')
+        fetch(`${API_BASE_URL}/api/users`)
         .then(res => res.json())
         .then(users => {
             allUsersData = users;
@@ -1386,7 +1389,7 @@
     // Kullanıcı silme fonksiyonu
     async function deleteUser(userId, userName) {
         try {
-            const response = await fetch(`http://localhost:3001/api/users/${userId}`, {
+            const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
                 method: 'DELETE'
             });
             const data = await response.json();
@@ -1437,7 +1440,7 @@
         const roleSelector = document.getElementById('roleSelector');
         if (!roleSelector) return; // roleSelector elementi yoksa fonksiyondan çık
 
-        fetch("http://localhost:3001/api/roles")
+        fetch(`${API_BASE_URL}/api/roles`)
             .then(response => {
                 if (!response.ok) {
                     return response.json().then(err => { throw new Error(err.message || 'Bilinmeyen sunucu hatası'); });
@@ -1596,8 +1599,6 @@
     document.addEventListener('DOMContentLoaded', function() {
         const accountSettingsForm = document.getElementById('accountSettingsForm');
         const accountSettingsMessage = document.getElementById('accountSettingsMessage');
-
-        const API_BASE_URL = "http://localhost:3001"; // API Base URL'inizin doğru olduğundan emin olun
 
         // Confirmation Modal'ı DOM yüklendiğinde başlat
         const confirmationModalElement = document.getElementById('confirmationModal');
@@ -1812,10 +1813,10 @@
                 }
                 const phonePattern = /^\(\d{3}\) \d{3} \d{2} \d{2}$/;
                 if (!phonePattern.test(phone)) {
-                    errorDiv.textContent = 'Telefon formatı (538) 123 45 67 şeklinde olmalıdır.';
+                    errorDiv.textContent = 'Telefon formatı (5__) ___ __ __ şeklinde olmalıdır.';
                     return;
                 }
-                fetch('http://localhost:3001/api/users', {
+                fetch(`${API_BASE_URL}/api/users`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ fullname, email, password, role, phone })
@@ -1837,7 +1838,7 @@
         }
 
         function loadRolesForUserModal() {
-            fetch('http://localhost:3001/api/roles')
+            fetch(`${API_BASE_URL}/api/roles`)
                 .then(res => res.json())
                 .then(roles => {
                     const roleSelect = document.getElementById('newUserRole');
@@ -1867,7 +1868,7 @@
                     });
                     return;
                 }
-                fetch(`http://localhost:3001/api/role-permissions?role=${selectedRole}`)
+                fetch(`${API_BASE_URL}/api/role-permissions?role=${selectedRole}`)
                     .then(res => res.json())
                     .then(data => {
                         const checkboxMap = {
@@ -1911,7 +1912,7 @@
                     pdf_olusturma: document.getElementById('permission4').checked ? 1 : 0,
                     musteri_duzenleme: document.getElementById('permission5').checked ? 1 : 0
                 };
-                fetch(`http://localhost:3001/api/role-permissions`, {
+                fetch(`${API_BASE_URL}/api/role-permissions`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ role: selectedRole, ...permissions })
@@ -1989,7 +1990,7 @@
         }
     });
     function loadPendingUsers() {
-        fetch('http://localhost:3001/api/pending-users')
+        fetch(`${API_BASE_URL}/api/pending-users`)
             .then(response => {
                 if (!response.ok) throw new Error('Bekleyen kullanıcılar getirilemedi.');
                 return response.json();
@@ -2034,7 +2035,7 @@
     }
     function approveUser(userId) {
         if (confirm('Bu kullanıcıyı onaylamak istediğinizden emin misiniz?')) {
-            fetch('http://localhost:3001/api/users/approve/' + userId, {
+            fetch(`${API_BASE_URL}/api/users/approve/` + userId, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' }
             })
@@ -2053,7 +2054,7 @@
     }
     function deleteUser(userId) {
         if (confirm('Bu kullanıcıyı kalıcı olarak silmek istediğinizden emin misiniz?')) {
-            fetch('http://localhost:3001/api/users/' + userId, {
+            fetch(`${API_BASE_URL}/api/users/` + userId, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' }
             })
