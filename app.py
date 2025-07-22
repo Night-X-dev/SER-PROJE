@@ -1071,15 +1071,6 @@ def add_project():
                     previous_end_date = step_end_date
 
             connection.commit()
-
-            # Proje yöneticisine bildirim ekle
-            message = f'"{project_name}" adlı yeni proje eklendi.'
-            notif_type = 'project_create'
-            cursor.execute("""
-                INSERT INTO notifications (user_id, project_id, message, type, is_read, created_at)
-                VALUES (%s, %s, %s, %s, %s, NOW())
-            """, (project_manager_id, project_id, message, notif_type, False))
-            connection.commit()
         return jsonify({'message': 'Proje başarıyla eklendi!', 'projectId': project_id}), 201
 
     except pymysql.Error as e:
