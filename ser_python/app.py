@@ -11,7 +11,9 @@ import datetime
 # load_dotenv()
 
 app = Flask(__name__)
-
+@app.route('/')
+def serve_login_page():
+    return render_template('login.html')
 # CORS (Cross-Origin Resource Sharing) ayarları
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 DB_HOST = os.getenv("MYSQL_HOST") or "localhost"
