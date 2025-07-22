@@ -910,10 +910,6 @@
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
             const notificationBtn = document.querySelector('.notification-btn'); // Zil butonu
-            // const notificationPanel = document.getElementById('notificationPanel'); // Bildirim paneli - Kaldırıldı
-            // const closeNotificationBtn = document.getElementById('closeNotificationPanel'); // Kapatma butonu - Kaldırıldı
-            // const notificationList = document.getElementById('notificationList'); // Bildirim listesi - Kaldırıldı
-
 
             // Form ve butonlar
             const customerForm = document.getElementById('customerForm'); // Form elementine referans
@@ -924,13 +920,13 @@
             const citySelect = document.getElementById('city');
             const districtSelect = document.getElementById('district');
 
+            // API Base URL
+            const API_BASE_URL = 'https://ser-proje.onrender.com';
+
             // --- Oturum Kontrolü ve Yönlendirme ---
             const storedUser = localStorage.getItem('currentUser');
             if (!storedUser) {
-                // showToast("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", true); // Toast ile göster
-                // setTimeout(() => {
-                    window.location.href = 'login.html';
-                // }, 1000); // 1 saniye sonra yönlendir
+                window.location.href = 'login.html';
             } else {
                 try {
                     const user = JSON.parse(storedUser);
@@ -938,10 +934,7 @@
                 } catch (e) {
                     console.error("Kayıtlı kullanıcı verisi bozuk:", e);
                     localStorage.removeItem('currentUser');
-                    // showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", true); // Toast ile göster
-                    // setTimeout(() => {
-                        window.location.href = 'login.html';
-                    // }, 1000); // 1 saniye sonra yönlendir
+                    window.location.href = 'login.html';
                 }
             }
 
@@ -1008,7 +1001,7 @@
             async function fetchLocations() {
                 try {
                     // API'den konum verilerini çek
-                    const response = await fetch('http://localhost:3001/api/locations/turkey');
+                    const response = await fetch(`${API_BASE_URL}/api/locations/turkey`);
                     if (!response.ok) throw new Error('Konum verileri çekilemedi.');
                     locationsData = await response.json(); // Veriyi global değişkene ata
                     
@@ -1119,7 +1112,7 @@
                 };
 
                 try {
-                    const response = await fetch('http://localhost:3001/api/customers', {
+                    const response = await fetch(`${API_BASE_URL}/api/customers`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(customerData)
@@ -1164,7 +1157,6 @@
             // Çıkış Yap Butonu Olay Dinleyicisi
             logoutButton.addEventListener('click', () => {
                 localStorage.removeItem('currentUser'); // Kullanıcı bilgisini sil
-                // alert("Başarıyla çıkış yaptınız."); // alert yerine toast kullanılmalı
                 showToast("Başarıyla çıkış yaptınız.");
                 setTimeout(() => { // Yönlendirmeden önce toast'ın görünmesi için gecikme
                     window.location.href = 'login.html'; // Giriş/kayıt sayfasına yönlendir
