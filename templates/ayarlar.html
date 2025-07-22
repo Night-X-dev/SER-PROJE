@@ -797,6 +797,7 @@
                 flex-direction: column;
                 gap: 0; /* Mobil'de dikeyde boşluk olmasın */
             }
+
             .form-col {
                 margin-bottom: 15px; /* Her sütun arasında boşluk bırak */
             }
@@ -860,44 +861,51 @@
                 justify-content: space-between; /* musteriler.html ile uyumlu */
                 align-items: center; /* musteriler.html ile uyumlu */
             }
+
             .search-container {
                 order: 2; /* musteriler.html ile uyumlu */
                 width: auto; /* musteriler.html ile uyumlu */
                 margin-left: 10px; /* musteriler.html ile uyumlu */
             }
+
             .topbar-actions {
                 order: 3; /* musteriler.html ile uyumlu */
                 margin-left: auto; /* musteriler.html ile uyumlu */
                 justify-content: flex-end; /* musteriler.html ile uyumlu */
                 width: auto; /* musteriler.html ile uyumlu */
             }
+
             .hamburger-menu {
                 order: 1; /* musteriler.html ile uyumlu */
             }
+
             .user-info {
                 display: none; /* Mobil görünümde kullanıcı adını gizle */
             }
+
             .logout-btn .logout-text {
                 display: none; /* Metni gizle */
             }
             .logout-btn i {
                 margin-right: 0; /* İkonun sağındaki boşluğu kaldır */
             }
+
             .form-actions {
                 flex-direction: column; /* Mobil'de butonları dikey sırala */
             }
             .form-actions .btn {
                 width: 100%; /* Tam genişlik */
             }
+
             .pagination {
                 flex-direction: column; /* Sayfalandırma bilgilerini ve kontrollerini dikey sırala */
                 align-items: center;
             }
-
             .pagination-controls {
                 margin-top: 10px;
             }
         }
+
         /* Bootstrap modal arka plan overlay düzeltmesi */
         .modal-backdrop {
             opacity: 0.5 !important;
@@ -933,11 +941,9 @@
     <div class="sidebar" id="sidebar">
         <a href="index.html" style="text-decoration: none;">
             <div class="logo-container" style="cursor: pointer;">
-              <img src="{{ url_for('static', filename='serlogo.png') }}" alt="Ser Elektrik Otomasyon" style="width: 180px; height: auto; padding-left: 10px;">
+                <img src="{{ url_for('static', filename='serlogo.png') }}" alt="Ser Elektrik Otomasyon" style="width: 180px; height: auto; padding-left: 10px;">
             </div>
-          </a>
-          
-
+        </a>
         <a href="index.html" class="nav-item">
             <i class="fas fa-home"></i>
             <span class="nav-text">Dashboard</span>
@@ -976,22 +982,15 @@
             </button>
             <div class="search-container">
                 <i class="fas fa-search"></i>
-                <input
-                    type="text"
-                    id="searchInput"
-                    placeholder="Kullanıcı ara..."
-                />
+                <input type="text" id="searchInput" placeholder="Kullanıcı ara..." />
             </div>
-
             <div class="topbar-actions">
                 <div class="theme-toggle" id="theme-toggle">
                     <i class="fas fa-moon"></i>
                 </div>
-
                 <div class="notification-btn">
                     <i class="fas fa-bell"></i>
                 </div>
-
                 <div class="user-profile">
                     <div class="user-avatar" id="userAvatar">MÖ</div>
                     <div class="user-info">
@@ -999,770 +998,151 @@
                         <div class="user-role" id="userRole">Admin</div>
                     </div>
                 </div>
-                <button
-                    class="btn btn-outline logout-btn"
-                    id="logoutButton"
-                >
-                    <i class="fas fa-sign-out-alt"></i> <span class="logout-text">Çıkış Yap</span>
+                <button class="btn btn-outline logout-btn" id="logoutButton" >
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="logout-text">Çıkış Yap</span>
                 </button>
             </div>
         </div>
 
-        <div class="settings-content" id="settingsContent">
+        <div class="settings-content">
             <h1 class="page-title">
-                <i class="fas fa-cog"></i>
-                Sistem Ayarları
+                <i class="fas fa-cog"></i> Ayarlar
             </h1>
-            
-            <div class="settings-card" id="userManagementCard">
+
+            <!-- Kullanıcı Rol ve Yetki Ayarları -->
+            <div class="settings-card">
                 <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-users-cog"></i>
-                        Kullanıcı Yönetimi
-                    </h2>
+                    <h2 class="card-title"><i class="fas fa-user-shield"></i> Kullanıcı Rol ve Yetkileri</h2>
                     <div class="card-actions">
-                        <button class="btn" id="addUserBtn">
-                            <i class="fas fa-user-plus"></i> Kullanıcı Ekle
-                        </button>
+                        <button class="btn btn-primary" id="savePermissionsBtn"><i class="fas fa-save"></i> Yetkileri Kaydet</button>
                     </div>
                 </div>
-                
-                <div class="table-container">
+                <div class="form-group">
+                    <label for="roleSelect" class="form-label">Rol Seçin:</label>
+                    <select id="roleSelect" class="form-input">
+                        <option value="Admin">Admin</option>
+                        <option value="Proje Yöneticisi">Proje Yöneticisi</option>
+                        <option value="Mühendis">Mühendis</option>
+                        <option value="Teknisyen">Teknisyen</option>
+                        <option value="Tekniker">Tekniker</option>
+                        <option value="Muhasebe">Muhasebe</option>
+                        <option value="Satış">Satış</option>
+                        <option value="Misafir">Misafir</option>
+                    </select>
+                </div>
+                <div class="permission-grid" id="permissionGrid">
+                    <!-- Yetkiler buraya dinamik olarak yüklenecek -->
+                </div>
+            </div>
+
+            <!-- Bekleyen Kullanıcı Onayları -->
+            <div class="settings-card">
+                <div class="card-header">
+                    <h2 class="card-title"><i class="fas fa-user-clock"></i> Bekleyen Kullanıcı Onayları</h2>
+                </div>
+                <div class="table-responsive">
                     <table class="user-table">
                         <thead>
                             <tr>
-                                <th>Ad Soyad</th>
-                                <th>Email</th>
+                                <th>Kullanıcı Adı</th>
+                                <th>E-posta</th>
                                 <th>Rol</th>
-                                <th>İşlemler</th>
-                            </tr>
-                        </thead>
-                        <tbody id="usersTableBody">
-                            
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- Pagination -->
-                <div class="pagination">
-                    <div class="pagination-info">Toplam <span id="totalUsersCount">0</span> kullanıcı, sayfa <span id="currentPage">1</span>/<span id="totalPages">1</span></div>
-                    <div class="pagination-controls">
-                        <button class="page-btn" id="prevPage"><i class="fas fa-chevron-left"></i></button>
-                        <div id="pageNumbers">
-                            <button class="page-btn active">1</button>
-                        </div>
-                        <button class="page-btn" id="nextPage"><i class="fas fa-chevron-right"></i></button>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="settings-card" id="rolePermissionCard">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-shield-alt"></i>
-                        Rol ve İzin Yönetimi
-                    </h2>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Rol Seçin</label>
-                    <select class="form-input" id="roleSelector">
-                        </select>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">İzinler</label>
-                    <div class="permission-grid">
-                        <div class="permission-item">
-                            <input type="checkbox" id="permission1" checked>
-                            <label class="permission-label" for="permission1">Proje Ekle</label>
-                        </div>
-                        <div class="permission-item">
-                            <input type="checkbox" id="permission2" checked>
-                            <label class="permission-label" for="permission2">Proje Düzenle</label>
-                        </div>
-                        <div class="permission-item">
-                            <input type="checkbox" id="permission3" checked>
-                            <label class="permission-label" for="permission3">Proje Sil</label>
-                        </div>
-                        <div class="permission-item">
-                            <input type="checkbox" id="permission4" checked>
-                            <label class="permission-label" for="permission4">PDF Oluşturma</label>
-                        </div>
-                        <div class="permission-item">
-                            <input type="checkbox" id="permission5">
-                            <label class="permission-label" for="permission5">Müşteri Düzenleme</label>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="form-actions">
-                    <button class="btn btn-outline" id="resetPermissionsBtn">
-                        <i class="fas fa-undo"></i> Sıfırla
-                    </button>
-                    <button class="btn" id="savePermissionsBtn">
-                        <i class="fas fa-save"></i> Kaydet
-                    </button>
-                </div>
-            </div>
-            
-           <div class="settings-card" id="accountSettingsCard">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-user"></i>
-                        Hesap Ayarları
-                    </h2>
-                </div>
-
-                <form id="accountSettingsForm">
-                    <div class="form-row">
-                        <div class="form-col">
-                            <div class="form-group">
-                                <label class="form-label" for="accountName">Ad Soyad</label>
-                                <input type="text" id="accountName" class="form-input" value="Mustafa Öztürk" />
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <div class="form-group">
-                                <label class="form-label" for="accountEmail">Email</label>
-                                <input type="email" id="accountEmail" class="form-input" value="email@example.com" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <h3 class="card-title" style="margin-top: 30px; margin-bottom: 20px; font-size: 1.2em;"><i class="fas fa-key"></i> Şifre Değiştirme</h3>
-                    <div class="form-group">
-                        <label class="form-label" for="currentPassword">Mevcut Şifre</label>
-                        <input type="password" id="currentPassword" class="form-input" placeholder="Mevcut şifrenizi girin">
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-col">
-                            <div class="form-group">
-                                <label class="form-label" for="newPassword">Yeni Şifre</label>
-                                <input type="password" id="newPassword" class="form-input" placeholder="Yeni şifre">
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <div class="form-group">
-                                <label class="form-label" for="confirmNewPassword">Şifreyi Onayla</label>
-                                <input type="password" id="confirmNewPassword" class="form-input" placeholder="Yeni şifreyi tekrar girin">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="submit" class="btn" id="saveAccountBtn">
-                            <i class="fas fa-save"></i> Değişiklikleri Kaydet
-                        </button>
-                    </div>
-                    <div id="accountSettingsMessage" style="margin-top: 10px;"></div>
-                </form>
-            </div>
-            
-            <div class="settings-card" id="pendingApprovalsCard" style="display:none">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-user-clock"></i>
-                        Onay Bekleyen Kullanıcılar
-                    </h2>
-                    <div class="card-actions">
-                        <button class="btn" id="refreshPendingUsersButton">
-                            <i class="fas fa-sync-alt"></i> Listeyi Yenile
-                        </button>
-                    </div>
-                </div>
-                <div id="pendingUsersContainer">
-                    <table class="user-table" id="pendingUsersTable">
-                        <thead>
-                            <tr>
-                                <th>Ad Soyad</th>
-                                <th>Email</th>
-                                <th>Telefon</th>
-                                <th>Rolü</th>
                                 <th>Kayıt Tarihi</th>
                                 <th>İşlemler</th>
                             </tr>
                         </thead>
                         <tbody id="pendingUsersTableBody">
-                            <!-- Kullanıcılar buraya dinamik olarak eklenecek -->
+                            <!-- Bekleyen kullanıcılar buraya yüklenecek -->
+                            <tr><td colspan="5" style="text-align: center;">Bekleyen kullanıcı bulunmamaktadır.</td></tr>
                         </tbody>
                     </table>
-                    <div class="empty-state" id="emptyState" style="display: none;">
-                        <i class="fas fa-user-check"></i>
-                        <h3>Onay Bekleyen Kullanıcı Yok</h3>
-                        <p>Şu anda onay bekleyen kullanıcı bulunmamaktadır.</p>
+                </div>
+            </div>
+
+            <!-- Mevcut Kullanıcılar -->
+            <div class="settings-card">
+                <div class="card-header">
+                    <h2 class="card-title"><i class="fas fa-users"></i> Mevcut Kullanıcılar</h2>
+                </div>
+                <div class="table-responsive">
+                    <table class="user-table">
+                        <thead>
+                            <tr>
+                                <th>Kullanıcı Adı</th>
+                                <th>E-posta</th>
+                                <th>Rol</th>
+                                <th>Durum</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activeUsersTableBody">
+                            <!-- Aktif kullanıcılar buraya yüklenecek -->
+                            <tr><td colspan="5" style="text-align: center;">Kullanıcı bulunmamaktadır.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination -->
+                <div class="pagination">
+                    <div class="pagination-info" id="paginationInfo"></div>
+                    <div class="pagination-controls">
+                        <button class="page-btn" id="prevPageBtn"><i class="fas fa-chevron-left"></i></button>
+                        <div id="pageNumbers"></div>
+                        <button class="page-btn" id="nextPageBtn"><i class="fas fa-chevron-right"></i></button>
                     </div>
                 </div>
             </div>
-            
-            <div class="footer">
-                &copy; 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır. | Mustafa Öztürk
-            </div>
+
         </div>
+
+        <footer class="footer">
+            <p>&copy; 2023 Ser Elektrik Otomasyon. Tüm Hakları Saklıdır.</p>
+        </footer>
     </div>
 
-    <div class="toast" id="toast">
-        <i class="fas fa-check-circle"></i>
-        <span id="toastMessage">İşlem başarıyla tamamlandı</span>
-    </div>
+    <div id="toast" class="toast"></div>
 
-    <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <form class="modal-content" id="addUserForm">
-      <div class="modal-header">
-        <h5 class="modal-title" id="addUserModalLabel">Yeni Kullanıcı Ekle</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">Ad Soyad</label>
-          <input type="text" class="form-input" id="newUserFullname" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Email</label>
-          <input type="email" class="form-input" id="newUserEmail" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Şifre</label>
-          <input type="password" class="form-input" id="newUserPassword" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Rol</label>
-          <select class="form-input" id="newUserRole" required>
-            <option value="">Rol Seçin</option>
-            <option value="Kullanıcı">Kullanıcı</option>
-            <option value="Yönetici">Yönetici</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Telefon</label>
-          <input type="text" class="form-input" id="newUserPhone" autocomplete="off" maxlength="16" placeholder="(5__) ___ __ __">
-        </div>
-        <div id="addUserError" style="color:red; font-size:14px; margin-top:8px;"></div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline" data-bs-dismiss="modal">İptal</button>
-        <button type="submit" class="btn">Kaydet</button>
-      </div>
-    </form>
-  </div>
-</div>
-    <!-- Bootstrap JS (En altta olması performans için iyidir) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-    // Genel Toast bildirim fonksiyonu (Sadece bir kez tanımlanacak)
-    function showToast(message, isError = false) {
-        const toast = document.getElementById('toast');
-        const toastMessage = document.getElementById('toastMessage');
+    <script>
+        const API_BASE_URL = 'https://ballast.proxy.rlwy.net:42617'; // API'nin temel URL'si
 
-        if (!toast || !toastMessage) {
-            console.error("Toast elementleri bulunamadı!");
-            return;
-        }
-
-        toastMessage.textContent = message;
-        toast.className = "toast show"; // 'show' sınıfı CSS ile toast'ı görünür yapar
-        if (isError) {
-            toast.classList.add("error");
-        } else {
-            toast.classList.remove("error"); // Başarılı ise 'error' sınıfını kaldır
-        }
-
-        setTimeout(() => {
-            toast.className = "toast"; // 'show' sınıfını kaldırarak toast'ı gizle
-        }, 3000); // 3 saniye sonra kaybolur
-    }
-
-    // Kullanıcı bilgilerini localStorage'dan yükleyen fonksiyon
-    function loadUserInfo() {
-        // Hem 'user' hem de 'currentUser' anahtarlarını kontrol edin, hangisi varsa onu kullanın
-        const user = JSON.parse(localStorage.getItem('user'));
-        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-
-        const userInfo = user || currentUser; // Mevcut kullanıcı verisini belirle
-
-        if (userInfo) {
-            const userNameElement = document.getElementById('userName');
-            const userRoleElement = document.getElementById('userRole');
-            const userAvatarElement = document.getElementById('userAvatar');
-            const accountNameInput = document.getElementById("accountName");
-            const accountEmailInput = document.getElementById("accountEmail");
-
-            // Topbar kullanıcı bilgileri
-            if (userNameElement) {
-                userNameElement.textContent = userInfo.fullname || userInfo.username || 'Kullanıcı';
-            }
-            if (userRoleElement) {
-                userRoleElement.textContent = userInfo.role || 'Rol Yok';
-            }
-
-            // Kullanıcı avatarı baş harfleri
-            if (userAvatarElement) {
-                const nameToUseForAvatar = userInfo.fullname || userInfo.username;
-                if (nameToUseForAvatar) {
-                    const names = nameToUseForAvatar.split(' ');
-                    let initials = names[0][0];
-                    if (names.length > 1) {
-                        initials += names[names.length-1][0];
-                    }
-                    userAvatarElement.textContent = initials.toUpperCase();
-                } else {
-                    userAvatarElement.textContent = 'AD'; // Varsayılan eğer ad yoksa
-                }
-            }
-
-            // Hesap ayarları bölümünü güncelle
-            if (accountNameInput && userInfo.fullname) {
-                accountNameInput.value = userInfo.fullname;
-            }
-            if (accountEmailInput && userInfo.email) {
-                accountEmailInput.value = userInfo.email;
-            }
-
-            // Kullanıcı rolüne göre ayar kartlarını göster/gizle
-            let userRoleForCardDisplay = userInfo.role ? userInfo.role.trim().toLowerCase() : null;
-            if (userRoleForCardDisplay === 'admin' || userRoleForCardDisplay === 'yönetici' || userRoleForCardDisplay === 'administrator' || userRoleForCardDisplay === 'admın') {
-                userRoleForCardDisplay = 'admin';
-            }
-            const userManagementCard = document.getElementById('userManagementCard');
-            const rolePermissionCard = document.getElementById('rolePermissionCard');
-
-            if (userRoleForCardDisplay !== 'admin') {
-                if (userManagementCard) userManagementCard.style.display = 'none';
-                if (rolePermissionCard) rolePermissionCard.style.display = 'none';
-            } else {
-                if (userManagementCard) userManagementCard.style.display = '';
-                if (rolePermissionCard) rolePermissionCard.style.display = '';
-            }
-
-        } else {
-            console.log("LocalStorage'da kullanıcı verisi bulunamadı. Giriş sayfasına yönlendiriliyor...");
-            window.location.href = 'login.html'; // Giriş sayfanızın URL'sini buraya yazın
-        }
-    }
-
-    let allUsersData = []; // Tüm kullanıcıları tutacak
-    let filteredUsers = []; // Filtrelenmiş kullanıcıları tutacak
-    let currentPage = 1;
-    const rowsPerPage = 10; // Sayfa başına gösterilecek kullanıcı sayısı
-
-    // API Base URL'i buraya gelecek - Lütfen kendi Railway Flask uygulamanızın URL'si ile değiştirin
-    const API_BASE_URL = "ballast.proxy.rlwy.net:42617"; 
-
-    // Tüm kullanıcıları API'den çeken ve tabloyu dolduran fonksiyon
-    function loadUsersTable() {
-        fetch(`${API_BASE_URL}/api/users`)
-        .then(res => res.json())
-        .then(users => {
-            allUsersData = users;
-            applyFiltersAndRenderTable(); // Filtreleri uygula ve tabloyu render et
-        })
-        .catch(err => {
-            console.error("Kullanıcılar yüklenirken hata:", err);
-            showToast("Kullanıcılar yüklenemedi", true); // Hata durumunda toast göster
-            const tbody = document.getElementById('usersTableBody');
-            if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--danger);">Kullanıcılar yüklenemedi. Sunucuya bağlanılamadı veya bir hata oluştu.</td></tr>';
-            }
-        });
-    }
-
-    let confirmCallback = null; // Callback function to execute on confirmation
-    let confirmationBootstrapModal; // Bootstrap modal instance
-
-    // Confirmation Modal'ı gösterme fonksiyonu
-    function showConfirmationModal(message, onConfirm) {
-        document.getElementById('confirmationMessage').textContent = message;
-        confirmCallback = onConfirm; // Callback'i sakla
-        if (confirmationBootstrapModal) {
-            // Modal'ı göstermeden önce gizle ve küçük bir gecikme ekle
-            confirmationBootstrapModal.hide(); 
-            setTimeout(() => {
-                confirmationBootstrapModal.show();
-            }, 50); // 50ms gecikme
-        } else {
-            console.error("Confirmation modal is not initialized. Cannot show.");
-        }
-    }
-
-    // Kullanıcı silme fonksiyonu
-    async function deleteUser(userId, userName) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
-                method: 'DELETE'
-            });
-            const data = await response.json();
-
-            if (!response.ok) {
-                // Hata mesajını kontrol et ve özelleştir
-                if (data.message && data.message.includes('foreign key constraint fails')) {
-                    showToast(
-                        `${userName} kullanıcısı silinemedi. Bu kullanıcıya atanmış projeler bulunmaktadır. Lütfen önce ilgili projeleri silin veya başka bir kullanıcıya atayın.`,
-                        true
-                    );
-                } else {
-                    showToast(data.message || `Silme işlemi başarısız: Bilinmeyen bir hata oluştu.`, true);
-                }
-                return;
-            }
-            showToast(data.message || `${userName} kullanıcısı başarıyla silindi!`); // Başarı toastı
-            loadUsersTable(); // Tabloyu yeniden yükle
-        } catch (error) {
-            console.error('Kullanıcı silme hatası:', error);
-            showToast(`Silme işlemi başarısız: Sunucuya bağlanılamadı veya bir hata oluştu.`, true); // Hata toastı
-        }
-    }
-
-    // Tema değiştirme fonksiyonu
-    function toggleTheme() {
-        const currentTheme = document.body.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        document.body.setAttribute('data-theme', newTheme);
-        const themeToggle = document.getElementById('theme-toggle');
-        if (themeToggle) {
-            themeToggle.innerHTML = newTheme === 'dark'
-                ? '<i class="fas fa-sun"></i>'
-                : '<i class="fas fa-moon"></i>';
-        }
-        localStorage.setItem('theme', newTheme);
-    }
-
-    // Çıkış fonksiyonu
-    function logout() {
-        localStorage.removeItem('currentUser');
-        localStorage.removeItem('user'); // 'user' anahtarı da varsa temizle
-        window.location.href = 'login.html';
-    }
-
-    // Rol seçiciyi backend API'den dolduran fonksiyon
-    function fillRoleSelectorFromAPI() {
-        const roleSelector = document.getElementById('roleSelector');
-        if (!roleSelector) return; // roleSelector elementi yoksa fonksiyondan çık
-
-        fetch(`${API_BASE_URL}/api/roles`)
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => { throw new Error(err.message || 'Bilinmeyen sunucu hatası'); });
-                }
-                return response.json();
-            })
-            .then(roles => {
-                roleSelector.innerHTML = ''; // Seçiciyi temizle
-                const defaultOpt = document.createElement('option');
-                defaultOpt.value = "";
-                defaultOpt.textContent = "Bir rol seçin...";
-                defaultOpt.disabled = true;
-                defaultOpt.selected = true;
-                roleSelector.appendChild(defaultOpt);
-
-                roles.forEach(role => {
-                    const opt = document.createElement('option');
-                    opt.value = role.toLowerCase(); // Değer olarak küçük harf kullanmak iyi bir pratik
-                    opt.textContent = role;
-                    roleSelector.appendChild(opt);
-                });
-            })
-            .catch(error => {
-                console.error('Rolleri çekerken hata:', error);
-                showToast(`Hata: ${error.message}`, true); // Hata durumunda toast göster
-            });
-    }
-
-    // Tabloyu render etme fonksiyonu
-    function renderUsersTable(usersToRender) {
-        const tbody = document.getElementById('usersTableBody');
-        if (!tbody) {
-            console.error("usersTableBody bulunamadı!");
-            return;
-        }
-        tbody.innerHTML = '';
-
-        if (usersToRender.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Gösterilecek kullanıcı bulunamadı.</td></tr>';
-            updatePagination(0, 0, 0);
-            return;
-        }
-
-        const startIndex = (currentPage - 1) * rowsPerPage;
-        const endIndex = startIndex + rowsPerPage;
-        const paginatedUsers = usersToRender.slice(startIndex, endIndex);
-
-        paginatedUsers.forEach(user => {
-            const tr = document.createElement('tr');
-
-            let badgeClass = 'role-user';
-            if (user.role && user.role.toLowerCase().includes('admin')) badgeClass = 'role-admin';
-            else if (user.role && (user.role.toLowerCase().includes('yönetici') || user.role.toLowerCase().includes('manager'))) badgeClass = 'role-manager';
-
-            tr.innerHTML = `
-                <td data-label="Ad Soyad">${user.fullname || user.username || ''}</td>
-                <td data-label="Email">${user.email || ''}</td>
-                <td data-label="Rol"><span class="role-badge ${badgeClass}">${user.role || ''}</span></td>
-                <td data-label="İşlemler">
-                    <div style="display: flex; gap: 10px;">
-                        <button class="action-btn delete-user-btn" data-userid="${user.id}" title="Sil">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-
-        // Her satır render edildiğinde listenerları yeniden bağla
-        document.querySelectorAll('.delete-user-btn').forEach(btn => {
-            btn.onclick = null; // Önceki dinleyicileri temizle
-            btn.addEventListener('click', function() {
-                const userId = this.getAttribute('data-userid');
-                const userName = this.closest('tr').querySelector('td:first-child').textContent;
-
-                showConfirmationModal(`${userName} kullanıcısını silmek istediğinize emin misiniz?`, () => {
-                    deleteUser(userId, userName);
-                });
-            });
-        });
-        updatePagination(usersToRender.length, currentPage, Math.ceil(usersToRender.length / rowsPerPage));
-    }
-
-    // Filtreleri uygula ve tabloyu render etme fonksiyonu
-    function applyFiltersAndRenderTable() {
-        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-        
-        filteredUsers = allUsersData
-            .filter(user => !(user.role && user.role.toLowerCase().includes('admin')))
-            .filter(user => {
-                const userName = (user.fullname || user.username || '').toLowerCase();
-                const userEmail = (user.email || '').toLowerCase();
-                const userRole = (user.role || '').toLowerCase();
-                
-                return userName.includes(searchTerm) || userEmail.includes(searchTerm) || userRole.includes(searchTerm);
-            });
-        currentPage = 1; // Filtreler değiştiğinde ilk sayfaya dön
-        renderUsersTable(filteredUsers);
-    }
-
-    // Sayfalandırma Fonksiyonları
-    function updatePagination(totalItems, currentP, totalP) {
-        const totalUsersCountSpan = document.getElementById('totalUsersCount');
-        const currentPageSpan = document.getElementById('currentPage');
-        const totalPagesSpan = document.getElementById('totalPages');
-        const prevPageButton = document.getElementById('prevPage');
-        const nextPageButton = document.getElementById('nextPage');
-        const pageNumbersContainer = document.getElementById('pageNumbers');
-
-        totalUsersCountSpan.textContent = totalItems;
-        currentPageSpan.textContent = currentP;
-        totalPagesSpan.textContent = totalP;
-
-        prevPageButton.disabled = currentP === 1;
-        nextPageButton.disabled = currentP === totalP || totalP === 0;
-
-        pageNumbersContainer.innerHTML = '';
-        const maxPageButtons = 5;
-        let startPage = Math.max(1, currentP - Math.floor(maxPageButtons / 2));
-        let endPage = Math.min(totalP, startPage + maxPageButtons - 1);
-
-        if (endPage - startPage + 1 < maxPageButtons) {
-            startPage = Math.max(1, endPage - maxPageButtons + 1);
-        }
-
-        for (let i = startPage; i <= endPage; i++) {
-            const pageButton = document.createElement('button');
-            pageButton.className = `page-btn ${i === currentP ? 'active' : ''}`;
-            pageButton.textContent = i;
-            pageButton.addEventListener('click', () => {
-                currentPage = i;
-                renderUsersTable(filteredUsers);
-            });
-            pageNumbersContainer.appendChild(pageButton);
-        }
-    }
-    
-    // Sayfalandırma butonları olay dinleyicileri
-    document.getElementById('prevPage').addEventListener('click', () => {
-        if (currentPage > 1) {
-            currentPage--;
-            renderUsersTable(filteredUsers);
-        }
-    });
-
-    document.getElementById('nextPage').addEventListener('click', () => {
-        if (currentPage < Math.ceil(filteredUsers.length / rowsPerPage)) {
-            currentPage++;
-            renderUsersTable(filteredUsers);
-        }
-    });
-
-
-    // DOM içeriği tamamen yüklendiğinde çalışacak ana kısım
-    document.addEventListener('DOMContentLoaded', function() {
-        const accountSettingsForm = document.getElementById('accountSettingsForm');
-        const accountSettingsMessage = document.getElementById('accountSettingsMessage');
-
-        // Confirmation Modal'ı DOM yüklendiğinde başlat
-        const confirmationModalElement = document.getElementById('confirmationModal');
-        if (confirmationModalElement) {
-            confirmationBootstrapModal = new bootstrap.Modal(confirmationModalElement);
-        }
-
-        // Confirmation Modal "Onayla" butonu için olay dinleyicisi
-        const confirmActionBtn = document.getElementById('confirmActionBtn');
-        if (confirmActionBtn) {
-            confirmActionBtn.addEventListener('click', () => {
-                if (confirmCallback) {
-                    confirmCallback(); // Saklanan callback'i çalıştır
-                    confirmCallback = null; // Callback'i sıfırla
-                }
-                if (confirmationBootstrapModal) {
-                    confirmationBootstrapModal.hide();
-                }
-            });
-        }
-
-
-        if (accountSettingsForm) {
-            accountSettingsForm.addEventListener('submit', async function(event) {
-                event.preventDefault(); // Formun varsayılan gönderimini engelle
-
-                accountSettingsMessage.textContent = ''; // Önceki mesajı temizle
-                accountSettingsMessage.style.color = ''; // Rengi temizle
-
-                const currentPassword = document.getElementById('currentPassword').value;
-                const newPassword = document.getElementById('newPassword').value;
-                const confirmNewPassword = document.getElementById('confirmNewPassword').value;
-                const accountName = document.getElementById('accountName').value;
-                const accountEmail = document.getElementById('accountEmail').value;
-
-                const user = JSON.parse(localStorage.getItem('currentUser'));
-                const userId = user ? user.id : null;
-
-                if (!userId) {
-                    accountSettingsMessage.textContent = 'Kullanıcı bilgisi bulunamadı. Lütfen tekrar giriş yapın.';
-                    accountSettingsMessage.style.color = 'red';
-                    return; // İşlemi durdur
-                }
-
-                let payload = {
-                    userId: userId,
-                    fullname: accountName,
-                    email: accountEmail
-                };
-
-                let passwordChangeAttempted = false;
-                if (currentPassword || newPassword || confirmNewPassword) {
-                    passwordChangeAttempted = true;
-                    if (!currentPassword || !newPassword || !confirmNewPassword) {
-                        accountSettingsMessage.textContent = 'Şifre değiştirmek için tüm şifre alanlarını doldurmalısınız.';
-                        accountSettingsMessage.style.color = 'red';
-                        return;
-                    }
-                    if (newPassword !== confirmNewPassword) {
-                        accountSettingsMessage.textContent = 'Yeni şifreler eşleşmiyor!';
-                        accountSettingsMessage.style.color = 'red';
-                        return;
-                    }
-                    if (newPassword.length < 6) {
-                        accountSettingsMessage.textContent = 'Yeni şifre en az 6 karakter olmalıdır.';
-                        accountSettingsMessage.style.color = 'red';
-                        return;
-                    }
-                    payload.currentPassword = currentPassword;
-                    payload.newPassword = newPassword;
-                }
-
-                try {
-                    const response = await fetch(`${API_BASE_URL}/api/update_user_profile`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(payload)
-                    });
-
-                    const data = await response.json();
-
-                    if (response.ok) {
-                        accountSettingsMessage.textContent = data.message;
-                        accountSettingsMessage.style.color = 'green';
-                        showToast(data.message, false);
-
-                        // Update localStorage if fullname or email changed
-                        if (user) {
-                            if (payload.fullname !== undefined) user.fullname = payload.fullname;
-                            if (payload.email !== undefined) user.email = payload.email;
-                            localStorage.setItem('currentUser', JSON.stringify(user));
-                            loadUserInfo(); // Reload user info in topbar
-                        }
-
-                        // Clear password fields
-                        document.getElementById('currentPassword').value = '';
-                        document.getElementById('newPassword').value = '';
-                        document.getElementById('confirmNewPassword').value = '';
-                    } else {
-                        accountSettingsMessage.textContent = data.message || 'Profil güncelleme başarısız oldu.';
-                        accountSettingsMessage.style.color = 'red';
-                        showToast(data.message || 'Profil güncelleme başarısız oldu.', true);
-                    }
-                } catch (error) {
-                    console.error('Profil güncelleme sırasında bir hata oluştu:', error);
-                    accountSettingsMessage.textContent = 'Profil güncelleme sırasında sunucuya bağlanırken bir hata oluştu.';
-                    accountSettingsMessage.style.color = 'red';
-                    showToast('Profil güncelleme sırasında sunucuya bağlanırken bir hata oluştu.', true);
-                }
-            });
-        }
-
-        // Kullanıcı bilgilerini yükle (Topbar ve Hesap Ayarları için)
-        loadUserInfo();
-
-        // Kullanıcı tablosunu yükle
-        loadUsersTable();
-
-        // Tema toggle butonuna event listener ekle
-        const themeToggle = document.getElementById('theme-toggle');
-        if (themeToggle) {
-            themeToggle.addEventListener('click', toggleTheme);
-            // Sayfa yüklendiğinde mevcut temayı kontrol et ve butonu güncelle
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme) {
-                document.body.setAttribute('data-theme', savedTheme);
-                themeToggle.innerHTML = savedTheme === 'dark'
-                    ? '<i class="fas fa-sun"></i>'
-                    : '<i class="fas fa-moon"></i>';
-            } else {
-                // Varsayılan tema (light) için butonu ayarla
-                themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
-            }
-        }
-
-        // Çıkış butonuna event listener ekle
-        const logoutButton = document.getElementById('logoutButton');
-        if (logoutButton) {
-            logoutButton.addEventListener('click', logout);
-        }
-
-        // Rol seçiciyi backend API'den doldur
-        fillRoleSelectorFromAPI();
-
-        // Kullanıcı Ekle butonu (Eğer HTML'de hala varsa ve kaldırılmadıysa)
-        const addUserBtn = document.getElementById('addUserBtn');
-        var addUserModal = new bootstrap.Modal(document.getElementById('addUserModal'));
-        var addUserForm = document.getElementById('addUserForm');
-        var phoneInput = document.getElementById('newUserPhone');
-        if (addUserBtn) {
-            addUserBtn.addEventListener('click', function() {
-                document.getElementById('addUserForm').reset();
-                document.getElementById('addUserError').textContent = '';
-                addUserModal.show();
-            });
-        }
-
-        // Hamburger menü işlevselliği
-        const hamburgerMenu = document.getElementById('hamburgerMenu');
         const sidebar = document.getElementById('sidebar');
         const mainContent = document.getElementById('mainContent');
+        const hamburgerMenu = document.getElementById('hamburgerMenu');
+        const themeToggle = document.getElementById('theme-toggle');
+        const logoutButton = document.getElementById('logoutButton');
+        const roleSelect = document.getElementById('roleSelect');
+        const permissionGrid = document.getElementById('permissionGrid');
+        const savePermissionsBtn = document.getElementById('savePermissionsBtn');
+        const pendingUsersTableBody = document.getElementById('pendingUsersTableBody');
+        const activeUsersTableBody = document.getElementById('activeUsersTableBody');
+        const toast = document.getElementById('toast');
+        const confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+        const confirmActionBtn = document.getElementById('confirmActionBtn');
+        let currentConfirmAction = null;
 
+        // Pagination variables
+        let currentPage = 1;
+        const rowsPerPage = 10;
+        let allUsers = [];
+
+        // Sayfa yüklendiğinde tema ayarını uygula
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.body.setAttribute('data-theme', savedTheme);
+            if (savedTheme === 'dark') {
+                themeToggle.querySelector('i').classList.replace('fa-moon', 'fa-sun');
+            }
+
+            // Kullanıcı bilgilerini yükle
+            loadUserProfile();
+            // Yetkileri ve kullanıcıları yükle
+            loadPermissions();
+            loadPendingUsers();
+            loadActiveUsers();
+        });
+
+        // Hamburger menü toggle
         hamburgerMenu.addEventListener('click', () => {
             sidebar.classList.toggle('show');
             mainContent.classList.toggle('expanded');
@@ -1770,8 +1150,8 @@
 
         // Sidebar dışına tıklayınca kapatma
         document.addEventListener('click', (event) => {
-            if (sidebar.classList.contains('show') && 
-                !sidebar.contains(event.target) && 
+            if (sidebar.classList.contains('show') &&
+                !sidebar.contains(event.target) &&
                 !hamburgerMenu.contains(event.target)) {
                 sidebar.classList.remove('show');
                 mainContent.classList.remove('expanded');
@@ -1786,291 +1166,401 @@
             }
         });
 
-        // Arama kutusu event listener'ı
-        document.getElementById('searchInput').addEventListener('input', applyFiltersAndRenderTable);
+        // Tema değiştirme
+        themeToggle.addEventListener('click', () => {
+            let currentTheme = document.body.getAttribute('data-theme');
+            let newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            themeToggle.querySelector('i').classList.replace(
+                currentTheme === 'light' ? 'fa-moon' : 'fa-sun',
+                newTheme === 'light' ? 'fa-moon' : 'fa-sun'
+            );
+        });
 
-        // Kullanıcı ekle butonuna tıklanınca modalı aç
-        var addUserModalElem = document.getElementById('addUserModal');
-        if (addUserModalElem) {
-            addUserModalElem.addEventListener('show.bs.modal', function () {
-                loadRolesForUserModal();
+        // Çıkış yap butonu
+        logoutButton.addEventListener('click', () => {
+            localStorage.removeItem('currentUser'); // Kullanıcı bilgisini sil
+            showToast("Başarıyla çıkış yaptınız.");
+            setTimeout(() => {
+                window.location.href = 'login.html'; // Giriş sayfasına yönlendir
+            }, 1000); // 1 saniye sonra yönlendir
+        });
+
+        // Toast mesajı gösterme fonksiyonu
+        function showToast(message, isError = false) {
+            toast.textContent = message;
+            if (isError) {
+                toast.classList.add('error');
+            } else {
+                toast.classList.remove('error');
+            }
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Confirmation Modal'ı gösterme fonksiyonu
+        function showConfirmationModal(message, actionCallback) {
+            document.getElementById('confirmationMessage').innerHTML = message;
+            currentConfirmAction = actionCallback;
+            confirmationModal.show();
+        }
+
+        // Confirmation Modal'daki onay butonuna tıklama
+        confirmActionBtn.addEventListener('click', () => {
+            if (currentConfirmAction) {
+                currentConfirmAction();
+            }
+            confirmationModal.hide();
+        });
+
+
+        // Kullanıcı profil bilgilerini yükle
+        function loadUserProfile() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (currentUser) {
+                document.getElementById('userName').textContent = currentUser.fullname;
+                document.getElementById('userRole').textContent = currentUser.role;
+                document.getElementById('userAvatar').textContent = currentUser.fullname.charAt(0).toUpperCase() + currentUser.fullname.split(' ')[1].charAt(0).toUpperCase();
+            } else {
+                showToast('Kullanıcı bilgileri bulunamadı. Lütfen tekrar giriş yapın.', true);
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 1500);
+            }
+        }
+
+        // Yetkileri backend'den çek ve doldur
+        async function loadPermissions() {
+            const selectedRole = roleSelect.value;
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(selectedRole)}`);
+                if (!response.ok) throw new Error('Yetkiler yüklenirken hata oluştu.');
+                const permissions = await response.json();
+                renderPermissions(permissions);
+            } catch (error) {
+                showToast('Yetkiler yüklenemedi: ' + error.message, true);
+                console.error('Yetkiler yüklenirken hata:', error);
+            }
+        }
+
+        // Yetkileri HTML'e render et
+        function renderPermissions(permissions) {
+            permissionGrid.innerHTML = '';
+            const allPermissions = [
+                { key: 'dashboard_goruntule', label: 'Dashboard Görüntüleme' },
+                { key: 'proje_goruntule', label: 'Proje Görüntüleme' },
+                { key: 'proje_ekle', label: 'Proje Ekleme' },
+                { key: 'proje_duzenle', label: 'Proje Düzenleme' },
+                { key: 'proje_sil', label: 'Proje Silme' },
+                { key: 'rapor_goruntule', label: 'Rapor Görüntüleme' },
+                { key: 'musteri_goruntule', label: 'Müşteri Görüntüleme' },
+                { key: 'musteri_ekle', label: 'Müşteri Ekleme' },
+                { key: 'musteri_duzenle', label: 'Müşteri Düzenleme' },
+                { key: 'musteri_sil', label: 'Müşteri Silme' },
+                { key: 'takvim_goruntule', label: 'Takvim Görüntüleme' },
+                { key: 'gorev_ekle', label: 'Görev Ekleme' },
+                { key: 'gorev_duzenle', label: 'Görev Düzenleme' },
+                { key: 'gorev_sil', label: 'Görev Silme' },
+                { key: 'kullanici_yonetimi', label: 'Kullanıcı Yönetimi' },
+                { key: 'rol_yetki_yonetimi', label: 'Rol Yetki Yönetimi' },
+                { key: 'pdf_olusturma', label: 'PDF Oluşturma' },
+                { key: 'excel_export', label: 'Excel Dışa Aktarma' }
+            ];
+
+            const currentPermissions = Array.isArray(permissions) && permissions.length > 0 ? permissions[0] : {};
+
+            allPermissions.forEach(perm => {
+                const isChecked = currentPermissions[perm.key] === 1;
+                const div = document.createElement('div');
+                div.classList.add('permission-item');
+                div.innerHTML = `
+                    <input type="checkbox" id="perm-${perm.key}" data-key="${perm.key}" ${isChecked ? 'checked' : ''}>
+                    <label for="perm-${perm.key}" class="permission-label">${perm.label}</label>
+                `;
+                permissionGrid.appendChild(div);
             });
         }
-        // Kullanıcı ekleme formu submit
-        if (addUserForm) {
-            addUserForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                const fullname = document.getElementById('newUserFullname').value.trim();
-                const email = document.getElementById('newUserEmail').value.trim();
-                const password = document.getElementById('newUserPassword').value;
-                const role = document.getElementById('newUserRole').value;
-                const phone = document.getElementById('newUserPhone').value.trim();
-                const errorDiv = document.getElementById('addUserError');
-                errorDiv.textContent = '';
-                if (!fullname || !email || !password || !role) {
-                    errorDiv.textContent = 'Tüm alanları doldurun.';
-                    return;
-                }
-                const phonePattern = /^\(\d{3}\) \d{3} \d{2} \d{2}$/;
-                if (!phonePattern.test(phone)) {
-                    errorDiv.textContent = 'Telefon formatı (5__) ___ __ __ şeklinde olmalıdır.';
-                    return;
-                }
-                fetch(`${API_BASE_URL}/api/users`, {
+
+        // Rol seçimi değiştiğinde yetkileri yeniden yükle
+        roleSelect.addEventListener('change', loadPermissions);
+
+        // Yetkileri kaydet
+        savePermissionsBtn.addEventListener('click', async () => {
+            const selectedRole = roleSelect.value;
+            const updatedPermissions = {};
+            document.querySelectorAll('#permissionGrid input[type="checkbox"]').forEach(checkbox => {
+                updatedPermissions[checkbox.dataset.key] = checkbox.checked ? 1 : 0;
+            });
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/role-permissions`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fullname, email, password, role, phone })
-                })
-                .then(res => res.json().then(data => ({ok: res.ok, data})))
-                .then(({ok, data}) => {
-                    if (ok) {
-                        addUserModal.hide();
-                        showToast('Kullanıcı başarıyla eklendi!');
-                        loadUsersTable();
-                    } else {
-                        errorDiv.textContent = data.message || 'Kullanıcı eklenemedi.';
-                    }
-                })
-                .catch(err => {
-                    errorDiv.textContent = 'Sunucuya bağlanılamadı.';
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ role: selectedRole, permissions: updatedPermissions })
+                });
+                if (!response.ok) throw new Error('Yetkiler güncellenirken hata oluştu.');
+                const data = await response.json();
+                showToast(data.message || 'Yetkiler başarıyla güncellendi!');
+            } catch (error) {
+                showToast('Yetkiler güncellenemedi: ' + error.message, true);
+                console.error('Yetki güncelleme hatası:', error);
+            }
+        });
+
+        // Bekleyen kullanıcıları yükle
+        async function loadPendingUsers() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/users/pending`);
+                if (!response.ok) throw new Error('Bekleyen kullanıcılar yüklenirken hata oluştu.');
+                const users = await response.json();
+                renderPendingUsers(users);
+            } catch (error) {
+                showToast('Bekleyen kullanıcılar yüklenemedi: ' + error.message, true);
+                console.error('Bekleyen kullanıcılar yüklenirken hata:', error);
+            }
+        }
+
+        // Bekleyen kullanıcıları HTML'e render et
+        function renderPendingUsers(users) {
+            pendingUsersTableBody.innerHTML = '';
+            if (users.length === 0) {
+                pendingUsersTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Bekleyen kullanıcı bulunmamaktadır.</td></tr>';
+                return;
+            }
+            users.forEach(user => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="Kullanıcı Adı">${user.fullname}</td>
+                    <td data-label="E-posta">${user.email}</td>
+                    <td data-label="Rol">${user.role}</td>
+                    <td data-label="Kayıt Tarihi">${new Date(user.registration_date).toLocaleDateString()}</td>
+                    <td data-label="İşlemler">
+                        <button class="action-btn approve-btn" data-id="${user.id}" title="Onayla"><i class="fas fa-check"></i></button>
+                        <button class="action-btn delete-btn" data-id="${user.id}" title="Sil"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                pendingUsersTableBody.appendChild(tr);
+            });
+
+            // Onayla ve Sil butonlarına event listener ekle
+            pendingUsersTableBody.querySelectorAll('.approve-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const userId = e.currentTarget.dataset.id;
+                    showConfirmationModal(`<strong>${userId}</strong> ID'li kullanıcıyı onaylamak istediğinizden emin misiniz?`, () => approveUser(userId));
+                });
+            });
+            pendingUsersTableBody.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const userId = e.currentTarget.dataset.id;
+                    showConfirmationModal(`<strong>${userId}</strong> ID'li kullanıcıyı kalıcı olarak silmek istediğinizden emin misiniz?`, () => deleteUser(userId));
                 });
             });
         }
 
-        function loadRolesForUserModal() {
-            fetch(`${API_BASE_URL}/api/roles`)
-                .then(res => res.json())
-                .then(roles => {
-                    const roleSelect = document.getElementById('newUserRole');
-                    roleSelect.innerHTML = '<option value="">Rol Seçin</option>';
-                    roles.forEach(role => {
-                        if (role.toLowerCase() !== 'admin') {
-                            roleSelect.innerHTML += `<option value="${role}">${role}</option>`;
-                        }
-                    });
+        // Kullanıcıyı onayla
+        async function approveUser(userId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/users/approve/${userId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' }
                 });
-        }
-
-        // Telefon input mask sadece bir kez eklenir
-        var phoneInput = document.getElementById('newUserPhone');
-        if (phoneInput) {
-            phoneInput.addEventListener('input', maskPhoneInput);
-        }
-
-        // Rol seçildiğinde izin kutucuklarının güncellenmesini sağlayan event handler
-        const roleSelector = document.getElementById('roleSelector');
-        if (roleSelector) {
-            roleSelector.addEventListener('change', function() {
-                const selectedRole = this.value;
-                if (!selectedRole) {
-                    document.querySelectorAll('.permission-item input[type=\"checkbox\"]').forEach(checkbox => {
-                        checkbox.checked = false;
-                    });
-                    return;
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.message || 'Kullanıcı onaylanırken hata oluştu.');
                 }
-                fetch(`${API_BASE_URL}/api/role-permissions?role=${selectedRole}`)
-                    .then(res => res.json())
-                    .then(data => {
-                        const checkboxMap = {
-                            permission1: 'proje_ekle',
-                            permission2: 'proje_duzenle',
-                            permission3: 'proje_sil',
-                            permission4: 'pdf_olusturma',
-                            permission5: 'musteri_duzenleme'
-                        };
-                        for (const checkboxId in checkboxMap) {
-                            const checkbox = document.getElementById(checkboxId);
-                            const key = checkboxMap[checkboxId];
-                            if (checkbox) {
-                                checkbox.checked = data[key] === 1;
-                            }
-                        }
-                    })
-                    .catch(err => {
-                        document.querySelectorAll('.permission-item input[type=\"checkbox\"]').forEach(checkbox => {
-                            checkbox.checked = false;
-                        });
-                    });
-            });
-        }
-
-        // DOMContentLoaded içinde, savePermissionsBtn için event listener ekleyin:
-        const savePermissionsBtn = document.getElementById('savePermissionsBtn');
-        if (savePermissionsBtn) {
-            savePermissionsBtn.addEventListener('click', function() {
-                const roleSelector = document.getElementById('roleSelector');
-                const selectedRole = roleSelector.value;
-                if (!selectedRole) {
-                    showToast('Lütfen bir rol seçin.', true);
-                    return;
-                }
-                // Checkbox'lardan izinleri topla
-                const permissions = {
-                    proje_ekle: document.getElementById('permission1').checked ? 1 : 0,
-                    proje_duzenle: document.getElementById('permission2').checked ? 1 : 0,
-                    proje_sil: document.getElementById('permission3').checked ? 1 : 0,
-                    pdf_olusturma: document.getElementById('permission4').checked ? 1 : 0,
-                    musteri_duzenleme: document.getElementById('permission5').checked ? 1 : 0
-                };
-                fetch(`${API_BASE_URL}/api/role-permissions`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ role: selectedRole, ...permissions })
-                })
-                .then(res => res.json().then(data => ({ok: res.ok, data})))
-                .then(({ok, data}) => {
-                    if (ok) {
-                        showToast('İzinler başarıyla güncellendi!');
-                    } else {
-                        showToast(data.message || 'İzinler güncellenemedi.', true);
-                    }
-                })
-                .catch(() => {
-                    showToast('Sunucuya bağlanılamadı.', true);
-                });
-            });
-        }
-    });
-
-    function maskPhoneInput(e) {
-        let value = e.target.value.replace(/\D/g, '');
-        if (value.length > 11) value = value.slice(0, 11);
-
-        let formatted = '';
-        if (value.length > 0) {
-            formatted = '(' + value.substring(0, 3);
-        }
-        if (value.length >= 3) {
-            formatted += ') ' + value.substring(3, 6);
-        }
-        if (value.length >= 6) {
-            formatted += ' ' + value.substring(6, 8);
-        }
-        if (value.length >= 8) {
-            formatted += ' ' + value.substring(8, 10);
-        }
-        e.target.value = formatted;
-    }
-
-    // --- Onay Bekleyen Kullanıcılar (Sadece Admin) ---
-    function showOrHidePendingApprovalsCard() {
-        const user = JSON.parse(localStorage.getItem('user')) || JSON.parse(localStorage.getItem('currentUser'));
-        if (user && user.role === 'Admin') {
-            document.getElementById('pendingApprovalsCard').style.display = '';
-            loadPendingUsers();
-        } else {
-            document.getElementById('pendingApprovalsCard').style.display = 'none';
-        }
-    }
-    document.addEventListener('DOMContentLoaded', function() {
-        showOrHidePendingApprovalsCard();
-        // ... mevcut kod ...
-        const refreshPendingUsersButton = document.getElementById('refreshPendingUsersButton');
-        if (refreshPendingUsersButton) {
-            refreshPendingUsersButton.addEventListener('click', () => {
-                loadPendingUsers();
-                showToast('Liste başarıyla yenilendi.');
-            });
-        }
-        const pendingUsersTableBody = document.getElementById('pendingUsersTableBody');
-        if (pendingUsersTableBody) {
-            pendingUsersTableBody.addEventListener('click', (event) => {
-                const target = event.target;
-                let userId;
-                if (target.classList.contains('approve-user-btn') || target.closest('.approve-user-btn')) {
-                    const button = target.closest('.approve-user-btn');
-                    userId = button.dataset.userid;
-                    if (userId) approveUser(userId);
-                } else if (target.classList.contains('delete-user-btn') || target.closest('.delete-user-btn')) {
-                    const button = target.closest('.delete-user-btn');
-                    userId = button.dataset.userid;
-                    if (userId) deleteUser(userId);
-                }
-            });
-        }
-    });
-    function loadPendingUsers() {
-        fetch(`${API_BASE_URL}/api/pending-users`)
-            .then(response => {
-                if (!response.ok) throw new Error('Bekleyen kullanıcılar getirilemedi.');
-                return response.json();
-            })
-            .then(users => {
-                const pendingUsersTableBody = document.getElementById('pendingUsersTableBody');
-                if (pendingUsersTableBody) {
-                    pendingUsersTableBody.innerHTML = '';
-                    if (users.length === 0) {
-                        pendingUsersTableBody.innerHTML = '<tr><td colspan="6">Onay bekleyen kullanıcı bulunmamaktadır.</td></tr>';
-                        return;
-                    }
-                    users.forEach(user => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${user.fullname || 'N/A'}</td>
-                            <td>${user.email || 'N/A'}</td>
-                            <td>${user.phone || 'N/A'}</td>
-                            <td>${user.role || 'N/A'}</td>
-                            <td>${user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}</td>
-                            <td>
-                                <div style="display: flex; gap: 5px;">
-                                    <button class="action-btn approve approve-user-btn" data-userid="${user.id}" title="Onayla">
-                                        <i class="fas fa-check"></i>
-                                    </button>
-                                    <button class="action-btn delete delete-user-btn" data-userid="${user.id}" title="Sil">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        `;
-                        pendingUsersTableBody.appendChild(row);
-                    });
-                }
-            })
-            .catch(error => {
-                const pendingUsersTableBody = document.getElementById('pendingUsersTableBody');
-                if (pendingUsersTableBody) {
-                    pendingUsersTableBody.innerHTML = '<tr><td colspan="6">Kullanıcılar yüklenirken bir hata oluştu.</td></tr>';
-                }
-            });
-    }
-    function approveUser(userId) {
-        if (confirm('Bu kullanıcıyı onaylamak istediğinizden emin misiniz?')) {
-            fetch(`${API_BASE_URL}/api/users/approve/` + userId, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' }
-            })
-            .then(response => {
-                if (!response.ok) return response.json().then(err => { throw new Error(err.message || 'Kullanıcı onaylanırken hata oluştu.'); });
-                return response.json();
-            })
-            .then(data => {
                 showToast(data.message || 'Kullanıcı başarıyla onaylandı!');
                 loadPendingUsers();
-            })
-            .catch(error => {
+                loadActiveUsers(); // Aktif kullanıcıları da güncelle
+            } catch (error) {
                 showToast('Kullanıcı onaylanırken bir hata oluştu: ' + error.message, true);
-            });
+                console.error('Kullanıcı onaylama hatası:', error);
+            }
         }
-    }
-    function deleteUser(userId) {
-        if (confirm('Bu kullanıcıyı kalıcı olarak silmek istediğinizden emin misiniz?')) {
-            fetch(`${API_BASE_URL}/api/users/` + userId, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' }
-            })
-            .then(response => {
-                if (!response.ok) return response.json().then(err => { throw new Error(err.message || 'Kullanıcı silinirken hata oluştu.'); });
-                return response.json();
-            })
-            .then(data => {
+
+        // Kullanıcıyı sil
+        async function deleteUser(userId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.message || 'Kullanıcı silinirken hata oluştu.');
+                }
                 showToast(data.message || 'Kullanıcı başarıyla silindi!');
                 loadPendingUsers();
-            })
-            .catch(error => {
+                loadActiveUsers(); // Aktif kullanıcıları da güncelle
+            } catch (error) {
                 showToast('Kullanıcı silinirken bir hata oluştu: ' + error.message, true);
-            });
+                console.error('Kullanıcı silme hatası:', error);
+            }
         }
-    }
-</script>
+
+        // Aktif kullanıcıları yükle
+        async function loadActiveUsers() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/users/active`);
+                if (!response.ok) throw new Error('Aktif kullanıcılar yüklenirken hata oluştu.');
+                allUsers = await response.json(); // Tüm kullanıcıları kaydet
+                displayUsers(currentPage);
+            } catch (error) {
+                showToast('Aktif kullanıcılar yüklenemedi: ' + error.message, true);
+                console.error('Aktif kullanıcılar yüklenirken hata:', error);
+            }
+        }
+
+        // Kullanıcıları sayfaya göre göster
+        function displayUsers(page) {
+            currentPage = page;
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const paginatedUsers = allUsers.slice(start, end);
+
+            activeUsersTableBody.innerHTML = '';
+            if (paginatedUsers.length === 0) {
+                activeUsersTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Aktif kullanıcı bulunmamaktadır.</td></tr>';
+                return;
+            }
+
+            paginatedUsers.forEach(user => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="Kullanıcı Adı">${user.fullname}</td>
+                    <td data-label="E-posta">${user.email}</td>
+                    <td data-label="Rol"><span class="role-badge role-${user.role.toLowerCase().replace(' ', '-')}">${user.role}</span></td>
+                    <td data-label="Durum">${user.is_active ? 'Aktif' : 'Pasif'}</td>
+                    <td data-label="İşlemler">
+                        <button class="action-btn edit-user-btn" data-id="${user.id}" title="Düzenle"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn delete-btn" data-id="${user.id}" title="Sil"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                activeUsersTableBody.appendChild(tr);
+            });
+
+            // Düzenle ve Sil butonlarına event listener ekle
+            activeUsersTableBody.querySelectorAll('.edit-user-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const userId = e.currentTarget.dataset.id;
+                    // TODO: Kullanıcı düzenleme modalı veya sayfasına yönlendirme
+                    showToast(`Kullanıcı ID: ${userId} düzenleniyor (Henüz aktif değil).`);
+                });
+            });
+            activeUsersTableBody.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const userId = e.currentTarget.dataset.id;
+                    showConfirmationModal(`<strong>${userId}</strong> ID'li kullanıcıyı kalıcı olarak silmek istediğinizden emin misiniz?`, () => deleteUser(userId));
+                });
+            });
+
+            updatePaginationControls();
+        }
+
+        // Sayfalandırma kontrollerini güncelle
+        function updatePaginationControls() {
+            const totalPages = Math.ceil(allUsers.length / rowsPerPage);
+            document.getElementById('paginationInfo').textContent = `Sayfa ${currentPage} / ${totalPages}`;
+
+            const pageNumbersContainer = document.getElementById('pageNumbers');
+            pageNumbersContainer.innerHTML = '';
+
+            const maxPageButtons = 5; // Gösterilecek maksimum sayfa butonu sayısı
+            let startPage = Math.max(1, currentPage - Math.floor(maxPageButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
+
+            if (endPage - startPage + 1 < maxPageButtons) {
+                startPage = Math.max(1, endPage - maxPageButtons + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const pageBtn = document.createElement('button');
+                pageBtn.classList.add('page-btn');
+                if (i === currentPage) {
+                    pageBtn.classList.add('active');
+                }
+                pageBtn.textContent = i;
+                pageBtn.addEventListener('click', () => displayUsers(i));
+                pageNumbersContainer.appendChild(pageBtn);
+            }
+
+            document.getElementById('prevPageBtn').disabled = currentPage === 1;
+            document.getElementById('nextPageBtn').disabled = currentPage === totalPages;
+
+            document.getElementById('prevPageBtn').onclick = () => {
+                if (currentPage > 1) {
+                    displayUsers(currentPage - 1);
+                }
+            };
+            document.getElementById('nextPageBtn').onclick = () => {
+                if (currentPage < totalPages) {
+                    displayUsers(currentPage + 1);
+                }
+            };
+        }
+
+        // Arama fonksiyonu (mevcut kullanıcılar için)
+        document.getElementById('searchInput').addEventListener('keyup', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filteredUsers = allUsers.filter(user =>
+                user.fullname.toLowerCase().includes(searchTerm) ||
+                user.email.toLowerCase().includes(searchTerm) ||
+                user.role.toLowerCase().includes(searchTerm)
+            );
+            renderActiveUsersFiltered(filteredUsers); // Filtrelenmiş kullanıcıları göster
+        });
+
+        // Filtrelenmiş aktif kullanıcıları render et (pagination olmadan)
+        function renderActiveUsersFiltered(users) {
+            activeUsersTableBody.innerHTML = '';
+            if (users.length === 0) {
+                activeUsersTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Eşleşen kullanıcı bulunmamaktadır.</td></tr>';
+                return;
+            }
+            users.forEach(user => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="Kullanıcı Adı">${user.fullname}</td>
+                    <td data-label="E-posta">${user.email}</td>
+                    <td data-label="Rol"><span class="role-badge role-${user.role.toLowerCase().replace(' ', '-')}">${user.role}</span></td>
+                    <td data-label="Durum">${user.is_active ? 'Aktif' : 'Pasif'}</td>
+                    <td data-label="İşlemler">
+                        <button class="action-btn edit-user-btn" data-id="${user.id}" title="Düzenle"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn delete-btn" data-id="${user.id}" title="Sil"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                activeUsersTableBody.appendChild(tr);
+            });
+
+            activeUsersTableBody.querySelectorAll('.edit-user-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const userId = e.currentTarget.dataset.id;
+                    showToast(`Kullanıcı ID: ${userId} düzenleniyor (Henüz aktif değil).`);
+                });
+            });
+            activeUsersTableBody.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const userId = e.currentTarget.dataset.id;
+                    showConfirmationModal(`<strong>${userId}</strong> ID'li kullanıcıyı kalıcı olarak silmek istediğinizden emin misiniz?`, () => deleteUser(userId));
+                });
+            });
+
+            // Arama yapıldığında pagination'ı gizle
+            document.querySelector('.pagination').style.display = 'none';
+        }
+
+        // Arama kutusu boşaldığında pagination'ı geri getir
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            if (e.target.value === '') {
+                document.querySelector('.pagination').style.display = 'flex';
+                displayUsers(currentPage); // Sayfalandırılmış görünümü geri yükle
+            }
+        });
+
+    </script>
 </body>
 </html>
