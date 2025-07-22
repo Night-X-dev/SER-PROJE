@@ -14,10 +14,11 @@ app = Flask(__name__)
 
 # CORS (Cross-Origin Resource Sharing) ayarları
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
-DB_HOST = "localhost"
-DB_USER = "root"
-DB_PASSWORD = ""
-DB_NAME = "ser"
+DB_HOST = os.getenv("MYSQL_HOST") or "localhost"
+DB_PORT = int(os.getenv("MYSQL_PORT") or 3306) # Port değeri int olmalı
+DB_USER = os.getenv("MYSQL_USER") or "root"
+DB_PASSWORD = os.getenv("MYSQL_PASSWORD") or ""
+DB_NAME = os.getenv("MYSQL_DATABASE") or "ser" # Railway'de bu 'ser' olarak ayarlı olmalı
 
 # Şifre Değiştirme API
 
