@@ -6,30 +6,22 @@ import bcrypt
 import os
 import json
 import datetime
-
 # Eğer dotenv kütüphanesini kullanıyorsanız aşağıdaki satırın yorumunu kaldırın:
 # from dotenv import load_dotenv
 # load_dotenv()
 
-# Flask uygulamasını başlatırken templates ve static klasörlerinin konumunu belirtmeye gerek yok
-# Eğer Flask uygulamanızın ana dosyası (app.py) bir alt klasördeyse (ser_python gibi)
-# ve templates/static klasörleri de bu alt klasörün içindeyse, Flask bunları otomatik bulur.
 app = Flask(__name__)
 
 # CORS (Cross-Origin Resource Sharing) ayarları
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
-
-# Veritabanı bağlantı bilgileri
-# Render ortamında DB_HOST, DB_USER, DB_PASSWORD, DB_NAME gibi değişkenleri
-# Ortam değişkenleri (Environment Variables) olarak ayarlamanız şiddetle tavsiye edilir.
-# Örneğin: DB_HOST = os.environ.get("DB_HOST", "localhost")
 DB_HOST = "localhost"
 DB_USER = "root"
 DB_PASSWORD = ""
 DB_NAME = "ser"
 
+# Şifre Değiştirme API
+
 def get_db_connection():
-    """MySQL veritabanı bağlantısını döndürür."""
     connection = None
     try:
         connection = pymysql.connect(
@@ -47,52 +39,8 @@ def get_db_connection():
             connection.close()
         raise # Hatayı yukarı fırlat, Flask bunu yakalayacaktır
 
-# Konum verilerini (il/ilçe) JSON dosyasından yükle
-TURKEY_LOCATIONS = {}
-try:
-    script_dir = os.path.dirname(__file__)
-    # Eğer turkey_locations.json app.py ile aynı dizinde değilse, yolu ayarlayın
-    # Şu anki varsayım: turkey_locations.json, app.py ile aynı dizinde (ser_python içinde)
-    file_path = os.path.join(script_dir, 'turkey_locations.json')
-    # Eğer dosya ser_python'ın bir üst dizinindeyse (SER-PROJE kökünde), aşağıdaki satırı kullanın:
-    # file_path = os.path.join(os.path.dirname(script_dir), 'turkey_locations.json')
-    with open(file_path, 'r', encoding='utf-8') as f:
-        TURKEY_LOCATIONS = json.load(f)
-    print("Konum verileri başarıyla yüklendi.")
-except FileNotFoundError:
-    print(f"Hata: 'turkey_locations.json' dosyası bulunamadı. Lütfen '{file_path}' yolunu kontrol edin.")
-    TURKEY_LOCATIONS = {"Türkiye": {"iller": {"Varsayılan İl": ["Varsayılan İlçe"]}}}
-except json.JSONDecodeError:
-    print("Hata: 'turkey_locations.json' dosyası JSON formatında değil veya bozuk.")
-    TURKEY_LOCATIONS = {"Türkiye": {"iller": {"Varsayılan İl": ["Varsayılan İlçe"]}}}
-except Exception as e:
-    print(f"Konum verilerini yüklerken beklenmeyen hata: {e}")
-    TURKEY_LOCATIONS = {"Türkiye": {"iller": {"Varsayılan İl": ["Varsayılan İlçe"]}}}
-
-# --- WEB SAYFASI ROTLARI ---
-# index.html'i sunmak için ana sayfa rotası
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-# Diğer HTML sayfaları için örnek rotalar
-@app.route('/ayarlar')
-def ayarlar_page():
-    return render_template('ayarlar.html')
-
-@app.route('/bildirim')
-def bildirim_page():
-    return render_template('bildirim.html')
-
-@app.route('/kayitolmay')
-def kayitolmay_page():
-    return render_template('kayitolmay.html')
-
-# --- API Rotaları ---
-
 @app.route('/api/update_user_profile', methods=['POST'])
 def update_user_profile():
-    """Kullanıcı profil bilgilerini (ad, email, şifre) günceller."""
     data = request.get_json()
     user_id = data.get('userId')
     current_password = data.get('currentPassword')
@@ -173,10 +121,52 @@ def update_user_profile():
     finally:
         if connection:
             connection.close()
+    data = request.get_json()
+    user_id = data.get('userId')
+    current_password = data.get('currentPassword')
+    new_password = data.get('newPassword')
 
+    if not all([user_id, current_password, new_password]):
+        return jsonify({'message': 'Tüm alanlar gereklidir.'}), 400
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Kullanıcının mevcut şifresini veritabanından çek
+            cursor.execute("SELECT password FROM users WHERE id = %s", (user_id,))
+            user = cursor.fetchone() # password alanı dönecek
+
+            if not user:
+                return jsonify({'message': 'Kullanıcı bulunamadı.'}), 404
+
+            # 'password' anahtarını kullanarak hash'lenmiş şifreye erişiyoruz
+            stored_password_hash = user['password'] 
+
+            # Girilen mevcut şifreyi, veritabanındaki hash ile karşılaştır
+            if not bcrypt.checkpw(current_password.encode('utf-8'), stored_password_hash.encode('utf-8')):
+                return jsonify({'message': 'Mevcut şifre yanlış.'}), 401
+
+            # Yeni şifreyi hash'le
+            hashed_new_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+            # Veritabanında şifreyi güncelle
+            cursor.execute("UPDATE users SET password = %s WHERE id = %s", (hashed_new_password, user_id))
+            connection.commit()
+
+            return jsonify({'message': 'Şifre başarıyla değiştirildi.'}), 200
+
+    except pymysql.Error as e:
+        print(f"Veritabanı şifre değiştirme hatası: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
+    except Exception as e:
+        print(f"Genel şifre değiştirme hatası: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+    finally:
+        if connection:
+            connection.close()
 @app.route('/api/pending-users', methods=['GET'])
 def get_pending_users():
-    """Onay bekleyen kullanıcıları listeler."""
     connection = None
     try:
         connection = get_db_connection()
@@ -194,10 +184,10 @@ def get_pending_users():
     finally:
         if connection:
             connection.close()
+# app.py dosyanızdaki diğer rotaların altına veya uygun bir yere ekleyin
 
 @app.route('/api/users/approve/<int:user_id>', methods=['PATCH'])
 def approve_user(user_id):
-    """Belirtilen kullanıcıyı onaylar."""
     connection = None
     try:
         connection = get_db_connection()
@@ -227,10 +217,9 @@ def approve_user(user_id):
     finally:
         if connection:
             connection.close()
-
+# Diğer rotalarınız ve fonksiyonlarınız...
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
-    """Belirtilen kullanıcıyı siler."""
     connection = None
     try:
         connection = get_db_connection()
@@ -257,9 +246,29 @@ def delete_user(user_id):
         if connection:
             connection.close()
 
+# Veritabanı bağlantısı oluşturan yardımcı fonksiyon
+# Konum verilerini (il/ilçe) JSON dosyasından yükle
+TURKEY_LOCATIONS = {}
+try:
+    script_dir = os.path.dirname(__file__)
+    file_path = os.path.join(script_dir, 'turkey_locations.json')
+    with open(file_path, 'r', encoding='utf-8') as f:
+        TURKEY_LOCATIONS = json.load(f)
+    print("Konum verileri başarıyla yüklendi.")
+except FileNotFoundError:
+    print(f"Hata: 'turkey_locations.json' dosyası bulunamadı. Lütfen '{file_path}' yolunu kontrol edin.")
+    TURKEY_LOCATIONS = {"Türkiye": {"iller": {"Varsayılan İl": ["Varsayılan İlçe"]}}}
+except json.JSONDecodeError:
+    print("Hata: 'turkey_locations.json' dosyası JSON formatında değil veya bozuk.")
+    TURKEY_LOCATIONS = {"Türkiye": {"iller": {"Varsayılan İl": ["Varsayılan İlçe"]}}}
+except Exception as e:
+    print(f"Konum verilerini yüklerken beklenmeyen hata: {e}")
+    TURKEY_LOCATIONS = {"Türkiye": {"iller": {"Varsayılan İl": ["Varsayılan İlçe"]}}}
+
+
+# --- API Rotaları ---
 @app.route('/api/role-permissions', methods=['GET'])
 def get_permissions_by_role():
-    """Belirtilen role ait yetkileri getirir."""
     role_name = request.args.get('role')
     if not role_name:
         return jsonify({'message': 'Rol adı gerekli'}), 400
@@ -282,7 +291,6 @@ def get_permissions_by_role():
 
 @app.route('/api/role-permissions', methods=['POST'])
 def update_role_permissions():
-    """Rol yetkilerini günceller."""
     data = request.json
     role = data.get('role')
     if not role:
@@ -314,9 +322,9 @@ def update_role_permissions():
         if connection:
             connection.close()
 
+# Kullanıcı Kayıt (Register) API
 @app.route('/api/register', methods=['POST'])
 def register_user():
-    """Yeni kullanıcı kaydı yapar."""
     data = request.get_json()
     fullname = data.get('fullname')
     email = data.get('email')
@@ -353,9 +361,10 @@ def register_user():
         if connection:
             connection.close()
 
+
 @app.route('/api/login', methods=['POST'])
 def login_user():
-    """Kullanıcı girişi yapar."""
+    
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
@@ -408,10 +417,9 @@ def login_user():
     finally:
         if connection:
             connection.close()
-
+# Yeni Müşteri Ekle API
 @app.route('/api/customers', methods=['POST'])
 def add_customer():
-    """Yeni müşteri ekler."""
     data = request.get_json()
     customer_name = data.get('companyName')
     status = data.get('status', 'active')
@@ -465,9 +473,9 @@ def add_customer():
         if connection:
             connection.close()
 
+# Tüm Müşterileri Listele API
 @app.route('/api/customers', methods=['GET'])
 def get_customers():
-    """Tüm müşterileri listeler."""
     connection = None
     try:
         connection = get_db_connection()
@@ -493,9 +501,9 @@ def get_customers():
         if connection:
             connection.close()
 
+# Tek bir müşterinin detaylarını çekme API'si (Modal için eklendi)
 @app.route('/api/customers/<int:customer_id>', methods=['GET'])
 def get_customer_details(customer_id):
-    """Belirtilen müşterinin detaylarını getirir."""
     connection = None
     try:
         connection = get_db_connection()
@@ -523,9 +531,9 @@ def get_customer_details(customer_id):
         if connection:
             connection.close()
 
+# Müşteri Güncelleme API (PUT)
 @app.route('/api/customers/<int:customer_id>', methods=['PUT'])
 def update_customer(customer_id):
-    """Müşteri bilgilerini günceller."""
     data = request.get_json()
     customer_name = data.get('companyName')
     status = data.get('status')
@@ -618,7 +626,6 @@ def update_customer(customer_id):
 
 @app.route('/api/customers/<int:customer_id>', methods=['DELETE'])
 def delete_customer(customer_id):
-    """Müşteri siler."""
     connection = None
     try:
         connection = get_db_connection()
@@ -648,9 +655,10 @@ def delete_customer(customer_id):
         if connection:
             connection.close()
 
+
+# Tüm Projeleri Listele API
 @app.route('/api/projects', methods=['GET'])
 def get_projects():
-    """Tüm projeleri listeler ve durumlarını günceller."""
     connection = None
     try:
         connection = get_db_connection()
@@ -882,7 +890,9 @@ def delete_project_api(project_id):
             # for uid in other_users:
             #     if uid not in user_ids_to_notify:
             #         user_ids_to_notify.append(uid)
+
            
+
         return jsonify({'message': 'Proje başarıyla silindi!'}), 200
 
     except pymysql.Error as e:
@@ -1478,6 +1488,10 @@ def add_user():
         if connection:
             connection.close()
 
+@app.route('/ayarlar')
+def ayarlar_page():
+    return render_template('ayarlar.html')
+
 @app.route('/api/roles', methods=['GET'])
 def get_distinct_roles():
     connection = None
@@ -1498,6 +1512,7 @@ def get_distinct_roles():
     finally:
         if connection:
             connection.close()
+from flask import request, jsonify
 
 @app.route('/api/tasks', methods=['POST', 'OPTIONS'])
 def add_task():
@@ -1700,6 +1715,5 @@ def worker_performance():
     finally:
         connection.close()
 
-# Üretim ortamında app.run() kullanılmaz, Gunicorn gibi bir WSGI sunucusu kullanılır.
-# if __name__ == '__main__':
-#     app.run(host='0.0.0.0', port=3001, debug=True)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=3001, debug=True)
