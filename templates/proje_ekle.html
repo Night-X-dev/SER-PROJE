@@ -561,32 +561,34 @@
             border-top: 1px solid var(--border-color);
         }
 
-        /* Notification Panel */
-        #notification-panel {
+        /* Toast */
+        .toast {
             position: fixed;
-            bottom: 20px;
+            bottom: 20px; /* Toast'ı alta taşı */
             right: 20px;
-            background-color: var(--primary);
-            color: var(--white);
             padding: 15px 25px;
             border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            background-color: var(--success);
+            color: var(--white);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 9999; /* En üstte görünmesini sağlar */
             display: flex;
             align-items: center;
             gap: 10px;
             opacity: 0;
-            transform: translateY(100%);
+            transform: translateY(20px); /* Alta doğru kaydırarak gizle */
             transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-            z-index: 10000;
+            pointer-events: none; /* Gizliyken tıklama olaylarını engeller */
         }
 
-        #notification-panel.show {
+        .toast.show {
             opacity: 1;
             transform: translateY(0);
+            pointer-events: auto; /* Görünürken tıklama olaylarına izin verir */
         }
 
-        #notification-panel i {
-            font-size: 20px;
+        .toast.error {
+            background-color: var(--danger);
         }
 
         /* Confirmation Modal - Ensure it's hidden by default and on top */
@@ -607,7 +609,7 @@
 
         @media (max-width: 992px) {
             .sidebar {
-                width: 260px; /* Mobil görünümde açıldığında genişlik */
+                width: 260px; /* Mobil görünümde açıkken genişlik */
                 position: fixed; /* Mobil görünümde sabit */
                 transform: translateX(-100%); /* Varsayılan olarak gizli */
                 box-shadow: 0 0 20px rgba(0,0,0,0.3);
@@ -666,7 +668,7 @@
                 justify-content: flex-end; /* Aksiyonları sağa hizala */
                 order: 3; /* Aramadan sonra yerleştir */
                 margin-left: auto; /* Aksiyonları en sağa it */
-                flex-wrap: nowrap; /* Aksiyonların kendilerinin sarmalamasını engelle */
+                flex-wrap: nowrap; /* Aksiyonların kendi içinde sarmalamasını engelle */
                 gap: 10px; /* Mobil'de aksiyonlar için daha küçük boşluk */
             }
 
@@ -695,6 +697,10 @@
             }
             .page-actions .btn {
                 width: 100%; /* Butonları tam genişlik yap */
+            }
+
+            .filter-row {
+                grid-template-columns: repeat(2, 1fr); /* Tablette 2 sütun */
             }
         }
 
@@ -767,11 +773,11 @@
                 font-size: 18px; /* Başlık boyutunu küçült */
             }
             .btn {
-                padding: 8px 15px; /* Buton paddingini küçült */
+                padding: 8px 15px;
                 font-size: 14px;
             }
             input, select, textarea {
-                padding: 10px 12px; /* Input paddingini küçült */
+                padding: 10px 12px;
                 font-size: 14px;
             }
             .progress-item {
@@ -988,9 +994,7 @@
                     <i class="fas fa-moon"></i>
                 </div>
                 
-                <div class="notification-btn">
-                    <i class="fas fa-bell"></i>
-                </div>
+                <!-- Bildirim butonu kaldırıldı -->
                 
                 <div class="user-profile">
                     <div class="user-avatar" id="userAvatar">MÖ</div>
@@ -1128,9 +1132,10 @@
         </div>
     </div>
 
-    <div id="notification-panel">
+    <!-- Genel Toast Bildirim Alanı -->
+    <div class="toast" id="toast">
         <i class="fas fa-check-circle"></i>
-        <span id="notification-message"></span>
+        <span id="toastMessage">İşlem başarıyla tamamlandı</span>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -1141,8 +1146,28 @@
         const API_BASE_URL = 'https://ser-proje.onrender.com'; 
 
         let confirmCallback = null; // Callback function to execute on confirmation
-
         
+        // Genel Toast bildirim fonksiyonu
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+
+            if (!toast || !toastMessage) {
+                console.error("Toast elementleri bulunamadı!");
+                return;
+            }
+
+            toastMessage.textContent = message;
+            toast.classList.remove('success', 'error'); // Önceki durumları temizle
+            toast.classList.add(isError ? 'error' : 'success'); // Yeni durumu ekle
+
+            toast.classList.add('show'); // 'show' sınıfı CSS ile toast'ı görünür yapar
+
+            setTimeout(() => {
+                toast.classList.remove('show'); // 'show' sınıfını kaldırarak toast'ı gizle
+            }, 3000); // 3 saniye sonra kaybolur
+        }
+
         // Tarih seçicileri başlat
         document.addEventListener('DOMContentLoaded', function() {
             const dateOptions = {
@@ -1167,10 +1192,6 @@
             const addProgressButton = document.getElementById('add-progress');
             const progressList = document.querySelector('.progress-list');
 
-            // Notification Panel Referansları
-            const notificationPanel = document.getElementById('notification-panel');
-            const notificationMessage = document.getElementById('notification-message');
-
             // Confirmation Modal "Onayla" butonu için olay dinleyicisi
             const confirmActionBtn = document.getElementById('confirmActionBtn');
             if (confirmActionBtn) {
@@ -1189,7 +1210,7 @@
             // --- Oturum Kontrolü ve Yönlendirme ---
             const storedUser = localStorage.getItem('currentUser');
             if (!storedUser) {
-                showNotification("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", false);
+                showToast("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", true);
                 setTimeout(() => {
                     window.location.href = 'login.html';
                 }, 2000); // 2 saniye sonra yönlendir
@@ -1200,7 +1221,7 @@
                 } catch (e) {
                     console.error("Kayıtlı kullanıcı verisi bozuk:", e);
                     localStorage.removeItem('currentUser');
-                    showNotification("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", false);
+                    showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", true);
                     setTimeout(() => {
                         window.location.href = 'login.html';
                     }, 2000); // 2 saniye sonra yönlendir
@@ -1308,7 +1329,7 @@
 
                 } catch (error) {
                     console.error('Müşteri/Yönetici verilerini çekerken hata:', error);
-                    showNotification('Gerekli müşteri ve yönetici listeleri yüklenemedi. Sunucu hatası veya bağlantı sorunu.', false);
+                    showToast('Gerekli müşteri ve yönetici listeleri yüklenemedi. Sunucu hatası veya bağlantı sorunu.', true);
                 }
             }
 
@@ -1361,24 +1382,6 @@
             addProgressButton.addEventListener('click', () => addProgressItem());
 
 
-            // --- Notification Panel Function ---
-            function showNotification(message, isSuccess = true) {
-                notificationMessage.textContent = message;
-                if (isSuccess) {
-                    notificationPanel.style.backgroundColor = 'var(--primary)'; // Blue for success
-                    notificationPanel.querySelector('i').className = 'fas fa-check-circle';
-                } else {
-                    notificationPanel.style.backgroundColor = '#dc3545'; // Red for error
-                    notificationPanel.querySelector('i').className = 'fas fa-exclamation-circle';
-                }
-                notificationPanel.classList.add('show');
-
-                setTimeout(() => {
-                    notificationPanel.classList.remove('show');
-                }, 3000); // 3 saniye sonra kaybol
-            }
-
-
             // --- Projeyi Kaydet ---
             saveProjectButton.addEventListener('click', async () => {
                 const projectName = document.getElementById('project-name').value.trim();
@@ -1394,16 +1397,16 @@
 
                 // Temel validasyon
                 if (!projectName || !customerId || !projectManagerId || !startDate || !endDate) {
-                    showNotification('Lütfen Proje Adı, Müşteri, Proje Yöneticisi, Planlı Başlangıç ve Bitiş Tarihi alanlarını doldurun.', false);
+                    showToast('Lütfen Proje Adı, Müşteri, Proje Yöneticisi, Planlı Başlangıç ve Bitiş Tarihi alanlarını doldurun.', true);
                     return;
                 }
                 
                 if (customerId === "") {
-                    showNotification("Lütfen bir müşteri seçin.", false);
+                    showToast("Lütfen bir müşteri seçin.", true);
                     return;
                 }
                 if (projectManagerId === "") {
-                    showNotification("Lütfen bir proje yöneticisi seçin.", false);
+                    showToast("Lütfen bir proje yöneticisi seçin.", true);
                     return;
                 }
 
@@ -1417,7 +1420,7 @@
                     const endInput = item.querySelector('input.progress-datepicker[placeholder="Bitiş"]');
 
                     if (!titleInput.value.trim() || !startInput.value || !endInput.value) {
-                        showNotification('Lütfen tüm iş gidişatı adımlarının başlık ve tarihlerini doldurun.', false);
+                        showToast('Lütfen tüm iş gidişatı adımlarının başlık ve tarihlerini doldurun.', true);
                         progressValidationFailed = true;
                         return;
                     }
@@ -1455,7 +1458,7 @@
 
                     const projectResult = await projectResponse.json();
                     if (projectResponse.ok) {
-                        showNotification(projectResult.message || 'Proje başarıyla eklendi!', true);
+                        showToast(projectResult.message || 'Proje başarıyla eklendi!', false);
                         // Proje başarıyla eklendikten sonra:
                         addActivity(
                           'Proje Eklendi',
@@ -1473,13 +1476,13 @@
                     }
                 } catch (error) {
                     console.error('Proje kaydetme hatası:', error);
-                    showNotification('Proje kaydedilirken hata oluştu: ' + error.message, false);
+                    showToast('Proje kaydedilirken hata oluştu: ' + error.message, true);
                 }
             });
 
             // İptal butonu
            cancelProjectButton.addEventListener('click', () => {
-                showNotification("Proje ekleme iptal edildi.", false); // Onay modalı olmadan doğrudan bildirim göster
+                showToast("Proje ekleme iptal edildi.", false); // Onay modalı olmadan doğrudan bildirim göster
                 setTimeout(() => {
                     window.location.href = 'index.html'; // 1 saniye sonra ana sayfaya yönlendir
                 }, 1000);
@@ -1537,8 +1540,8 @@ function getCurrentUserRole() {
 async function checkPermission(permissionKey) {
     const role = getCurrentUserRole();
     if (!role) {
-        // alert yerine showNotification kullanıldı
-        showNotification('Kullanıcı rolü bulunamadı. Lütfen tekrar giriş yapın.', false);
+        // alert yerine showToast kullanıldı
+        showToast('Kullanıcı rolü bulunamadı. Lütfen tekrar giriş yapın.', true);
         setTimeout(() => { window.location.href = 'index.html'; }, 1500);
         return false;
     }
@@ -1548,15 +1551,15 @@ async function checkPermission(permissionKey) {
         const perms = await response.json();
         const permission = Array.isArray(perms) ? perms[0] : perms;
         if (permission[permissionKey] != 1) {
-            // alert yerine showNotification kullanıldı
-            showNotification('Proje ekleme yetkiniz yok!', false);
+            // alert yerine showToast kullanıldı
+            showToast('Proje ekleme yetkiniz yok!', true);
             setTimeout(() => { window.location.href = 'index.html'; }, 1500);
             return false;
         }
         return true;
     } catch (error) {
-        // alert yerine showNotification kullanıldı
-        showNotification('Yetki sorgusu sırasında hata oluştu.', false);
+        // alert yerine showToast kullanıldı
+        showToast('Yetki sorgusu sırasında hata oluştu.', true);
         setTimeout(() => { window.location.href = 'index.html'; }, 1500);
         return false;
     }
