@@ -13,7 +13,59 @@ import datetime
 app = Flask(__name__)
 @app.route('/')
 def serve_login_page():
+    """Kök URL'ye (/) gelen istekleri login.html sayfasına yönlendirir."""
     return render_template('login.html')
+
+@app.route('/index.html')
+def serve_index_page():
+    """/index.html URL'ye gelen istekleri index.html sayfasına yönlendirir."""
+    return render_template('index.html')
+
+@app.route('/ayarlar.html')
+def serve_ayarlar_page():
+    """/ayarlar.html URL'ye gelen istekleri ayarlar.html sayfasına yönlendirir."""
+    return render_template('ayarlar.html')
+
+@app.route('/kayitonay.html')
+def serve_kayitonay_page():
+    """/kayitonay.html URL'ye gelen istekleri kayitonay.html sayfasına yönlendirir."""
+    return render_template('kayitonay.html')
+
+@app.route('/musteriler.html')
+def serve_musteriler_page():
+    """/musteriler.html URL'ye gelen istekleri musteriler.html sayfasına yönlendirir."""
+    return render_template('musteriler.html')
+
+@app.route('/proje_ekle.html')
+def serve_proje_ekle_page():
+    """/proje_ekle.html URL'ye gelen istekleri proje_ekle.html sayfasına yönlendirir."""
+    return render_template('proje_ekle.html')
+
+@app.route('/projeler.html')
+def serve_projeler_page():
+    """/projeler.html URL'ye gelen istekleri projeler.html sayfasına yönlendirir."""
+    return render_template('projeler.html')
+
+@app.route('/raporlar.html')
+def serve_raporlar_page():
+    """/raporlar.html URL'ye gelen istekleri raporlar.html sayfasına yönlendirir."""
+    return render_template('raporlar.html')
+
+@app.route('/takvim.html')
+def serve_takvim_page():
+    """/takvim.html URL'ye gelen istekleri takvim.html sayfasına yönlendirir."""
+    return render_template('takvim.html')
+
+@app.route('/waiting.html')
+def serve_waiting_page():
+    """/waiting.html URL'ye gelen istekleri waiting.html sayfasına yönlendirir."""
+    return render_template('waiting.html')
+
+@app.route('/yeni_musteri.html')
+def serve_yeni_musteri_page():
+    """/yeni_musteri.html URL'ye gelen istekleri yeni_musteri.html sayfasına yönlendirir."""
+    return render_template('yeni_musteri.html')
+
 # CORS (Cross-Origin Resource Sharing) ayarları
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 DB_HOST = os.getenv("MYSQL_HOST") or "localhost"
