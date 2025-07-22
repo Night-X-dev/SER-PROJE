@@ -7,8 +7,8 @@ import os
 import json
 import datetime
 # Eğer dotenv kütüphanesini kullanıyorsanız aşağıdaki satırın yorumunu kaldırın:
-# from dotenv import load_dotenv
-# load_dotenv()
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
 @app.route('/')
@@ -68,7 +68,7 @@ def serve_yeni_musteri_page():
 
 # CORS (Cross-Origin Resource Sharing) ayarları
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
-DB_HOST = os.getenv("MYSQL_HOST") or "localhost"
+DB_HOST = os.getsrc="{{ url_for('static', filename='serlogo.png') }}"("MYSQL_HOST") or "localhost"
 DB_PORT = int(os.getenv("MYSQL_PORT") or 3306) # Port değeri int olmalı
 DB_USER = os.getenv("MYSQL_USER") or "root"
 DB_PASSWORD = os.getenv("MYSQL_PASSWORD") or ""
