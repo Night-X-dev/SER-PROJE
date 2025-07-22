@@ -72,15 +72,6 @@ def serve_yeni_musteri_page():
 # CORS (Cross-Origin Resource Sharing) ayarları
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
-# DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME değişkenlerini doğrudan kullanmak yerine,
-# get_db_connection fonksiyonu içinde dinamik olarak belirleyeceğiz.
-# Bu satırlar artık gerekli değil, fonksiyon içinde dinamik olarak belirlenecekler.
-# DB_HOST = os.getenv("MYSQL_HOST") or "localhost"
-# DB_PORT = int(os.getenv("MYSQL_PORT") or 3306)
-# DB_USER = os.getenv("MYSQL_USER") or "root"
-# DB_PASSWORD = os.getenv("MYSQL_PASSWORD") or ""
-# DB_NAME = os.getenv("MYSQL_DATABASE") or "ser"
-
 def get_db_connection():
     connection = None
     try:
@@ -90,34 +81,36 @@ def get_db_connection():
         password = None
         database = None
 
-        # MYSQL_PUBLIC_URL'den bağlantı bilgilerini almaya çalış
         public_url = os.getenv("MYSQL_PUBLIC_URL")
+        print(f"DEBUG: MYSQL_PUBLIC_URL from env: '{public_url}'") # Added more detailed logging
+
         if public_url:
             try:
                 parsed_url = urllib.parse.urlparse(public_url)
                 host = parsed_url.hostname
-                port = parsed_url.port if parsed_url.port else 3306 # URL'de port belirtilmemişse varsayılan 3306
+                port = parsed_url.port if parsed_url.port else 3306
                 user = parsed_url.username
                 password = parsed_url.password
-                database = parsed_url.path.lstrip('/') # Baştaki '/' karakterini kaldır
-                print(f"Using public URL: Host={host}, Port={port}, User={user}, DB={database}")
+                database = parsed_url.path.lstrip('/')
+                print(f"DEBUG: Using parsed public URL. Host={host}, Port={port}, User={user}, DB={database}")
             except Exception as url_parse_e:
-                print(f"Error parsing MYSQL_PUBLIC_URL: {url_parse_e}. Falling back to individual env vars.")
+                print(f"ERROR: Failed to parse MYSQL_PUBLIC_URL: {url_parse_e}. Falling back to individual env vars.")
                 # URL ayrıştırma hatası durumunda tekil ortam değişkenlerine geri dön
                 host = os.getenv("MYSQL_HOST") or "localhost"
                 port = int(os.getenv("MYSQL_PORT") or 3306)
                 user = os.getenv("MYSQL_USER") or "root"
                 password = os.getenv("MYSQL_PASSWORD") or ""
                 database = os.getenv("MYSQL_DATABASE") or "ser"
-                print(f"Using individual env vars fallback: Host={host}, Port={port}, User={user}, DB={database}")
+                print(f"DEBUG: Using individual env vars fallback: Host={host}, Port={port}, User={user}, DB={database}")
         else:
+            print("DEBUG: MYSQL_PUBLIC_URL not found or empty. Using individual env vars.")
             # MYSQL_PUBLIC_URL yoksa tekil ortam değişkenlerini veya varsayılanları kullan
             host = os.getenv("MYSQL_HOST") or "localhost"
             port = int(os.getenv("MYSQL_PORT") or 3306)
             user = os.getenv("MYSQL_USER") or "root"
             password = os.getenv("MYSQL_PASSWORD") or ""
             database = os.getenv("MYSQL_DATABASE") or "ser"
-            print(f"Using individual env vars: Host={host}, Port={port}, User={user}, DB={database}")
+            print(f"DEBUG: Using individual env vars: Host={host}, Port={port}, User={user}, DB={database}")
 
         connection = pymysql.connect(
             host=host,
