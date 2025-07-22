@@ -1,0 +1,1850 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ser Elektrik Otomasyon - İş Takvimi</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        :root {
+            /* Renk Paleti */
+            --primary: #005c9d;
+            --primary-light: #0980d3;
+            --white: #ffffff;
+            --light-gray: #97a1aa;
+            --dark-gray: #5e6870;
+            
+            /* Gündüz Modu */
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --input-bg: #f0f4f8;
+            --border-color: #e1e5e9;
+            --sidebar-bg: #ffffff;
+            --topbar-bg: #ffffff;
+            --success: #2ed573;
+            --danger: #ff4757;
+        }
+
+        [data-theme="dark"] {
+            /* Gece Modu */
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --input-bg: #2d2d2d;
+            --border-color: #3a3a3a;
+            --sidebar-bg: #1a1a1a;
+            --topbar-bg: #1a1a1a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Hamburger menü butonu */
+        .hamburger-menu {
+            display: none; /* Varsayılan olarak gizli */
+            background-color: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            font-size: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            margin-right: 15px; /* Sağında boşluk bırak */
+            flex-shrink: 0; /* Küçülmesini engelle */
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            height: 100vh;
+            position: fixed; /* Masaüstünde sabit */
+            overflow-y: auto;
+            padding: 20px 0;
+            z-index: 1000;
+            transform: translateX(0); /* Masaüstünde görünür */
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .sidebar.show { /* Mobil görünümde açıldığında */
+            transform: translateX(0);
+        }
+        .sidebar.hidden { /* Mobil görünümde gizli */
+            transform: translateX(-100%);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            padding: 0 20px 25px 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 25px;
+        }
+
+        .logo-icon {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 20px;
+            margin-right: 12px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .nav-item {
+            padding: 12px 25px;
+            display: flex;
+            align-items: center;
+            color: var(--text-color);
+            text-decoration: none;
+            border-left: 3px solid transparent;
+            margin-bottom: 5px;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background-color: rgba(9, 128, 211, 0.1);
+            border-left-color: var(--primary-light);
+            color: var(--primary-light);
+        }
+
+        .nav-item i {
+            font-size: 18px;
+            margin-right: 15px;
+            width: 24px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 260px; /* Sidebar genişliği kadar boşluk */
+            transition: margin-left 0.3s ease-in-out;
+            width: calc(100% - 260px); /* Kalan genişliği kapla */
+        }
+
+        .main-content.expanded {
+            margin-left: 0; /* Sidebar gizlendiğinde boşluk sıfırla */
+            width: 100%;
+        }
+
+        /* Topbar */
+        .topbar {
+            background-color: var(--topbar-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between; /* Masaüstü varsayılan */
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            flex-wrap: nowrap; /* Masaüstünde sarmalamayı engelle */
+            gap: 15px; /* Öğeler arası boşluk */
+        }
+
+        .search-container {
+            position: relative;
+            width: 300px; /* Masaüstü varsayılan */
+            flex-grow: 1; /* Esnek genişlik */
+        }
+
+        .search-container input {
+            width: 100%;
+            padding: 10px 15px 10px 40px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+        }
+
+        .search-container i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--light-gray);
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-left: auto; /* Masaüstünde sağa it */
+            flex-shrink: 0; /* Küçülmesini engelle */
+        }
+
+        .notification-btn, .theme-toggle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            cursor: pointer;
+            position: relative;
+            flex-shrink: 0; /* Küçülmesini engelle */
+        }
+
+        .notification-btn::after {
+            content: "3";
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #ff4757;
+            color: white;
+            font-size: 10px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: 600;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .user-role {
+            font-size: 13px;
+            color: var(--light-gray);
+        }
+
+        /* Tek Çıkış Butonu Stilleri */
+        .logout-btn {
+            display: flex; /* Varsayılan olarak masaüstünde görünür */
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px; /* Standart padding */
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            gap: 8px;
+            transition: all 0.3s ease;
+            background: transparent;
+            border: 1px solid var(--primary-light);
+            color: var(--primary-light);
+            margin-left: 10px; /* Masaüstünde sağa boşluk */
+        }
+
+        .logout-btn:hover {
+            background-color: var(--primary); /* Takvim.html'deki gibi hover rengi */
+            color: var(--white); /* Takvim.html'deki gibi yazı rengi */
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2); /* Takvim.html'deki gibi gölge */
+        }
+
+        /* Calendar Content */
+        .calendar-content {
+            padding: 30px;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap; /* Mobil görünümde alt alta gelmesi için */
+            gap: 15px; /* Öğeler arası boşluk */
+        }
+
+        .page-title {
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .page-title i {
+            color: var(--primary-light);
+        }
+
+        .calendar-actions {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap; /* Mobil görünümde alt alta gelmesi için */
+            justify-content: flex-end; /* Sağ tarafa hizala */
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(to right, var(--primary), var(--primary-light));
+            color: var(--white);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--primary-light);
+            color: var(--primary-light);
+        }
+
+        .btn i {
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(9, 128, 211, 0.3);
+        }
+
+        /* Calendar Container */
+        .calendar-container {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            margin-bottom: 30px;
+            height: 700px; /* Fixed height for calendar */
+        }
+
+        /* Takvim etkinliklerinde metin taşmasını önleme */
+        .fc-event {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .fc-event .fc-event-title {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Gece temasında takvim gün hücreleri */
+        [data-theme="dark"] .fc-daygrid-day {
+            background-color: var(--card-bg);
+        }
+
+        [data-theme="dark"] .fc-col-header-cell {
+            background-color: var(--card-bg);
+        }
+
+        /* Task Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            width: 500px;
+            max-width: 90%;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--light-gray);
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            color: var(--primary-light);
+            transform: rotate(90deg);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            font-size: 15px;
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        /* Task List */
+        .tasks-container {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+        }
+
+        .tasks-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .tasks-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: var(--input-bg);
+            border-left: 4px solid var(--primary-light);
+            transition: all 0.2s;
+        }
+
+        .task-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .task-priority {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 15px;
+        }
+
+        .priority-high {
+            background-color: #ff4757;
+        }
+
+        .priority-medium {
+            background-color: #ffa502;
+        }
+
+        .priority-low {
+            background-color: #2ed573;
+        }
+
+        .task-content {
+            flex: 1;
+        }
+
+        .task-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .task-desc {
+            font-size: 14px;
+            color: var(--light-gray);
+            margin-bottom: 5px;
+        }
+
+        .task-time {
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--primary-light);
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .task-action-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(9, 128, 211, 0.1);
+            color: var(--primary-light);
+            cursor: pointer;
+        }
+
+        .task-action-btn:hover {
+            background-color: rgba(9, 128, 211, 0.2);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--light-gray);
+            font-size: 14px;
+            border-top: 1px solid var(--border-color);
+            margin-top: 30px;
+        }
+
+        /* Confirmation Modal Styles */
+        #confirmationModal {
+            display: none; /* Ensure it's hidden by default */
+            z-index: 2001; /* Higher than taskModal's z-index */
+        }
+        #confirmationModal.show {
+            display: block; /* Bootstrap will add this when showing */
+        }
+        .modal-content {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-header {
+            border-bottom-color: var(--border-color);
+        }
+
+        .modal-title {
+            color: var(--primary);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-body p {
+            margin-bottom: 8px;
+        }
+
+        .modal-body strong {
+            color: var(--dark-gray);
+        }
+
+        .modal-body hr {
+            border-top: 1px solid var(--border-color);
+            margin: 20px 0;
+        }
+
+        .modal-body h6 {
+            color: var(--primary-light);
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .input-group .form-control {
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            border-color: var(--border-color);
+        }
+
+        .input-group .btn-primary {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .input-group .btn-primary:hover {
+            background-color: var(--primary-light);
+            border-color: var(--primary-light);
+        }
+
+        .modal-footer {
+            border-top-color: var(--border-color);
+        }
+
+        .modal-footer .btn-secondary {
+            background-color: var(--light-gray);
+            border-color: var(--light-gray);
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .form-row {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .sidebar {
+                width: 260px; /* Mobil görünümde açıkken genişlik */
+                position: fixed;
+                transform: translateX(-100%); /* Varsayılan olarak gizli */
+                box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            }
+            .sidebar.show {
+                transform: translateX(0); /* Açıldığında görünür */
+            }
+            
+            .logo-text, .nav-text {
+                display: block; /* Mobil menü açıkken görünür */
+            }
+            
+            .logo-container {
+                justify-content: flex-start;
+                padding: 0 20px 25px 20px;
+            }
+            
+            .logo-icon {
+                margin-right: 12px;
+            }
+            
+            .nav-item {
+                justify-content: flex-start;
+                padding: 12px 25px;
+            }
+            
+            .nav-item i {
+                margin-right: 15px;
+            }
+            
+            .main-content {
+                margin-left: 0; /* Mobil görünümde boşluk yok */
+                width: 100%;
+            }
+
+            .topbar {
+                flex-direction: row; /* Topbar için satır yönünü koru */
+                justify-content: flex-start; /* Öğeleri başlangıca hizala */
+                flex-wrap: nowrap; /* Orta boyutlarda sarmalamayı engelle */
+                padding: 10px 15px; /* Mobil için daha küçük padding */
+                align-items: center; /* Öğeleri dikeyde ortala */
+                gap: 10px; /* Hamburger ve arama kutusu arasına boşluk */
+            }
+            .hamburger-menu {
+                display: block; /* Mobil görünümde göster */
+                order: 1; /* Hamburger menü ilk sırada */
+            }
+            .search-container {
+                width: auto; /* Arama çubuğunun küçülmesine izin ver */
+                flex-grow: 1; /* Kalan alanı kapla */
+                order: 2; /* Hamburgerden sonra yerleştir */
+                margin-left: 0; /* Önceki margin-left'i sıfırla */
+            }
+
+            .topbar-actions {
+                width: auto; /* Otomatik genişlik */
+                justify-content: flex-end; /* Aksiyonları sağa hizala */
+                order: 3; /* Aramadan sonra yerleştir */
+                margin-left: auto; /* Aksiyonları en sağa it */
+                flex-wrap: nowrap; /* Aksiyonların kendilerinin sarmalamasını engelle */
+                gap: 10px; /* Mobil'de aksiyonlar için daha küçük boşluk */
+                margin-top: 0; /* Üstten boşluğu kaldır */
+            }
+
+            .user-profile {
+                flex-grow: 0; /* Mobil'de büyümesini engelle */
+            }
+
+            /* Mobil için tek çıkış butonu */
+            .logout-btn {
+                padding: 10px 12px; /* Daha küçük padding */
+                width: auto; /* Genişliği içeriğe göre ayarla */
+                min-width: 40px; /* Minimum genişlik (ikon için) */
+                height: 40px; /* Yüksekliği sabitle */
+                margin-left: 0 !important; /* Masaüstü margin'ini sıfırla */
+            }
+            .logout-btn .logout-text {
+                display: none; /* Metni gizle */
+            }
+            .logout-btn i {
+                margin-right: 0; /* İkonun sağındaki boşluğu kaldır */
+            }
+
+            .page-actions {
+                width: 100%;
+                justify-content: center; /* Butonları ortala */
+            }
+            .page-actions .btn {
+                width: 100%; /* Butonları tam genişlik yap */
+            }
+            .calendar-container {
+                height: 500px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .search-container {
+                width: 100%;
+            }
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            .calendar-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+            .calendar-container {
+                height: 450px; /* Daha küçük ekranlar için takvim yüksekliğini ayarla */
+            }
+        }
+
+        @media (max-width: 576px) {
+            .sidebar {
+                width: 0;
+                overflow: hidden;
+                transform: translateX(-100%); /* Tamamen gizle */
+            }
+            .sidebar.show { /* Mobil görünümde açıldığında */
+                width: 260px; /* Sidebar'ın genişliğini ayarla */
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .topbar {
+                padding: 15px;
+                flex-wrap: nowrap; /* Çok küçük ekranlarda da sarmalamayı engelle */
+                gap: 10px; /* Hamburger ve arama kutusu arasına boşluk */
+                flex-direction: row; 
+                justify-content: flex-start; /* Öğeleri başlangıca hizala */
+                align-items: center;
+            }
+            .hamburger-menu {
+                order: 1; /* Hamburger menü ilk sırada */
+            }
+            .search-container {
+                flex-grow: 1; /* Kalan alanı kapla */
+                order: 2; /* Arama kutusu ikinci sırada */
+                margin-left: 0; /* Önceki margin-left'i sıfırla */
+                width: auto; /* Otomatik genişlik */
+            }
+            .topbar-actions {
+                width: auto; /* Aksiyonların genişliği otomatik olsun */
+                order: 3; /* Aksiyonlar üçüncü sırada */
+                justify-content: flex-end; /* Aksiyonları sağa hizala */
+                margin-left: auto; /* Sağ tarafa it */
+                flex-wrap: nowrap; /* Aksiyonların kendi içinde sarmalamasını engelle */
+                gap: 8px; /* Daha küçük boşluk */
+            }
+            .user-info {
+                display: none;
+            }
+            .calendar-content {
+                padding: 15px;
+            }
+            .page-title {
+                font-size: 22px;
+            }
+            .btn {
+                padding: 8px 15px;
+                font-size: 14px;
+            }
+            input, select, textarea {
+                padding: 10px 12px;
+                font-size: 14px;
+            }
+            .calendar-container {
+                height: 350px; /* Çok küçük ekranlar için takvim yüksekliğini ayarla */
+                padding: 10px;
+            }
+            .fc-toolbar-chunk:nth-child(1) { /* prev,next,today */
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            .fc-toolbar-chunk:nth-child(3) { /* dayGridMonth,timeGridWeek,timeGridDay */
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                width: 100%;
+            }
+            .fc-toolbar-chunk:nth-child(2) { /* title */
+                order: -1; /* Başlığı en üste taşı */
+                width: 100%;
+                text-align: center;
+                margin-bottom: 10px;
+            }
+            .fc-button-group {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .fc-button {
+                margin: 5px;
+            }
+        }
+        .btn-danger {
+            background: #ff4757;
+            color: #fff;
+        }
+        .btn-danger:hover {
+            background: #e84118;
+        }
+
+        /* Notification Panel Styles */
+        #notification-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: var(--primary);
+            color: var(--white);
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-20px);
+            transition: all 0.3s ease-in-out;
+            z-index: 3000; /* Ensure it's on top */
+        }
+
+        #notification-panel.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        #notification-panel i {
+            font-size: 20px;
+        }
+
+        #notification-message {
+            font-weight: 500;
+        }
+        /* Confirmation Modal tam ortalı ve belirgin olsun */
+        #confirmationModal .modal-dialog {
+            display: flex;
+            align-items: center;
+            min-height: 100vh;
+            justify-content: center;
+        }
+        #confirmationModal .modal-content {
+            margin: auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+            border-radius: 16px;
+            border: 2px solid var(--primary-light);
+            max-width: 350px;
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <!-- Confirmation Modal -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered"> <!-- Added modal-dialog-centered class -->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmationModalLabel">Onay Gerekli</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="confirmationMessage">
+                    Emin misiniz?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary" id="confirmActionBtn">Onayla</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Panel -->
+    <div id="notification-panel">
+        <i class="fas fa-info-circle"></i>
+        <span id="notification-message"></span>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <a href="index.html" style="text-decoration: none;">
+            <div class="logo-container" style="cursor: pointer;">
+              <img src="serlogo.png" alt="Ser Elektrik Otomasyon" style="width: 180px; height: auto; padding-left: 10px;">
+            </div>
+          </a>
+          
+        
+        <a href="index.html" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span class="nav-text">Dashboard</span>
+        </a>
+        <a href="projeler.html" class="nav-item">
+            <i class="fas fa-project-diagram"></i>
+            <span class="nav-text">Projeler</span>
+        </a>
+        <a href="proje_ekle.html" class="nav-item">
+            <i class="fas fa-plus-circle"></i>
+            <span class="nav-text">Yeni Proje</span>
+        </a>
+        <a href="raporlar.html" class="nav-item">
+            <i class="fas fa-chart-line"></i>
+            <span class="nav-text">Raporlar</span>
+        </a>
+        <a href="musteriler.html" class="nav-item">
+            <i class="fas fa-users"></i>
+            <span class="nav-text">Müşteriler</span>
+        </a>
+        <a href="takvim.html" class="nav-item active">
+            <i class="fas fa-calendar-alt"></i>
+            <span class="nav-text">Takvim</span>
+        </a>
+        <a href="ayarlar.html" class="nav-item">
+            <i class="fas fa-cog"></i>
+            <span class="nav-text">Ayarlar</span>
+        </a>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <!-- Topbar -->
+        <div class="topbar">
+            <!-- Hamburger Menü Butonu -->
+            <button class="hamburger-menu" id="hamburgerMenu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="search-container">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Görev, müşteri veya proje ara...">
+            </div>
+            
+            <div class="topbar-actions">
+                <div class="theme-toggle" id="theme-toggle">
+                    <i class="fas fa-moon"></i>
+                </div>
+                
+                <div class="notification-btn">
+                    <i class="fas fa-bell"></i>
+                </div>
+                
+                 <div class="user-profile">
+                    <div class="user-avatar" id="userAvatar"></div>
+                    <div class="user-info">
+                        <div class="user-name" id="userName"></div>
+                        <div class="user-role" id="userRole"></div>
+                    </div>
+                </div>
+                <button class="btn btn-outline logout-btn" id="logoutButton">
+                    <i class="fas fa-sign-out-alt"></i> <span class="logout-text">Çıkış Yap</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Calendar Content -->
+        <div class="calendar-content">
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-calendar-alt"></i>
+                    İş Takvimi
+                </h1>
+                <div class="calendar-actions">
+                    <button class="btn btn-outline">
+                        <i class="fas fa-filter"></i> Filtrele
+                    </button>
+                    <button class="btn btn-primary" id="addTask">
+                        <i class="fas fa-plus"></i> Yeni Görev
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Calendar Container -->
+            <div class="calendar-container" id="calendar"></div>
+            
+            <!-- Upcoming Tasks -->
+            <div class="tasks-container">
+                <div class="tasks-header">
+                    <div class="tasks-title">Yaklaşan Görevlerim</div>
+                </div>
+                <div class="task-list" id="taskList">
+                    <!-- Tasks will be populated by JavaScript -->
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="footer">
+                &copy; 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır. | Mustafa Öztürk
+            </div>
+        </div>
+    </div>
+    
+    <!-- Task Modal -->
+    <div class="modal" id="taskModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Yeni Görev Ekle</h2>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Görev Başlığı</label>
+                    <input type="text" class="form-input" id="taskTitle" placeholder="Görev başlığını girin">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Başlangıç Tarihi</label>
+                        <input type="datetime-local" class="form-input" id="taskStart">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Bitiş Tarihi</label>
+                        <input type="datetime-local" class="form-input" id="taskEnd">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Öncelik</label>
+                    <select class="form-select" id="taskPriority">
+                        <option value="high">Yüksek Öncelikli</option>
+                        <option value="medium" selected>Orta Öncelikli</option>
+                        <option value="low">Düşük Öncelikli</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Açıklama</label>
+                    <textarea class="form-textarea" id="taskDescription" placeholder="Görev açıklamasını girin"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Görev Atanacak Kişi</label>
+                    <select class="form-select" id="taskAssignee">
+                        <!-- JS ile doldurulacak -->
+                    </select>
+                    <div id="assigneeInfo" style="margin-top:4px; font-size:13px; color:#888;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="cancelTask">İptal</button>
+                <button class="btn btn-danger" id="deleteTask" style="display:none;">Sil</button>
+                <button class="btn btn-primary" id="saveTask">Görevi Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="taskDetailModal">
+        <div class="modal-content" style="max-width:480px; min-width:320px;">
+            <div class="modal-header">
+                <h2 class="modal-title" style="font-size:18px;">Görev Detayı</h2>
+                <button class="modal-close" id="closeTaskDetailModal">&times;</button>
+            </div>
+            <div class="modal-body" id="taskDetailBody" style="font-size:15px; padding:10px 0;">
+                <!-- JS ile doldurulacak -->
+            </div>
+            <div class="modal-footer" id="taskDetailFooter" style="justify-content: flex-end; gap: 10px;">
+                <button class="btn btn-danger" id="deleteTaskFromDetail" style="display:none;">Sil</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/tr.min.js"></script>
+    <script>
+        // Takvim nesnesi
+        let calendar;
+        let tasks = []; // tasks dizisini burada tanımla
+        let users = []; // Kullanıcıları burada sakla
+        let editingTask = null;
+
+        // Confirmation Modal için callback
+        let confirmCallback = null;
+
+        // Confirmation Modal'ı gösterme fonksiyonu
+        function showConfirmationModal(message, onConfirm) {
+            document.getElementById('confirmationMessage').textContent = message;
+            confirmCallback = onConfirm; // Callback'i sakla
+
+            const confirmationModalElement = document.getElementById('confirmationModal');
+            const confirmationModal = new bootstrap.Modal(confirmationModalElement);
+            confirmationModal.show();
+        }
+
+        function loadUsersForAssignee(selectedUserId = null, callback = null) {
+            fetch('http://localhost:3001/api/users')
+                .then(res => res.json())
+                .then(apiUsers => {
+                    users = apiUsers;
+                    const select = document.getElementById('taskAssignee');
+                    select.innerHTML = '<option value="">Kişi Seçin</option>';
+                    users.forEach(user => {
+                        if (user.role !== "Admin") {
+                            select.innerHTML += `<option value="${user.id}">${user.fullname} (${user.role})</option>`;
+                        }
+                    });
+                    // Atanan kişiyi seçili yap
+                    if (selectedUserId) {
+                        select.value = selectedUserId;
+                    }
+                    if (callback) callback();
+                })
+                .catch(err => {
+                    console.error('Kullanıcılar yüklenemedi:', err);
+                    showNotification('Kullanıcı listeleri yüklenemedi. Sunucu hatası veya bağlantı sorunu.', "error");
+                });
+        }
+
+        // Takvimi başlatma fonksiyonu
+        function initCalendar() {
+            const calendarEl = document.getElementById('calendar');
+            if (calendar) { // Eğer zaten bir takvim varsa, onu yok et ve yeniden oluştur
+                calendar.destroy();
+            }
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'tr',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                events: tasks.map(task => {
+                    const color = task.priority === "high" ? "#ff4757" : 
+                                task.priority === "medium" ? "#ffa502" : "#2ed573";
+                    
+                    return {
+                        id: task.id,
+                        title: task.title,
+                        start: task.start,
+                        end: task.end,
+                        color: color,
+                        extendedProps: {
+                            originalColor: color,
+                            priority: task.priority,
+                            description: task.description
+                        }
+                    };
+                }),
+                eventClick: function(info) {
+                    const task = tasks.find(t => t.id === parseInt(info.event.id));
+                    openTaskModal(task);
+                },
+                eventContent: function(arg) {
+                    const priorityDot = document.createElement('div');
+                    priorityDot.className = 'priority-dot';
+                    priorityDot.style.backgroundColor = arg.event.backgroundColor;
+                    priorityDot.style.width = '10px';
+                    priorityDot.style.height = '10px';
+                    priorityDot.style.borderRadius = '50%';
+                    priorityDot.style.marginRight = '5px';
+                    priorityDot.style.display = 'inline-block';
+                    
+                    const title = document.createElement('div');
+                    title.innerHTML = arg.event.title;
+                    title.style.overflow = 'hidden';
+                    title.style.textOverflow = 'ellipsis';
+                    title.style.whiteSpace = 'nowrap';
+                    
+                    const content = document.createElement('div');
+                    content.style.display = 'flex';
+                    content.style.alignItems = 'center';
+                    content.style.padding = '2px';
+                    content.appendChild(priorityDot);
+                    content.appendChild(title);
+                    
+                    return { domNodes: [content] };
+                },
+                eventTimeFormat: {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                }
+            });
+            
+            calendar.render();
+        }
+        
+        // Yaklaşan görevleri listeleme fonksiyonu
+        function renderUpcomingTasks() {
+            const taskList = document.getElementById('taskList');
+            taskList.innerHTML = '';
+
+            const now = new Date();
+            const twoWeeksLater = new Date();
+            twoWeeksLater.setDate(now.getDate() + 14);
+
+            const upcomingTasks = tasks.filter(task => {
+                const endDate = task.end ? new Date(task.end) : new Date(task.start);
+                return endDate > now && endDate <= twoWeeksLater;
+            }).sort((a, b) => {
+                const aEnd = a.end ? new Date(a.end) : new Date(a.start);
+                const bEnd = b.end ? new Date(b.end) : new Date(b.start);
+                return aEnd - bEnd; /* Düzeltme: bB yerine bEnd */
+            });
+            
+            const displayTasks = upcomingTasks.slice(0, 5);
+            
+            if (displayTasks.length === 0) {
+                taskList.innerHTML = '<p style="text-align: center; color: var(--light-gray);">Yaklaşan görev bulunmamaktadır.</p>';
+                return;
+            }
+
+            displayTasks.forEach(task => {
+                const taskItem = document.createElement('div');
+                taskItem.className = 'task-item';
+                
+                const priorityClass = `priority-${task.priority}`;
+                
+                const formattedDate = (task.end ? new Date(task.end) : new Date(task.start)).toLocaleDateString('tr-TR', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric'
+                });
+                
+                taskItem.innerHTML = `
+                    <div class="task-priority ${priorityClass}"></div>
+                    <div class="task-content">
+                        <div class="task-title">${task.title}</div>
+                        <div class="task-desc">${task.description}</div>
+                        <div class="task-time">
+                            <i class="fas fa-clock"></i>
+                            ${formattedDate}
+                        </div>
+                    </div>
+                    <div class="task-actions">
+                        <div class="task-action-btn" data-id="${task.id}">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                    </div>
+                `;
+                
+                taskList.appendChild(taskItem);
+            });
+
+            // Her bir göz ikonuna tıklama event'i ekle
+            taskList.querySelectorAll('.task-action-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const taskId = e.currentTarget.dataset.id;
+                    const task = tasks.find(t => t.id === parseInt(taskId));
+                    openTaskDetailModal(task);
+                });
+            });
+        }
+        
+        // Modal işlemleri
+        const taskModal = document.getElementById('taskModal');
+        const addTaskBtn = document.getElementById('addTask');
+        const closeModal = document.getElementById('closeModal');
+        const cancelTask = document.getElementById('cancelTask');
+        const saveTaskBtn = document.getElementById('saveTask');
+        const deleteTaskBtn = document.getElementById('deleteTask');
+
+        // Modal açma fonksiyonu
+        function openTaskModal(task = null, viewOnly = false) {
+            editingTask = task;
+            const titleInput = document.getElementById('taskTitle');
+            const startInput = document.getElementById('taskStart');
+            const endInput = document.getElementById('taskEnd');
+            const priorityInput = document.getElementById('taskPriority');
+            const descInput = document.getElementById('taskDescription');
+            const assigneeSelect = document.getElementById('taskAssignee');
+            const saveBtn = document.getElementById('saveTask');
+            const deleteBtn = document.getElementById('deleteTask');
+            const assigneeInfo = document.getElementById('assigneeInfo');
+
+            if (task && task.id) {
+                titleInput.value = task.title;
+                startInput.value = formatDateTimeLocal(task.start);
+                endInput.value = formatDateTimeLocal(task.end);
+                priorityInput.value = task.priority;
+                descInput.value = task.description;
+                // Kullanıcıları yükle ve atanan kişiyi seçili yap
+                loadUsersForAssignee(task.assigned_user_id, () => {
+                    let assigneeName = '';
+                    if (task.assigned_user_id) {
+                        const user = users.find(u => u.id == task.assigned_user_id);
+                        assigneeName = user ? user.fullname + ' (' + user.role + ')' : '';
+                    }
+                    assigneeInfo.textContent = assigneeName ? `Şu an atanan kişi: ${assigneeName}` : '';
+                });
+                deleteBtn.style.display = '';
+            } else {
+                titleInput.value = '';
+                startInput.value = '';
+                endInput.value = '';
+                priorityInput.value = 'medium';
+                descInput.value = '';
+                loadUsersForAssignee(null, () => {
+                    assigneeInfo.textContent = '';
+                });
+                assigneeSelect.value = '';
+                deleteBtn.style.display = 'none'; // Yeni görevde sil butonunu kesinlikle gizle
+            }
+
+            [titleInput, startInput, endInput, priorityInput, descInput, assigneeSelect].forEach(el => {
+                el.disabled = !!viewOnly;
+            });
+            saveBtn.style.display = viewOnly ? 'none' : '';
+            deleteBtn.style.display = viewOnly ? 'none' : deleteBtn.style.display;
+            taskModal.style.display = 'flex';
+        }
+        
+        // Modal kapatma fonksiyonu
+        function closeTaskModal() {
+            taskModal.style.display = 'none';
+            editingTask = null; // Modal kapatıldığında editingTask'i temizle
+        }
+
+        function openTaskDetailModal(task) {
+            const modal = document.getElementById('taskDetailModal');
+            const body = document.getElementById('taskDetailBody');
+            const footer = document.getElementById('taskDetailFooter');
+            const deleteBtn = document.getElementById('deleteTaskFromDetail'); // Detay modalındaki sil butonu
+            if (!task) return;
+
+            const endDate = task.end ? new Date(task.end) : new Date(task.start);
+            const formattedStart = new Date(task.start).toLocaleString('tr-TR', {
+                day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+            const formattedEnd = task.end ? new Date(task.end).toLocaleString('tr-TR', {
+                day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+            }) : 'Yok';
+
+            let assignee = task.assignee_name || '';
+            if (!assignee && task.assigned_user_id) {
+                const user = users.find(u => u.id == task.assigned_user_id);
+                assignee = user ? user.fullname : `Kullanıcı ID: ${task.assigned_user_id}`;
+            }
+
+            let creator = '';
+            if (task.created_by) {
+                const user = users.find(u => u.id == task.created_by);
+                creator = user ? user.fullname : `Kullanıcı ID: ${task.created_by}`;
+            }
+
+            // Öncelik renkleri
+            let priorityColor = '#2ed573'; // düşük
+            let priorityText = 'Düşük';
+            if (task.priority === 'high') {
+                priorityColor = '#ff4757';
+                priorityText = 'Yüksek';
+            } else if (task.priority === 'medium') {
+                priorityColor = '#ffa502';
+                priorityText = 'Orta';
+            }
+
+            // Karanlık modda metinler beyaz olsun
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            const textColor = isDark ? '#fff' : '#555';
+
+            body.innerHTML = `
+                <div style="font-size:20px; font-weight:600; margin-bottom:8px; color:${textColor};">${task.title}</div>
+                <div style="margin:6px 0 12px 0; color:#888;">${task.description || ''}</div>
+                <div style="margin-bottom:6px; color:${textColor};">
+                    <i class="fas fa-calendar-alt"></i>
+                    <b>Başlangıç:</b> ${formattedStart}
+                </div>
+                <div style="margin-bottom:6px; color:${textColor};">
+                    <i class="fas fa-calendar-check"></i>
+                    <b>Bitiş:</b> ${formattedEnd}
+                </div>
+                <div style="margin-bottom:6px; display:flex; align-items:center; color:${textColor};">
+                    <span style="font-size:14px; display:flex; align-items:center;">
+                        <span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:${priorityColor}; margin-right:7px;"></span>
+                        <b>Öncelik:</b> <span style="color:${priorityColor}; margin-left:5px;">${priorityText}</span>
+                    </span>
+                </div>
+                <div style="margin-bottom:6px; color:${textColor};">
+                    <span style="font-size:14px;">
+                        <b>Atanan:</b> <span style="color:${textColor};">${assignee}</span>
+                    </span>
+                </div>
+                <div style="margin-bottom:6px; color:${textColor};">
+                    <span style="font-size:14px;">
+                        <b>Atayan:</b> <span style="color:${textColor};">${creator}</span>
+                    </span>
+                </div>
+            `;
+            // Sil butonunu sadece görevi oluşturan veya atanan kullanıcıya göster
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (currentUser && (currentUser.id == task.created_by || currentUser.id == task.assigned_user_id)) {
+                deleteBtn.style.display = '';
+                deleteBtn.onclick = function() {
+                    showConfirmationModal('Bu görevi silmek istediğinize emin misiniz?', () => {
+                        fetch(`http://localhost:3001/api/tasks/${task.id}`, {
+                            method: 'DELETE'
+                        })
+                        .then(async res => {
+                            const data = await res.json();
+                            if (res.ok) {
+                                closeTaskDetailModal();
+                                showNotification(data.message, "success");
+                                setTimeout(() => {
+                                    if (typeof loadTasksFromApi === 'function') loadTasksFromApi();
+                                }, 100); // Kısa bir gecikme ile kesin yenile
+                            } else {
+                                showNotification('Silme başarısız: ' + (data.message || 'Bilinmeyen hata.'), "error");
+                            }
+                        })
+                        .catch(error => {
+                            showNotification('Görev silinirken bir hata oluştu.', "error");
+                        });
+                    });
+                };
+            } else {
+                deleteBtn.style.display = 'none';
+                deleteBtn.onclick = null;
+            }
+            modal.style.display = 'flex';
+        }
+
+        function closeTaskDetailModal() {
+            const taskDetailModal = document.getElementById('taskDetailModal');
+            taskDetailModal.style.display = 'none';
+            document.getElementById('deleteTaskFromDetail').style.display = 'none'; // Detay modalını kapatınca sil butonunu gizle
+        }
+        
+        // Tarih formatı dönüştürme
+        function formatDateTimeLocal(date) {
+            const d = new Date(date);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+        // Bildirim göster
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification-panel');
+            const notificationMessage = document.getElementById('notification-message');
+            
+            // Check if elements exist before trying to set properties
+            if (notification && notificationMessage) {
+                notificationMessage.textContent = message;
+                if (type === 'success') {
+                    notification.style.backgroundColor = 'var(--success)';
+                    notification.querySelector('i').className = 'fas fa-check-circle';
+                } else if (type === 'error') {
+                    notification.style.backgroundColor = 'var(--danger)';
+                    notification.querySelector('i').className = 'fas fa-exclamation-circle';
+                } else { // info
+                    notification.style.backgroundColor = 'var(--primary-light)';
+                    notification.querySelector('i').className = 'fas fa-info-circle';
+                }
+                
+                notification.classList.add('show');
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            } else {
+                console.error("Notification panel elements not found in DOM.");
+            }
+        }
+        
+        // Sayfa yüklendiğinde
+        document.addEventListener('DOMContentLoaded', () => {
+            // Kullanıcı bilgileri
+            const userNameElement = document.getElementById('userName');
+            const userRoleElement = document.getElementById('userRole');
+            const userAvatarElement = document.getElementById('userAvatar');
+            const logoutButton = document.getElementById('logoutButton');
+            const hamburgerMenu = document.getElementById('hamburgerMenu');
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+
+
+            const storedUser = localStorage.getItem('currentUser');
+            if (!storedUser) {
+                showNotification("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", "error");
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000); // 2 saniye sonra yönlendir
+            } else {
+                try {
+                    const currentUser = JSON.parse(storedUser); 
+                    updateUserInfo(currentUser);
+                } catch (e) {
+                    console.error("Kayıtlı kullanıcı verisi bozuk:", e);
+                    localStorage.removeItem('currentUser');
+                    showNotification("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", "error");
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000); // 2 saniye sonra yönlendir
+                }
+            }
+
+            function updateUserInfo(user) {
+                if (user) {
+                    userNameElement.textContent = user.fullname;
+                    userRoleElement.textContent = user.role;
+                    userAvatarElement.textContent = getInitials(user.fullname);
+                }
+            }
+
+            function getInitials(fullname) {
+                if (!fullname) return '';
+                const parts = fullname.split(' ');
+                if (parts.length === 1) {
+                    return parts[0].charAt(0).toUpperCase();
+                } else if (parts.length >= 2) {
+                    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+                }
+                return '';
+            }
+
+            // Tema değiştirme
+            const themeToggle = document.getElementById('theme-toggle');
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.body.setAttribute('data-theme', savedTheme);
+                themeToggle.innerHTML = savedTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+            }
+            
+            themeToggle.addEventListener('click', () => {
+                const currentTheme = document.body.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                document.body.setAttribute('data-theme', newTheme);
+                themeToggle.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+                localStorage.setItem('theme', newTheme);
+                
+                // Takvimi yeniden oluştur
+                initCalendar();
+            });
+
+            // Çıkış butonu
+            logoutButton.addEventListener('click', () => {
+                // Onay modalını göstermeden direkt çıkış yap
+                localStorage.removeItem('currentUser');
+                window.location.href = 'login.html';
+            });
+
+            // Confirmation Modal "Onayla" butonu için olay dinleyicisi
+            const confirmActionBtn = document.getElementById('confirmActionBtn');
+            if (confirmActionBtn) {
+                confirmActionBtn.addEventListener('click', () => {
+                    if (confirmCallback) {
+                        confirmCallback(); // Saklanan callback'i çalıştır
+                        confirmCallback = null; // Callback'i sıfırla
+                    }
+                    const confirmationModalElement = document.getElementById('confirmationModal');
+                    const confirmationModal = bootstrap.Modal.getInstance(confirmationModalElement);
+                    if (confirmationModal) confirmationModal.hide();
+                });
+            }
+
+            // Hamburger menü toggle
+            hamburgerMenu.addEventListener('click', () => {
+                sidebar.classList.toggle('show');
+                mainContent.classList.toggle('expanded');
+            });
+            
+            // Takvimi başlat
+            initCalendar();
+            
+            // Yaklaşan görevleri listele
+            renderUpcomingTasks();
+            
+            // Modal event listener'ları
+            addTaskBtn.addEventListener('click', () => openTaskModal());
+            closeModal.addEventListener('click', closeTaskModal);
+            cancelTask.addEventListener('click', closeTaskModal);
+            
+            // Görevi kaydetme
+            saveTaskBtn.addEventListener('click', () => {
+                const title = document.getElementById('taskTitle').value;
+                const start = document.getElementById('taskStart').value;
+                const end = document.getElementById('taskEnd').value;
+                const priority = document.getElementById('taskPriority').value;
+                const assigned_user_id = document.getElementById('taskAssignee').value;
+                const description = document.getElementById('taskDescription').value;
+                const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                const created_by = currentUser ? currentUser.id : null;
+
+                if (!title || !start || !assigned_user_id || !created_by) {
+                    showNotification('Lütfen tüm gerekli alanları doldurun.', "error");
+                    return;
+                }
+
+                // Eğer editingTask varsa, güncelleme yap
+                if (editingTask && editingTask.id) {
+                    fetch(`http://localhost:3001/api/tasks/${editingTask.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title, description, start, end, priority,
+                            assigned_user_id, created_by
+                        })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.message && data.message.includes('güncellendi')) {
+                            closeTaskModal();
+                            showNotification('Görev başarıyla güncellendi!', "success");
+                            loadTasksFromApi(); // Takvimi yenile
+                        } else {
+                            showNotification(data.message || 'Görev güncellenemedi.', "error");
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Görev güncellenirken hata:', error);
+                        showNotification('Görev güncellenirken bir hata oluştu.', "error");
+                    });
+                } else {
+                    // Yeni görev ekle
+                    fetch('http://localhost:3001/api/tasks', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title, description, start, end, priority,
+                            assigned_user_id, created_by
+                        })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.message && data.message.includes('başarıyla')) {
+                            closeTaskModal();
+                            showNotification('Görev başarıyla eklendi!', "success");
+                            loadTasksFromApi(); // Takvimi yenile
+                        } else {
+                            showNotification(data.message || 'Görev eklenemedi.', "error");
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Görev eklenirken hata:', error);
+                        showNotification('Görev eklenirken bir hata oluştu.', "error");
+                    });
+                }
+            });
+
+            // Silme işlemi
+            deleteTaskBtn.addEventListener('click', function() {
+                if (!editingTask || !editingTask.id) return;
+                showConfirmationModal('Bu görevi silmek istediğinize emin misiniz?', () => {
+                    fetch(`http://localhost:3001/api/tasks/${editingTask.id}`, {
+                        method: 'DELETE'
+                    })
+                    .then(async res => {
+                        const data = await res.json();
+                        if (res.ok) {
+                            closeTaskModal();
+                            showNotification(data.message, "success");
+                            setTimeout(() => {
+                                if (typeof loadTasksFromApi === 'function') loadTasksFromApi();
+                            }, 100);
+                        } else {
+                            console.error('Silme başarısız:', data.message);
+                            showNotification('Silme başarısız: ' + (data.message || 'Bilinmeyen hata.'), "error");
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Görev silinirken hata:', error);
+                        showNotification('Görev silinirken bir hata oluştu. Lütfen backend sunucusunun çalıştığından emin olun.', "error");
+                    });
+                });
+            });
+
+            // Detay modalındaki sil butonu için olay dinleyicisi
+            const deleteTaskFromDetailBtn = document.getElementById('deleteTaskFromDetail');
+            if (deleteTaskFromDetailBtn) {
+                deleteTaskFromDetailBtn.addEventListener('click', () => {
+                    if (!editingTask || !editingTask.id) return;
+                    showConfirmationModal('Bu görevi silmek istediğinize emin misiniz?', () => {
+                        fetch(`http://localhost:3001/api/tasks/${editingTask.id}`, {
+                            method: 'DELETE'
+                        })
+                        .then(async res => {
+                            const data = await res.json();
+                            if (res.ok) {
+                                closeTaskDetailModal();
+                                showNotification(data.message, "success");
+                                loadTasksFromApi(); // Takvimi yenile
+                            } else {
+                                console.error('Silme başarısız:', data.message);
+                                showNotification('Silme başarısız: ' + (data.message || 'Bilinmeyen hata.'), "error");
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Görev silinirken hata:', error);
+                            showNotification('Görev silinirken bir hata oluştu. Lütfen backend sunucusunun çalıştığından emin olun.', "error");
+                        });
+                    });
+                });
+            }
+            
+            // Dışarı tıklayınca modal kapatma
+            window.addEventListener('click', (e) => {
+                // Sadece taskModal'a veya taskDetailModal'a tıklama durumunda kapat
+                // Confirmation modal'a tıklama olayını Bootstrap zaten yönetiyor.
+                if (e.target === taskModal) {
+                    closeTaskModal();
+                }
+                if (e.target === document.getElementById('taskDetailModal')) {
+                    closeTaskDetailModal();
+                }
+            });
+            
+            // Arama kutusu için event listener
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase().trim();
+                
+                if (!searchTerm) {
+                    // Arama kutusu boşsa tüm etkinlikleri orijinal renklerine döndür
+                    calendar.getEvents().forEach(event => {
+                        const originalColor = event.extendedProps.originalColor;
+                        event.setProp('backgroundColor', originalColor);
+                    });
+                    return;
+                }
+                
+                // Etkinlikleri filtrele ve vurgula
+                let foundEvent = null;
+                calendar.getEvents().forEach(event => {
+                    const eventText = event.title.toLowerCase();
+                    if (eventText.includes(searchTerm)) {
+                        // Eşleşen etkinliği sarıyla vurgula
+                        event.setProp('backgroundColor', 'rgba(255, 215, 0, 0.7)');
+                        if (!foundEvent) {
+                            foundEvent = event;
+                        }
+                    } else {
+                        // Eşleşmeyenleri orijinal rengine döndür
+                        const originalColor = event.extendedProps.originalColor;
+                        event.setProp('backgroundColor', originalColor);
+                    }
+                });
+                
+                // Takvimde eşleşen ilk etkinliğe git
+                if (foundEvent) {
+                    calendar.gotoDate(foundEvent.start);
+                }
+            });
+
+            // Sayfa yüklendiğinde kullanıcıları çek
+            loadUsersForAssignee();
+          
+            // Görevleri ve kullanıcıları backend'den çek
+            function loadTasksFromApi() {
+                fetch('http://localhost:3001/api/tasks')
+                    .then(res => res.json())
+                    .then(apiTasks => {
+                        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                        tasks = apiTasks
+                            .filter(task => task.assigned_user_id == currentUser.id)
+                            .map(task => ({
+                                ...task,
+                                start: new Date(task.start),
+                                end: task.end ? new Date(task.end) : null
+                            }));
+                        initCalendar();
+                        renderUpcomingTasks();
+                    })
+                    .catch(error => {
+                        console.error('Görevler yüklenirken hata:', error);
+                        showNotification('Görevler yüklenemedi. Sunucuya bağlanılamadı veya bir hata oluştu.', "error");
+                    });
+            }
+            loadTasksFromApi(); // Bunu buraya ekle
+        });
+        document.getElementById('closeTaskDetailModal').addEventListener('click', () => {
+            document.getElementById('taskDetailModal').style.display = 'none';
+            document.getElementById('deleteTaskFromDetail').style.display = 'none'; // Detay modalını kapatınca sil butonunu gizle
+        });
+    </script>
+</body>
+</html>

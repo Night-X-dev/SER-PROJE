@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ser Elektrik Otomasyon - Onay Bekleniyor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            /* Renk Paleti */
+            --primary: #005c9d;
+            --secondary: #0980d3;
+            --white: #ffffff;
+            --light-gray: #97a1aa;
+            --dark-gray: #5e6870;
+
+            /* Gündüz Modu */
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --input-bg: #f0f4f8;
+            --border-color: #e1e5e9;
+        }
+
+        [data-theme="dark"] {
+            /* Gece Modu */
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --input-bg: #2d2d2d;
+            --border-color: #3a3a3a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 24px;
+        }
+
+        .logo-text {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .theme-toggle {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            width: 60px;
+            height: 30px;
+            border-radius: 15px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            padding: 0 5px;
+        }
+
+        .toggle-circle {
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--secondary);
+            left: 5px;
+            transition: transform 0.3s;
+        }
+
+        .theme-toggle.dark .toggle-circle {
+            transform: translateX(30px);
+        }
+
+        .toggle-icon {
+            font-size: 14px;
+            z-index: 1;
+        }
+
+        .toggle-icon.sun {
+            color: #ffd700;
+            margin-right: auto;
+        }
+
+        .toggle-icon.moon {
+            color: #e0e0ff;
+            margin-left: auto;
+        }
+
+        .waiting-card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 50px;
+            width: 100%;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .waiting-icon {
+            font-size: 80px;
+            color: var(--secondary);
+            margin-bottom: 30px;
+        }
+
+        .waiting-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--text-color);
+        }
+
+        .waiting-text {
+            font-size: 18px;
+            color: var(--light-gray);
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: var(--white);
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+            display: inline-block;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(9, 128, 211, 0.3);
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: var(--light-gray);
+            font-size: 14px;
+        }
+
+        .steps-container {
+            display: flex;
+            justify-content: space-around;
+            margin: 40px 0;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .step {
+            flex: 1;
+            min-width: 200px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .step-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-weight: bold;
+        }
+
+        .step-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--text-color);
+        }
+
+        .step-description {
+            color: var(--light-gray);
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .waiting-card {
+                padding: 30px 20px;
+            }
+            
+            .steps-container {
+                flex-direction: column;
+                gap: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                 <img src="serlogo.png" alt="Ser Elektrik Otomasyon" style="width: 180px; height: auto; padding-left: 10px;">
+            </div>
+            <div class="theme-toggle">
+                <i class="fas fa-sun toggle-icon sun"></i>
+                <div class="toggle-circle"></div>
+                <i class="fas fa-moon toggle-icon moon"></i>
+            </div>
+        </div>
+
+        <div class="waiting-card">
+            <div class="waiting-icon">
+                <i class="fas fa-hourglass-half"></i>
+            </div>
+            <h2 class="waiting-title">Hesabınız Onay Bekliyor</h2>
+            <p class="waiting-text">
+                Hesabınızın aktif hale gelmesi için sistem yöneticisi tarafından onaylanması gerekmektedir. Onaylandığında e-posta adresinize bilgilendirme gönderilecektir.
+            </p>
+            
+            <div class="steps-container">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-title">Kayıt Tamamlandı</div>
+                    <div class="step-description">Kayıt bilgileriniz başarıyla sistemimize kaydedildi.</div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-title">Yönetici Onayı Bekleniyor</div>
+                    <div class="step-description">Sistem yöneticisi kaydınızı kontrol ediyor.</div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-title">Aktivasyon</div>
+                    <div class="step-description">Onaylandıktan sonra giriş yapabileceksiniz.</div>
+                </div>
+            </div>
+            
+            <a href="login.html" class="btn">Giriş Yap</a>
+        </div>
+
+        <div class="footer">
+            &copy; 2023 Ser Elektrik Otomasyon. Tüm hakları saklıdır. | Mustafa Öztürk
+        </div>
+    </div>
+
+    <script>
+        // Tema değiştirme
+        const themeToggle = document.querySelector('.theme-toggle');
+        themeToggle.addEventListener('click', () => {
+            themeToggle.classList.toggle('dark');
+            document.body.setAttribute('data-theme',
+                document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+
+            // Kullanıcı tercihini localStorage'da sakla
+            localStorage.setItem('theme', document.body.getAttribute('data-theme'));
+        });
+
+        // Sayfa yüklendiğinde tema tercihini kontrol et
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.body.setAttribute('data-theme', savedTheme);
+            if (savedTheme === 'dark') {
+                themeToggle.classList.add('dark');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ser Elektrik Otomasyon - Raporlar</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- html2pdf.js kütüphanesi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --primary: #005c9d;
+            --primary-light: #0980d3;
+            --white: #ffffff;
+            --light-gray: #97a1aa;
+            --dark-gray: #5e6870;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --input-bg: #f0f4f8;
+            --border-color: #e1e5e9;
+            --sidebar-bg: #ffffff;
+            --topbar-bg: #ffffff;
+            --success: #2ed573;
+            --danger: #ff4757;
+            --warning: #ffc107;
+            --info: #0980d3;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --input-bg: #2d2d2d;
+            --border-color: #3a3a3a;
+            --sidebar-bg: #1a1a1a;
+            --topbar-bg: #1a1a1a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Hamburger menü butonu */
+        .hamburger-menu {
+            display: none;
+            background-color: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            font-size: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            height: 100vh;
+            position: fixed;
+            overflow-y: auto;
+            padding: 20px 0;
+            z-index: 1000;
+            transform: translateX(0);
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .sidebar.show {
+            transform: translateX(0);
+        }
+        .sidebar.hidden {
+            transform: translateX(-100%);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            padding: 0 20px 25px 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 25px;
+        }
+
+        .logo-icon {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 20px;
+            margin-right: 12px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .nav-item {
+            padding: 12px 25px;
+            display: flex;
+            align-items: center;
+            color: var(--text-color);
+            text-decoration: none;
+            border-left: 3px solid transparent;
+            margin-bottom: 5px;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background-color: rgba(9, 128, 211, 0.1);
+            border-left-color: var(--primary-light);
+            color: var(--primary-light);
+        }
+
+        .nav-item i {
+            font-size: 18px;
+            margin-right: 15px;
+            width: 24px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            transition: margin-left 0.3s ease-in-out;
+            width: calc(100% - 260px);
+        }
+
+        .main-content.expanded {
+            margin-left: 0;
+            width: 100%;
+        }
+
+        /* Topbar */
+        .topbar {
+            background-color: var(--topbar-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            flex-wrap: nowrap;
+            gap: 15px;
+        }
+
+        .search-container {
+            position: relative;
+            width: 300px;
+            flex-grow: 1;
+        }
+
+        .search-container input {
+            width: 100%;
+            padding: 10px 15px 10px 40px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+        }
+
+        .search-container i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--light-gray);
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .notification-btn, .theme-toggle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            cursor: pointer;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .notification-btn::after {
+            content: "3";
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #ff4757;
+            color: white;
+            font-size: 10px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: 600;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .user-role {
+            font-size: 13px;
+            color: var(--light-gray);
+        }
+
+        /* Çıkış Yap Butonu Düzeltmeleri */
+        .logout-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            gap: 8px;
+            transition: all 0.3s ease;
+            background: transparent;
+            border: 1px solid var(--primary-light);
+            color: var(--primary-light);
+            margin-left: 10px;
+            position: relative;
+            z-index: 20; /* Z-index değerini artırdık */
+            height: 40px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .logout-btn:hover {
+            background-color: var(--primary);
+            color: var(--white);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+
+        /* Raporlar Sayfası Özel Stiller */
+        .reports-content {
+            padding: 30px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .page-title i {
+            color: var(--primary-light);
+        }
+
+        .reports-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .report-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            padding: 25px;
+            height: 100%;
+        }
+
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .report-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .report-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(9, 128, 211, 0.1);
+            color: var(--primary-light);
+            font-size: 24px;
+        }
+
+        .chart-container {
+            height: 300px;
+            position: relative;
+            margin-top: 20px;
+        }
+
+        .report-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            background-color: var(--input-bg);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-light);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--light-gray);
+        }
+
+        .filters-container {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+        }
+
+        .filters-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .filter-title {
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-label {
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: var(--light-gray);
+        }
+
+        .filter-input {
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            width: 100%;
+        }
+
+        .filter-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            background: linear-gradient(to right, var(--primary), var(--primary-light));
+            color: var(--white);
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--primary-light);
+            color: var(--primary-light);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(9, 128, 211, 0.3);
+        }
+
+        .report-table-container {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .table-header {
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .table-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            padding: 20px;
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .report-table th {
+            text-align: left;
+            padding: 15px;
+            background-color: rgba(9, 128, 211, 0.05);
+            color: var(--light-gray);
+            font-weight: 500;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .report-table td {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .report-table tr {
+            transition: background-color 0.2s;
+        }
+
+        .report-table tr:hover {
+            background-color: rgba(9, 128, 211, 0.05);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--light-gray);
+            font-size: 14px;
+            border-top: 1px solid var(--border-color);
+            margin-top: 30px;
+        }
+
+        /* Responsive tasarım */
+        @media (max-width: 992px) {
+            .reports-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                width: 260px;
+                position: fixed;
+                transform: translateX(-100%);
+                box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            }
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .logo-text, .nav-text {
+                display: block;
+            }
+            
+            .logo-container {
+                justify-content: flex-start;
+                padding: 0 20px 25px 20px;
+            }
+            
+            .logo-icon {
+                margin-right: 12px;
+            }
+            
+            .nav-item {
+                justify-content: flex-start;
+                padding: 12px 25px;
+            }
+            
+            .nav-item i {
+                margin-right: 15px;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+
+            .topbar {
+                flex-direction: row;
+                justify-content: flex-start;
+                flex-wrap: nowrap;
+                padding: 10px 15px;
+                align-items: center;
+                gap: 10px;
+            }
+            .hamburger-menu {
+                display: block;
+                order: 1;
+            }
+            .search-container {
+                width: auto;
+                flex-grow: 1;
+                order: 2;
+                margin-left: 0;
+            }
+
+            .topbar-actions {
+                width: auto;
+                justify-content: flex-end;
+                order: 3;
+                margin-left: auto;
+                flex-wrap: nowrap;
+                gap: 10px;
+                margin-top: 0;
+            }
+
+            .user-profile {
+                flex-grow: 0;
+                flex-shrink: 0;
+            }
+
+            /* Mobil için çıkış butonu düzeltmesi */
+            .logout-btn {
+                padding: 10px 12px;
+                width: auto;
+                min-width: 40px;
+                height: 40px;
+                margin-left: 0 !important;
+                z-index: 20; /* Z-index değerini artırdık */
+            }
+            .logout-btn .logout-text {
+                display: none;
+            }
+            .logout-btn i {
+                margin-right: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .search-container {
+                width: 100%;
+            }
+            .user-info {
+                display: none;
+            }
+            .filter-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .sidebar {
+                width: 0;
+                overflow: hidden;
+                transform: translateX(-100%);
+            }
+            .sidebar.show {
+                width: 260px;
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .topbar {
+                padding: 15px;
+                flex-wrap: nowrap;
+                gap: 10px;
+                flex-direction: row; 
+                justify-content: flex-start;
+                align-items: center;
+            }
+            .hamburger-menu {
+                order: 1;
+            }
+            .search-container {
+                flex-grow: 1;
+                order: 2;
+                margin-left: 0;
+                width: auto;
+            }
+            .topbar-actions {
+                width: auto;
+                order: 3;
+                justify-content: flex-end;
+                margin-left: auto;
+                flex-wrap: nowrap;
+                gap: 8px;
+            }
+            .user-info {
+                display: none;
+            }
+            .report-stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .report-table th, .report-table td {
+                padding: 10px 8px;
+                font-size: 14px;
+            }
+        }
+
+        /* Toast bildirimi */
+        .toast {
+            position: fixed;
+            top: 60px; /* 20px yerine 60px yapın */
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            background-color: var(--success);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 10000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .toast.error {
+            background-color: var(--danger);
+        }
+
+        /* PDF Report Content Styles (Inline used for html2canvas compatibility) */
+        .pdf-report-content {
+            font-family: "Segoe UI", Arial, sans-serif;
+            padding: 20px;
+            color: #333;
+            background: #fff;
+            box-sizing: border-box;
+        }
+        .pdf-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .pdf-header img {
+            height: 60px;
+            margin-bottom: 10px;
+        }
+        .pdf-header h1 {
+            color: #005c9d;
+            font-size: 28px;
+            margin: 0;
+        }
+        .pdf-header h2 {
+            color: #0980d3;
+            font-size: 22px;
+            margin: 5px 0 15px;
+        }
+        .pdf-info {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .pdf-table-container {
+            margin-top: 20px;
+        }
+        .pdf-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .pdf-table th, .pdf-table td {
+            border: 1px solid #e1e5e9;
+            padding: 8px;
+            text-align: left;
+            font-size: 13px;
+        }
+        .pdf-table th {
+            background-color: #f0f4f8;
+            color: #5e6870;
+            font-weight: bold;
+        }
+        .pdf-footer {
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 40px;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+        .print-button-container {
+            text-align: center;
+            margin-top: 20px;
+            padding-bottom: 20px;
+        }
+        .print-button {
+            background-color: #005c9d;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .print-button:hover {
+            background-color: #0980d3;
+        }
+        @media print {
+            .print-button-container { display: none; }
+            body { background-color: #fff; }
+            .pdf-container { margin: 0; box-shadow: none; padding: 0; }
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <div class="sidebar" id="sidebar">
+        <a href="index.html" style="text-decoration: none;">
+            <div class="logo-container" style="cursor: pointer;">
+              <img src="serlogo.png" alt="Ser Elektrik Otomasyon" style="width: 180px; height: auto; padding-left: 10px;">
+            </div>
+          </a>
+
+        <a href="index.html" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span class="nav-text">Dashboard</span>
+        </a>
+        <a href="projeler.html" class="nav-item">
+            <i class="fas fa-project-diagram"></i>
+            <span class="nav-text">Projeler</span>
+        </a>
+        <a href="proje_ekle.html" class="nav-item">
+            <i class="fas fa-plus-circle"></i>
+            <span class="nav-text">Yeni Proje</span>
+        </a>
+        <a href="raporlar.html" class="nav-item active">
+            <i class="fas fa-chart-line"></i>
+            <span class="nav-text">Raporlar</span>
+        </a>
+        <a href="musteriler.html" class="nav-item">
+            <i class="fas fa-users"></i>
+            <span class="nav-text">Müşteriler</span>
+        </a>
+        <a href="takvim.html" class="nav-item">
+            <i class="fas fa-calendar-alt"></i>
+            <span class="nav-text">Takvim</span>
+        </a>
+        <a href="ayarlar.html" class="nav-item">
+            <i class="fas fa-cog"></i>
+            <span class="nav-text">Ayarlar</span>
+        </a>
+    </div>
+
+    <div class="main-content" id="mainContent">
+        <div class="topbar">
+            <!-- Hamburger Menü Butonu -->
+            <button class="hamburger-menu" id="hamburgerMenu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="search-container">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Rapor ara...">
+            </div>
+
+            <div class="topbar-actions">
+                <div class="theme-toggle" id="theme-toggle">
+                    <i class="fas fa-moon"></i>
+                </div>
+
+                <div class="notification-btn">
+                    <i class="fas fa-bell"></i>
+                </div>
+
+                <div class="user-profile">
+                    <div class="user-avatar" id="userAvatar">MÖ</div>
+                    <div class="user-info">
+                        <div class="user-name" id="userName">Mustafa Öztürk</div>
+                        <div class="user-role" id="userRole">Veritabanı Yöneticisi</div>
+                    </div>
+                </div>
+                <button class="btn btn-outline logout-btn" id="logoutButton">
+                    <i class="fas fa-sign-out-alt"></i> <span class="logout-text">Çıkış Yap</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="reports-content">
+            <h1 class="page-title">
+                <i class="fas fa-chart-line"></i> Raporlar
+            </h1>
+            
+            <div class="report-table-container">
+                <div class="table-header">
+                    <div class="table-title">Detaylı Rapor</div>
+                    <!-- PDF Oluştur butonu buraya eklendi -->
+                    <button class="btn" id="exportPdf">
+                        <i class="fas fa-file-pdf"></i> PDF Oluştur
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="report-table" id="reportTable">
+                        <thead>
+                            <tr>
+                                <th>Proje Yöneticisi</th>
+                                <th>Toplam Proje</th>
+                                <th>Zamanında Biten</th>
+                                <th>Geciken</th>
+                                <th>Toplam Gecikme (gün)</th>
+                                <th>Ortalama Proje Süresi (gün)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="reports-container">
+                <div class="report-card">
+                    <div class="report-header">
+                        <div class="report-title">Proje İlerleme Durumu</div>
+                        <div class="report-icon">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="progressChart"></canvas>
+                    </div>
+                    <div class="report-stats">
+                        <div class="stat-item">
+                            <div class="stat-value" id="activeProjects">12</div>
+                            <div class="stat-label">Aktif Proje</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="delayedProjects">3</div>
+                            <div class="stat-label">Geciken Proje</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="avgDelay">4.2</div>
+                            <div class="stat-label">Ort. Gecikme (gün)</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="completionRate">78%</div>
+                            <div class="stat-label">Tamamlanma Oranı</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="report-card">
+                    <div class="report-header">
+                        <div class="report-title">İşçi Performans Analizi</div>
+                        <div class="report-icon">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                    <div class="report-stats">
+                        <div class="stat-item">
+                            <div class="stat-value" id="totalWorkers"></div>
+                            <div class="stat-label">Toplam İşçi</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="avgEfficiency"></div>
+                            <div class="stat-label">Ort. Verimlilik</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="bestPerformer"></div>
+                            <div class="stat-label">En Verimli İşçi</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="tasksCompleted"></div>
+                            <div class="stat-label">Tamamlanan İş</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            
+            <div class="footer">
+                &copy; 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır. | Mustafa Öztürk
+            </div>
+        </div>
+    </div>
+    
+    <div class="toast" id="toast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMessage">İşlem başarıyla tamamlandı</span>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3001';
+        let currentUser = null;
+        let progressChartInstance = null;
+        let performanceChartInstance = null;
+        
+        // Sayfa yüklendiğinde çalışacak fonksiyonlar
+        document.addEventListener('DOMContentLoaded', function() {
+            // Kullanıcı bilgilerini yükle
+            loadUserInfo();
+            
+            // Tema değiştirme
+            setupThemeToggle();
+            
+            // Çıkış butonu
+            document.getElementById('logoutButton').addEventListener('click', logout);
+            
+            // PDF oluştur butonu
+            document.getElementById('exportPdf').addEventListener('click', exportToPdf);
+            
+            // Grafikleri başlat
+            initCharts();
+            
+            // Detaylı rapor tablosunu doldur
+            fillManagerStatsTable();
+
+            // İşçi performans verisini dinamik olarak çek
+            fetch('http://localhost:3001/api/worker-performance')
+                .then(response => response.json())
+                .then(data => {
+                    // İstatistik kutularını doldurmak için örnek:
+                    document.getElementById('totalWorkers').textContent = data.length;
+                    document.getElementById('avgEfficiency').textContent = 
+                        (data.reduce((sum, w) => sum + w.on_time_projects, 0) / data.length).toFixed(2) + '%';
+                    document.getElementById('bestPerformer').textContent = 
+                        data.reduce((best, w) => w.on_time_projects > best.on_time_projects ? w : best, data[0]).manager_name;
+                    document.getElementById('tasksCompleted').textContent = 
+                        data.reduce((sum, w) => sum + w.total_projects, 0);
+
+                    // Grafik için:
+                    const ctx = document.getElementById('performanceChart').getContext('2d');
+                    if (performanceChartInstance) performanceChartInstance.destroy();
+                    performanceChartInstance = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: data.map(w => w.manager_name),
+                            datasets: [{
+                                label: 'Zamanında Bitirilen Proje',
+                                data: data.map(w => w.on_time_projects),
+                                backgroundColor: '#0980d3',
+                                borderColor: '#005c9d',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return value + '%';
+                                        },
+                                        color: getComputedStyle(document.body).getPropertyValue('--text-color').trim()
+                                    }
+                                },
+                                x: {
+                                    ticks: {
+                                        color: getComputedStyle(document.body).getPropertyValue('--text-color').trim()
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    labels: {
+                                        color: getComputedStyle(document.body).getPropertyValue('--text-color').trim()
+                                    }
+                                }
+                            }
+                        }
+                    });
+                })
+                .catch(err => {
+                    document.getElementById('totalWorkers').textContent = '-';
+                    document.getElementById('avgEfficiency').textContent = '-';
+                    document.getElementById('bestPerformer').textContent = '-';
+                    document.getElementById('tasksCompleted').textContent = '-';
+                    if (performanceChartInstance) performanceChartInstance.destroy();
+                    performanceChartInstance = null;
+                    console.error('İşçi performans verisi alınamadı:', err);
+                });
+
+            // Hamburger menü toggle
+            const hamburgerMenu = document.getElementById('hamburgerMenu');
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+
+            hamburgerMenu.addEventListener('click', () => {
+                sidebar.classList.toggle('show');
+                mainContent.classList.toggle('expanded');
+            });
+        });
+        
+        // Kullanıcı bilgilerini yükleme
+        function loadUserInfo() {
+            const storedUser = localStorage.getItem('currentUser');
+            if (!storedUser) {
+                showToast("Oturum süreniz doldu. Lütfen giriş yapın.", true);
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 1500);
+                return;
+            }
+            
+            try {
+                currentUser = JSON.parse(storedUser);
+                document.getElementById('userName').textContent = currentUser.fullname;
+                document.getElementById('userRole').textContent = currentUser.role;
+                document.getElementById('userAvatar').textContent = getInitials(currentUser.fullname);
+            } catch (e) {
+                console.error("Kullanıcı verisi bozuk:", e);
+                localStorage.removeItem('currentUser');
+                showToast("Kullanıcı verisi bozuk. Lütfen tekrar giriş yapın.", true);
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 1500);
+            }
+        }
+        
+        // İsim baş harflerini alma
+        function getInitials(fullname) {
+            if (!fullname) return '';
+            const parts = fullname.split(' ');
+            return parts.length === 1 
+                ? parts[0].charAt(0).toUpperCase() 
+                : (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+        }
+        
+        // Tema değiştirme
+        function setupThemeToggle() {
+            const themeToggle = document.getElementById('theme-toggle');
+            const savedTheme = localStorage.getItem('theme');
+            
+            if (savedTheme) {
+                document.body.setAttribute('data-theme', savedTheme);
+                themeToggle.innerHTML = savedTheme === 'dark' 
+                    ? '<i class="fas fa-sun"></i>' 
+                    : '<i class="fas fa-moon"></i>';
+            }
+            
+            themeToggle.addEventListener('click', () => {
+                const currentTheme = document.body.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                document.body.setAttribute('data-theme', newTheme);
+                themeToggle.innerHTML = newTheme === 'dark' 
+                    ? '<i class="fas fa-sun"></i>' 
+                    : '<i class="fas fa-moon"></i>';
+                localStorage.setItem('theme', newTheme);
+                
+                // Tema değiştiğinde grafikleri yeniden çiz
+                if (progressChartInstance) progressChartInstance.destroy();
+                if (performanceChartInstance) performanceChartInstance.destroy();
+                initCharts();
+            });
+        }
+        
+        // Çıkış yap
+        function logout() {
+            console.log("Çıkış yap butonu tıklandı!");
+            localStorage.removeItem('currentUser');
+            window.location.href = 'login.html';
+        }
+        
+        // Grafikleri başlatma
+        function initCharts() {
+            const progressCtx = document.getElementById('progressChart').getContext('2d');
+            progressChartInstance = new Chart(progressCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Tamamlandı', 'Devam Ediyor', 'Gecikti', 'Planlama'],
+                    datasets: [{
+                        data: [8, 12, 3, 2],
+                        backgroundColor: [
+                            '#2ed573',
+                            '#0980d3',
+                            '#ff4757',
+                            '#ffc107'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                color: getComputedStyle(document.body).getPropertyValue('--text-color').trim()
+                            }
+                        }
+                    }
+                }
+            });
+            // performanceChartInstance burada oluşturulmasın, veri gelince oluşturulsun
+        }
+        
+        // PDF oluşturma fonksiyonu
+        async function exportToPdf() {
+            showToast("PDF raporu hazırlanıyor...", false);
+
+            const reportTable = document.getElementById('reportTable');
+            const tableRows = reportTable.querySelectorAll('tbody tr');
+            const tableHeaders = reportTable.querySelectorAll('thead th');
+
+            let tableHtml = `
+                <table class="pdf-table" style="width:100%; border-collapse: collapse; margin-bottom: 20px;">
+                    <thead>
+                        <tr>
+                            ${Array.from(tableHeaders).map(th => `<th style="border: 1px solid #e1e5e9; padding: 8px; text-align: left; background-color: #f0f4f8; font-weight: bold; color: #5e6870;">${th.textContent}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            tableRows.forEach((row, index) => {
+                const rowBgColor = index % 2 === 0 ? '#ffffff' : '#f9f9f9';
+                tableHtml += `<tr style="background-color: ${rowBgColor};">`;
+                Array.from(row.children).forEach(cell => {
+                    tableHtml += `<td style="border: 1px solid #e1e5e9; padding: 8px; text-align: left; font-size: 13px;">${cell.textContent}</td>`;
+                });
+                tableHtml += `</tr>`;
+            });
+            tableHtml += `
+                    </tbody>
+                </table>
+            `;
+
+            const pdfContent = document.createElement('div');
+            pdfContent.className = 'pdf-report-content';
+            pdfContent.innerHTML = `
+                <div class="pdf-header">
+                    <img src="serlogo.png" alt="Ser Elektrik" style="height: 60px; margin-bottom: 10px;">
+                    <h2>Performans Raporu</h2>
+                    <div class="pdf-info">
+                        <div>Tarih: ${new Date().toLocaleDateString('tr-TR')}</div>
+                    </div>
+                </div>
+                <div class="pdf-table-container">
+                    ${tableHtml}
+                </div>
+                <div class="pdf-footer">
+                    &copy; 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır.
+                </div>
+            `;
+
+            // Yeni pencere aç
+            const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
+            if (!newWindow) {
+                showToast("PDF önizlemesi için yeni pencere açılamadı. Tarayıcınızın pop-up engelleyicisini kontrol edin.", true);
+                return;
+            }
+
+            // Yeni pencereye PDF içeriğini ve gerekli CSS'i ekle
+            newWindow.document.write(`
+                <!DOCTYPE html>
+                <html lang="tr">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Rapor Önizlemesi</title>
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                    <style>
+                        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; }
+                        .pdf-container {
+                            width: 210mm; /* A4 genişliği */
+                            min-height: 297mm; /* A4 yüksekliği */
+                            margin: 20px auto;
+                            background: #fff;
+                            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                            padding: 20mm; /* Kenar boşlukları */
+                            box-sizing: border-box;
+                        }
+                        .pdf-report-content {
+                            font-family: "Segoe UI", Arial, sans-serif;
+                            color: #333;
+                            box-sizing: border-box;
+                        }
+                        .pdf-header { text-align: center; margin-bottom: 20px; }
+                        .pdf-header img { height: 60px; margin-bottom: 10px; }
+                        .pdf-header h1 { color: #005c9d; font-size: 28px; margin: 0; }
+                        .pdf-header h2 { color: #0980d3; font-size: 22px; margin: 5px 0 15px; }
+                        .pdf-info { display: flex; justify-content: center; gap: 20px; font-size: 14px; margin-bottom: 15px; }
+                        .pdf-table-container { margin-top: 20px; }
+                        .pdf-table { width: 100%; border-collapse: collapse; }
+                        .pdf-table th, .pdf-table td { border: 1px solid #e1e5e9; padding: 8px; text-align: left; font-size: 13px; }
+                        .pdf-table th { background-color: #f0f4f8; color: #5e6870; font-weight: bold; }
+                        .pdf-footer { text-align: center; font-size: 12px; color: #6c757d; margin-top: 40px; border-top: 1px solid #eee; padding-top: 15px; }
+                        .print-button-container {
+                            text-align: center;
+                            margin-top: 20px;
+                            padding-bottom: 20px;
+                        }
+                        .print-button {
+                            background-color: #005c9d;
+                            color: white;
+                            padding: 10px 20px;
+                            border: none;
+                            border-radius: 8px;
+                            font-size: 16px;
+                            cursor: pointer;
+                            transition: background-color 0.3s ease;
+                        }
+                        .print-button:hover {
+                            background-color: #0980d3;
+                        }
+                        @media print {
+                            .print-button-container { display: none; }
+                            body { background-color: #fff; }
+                            .pdf-container { margin: 0; box-shadow: none; padding: 0; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="pdf-container">
+                        ${pdfContent.innerHTML}
+                    </div>
+                    <div class="print-button-container">
+                        <button class="print-button" onclick="window.print()"><i class="fas fa-print"></i> PDF Kaydet / Yazdır</button>
+                    </div>
+                </body>
+                </html>
+            `);
+            newWindow.document.close(); // Yazma işlemini bitir
+
+            newWindow.onload = () => {
+                showToast("PDF raporu önizlemesi hazır.");
+                // Aktivite loglama (isteğe bağlı)
+                // addActivity("Rapor PDF Önizlendi", "Genel rapor PDF önizlemesi açıldı.", null, "fas fa-file-pdf", "pdf_preview");
+            };
+        }
+        
+        // Toast mesajı gösterme
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toastMessage.textContent = message;
+            toast.className = 'toast show';
+            if (isError) {
+                toast.classList.add('error');
+            }
+            
+            setTimeout(() => {
+                toast.className = 'toast';
+            }, 3000);
+        }
+
+        // Proje yöneticisi istatistik tablosunu dolduran fonksiyon
+        function fillManagerStatsTable() {
+            fetch('http://localhost:3001/api/manager-stats')
+                .then(response => response.json())
+                .then(managers => {
+                    const tbody = document.getElementById('reportTableBody');
+                    tbody.innerHTML = '';
+                    managers.forEach(mgr => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${mgr.manager_name || mgr.project_manager_id}</td>
+                            <td>${mgr.total_projects}</td>
+                            <td>${mgr.on_time_projects}</td>
+                            <td>${mgr.delayed_projects}</td>
+                            <td>${mgr.total_delay_days}</td>
+                            <td>${Number(mgr.avg_project_duration).toFixed(2)}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                })
+                .catch(err => {
+                    document.getElementById('reportTableBody').innerHTML = '<tr><td colspan="6">Veri alınamadı</td></tr>';
+                    console.error('Yönetici istatistikleri alınamadı:', err);
+                });
+        }
+    </script>
+</body>
+</html>
