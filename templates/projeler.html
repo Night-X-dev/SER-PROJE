@@ -417,10 +417,6 @@
         box-shadow: 0 5px 15px rgba(9, 128, 211, 0.3);
       }
 
-      .btn i {
-        font-size: 14px;
-      }
-
       /* Genel buton stilini biraz iyileştirebiliriz */
       .btn, .modal-btn {
           padding: 10px 20px; /* Buton padding'ini artır */
@@ -1268,6 +1264,25 @@
     </style>
   </head>
   <body data-theme="light">
+    <!-- Confirmation Modal -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmationModalLabel">Onay Gerekli</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="confirmationMessage">
+                    Emin misiniz?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary" id="confirmActionBtn">Onayla</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Proje Detay/Düzenleme Modalı -->
     <div id="projectModal" class="modal">
       <div class="modal-content" id="projectModalContent">
@@ -1501,7 +1516,7 @@
     
 
     <script>
-      const API_BASE_URL = "ballast.proxy.rlwy.net:42617";
+      const API_BASE_URL = "https://ser-proje.onrender.com";
       let currentUser = null;
       let allProjectsData = [];
       let filteredProjects = []; // Filtrelenmiş projeleri tutacak
@@ -1515,6 +1530,10 @@
       const prevPageButton = document.getElementById('prevPage');
       const nextPageButton = document.getElementById('nextPage');
       const pageNumbersContainer = document.getElementById('pageNumbers');
+      const confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+      const confirmActionBtn = document.getElementById('confirmActionBtn');
+      let currentConfirmAction = null;
+
 
       // --- Kullanıcı Oturum Kontrolü ve Tema ---
       document.addEventListener("DOMContentLoaded", function () {
@@ -1641,6 +1660,21 @@
           toast.className = "toast";
         }, 3000);
       }
+
+      // Confirmation Modal'ı gösterme fonksiyonu
+      function showConfirmationModal(message, actionCallback) {
+          document.getElementById('confirmationMessage').innerHTML = message;
+          currentConfirmAction = actionCallback;
+          confirmationModal.show();
+      }
+
+      // Confirmation Modal'daki onay butonuna tıklama
+      confirmActionBtn.addEventListener('click', () => {
+          if (currentConfirmAction) {
+              currentConfirmAction();
+          }
+          confirmationModal.hide();
+      });
 
       // Tarih formatlama (DD.MM.YYYY)
       function formatDateForDisplay(dateStr) {
@@ -1952,7 +1986,7 @@
             const projectId = e.currentTarget.dataset.id;
             const hasPermission = await checkPermission('proje_sil');
             if (!hasPermission) return;
-            deleteProject(projectId);
+            showConfirmationModal(`Bu projeyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz!`, () => deleteProject(projectId));
           };
         });
         document.querySelectorAll(".generate-pdf-btn").forEach((btn) => {
@@ -1970,33 +2004,29 @@
       }
 
       async function deleteProject(id) {
-        const hasPermission = await checkPermission('proje_sil');
-        if (!hasPermission) return;
         const project = allProjectsData.find(p => String(p.project_id) === String(id));
         const projectName = project ? project.project_name : `ID: ${id}`;
-        if (confirm("Bu projeyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz!")) {
-          try {
-            const response = await fetch(`${API_BASE_URL}/api/projects/${id}`, {
-              method: "DELETE",
-            });
-            const data = await response.json();
-            if (response.ok) {
-              showToast(data.message || "Proje başarıyla silindi");
-              fetchProjects();
-              addActivity(
-                "Proje Silindi",
-                `\"${projectName}\" projesi silindi.`,
-                id,
-                "fas fa-trash",
-                "project_delete"
-              );
-            } else {
-              showToast(`Hata: ${data.message}`, true);
-            }
-          } catch (error) {
-            console.error("Proje silme hatası:", error);
-            showToast("Sunucuya bağlanılamadı veya bir sorun oluştu.", true);
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/projects/${id}`, {
+            method: "DELETE",
+          });
+          const data = await response.json();
+          if (response.ok) {
+            showToast(data.message || "Proje başarıyla silindi");
+            fetchProjects();
+            addActivity(
+              "Proje Silindi",
+              `\"${projectName}\" projesi silindi.`,
+              id,
+              "fas fa-trash",
+              "project_delete"
+            );
+          } else {
+            showToast(`Hata: ${data.message}`, true);
           }
+        } catch (error) {
+          console.error("Proje silme hatası:", error);
+          showToast("Sunucuya bağlanılamadı veya bir sorun oluştu.", true);
         }
       }
 
@@ -2396,7 +2426,7 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
         button.addEventListener('click', (e) => {
           const progressId = e.currentTarget.dataset.id;
           const projId = e.currentTarget.dataset.projectId;
-          deleteProgressStep(progressId, projId);
+          showConfirmationModal(`Bu iş adımını silmek istediğinize emin misiniz? Bu işlem geri alınamaz!`, () => deleteProgressStep(progressId, projId));
         });
       });
     }
@@ -2502,6 +2532,7 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
           const data = await response.json();
           if (response.ok) {
             showToast("İş adımı başarıyla güncellendi.");
+            fetchProjects(); // Projeler listesini de yenile (durum güncellenmiş olabilir)
             fetchProgressSteps(projectId, true); // Adımları yenile (düzenleme modunda kal)
             addActivity(
               "İş Adımı Güncellendi",
@@ -2519,8 +2550,6 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
 
       // progress_id kullanıldı
       async function deleteProgressStep(progressId, projectId) {
-        // SweetAlert2 yerine custom toast ve confirm kullanıyoruz
-        if (confirm("Bu iş adımını silmek istediğinize emin misiniz? Bu işlem geri alınamaz!")) {
           try {
             const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, { // progressId kullanılıyor
               method: "DELETE",
@@ -2528,6 +2557,7 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
             const data = await response.json();
             if (response.ok) {
               showToast("İş adımı başarıyla silindi!");
+              fetchProjects(); // Projeler listesini de yenile (durum güncellenmiş olabilir)
               fetchProgressSteps(projectId, true); // Adımları yenile (düzenleme modunda kal)
               addActivity(
                 "İş Adımı Silindi",
@@ -2541,7 +2571,6 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
             console.error("İş adımı silme hatası:", error);
             showToast("İş adımı silinirken bir sorun oluştu.", true);
           }
-        }
       }
 
       // PDF Oluşturma Fonksiyonları (progress_id kullanıldı)
@@ -3015,7 +3044,7 @@ async function checkPermission(permissionKey) {
         return false;
     }
     try {
-        const response = await fetch(`http://localhost:3001/api/role-permissions?role=${encodeURIComponent(role)}`);
+        const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(role)}`);
         if (!response.ok) throw new Error('Yetki sorgusu başarısız');
         const perms = await response.json();
         const permission = Array.isArray(perms) ? perms[0] : perms;
