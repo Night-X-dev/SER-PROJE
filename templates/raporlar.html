@@ -217,7 +217,8 @@
             flex-shrink: 0;
         }
 
-        .notification-btn::after {
+        /* Bildirim butonu kaldırıldığı için ::after pseudo-elementi de kaldırıldı */
+        /* .notification-btn::after {
             content: "3";
             position: absolute;
             top: 5px;
@@ -231,7 +232,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-        }
+        } */
 
         .user-profile {
             display: flex;
@@ -686,7 +687,7 @@
         /* Toast bildirimi */
         .toast {
             position: fixed;
-            top: 60px; /* 20px yerine 60px yapın */
+            bottom: 20px; /* Toast'ı alta taşı */
             right: 20px;
             padding: 15px 25px;
             border-radius: 8px;
@@ -698,7 +699,7 @@
             gap: 10px;
             z-index: 10000;
             opacity: 0;
-            transform: translateY(-20px);
+            transform: translateY(20px); /* Alta doğru kaydırarak gizle */
             transition: all 0.3s ease;
             pointer-events: none;
         }
@@ -850,9 +851,12 @@
                     <i class="fas fa-moon"></i>
                 </div>
 
+                <!-- Bildirim butonu kaldırıldı -->
+                <!--
                 <div class="notification-btn">
                     <i class="fas fa-bell"></i>
                 </div>
+                -->
 
                 <div class="user-profile">
                     <div class="user-avatar" id="userAvatar">MÖ</div>
@@ -973,7 +977,8 @@
     </div>
 
     <script>
-        const API_BASE_URL = 'https://ballast.proxy.rlwy.net:42617';
+        // API Base URL (Doğru URL ile güncellendi)
+        const API_BASE_URL = 'https://ser-proje.onrender.com'; 
         let currentUser = null;
         let progressChartInstance = null;
         let performanceChartInstance = null;
@@ -999,7 +1004,8 @@
             fillManagerStatsTable();
 
             // İşçi performans verisini dinamik olarak çek
-            fetch('https://ballast.proxy.rlwy.net:42617/api/worker-performance')
+            // API_BASE_URL kullanılarak güncellendi
+            fetch(`${API_BASE_URL}/api/worker-performance`)
                 .then(response => response.json())
                 .then(data => {
                     // İstatistik kutularını doldurmak için örnek:
@@ -1313,7 +1319,7 @@
 
             newWindow.onload = () => {
                 showToast("PDF raporu önizlemesi hazır.");
-                // Aktivite loglama (isteğe bağlı)
+                // Aktivite loglama (isteğe bağlı) - Bildirim sistemi kaldırıldığı için yorum satırı yapıldı.
                 // addActivity("Rapor PDF Önizlendi", "Genel rapor PDF önizlemesi açıldı.", null, "fas fa-file-pdf", "pdf_preview");
             };
         }
@@ -1336,7 +1342,8 @@
 
         // Proje yöneticisi istatistik tablosunu dolduran fonksiyon
         function fillManagerStatsTable() {
-            fetch('https://ballast.proxy.rlwy.net:42617/api/manager-stats')
+            // API_BASE_URL kullanılarak güncellendi
+            fetch(`${API_BASE_URL}/api/manager-stats`)
                 .then(response => response.json())
                 .then(managers => {
                     const tbody = document.getElementById('reportTableBody');

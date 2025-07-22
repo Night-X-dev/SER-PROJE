@@ -146,7 +146,7 @@
         .main-content {
             flex: 1;
             margin-left: 260px; /* Sidebar genişliği kadar boşluk */
-            transition: margin-left 0.3s ease-in-out;
+            transition: margin-left 0 3s ease-in-out;
             width: calc(100% - 260px); /* Kalan genişliği kapla */
         }
 
@@ -215,7 +215,8 @@
             flex-shrink: 0; /* Küçülmesini engelle */
         }
 
-        .notification-btn::after {
+        /* Bildirim butonu kaldırıldığı için ::after pseudo-elementi de kaldırıldı */
+        /* .notification-btn::after {
             content: "3";
             position: absolute;
             top: 5px;
@@ -229,7 +230,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-        }
+        } */
 
         .user-profile {
             display: flex;
@@ -809,25 +810,25 @@
                 flex-wrap: nowrap; /* Çok küçük ekranlarda da sarmalamayı engelle */
                 gap: 10px; /* Hamburger ve arama kutusu arasına boşluk */
                 flex-direction: row; 
-                justify-content: flex-start; /* Öğeleri başlangıca hizala */
+                justify-content: flex-start;
                 align-items: center;
             }
             .hamburger-menu {
-                order: 1; /* Hamburger menü ilk sırada */
+                order: 1;
             }
             .search-container {
-                flex-grow: 1; /* Kalan alanı kapla */
-                order: 2; /* Arama kutusu ikinci sırada */
-                margin-left: 0; /* Önceki margin-left'i sıfırla */
-                width: auto; /* Otomatik genişlik */
+                flex-grow: 1;
+                order: 2;
+                margin-left: 0;
+                width: auto;
             }
             .topbar-actions {
-                width: auto; /* Aksiyonların genişliği otomatik olsun */
-                order: 3; /* Aksiyonlar üçüncü sırada */
-                justify-content: flex-end; /* Aksiyonları sağa hizala */
-                margin-left: auto; /* Sağ tarafa it */
-                flex-wrap: nowrap; /* Aksiyonların kendi içinde sarmalamasını engelle */
-                gap: 8px; /* Daha küçük boşluk */
+                width: auto;
+                order: 3;
+                justify-content: flex-end;
+                margin-left: auto;
+                flex-wrap: nowrap;
+                gap: 8px;
             }
             .user-info {
                 display: none;
@@ -888,7 +889,7 @@
         /* Notification Panel Styles */
         #notification-panel {
             position: fixed;
-            top: 20px;
+            bottom: 20px; /* Toast'ı alta taşı */
             right: 20px;
             background-color: var(--primary);
             color: var(--white);
@@ -900,7 +901,7 @@
             gap: 10px;
             opacity: 0;
             visibility: hidden;
-            transform: translateY(-20px);
+            transform: translateY(20px); /* Alta doğru kaydırarak gizle */
             transition: all 0.3s ease-in-out;
             z-index: 3000; /* Ensure it's on top */
         }
@@ -1017,9 +1018,12 @@
                     <i class="fas fa-moon"></i>
                 </div>
                 
+                <!-- Bildirim butonu kaldırıldı -->
+                <!--
                 <div class="notification-btn">
                     <i class="fas fa-bell"></i>
                 </div>
+                -->
                 
                  <div class="user-profile">
                     <div class="user-avatar" id="userAvatar"></div>
@@ -1142,6 +1146,9 @@
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/tr.min.js"></script>
     <script>
+        // API Base URL (Doğru URL ile güncellendi)
+        const API_BASE_URL = 'https://ser-proje.onrender.com'; 
+
         // Takvim nesnesi
         let calendar;
         let tasks = []; // tasks dizisini burada tanımla
@@ -1162,7 +1169,8 @@
         }
 
         function loadUsersForAssignee(selectedUserId = null, callback = null) {
-            fetch('http://localhost:3001/api/users')
+            // API_BASE_URL kullanılarak güncellendi
+            fetch(`${API_BASE_URL}/api/users`)
                 .then(res => res.json())
                 .then(apiUsers => {
                     users = apiUsers;
@@ -1463,7 +1471,8 @@
                 deleteBtn.style.display = '';
                 deleteBtn.onclick = function() {
                     showConfirmationModal('Bu görevi silmek istediğinize emin misiniz?', () => {
-                        fetch(`http://localhost:3001/api/tasks/${task.id}`, {
+                        // API_BASE_URL kullanılarak güncellendi
+                        fetch(`${API_BASE_URL}/api/tasks/${task.id}`, {
                             method: 'DELETE'
                         })
                         .then(async res => {
@@ -1662,7 +1671,8 @@
 
                 // Eğer editingTask varsa, güncelleme yap
                 if (editingTask && editingTask.id) {
-                    fetch(`http://localhost:3001/api/tasks/${editingTask.id}`, {
+                    // API_BASE_URL kullanılarak güncellendi
+                    fetch(`${API_BASE_URL}/api/tasks/${editingTask.id}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -1686,7 +1696,8 @@
                     });
                 } else {
                     // Yeni görev ekle
-                    fetch('http://localhost:3001/api/tasks', {
+                    // API_BASE_URL kullanılarak güncellendi
+                    fetch(`${API_BASE_URL}/api/tasks`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -1715,7 +1726,8 @@
             deleteTaskBtn.addEventListener('click', function() {
                 if (!editingTask || !editingTask.id) return;
                 showConfirmationModal('Bu görevi silmek istediğinize emin misiniz?', () => {
-                    fetch(`http://localhost:3001/api/tasks/${editingTask.id}`, {
+                    // API_BASE_URL kullanılarak güncellendi
+                    fetch(`${API_BASE_URL}/api/tasks/${editingTask.id}`, {
                         method: 'DELETE'
                     })
                     .then(async res => {
@@ -1744,7 +1756,8 @@
                 deleteTaskFromDetailBtn.addEventListener('click', () => {
                     if (!editingTask || !editingTask.id) return;
                     showConfirmationModal('Bu görevi silmek istediğinize emin misiniz?', () => {
-                        fetch(`http://localhost:3001/api/tasks/${editingTask.id}`, {
+                        // API_BASE_URL kullanılarak güncellendi
+                        fetch(`${API_BASE_URL}/api/tasks/${editingTask.id}`, {
                             method: 'DELETE'
                         })
                         .then(async res => {
@@ -1820,7 +1833,8 @@
           
             // Görevleri ve kullanıcıları backend'den çek
             function loadTasksFromApi() {
-                fetch('http://localhost:3001/api/tasks')
+                // API_BASE_URL kullanılarak güncellendi
+                fetch(`${API_BASE_URL}/api/tasks`)
                     .then(res => res.json())
                     .then(apiTasks => {
                         const currentUser = JSON.parse(localStorage.getItem('currentUser'));
