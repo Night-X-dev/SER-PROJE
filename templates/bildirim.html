@@ -3,867 +3,792 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Proje Yönetimi - Bildirimler</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <title>Ser Elektrik Otomasyon - Bildirimler</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        /* Genel Stil */
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        /* index.html'den alınan genel stil değişkenleri */
+        :root {
+            --primary: #005c9d;
+            --primary-light: #0980d3;
+            --white: #ffffff;
+            --light-gray: #97a1aa;
+            --dark-gray: #5e6870;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --input-bg: #f0f4f8;
+            --border-color: #e1e5e9;
+            --sidebar-bg: #ffffff;
+            --topbar-bg: #ffffff;
+            --success: #2ed573;
+            --danger: #ff4757;
+            --warning: #ffc107;
+            --info: #0980d3;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --input-bg: #2d2d2d;
+            --border-color: #3a3a3a;
+            --sidebar-bg: #1a1a1a;
+            --topbar-bg: #1a1a1a;
+        }
+
+        * {
             margin: 0;
             padding: 0;
-            background-color: #f0f2f5;
-            color: #333;
-            line-height: 1.6;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
 
-        header {
-            background-color: #007bff;
-            color: white;
-            padding: 15px 20px;
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            height: 100vh;
+            position: fixed;
+            overflow-y: auto;
+            padding: 20px 0;
+            z-index: 1000;
+            transform: translateX(0);
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .sidebar.show {
+            transform: translateX(0);
+        }
+        .sidebar.hidden {
+            transform: translateX(-100%);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            padding: 0 20px 25px 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 25px;
+        }
+
+        .logo-icon {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 20px;
+            margin-right: 12px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .nav-item {
+            padding: 12px 25px;
+            display: flex;
+            align-items: center;
+            color: var(--text-color);
+            text-decoration: none;
+            border-left: 3px solid transparent;
+            margin-bottom: 5px;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background-color: rgba(9, 128, 211, 0.1);
+            border-left-color: var(--primary-light);
+            color: var(--primary-light);
+        }
+
+        .nav-item i {
+            font-size: 18px;
+            margin-right: 15px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            transition: margin-left 0.3s ease-in-out;
+            width: calc(100% - 260px);
+        }
+
+        .main-content.expanded {
+            margin-left: 0;
+            width: 100%;
+        }
+
+        .topbar {
+            background-color: var(--topbar-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            flex-wrap: nowrap;
+            gap: 15px;
         }
 
-        header h1 {
-            margin: 0;
-            font-size: 1.8em;
+        .search-container {
+            position: relative;
+            width: 300px;
+            flex-grow: 1;
+        }
+
+        .search-container input {
+            width: 100%;
+            padding: 10px 15px 10px 40px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+        }
+
+        .search-container i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--light-gray);
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .notification-btn, .theme-toggle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            cursor: pointer;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .notification-btn::after {
+            content: "3";
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #ff4757;
+            color: white;
+            font-size: 10px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.2s ease-out;
+        }
+        .notification-btn.has-notifications::after {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: 600;
         }
 
         .user-info {
             display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .user-role {
+            font-size: 13px;
+            color: var(--light-gray);
+        }
+
+        .logout-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            gap: 8px;
+            transition: all 0.3s ease;
+            background: transparent;
+            border: 1px solid var(--primary-light);
+            color: var(--primary-light);
+            margin-left: 10px;
+        }
+
+        .logout-btn:hover {
+            background-color: var(--primary);
+            color: var(--white);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+
+        .dashboard-content { /* Bu sayfada bildirimler içeriği için kullanılacak */
+            padding: 30px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .page-title i {
+            color: var(--primary-light);
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .card-header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
             align-items: center;
         }
 
-        .user-info span {
-            margin-right: 15px;
-            font-size: 1.1em;
-            font-weight: 500;
-        }
-
-        .notification-container {
-            position: relative;
-            display: inline-block;
-            margin-right: 20px;
-        }
-
-        .notification-button {
-            background: none;
-            border: none;
-            font-size: 1.8em; /* Daha belirgin */
-            cursor: pointer;
-            color: white;
-            position: relative;
-            padding: 5px;
-        }
-
-        .notification-button:hover {
-            color: #e0e0e0;
-        }
-
-        .notification-count {
-            position: absolute;
-            top: 0px; /* Daha yukarısı */
-            right: 0px; /* Daha sağda */
-            background-color: #dc3545; /* Kırmızı */
-            color: white;
-            border-radius: 50%;
-            padding: 3px 8px;
-            font-size: 0.7em;
-            display: none; /* Başlangıçta gizli */
-            border: 1px solid white; /* Beyaz kenarlık */
-            min-width: 18px; /* Tek haneli sayılar için */
-            text-align: center;
-        }
-
-        .notification-panel {
-            display: none;
-            position: absolute;
-            top: 55px; /* Butonun biraz altı */
-            right: 0;
-            background-color: white;
-            border: 1px solid #ddd;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            width: 350px; /* Daha geniş */
-            max-height: 450px; /* Daha uzun */
-            overflow-y: auto;
-            z-index: 1000;
-            border-radius: 8px;
-            animation: fadeIn 0.3s ease-out; /* Açılış animasyonu */
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .notification-panel h3 {
-            margin: 0;
-            padding: 12px 15px;
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #eee;
-            text-align: left;
-            color: #495057;
-            font-size: 1.1em;
+        .card-title {
+            font-size: 18px;
             font-weight: 600;
         }
 
-        #notification-list {
-            padding: 0; /* Padding'i item'lara bırak */
-            list-style: none; /* Liste işaretlerini kaldır */
+        .notification-list-full {
+            padding: 10px 0;
         }
 
         .notification-item {
-            padding: 12px 15px;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
-            transition: background-color 0.2s ease, transform 0.2s ease;
+            display: flex;
+            align-items: flex-start;
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.2s;
+            cursor: pointer; /* Tıklanabilir olması için */
         }
 
         .notification-item:last-child {
             border-bottom: none;
         }
 
-        .notification-item.unread {
-            background-color: #eaf6ff; /* Okunmamışlar için açık mavi, daha yumuşak */
-            font-weight: 500;
-        }
-
         .notification-item:hover {
-            background-color: #f2f2f2;
-            transform: translateX(3px);
+            background-color: rgba(9, 128, 211, 0.05);
         }
 
-        .notification-item p {
-            margin: 0 0 5px 0;
-            font-size: 0.95em;
-            color: #343a40;
+        .notification-item.unread {
+            background-color: rgba(9, 128, 211, 0.1);
+        }
+        .notification-item.unread:hover {
+            background-color: rgba(9, 128, 211, 0.15);
         }
 
-        .notification-item small {
-            font-size: 0.78em;
-            color: #6c757d;
-            display: block; /* Yeni satıra geç */
+        .notification-item-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(9, 128, 211, 0.1);
+            color: var(--primary-light);
+            font-size: 18px;
+            margin-right: 15px;
+            flex-shrink: 0;
         }
-        .notification-item .message-text {
-            font-weight: normal; /* İç mesajın bold olmamasını sağlar */
+        .notification-item.unread .notification-item-icon {
+            background-color: var(--primary-light);
+            color: var(--white);
         }
 
+        .notification-item-content {
+            flex-grow: 1;
+        }
+
+        .notification-item-title {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 5px;
+            color: var(--text-color);
+        }
+
+        .notification-item-description {
+            font-size: 14px;
+            color: var(--light-gray);
+            line-height: 1.5;
+        }
+
+        .notification-item-time {
+            font-size: 12px;
+            color: var(--light-gray);
+            margin-top: 8px;
+            text-align: right;
+        }
 
         .no-notifications {
             text-align: center;
-            color: #888;
-            padding: 20px;
-            font-style: italic;
+            padding: 30px;
+            color: var(--light-gray);
+            font-size: 16px;
         }
 
-        .logout-button {
-            background-color: #28a745; /* Yeşil */
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            text-decoration: none;
-            font-size: 0.9em;
-            transition: background-color 0.2s ease;
-        }
-
-        .logout-button:hover {
-            background-color: #218838;
-        }
-        
-        /* Simülasyon Alanı */
-        .simulation-section {
-            background-color: #e9ecef;
-            padding: 25px;
-            border-radius: 8px;
-            margin-top: 30px;
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
-        }
-        
-        .simulation-section h2 {
-            color: #0056b3;
-            margin-bottom: 20px;
+        .footer {
             text-align: center;
-        }
-
-        .simulation-controls {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-        }
-
-        .control-card {
-            background-color: #fff;
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+            color: var(--light-gray);
+            font-size: 14px;
+            border-top: 1px solid var(--border-color);
+            margin-top: auto; /* Footer'ı alta itmek için */
         }
 
-        .control-card label {
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: #555;
-        }
-
-        .control-card select,
-        .control-card input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-sizing: border-box; /* Padding dahil genişlik */
-        }
-
-        .control-card button {
-            background-color: #28a745;
+        /* Toast bildirimi */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--success);
             color: white;
-            border: none;
             padding: 12px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1em;
-            transition: background-color 0.2s ease;
-            margin-top: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 10000;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+        
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .toast.error {
+            background-color: var(--danger);
         }
 
-        .control-card button:hover {
-            background-color: #218838;
-        }
-
-        /* Responsive Tasarım */
-        @media (max-width: 768px) {
-            header {
-                flex-direction: column;
-                align-items: flex-start;
+        /* Mobil uyumluluk */
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-100%);
             }
-            .user-info {
-                margin-top: 10px;
+            .main-content {
+                margin-left: 0;
                 width: 100%;
-                justify-content: space-between;
             }
-            .notification-container {
+            .hamburger-menu {
+                display: block;
+                background-color: var(--primary);
+                color: var(--white);
+                border: none;
+                border-radius: 8px;
+                padding: 10px 12px;
+                cursor: pointer;
+                font-size: 20px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                margin-right: 15px;
+            }
+            .topbar {
+                padding: 15px;
+                flex-wrap: wrap;
+                justify-content: flex-start;
+                gap: 10px;
+            }
+            .search-container {
+                order: 2;
+                flex-grow: 1;
                 margin-right: 0;
             }
-            .notification-panel {
+            .topbar-actions {
+                order: 3;
                 width: 100%;
-                left: 0;
-                right: auto;
-                top: 110px; /* Header yüksekliğine göre ayarla */
+                justify-content: flex-end;
+                margin-top: 10px;
+                gap: 10px;
             }
-            .simulation-controls {
-                grid-template-columns: 1fr;
+            .user-profile {
+                flex-grow: 0;
+            }
+            .logout-btn {
+                padding: 8px 10px;
+                font-size: 14px;
+                margin-left: 0;
+            }
+            .logout-btn .logout-text {
+                display: none;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .dashboard-content {
+                padding: 15px;
+            }
+            .page-title {
+                font-size: 22px;
             }
         }
     </style>
 </head>
-<body>
-    <header>
-        <div class="user-info">
-            <h1 id="current-user-display">Hoş Geldin!</h1>
-            <div class="notification-container">
-                <button id="notification-button" class="notification-button">
-                    <i class="fas fa-bell"></i> <span id="notification-count" class="notification-count"></span>
-                </button>
-                <div id="notification-panel" class="notification-panel">
-                    <h3>Bildirimler</h3>
-                    <ul id="notification-list">
-                        <p class="no-notifications">Henüz bildiriminiz yok.</p>
-                    </ul>
-                </div>
+<body data-theme="light">
+    <div class="sidebar" id="sidebar">
+        <a href="index.html" style="text-decoration: none;">
+            <div class="logo-container" style="cursor: pointer;">
+              <img src="{{ url_for('static', filename='serlogo.png') }}" alt="Ser Elektrik Otomasyon" style="width: 180px; height: auto; padding-left: 10px;">
             </div>
-            <button id="logout-button" class="logout-button">Çıkış Yap</button>
-        </div>
-    </header>
+          </a>
+          
+        <a href="index.html" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span class="nav-text">Dashboard</span>
+        </a>
+        <a href="projeler.html" class="nav-item">
+            <i class="fas fa-project-diagram"></i>
+            <span class="nav-text">Projeler</span>
+        </a>
+        <a href="proje_ekle.html" class="nav-item">
+            <i class="fas fa-plus-circle"></i>
+            <span class="nav-text">Yeni Proje</span>
+        </a>
+        <a href="raporlar.html" class="nav-item">
+            <i class="fas fa-chart-line"></i>
+            <span class="nav-text">Raporlar</span>
+        </a>
+        <a href="musteriler.html" class="nav-item">
+            <i class="fas fa-users"></i>
+            <span class="nav-text">Müşteriler</span>
+        </a>
+        <a href="takvim.html" class="nav-item">
+            <i class="fas fa-calendar-alt"></i>
+            <span class="nav-text">Takvim</span>
+        </a>
+        <a href="ayarlar.html" class="nav-item">
+            <i class="fas fa-cog"></i>
+            <span class="nav-text">Ayarlar</span>
+        </a>
+        <a href="bildirim.html" class="nav-item active">
+            <i class="fas fa-bell"></i>
+            <span class="nav-text">Bildirimler</span>
+        </a>
+    </div>
 
-    <div class="container">
-        <section class="simulation-section">
-            <h2>Simülasyon Alanı</h2>
-            <p>Bu alandaki işlemler bildirimleri tetikleyecektir.</p>
-
-            <div class="simulation-controls">
-                <div class="control-card">
-                    <h3>Yeni Proje Ekle</h3>
-                    <label for="new-project-name">Proje Adı:</label>
-                    <input type="text" id="new-project-name" placeholder="Proje Adı">
-                    
-                    <label for="new-project-customer">Müşteri:</label>
-                    <select id="new-project-customer">
-                        </select>
-
-                    <label for="new-project-manager">Proje Yöneticisi:</label>
-                    <select id="new-project-manager">
-                        </select>
-                    
-                    <label for="new-project-start-date">Başlangıç Tarihi:</label>
-                    <input type="date" id="new-project-start-date">
-
-                    <label for="new-project-end-date">Bitiş Tarihi:</label>
-                    <input type="date" id="new-project-end-date">
-
-                    <button id="add-project-btn">Proje Ekle</button>
-                </div>
-
-                <div class="control-card">
-                    <h3>Mevcut Projeyi Güncelle</h3>
-                    <label for="update-project-select">Proje Seç:</label>
-                    <select id="update-project-select">
-                        </select>
-                    <label for="updated-project-name">Yeni Proje Adı:</label>
-                    <input type="text" id="updated-project-name" placeholder="Yeni Proje Adı (isteğe bağlı)">
-                    <label for="updated-project-status">Yeni Durum:</label>
-                    <select id="updated-project-status">
-                        <option value="">Değişiklik Yok</option>
-                        <option value="Planlama Aşamasında">Planlama Aşamasında</option>
-                        <option value="Aktif">Aktif</option>
-                        <option value="Aktif (İş Gecikmeli)">Aktif (İş Gecikmeli)</option>
-                        <option value="Gecikti">Gecikti</option>
-                        <option value="Tamamlandı">Tamamlandı</option>
-                    </select>
-                    <button id="update-project-btn">Proje Güncelle</button>
-                </div>
-
-                <div class="control-card">
-                    <h3>Proje Sil</h3>
-                    <label for="delete-project-select">Silinecek Proje Seç:</label>
-                    <select id="delete-project-select">
-                        </select>
-                    <button id="delete-project-btn" class="delete-button">Proje Sil</button>
+    <div class="main-content" id="mainContent">
+        <!-- Topbar -->
+        <div class="topbar">
+            <button class="hamburger-menu" id="hamburgerMenu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="search-container">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Görev, müşteri veya proje ara...">
+            </div>
+            
+            <div class="topbar-actions">
+                <div class="theme-toggle" id="theme-toggle">
+                    <i class="fas fa-moon"></i>
                 </div>
                 
-                <div class="control-card">
-                    <h3>Yeni Müşteri Ekle</h3>
-                    <label for="new-customer-name">Firma Adı:</label>
-                    <input type="text" id="new-customer-name" placeholder="Firma Adı">
-                    <label for="new-customer-contact">İlgili Kişi:</label>
-                    <input type="text" id="new-customer-contact" placeholder="İlgili Kişi">
-                    <label for="new-customer-phone">Telefon:</label>
-                    <input type="text" id="new-customer-phone" placeholder="Telefon">
-                    <button id="add-customer-btn">Müşteri Ekle</button>
+                <div class="notification-btn" id="notificationButton">
+                    <i class="fas fa-bell"></i>
                 </div>
-
-                <div class="control-card">
-                    <h3>Müşteri Güncelle</h3>
-                    <label for="update-customer-select">Müşteri Seç:</label>
-                    <select id="update-customer-select">
-                        </select>
-                    <label for="updated-customer-name">Yeni Firma Adı:</label>
-                    <input type="text" id="updated-customer-name" placeholder="Yeni Firma Adı (isteğe bağlı)">
-                    <button id="update-customer-btn">Müşteri Güncelle</button>
+                
+                 <div class="user-profile">
+                    <div class="user-avatar" id="userAvatar"></div>
+                    <div class="user-info">
+                        <div class="user-name" id="userName"></div>
+                        <div class="user-role" id="userRole"></div>
+                    </div>
                 </div>
+                <button class="btn btn-outline logout-btn" id="logoutButton">
+                    <i class="fas fa-sign-out-alt"></i> <span class="logout-text">Çıkış Yap</span>
+                </button>
+            </div>
+        </div>
 
-                <div class="control-card">
-                    <h3>Müşteri Sil</h3>
-                    <label for="delete-customer-select">Silinecek Müşteri Seç:</label>
-                    <select id="delete-customer-select">
-                        </select>
-                    <button id="delete-customer-btn" class="delete-button">Müşteri Sil</button>
+        <div class="dashboard-content">
+            <h1 class="page-title">
+                <i class="fas fa-bell"></i>
+                Tüm Bildirimler
+            </h1>
+            
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Bildirim Listesi</div>
+                </div>
+                <div class="card-body">
+                    <div class="notification-list-full" id="fullNotificationList">
+                        <!-- Tüm bildirimler buraya yüklenecek -->
+                        <div class="no-notifications">Bildirimler yükleniyor...</div>
+                    </div>
                 </div>
             </div>
-        </section>
+
+            <div class="footer">
+                &copy; 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır. | Mustafa Öztürk
+            </div>
+        </div>
+    </div>
+    
+    <div class="toast" id="toast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMessage">İşlem başarıyla tamamlandı</span>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const userId = localStorage.getItem('userId'); // Kullanıcı ID'sini localStorage'dan al
-            const userRole = localStorage.getItem('userRole'); // Kullanıcı rolünü localStorage'dan al
-            const currentUserName = localStorage.getItem('userName'); // Kullanıcı adını al
+        const API_BASE_URL = "https://ser-proje.onrender.com"; // Bu URL'i Render'daki uygulamanızın gerçek URL'i ile değiştirin
+        let currentUser = null;
 
-            const currentUserDisplay = document.getElementById('current-user-display');
-            if (currentUserName && currentUserDisplay) {
-                currentUserDisplay.textContent = `Hoş Geldin, ${currentUserName}! (Rol: ${userRole})`;
+        // Toast mesajı gösterme fonksiyonu
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toastMessage.textContent = message;
+            toast.className = 'toast show';
+            if (isError) {
+                toast.classList.add('error');
+            } else {
+                toast.classList.remove('error');
             }
+            
+            setTimeout(() => {
+                toast.className = 'toast';
+            }, 3000);
+        }
 
-            if (!userId) {
-                alert("Kullanıcı girişi yapılmamış. Lütfen giriş sayfasına yönlendirileceksiniz.");
-                // Gerçek uygulamada buraya bir login sayfasına yönlendirme eklersiniz.
-                // window.location.href = '/login.html'; // Örnek
-                return; // userId yoksa diğer scriptleri çalıştırmayı durdur
-            }
+        document.addEventListener('DOMContentLoaded', function() {
+            const userNameElement = document.getElementById('userName');
+            const userRoleElement = document.getElementById('userRole');
+            const userAvatarElement = document.getElementById('userAvatar');
+            const logoutButton = document.getElementById('logoutButton');
 
-            const notificationButton = document.getElementById('notification-button');
-            const notificationPanel = document.getElementById('notification-panel');
-            const notificationList = document.getElementById('notification-list');
-            const notificationCountSpan = document.getElementById('notification-count');
-            const logoutButton = document.getElementById('logout-button');
-
-            // Kullanıcı bilgilerini çeken fonksiyon (role kontrolü için de kullanılabilir)
-            async function fetchUserInfo() {
+            const storedUser = localStorage.getItem('currentUser');
+            if (!storedUser) {
+                showToast("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", true);
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000); // 2 saniye sonra yönlendir
+            } else {
                 try {
-                    const response = await fetch(`/api/user-info?user_id=${userId}`);
-                    if (!response.ok) throw new Error('Kullanıcı bilgileri çekilemedi.');
-                    const userData = await response.json();
-                    localStorage.setItem('userRole', userData.role); // Rolü güncelle
-                    localStorage.setItem('userName', userData.fullname); // Adı güncelle
-                    currentUserDisplay.textContent = `Hoş Geldin, ${userData.fullname}! (Rol: ${userData.role})`;
-
-                    // Admin işlemleri bölümünün görünürlüğünü yönet
-                    const adminSection = document.querySelector('.simulation-section');
-                    if (adminSection) {
-                        if (userData.role === 'Admin') {
-                            adminSection.style.display = 'block';
-                            await fetchCustomersForSelect(); // Müşterileri doldur
-                            await fetchProjectManagersForSelect(); // Proje yöneticilerini doldur
-                            await fetchProjectsForSelect(); // Projeleri doldur
-                        } else {
-                            adminSection.style.display = 'none';
-                        }
-                    }
-
-                } catch (error) {
-                    console.error("Kullanıcı bilgisi çekilirken hata:", error);
-                    alert("Kullanıcı bilgileri alınamadı. Lütfen tekrar giriş yapın.");
-                    // Opsiyonel: Oturumu kapat ve giriş sayfasına yönlendir
-                    // logoutUser();
+                    currentUser = JSON.parse(storedUser); 
+                    updateUserInfo(currentUser);
+                } catch (e) {
+                    console.error("Kayıtlı kullanıcı verisi bozuk:", e);
+                    localStorage.removeItem('currentUser');
+                    showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", true);
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000); // 2 saniye sonra yönlendir
                 }
             }
 
-
-            // Bildirim panelini aç/kapa
-            if (notificationButton) {
-                notificationButton.addEventListener('click', () => {
-                    const isHidden = notificationPanel.style.display === 'none' || notificationPanel.style.display === '';
-                    notificationPanel.style.display = isHidden ? 'block' : 'none';
-                    if (isHidden) {
-                        fetchNotifications(); // Panel açıldığında bildirimleri yenile
-                    }
-                });
+            function updateUserInfo(user) {
+                if (user) {
+                    userNameElement.textContent = user.fullname;
+                    userRoleElement.textContent = user.role;
+                    userAvatarElement.textContent = getInitials(user.fullname);
+                }
             }
 
-            // Panel dışına tıklayınca kapat
+            function getInitials(fullname) {
+                if (!fullname) return '';
+                const parts = fullname.split(' ');
+                if (parts.length === 1) {
+                    return parts[0].charAt(0).toUpperCase();
+                } else if (parts.length >= 2) {
+                    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+                }
+                return '';
+            }
+
+            const themeToggle = document.getElementById('theme-toggle');
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.body.setAttribute('data-theme', savedTheme);
+                themeToggle.innerHTML =
+                    savedTheme === 'dark'
+                        ? '<i class="fas fa-sun"></i>'
+                        : '<i class="fas fa-moon"></i>';
+            }
+            themeToggle.addEventListener('click', () => {
+                const currentTheme = document.body.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                document.body.setAttribute('data-theme', newTheme);
+                themeToggle.innerHTML =
+                    newTheme === 'dark'
+                        ? '<i class="fas fa-sun"></i>'
+                        : '<i class="fas fa-moon"></i>';
+                localStorage.setItem('theme', newTheme);
+            });
+
+            const handleLogout = () => {
+                localStorage.removeItem('currentUser');
+                window.location.href = 'login.html';
+            };
+
+            logoutButton.addEventListener('click', handleLogout);
+
+            // Hamburger menü işlevselliği
+            const hamburgerMenu = document.getElementById('hamburgerMenu');
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+
+            hamburgerMenu.addEventListener('click', () => {
+                sidebar.classList.toggle('show');
+                mainContent.classList.toggle('expanded');
+            });
+
             document.addEventListener('click', (event) => {
-                if (notificationPanel && !notificationPanel.contains(event.target) && !notificationButton.contains(event.target) && notificationPanel.style.display === 'block') {
-                    notificationPanel.style.display = 'none';
+                if (sidebar.classList.contains('show') && 
+                    !sidebar.contains(event.target) && 
+                    !hamburgerMenu.contains(event.target)) {
+                    sidebar.classList.remove('show');
+                    mainContent.classList.remove('expanded');
                 }
             });
 
-            // Bildirimleri çeken ana fonksiyon
-            async function fetchNotifications() {
-                try {
-                    const response = await fetch(`/api/notifications?userId=${userId}`); // userId'yi query param olarak gönder
-                    if (!response.ok) {
-                        // Eğer backend 401 döndürürse, oturumun sona ermiş olabileceğini düşün
-                        if (response.status === 401 || response.status === 403) {
-                            console.warn('Oturum sonlandı veya yetkisiz erişim. Oturum kapatılıyor...');
-                            logoutUser();
-                            return;
-                        }
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const notifications = await response.json();
-
-                    notificationList.innerHTML = ''; // Paneli temizle
-                    let unreadCount = 0;
-
-                    if (notifications.length === 0) {
-                        const noNotifications = document.createElement('p');
-                        noNotifications.className = 'no-notifications';
-                        noNotifications.textContent = 'Henüz bildiriminiz yok.';
-                        notificationList.appendChild(noNotifications);
-                    } else {
-                        notifications.forEach(notification => {
-                            if (!notification.is_read) {
-                                unreadCount++;
-                            }
-                            const notificationItem = document.createElement('li'); // li olarak değiştirildi
-                            notificationItem.className = `notification-item ${notification.is_read ? 'read' : 'unread'}`;
-                            
-                            const date = new Date(notification.created_at);
-                            const formattedDate = date.toLocaleString('tr-TR', {
-                                year: 'numeric', month: 'numeric', day: 'numeric',
-                                hour: '2-digit', minute: '2-digit'
-                            });
-
-                            notificationItem.innerHTML = `
-                                <p><span class="message-text">${notification.message}</span></p>
-                                <small>${formattedDate}</small>
-                            `;
-                            notificationItem.dataset.notificationId = notification.id; 
-                            notificationItem.addEventListener('click', () => markNotificationAsRead(notification.id, notificationItem));
-                            notificationList.appendChild(notificationItem);
-                        });
-                    }
-
-                    // Bildirim sayacını güncelle
-                    if (notificationCountSpan) {
-                        notificationCountSpan.textContent = unreadCount > 0 ? unreadCount : '';
-                        notificationCountSpan.style.display = unreadCount > 0 ? 'block' : 'none';
-                    }
-
-                } catch (error) {
-                    console.error('Bildirimler çekilirken hata oluştu:', error);
-                    if (notificationCountSpan) {
-                        notificationCountSpan.style.display = 'none'; 
-                    }
+            window.addEventListener('resize', () => {
+                if (window.innerWidth > 992) {
+                    sidebar.classList.remove('show');
+                    mainContent.classList.remove('expanded');
                 }
-            }
+            });
 
-            // Bildirimi okundu olarak işaretleme fonksiyonu
-            async function markNotificationAsRead(notificationId, notificationElement) {
-                try {
-                    const response = await fetch(`/api/notifications/${notificationId}/mark_read?userId=${userId}`, { // userId'yi query param olarak gönder
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const data = await response.json();
-                    console.log(data.message);
-                    if (notificationElement) {
-                        notificationElement.classList.remove('unread');
-                        notificationElement.classList.add('read');
-                    }
-                    fetchNotifications(); // Bildirimleri yeniden çekip sayacı güncelleyelim
-                } catch (error) {
-                    console.error('Bildirim okundu olarak işaretlenirken hata oluştu:', error);
-                }
-            }
-
-            // Çıkış yapma fonksiyonu
-            function logoutUser() {
-                localStorage.removeItem('userId');
-                localStorage.removeItem('userName');
-                localStorage.removeItem('userRole');
-                alert("Çıkış yapıldı. Giriş sayfasına yönlendiriliyorsunuz.");
-                // Gerçek uygulamada burayı kendi login sayfanızın URL'si ile değiştirin
-                window.location.href = '/login.html'; 
-            }
-
-            if (logoutButton) {
-                logoutButton.addEventListener('click', logoutUser);
-            }
-
-            // Her 5 saniyede bir bildirimleri kontrol et (Polling)
-            setInterval(fetchNotifications, 5000); 
-            fetchNotifications(); // Sayfa yüklendiğinde bir kere çek
-            fetchUserInfo(); // Sayfa yüklendiğinde kullanıcı bilgilerini çek
-
-            // --- Simülasyon İşlevleri (Admin Panel İçin) ---
-
-            // Müşterileri selectbox'a doldurma
-            async function fetchCustomersForSelect() {
-                const selectElements = [
-                    document.getElementById('new-project-customer'),
-                    document.getElementById('update-customer-select'),
-                    document.getElementById('delete-customer-select')
-                ];
-                if (!selectElements[0] || !selectElements[1] || !selectElements[2]) return; // Elementler yoksa çık
-
-                try {
-                    const response = await fetch('/api/customers');
-                    if (!response.ok) throw new Error('Müşteriler çekilemedi.');
-                    const customers = await response.json();
-
-                    selectElements.forEach(select => {
-                        select.innerHTML = '<option value="">-- Seçiniz --</option>';
-                        customers.forEach(customer => {
-                            const option = document.createElement('option');
-                            option.value = customer.customer_id;
-                            option.textContent = customer.customer_name;
-                            select.appendChild(option);
-                        });
-                    });
-                } catch (error) {
-                    console.error('Müşteriler yüklenirken hata:', error);
-                }
-            }
-
-            // Proje yöneticilerini selectbox'a doldurma
-            async function fetchProjectManagersForSelect() {
-                const selectElement = document.getElementById('new-project-manager');
-                if (!selectElement) return;
-
-                try {
-                    const response = await fetch('/api/project_managers');
-                    if (!response.ok) throw new Error('Proje yöneticileri çekilemedi.');
-                    const managers = await response.json();
-
-                    selectElement.innerHTML = '<option value="">-- Seçiniz --</option>';
-                    managers.forEach(manager => {
-                        const option = document.createElement('option');
-                        option.value = manager.id;
-                        option.textContent = manager.fullname;
-                        selectElement.appendChild(option);
-                    });
-                } catch (error) {
-                    console.error('Proje yöneticileri yüklenirken hata:', error);
-                }
-            }
-
-            // Projeleri selectbox'lara doldurma
-            async function fetchProjectsForSelect() {
-                const selectElements = [
-                    document.getElementById('update-project-select'),
-                    document.getElementById('delete-project-select')
-                ];
-                 if (!selectElements[0] || !selectElements[1]) return; // Elementler yoksa çık
-
-                try {
-                    const response = await fetch('/api/projects');
-                    if (!response.ok) throw new Error('Projeler çekilemedi.');
-                    const projects = await response.json();
-
-                    selectElements.forEach(select => {
-                        select.innerHTML = '<option value="">-- Seçiniz --</option>';
-                        projects.forEach(project => {
-                            const option = document.createElement('option');
-                            option.value = project.project_id;
-                            option.textContent = project.project_name;
-                            select.appendChild(option);
-                        });
-                    });
-                } catch (error) {
-                    console.error('Projeler yüklenirken hata:', error);
-                }
-            }
-
-
-            // Yeni Proje Ekle Butonu
-            const addProjectBtn = document.getElementById('add-project-btn');
-            if (addProjectBtn) {
-                addProjectBtn.addEventListener('click', async () => {
-                    const projectName = document.getElementById('new-project-name').value;
-                    const customerId = document.getElementById('new-project-customer').value;
-                    const projectManagerId = document.getElementById('new-project-manager').value;
-                    const startDate = document.getElementById('new-project-start-date').value;
-                    const endDate = document.getElementById('new-project-end-date').value;
-
-                    if (!projectName || !customerId || !projectManagerId || !startDate || !endDate) {
-                        alert('Lütfen tüm proje bilgilerini doldurun.');
-                        return;
-                    }
-
-                    try {
-                        const response = await fetch('/api/projects', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                projectName,
-                                customerId: parseInt(customerId),
-                                projectManagerId: parseInt(projectManagerId),
-                                startDate,
-                                endDate,
-                                projectRef: "REF-" + Math.random().toString(36).substr(2, 5).toUpperCase(), // Örnek
-                                projectDescription: "Yeni eklenen proje",
-                                contractDate: startDate,
-                                meetingDate: startDate,
-                                projectLocation: "Konum Bilgisi",
-                                progressSteps: [] // Basitlik için boş bırakıldı
-                            })
-                        });
-                        const data = await response.json();
-                        alert(data.message);
-                        if (response.ok) {
-                            // Başarılı olursa inputları temizle ve selectboxları yenile
-                            document.getElementById('new-project-name').value = '';
-                            document.getElementById('new-project-customer').value = '';
-                            document.getElementById('new-project-manager').value = '';
-                            document.getElementById('new-project-start-date').value = '';
-                            document.getElementById('new-project-end-date').value = '';
-                            await fetchProjectsForSelect(); // Proje selectbox'ını güncelle
-                        }
-                        fetchNotifications(); // Admin olarak yeni bildirimleri görmek için
-                    } catch (error) {
-                        console.error('Proje ekleme hatası:', error);
-                        alert('Proje eklerken bir hata oluştu.');
-                    }
-                });
-            }
-
-            // Proje Güncelle Butonu
-            const updateProjectBtn = document.getElementById('update-project-btn');
-            if (updateProjectBtn) {
-                updateProjectBtn.addEventListener('click', async () => {
-                    const projectId = document.getElementById('update-project-select').value;
-                    const newProjectName = document.getElementById('updated-project-name').value.trim();
-                    const newStatus = document.getElementById('updated-project-status').value;
-
-                    if (!projectId) {
-                        alert('Lütfen güncellenecek bir proje seçin.');
-                        return;
-                    }
-                    if (!newProjectName && !newStatus) {
-                        alert('Lütfen yeni proje adı veya yeni durum belirtin.');
-                        return;
-                    }
-
-                    const updateData = {};
-                    if (newProjectName) updateData.project_name = newProjectName;
-                    if (newStatus) updateData.status = newStatus;
-
-                    try {
-                        const response = await fetch(`/api/projects/${projectId}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(updateData)
-                        });
-                        const data = await response.json();
-                        alert(data.message);
-                        if (response.ok) {
-                            document.getElementById('updated-project-name').value = '';
-                            document.getElementById('updated-project-status').value = '';
-                            await fetchProjectsForSelect(); // Proje selectbox'ını güncelle
-                        }
-                        fetchNotifications(); // Admin olarak yeni bildirimleri görmek için
-                    } catch (error) {
-                        console.error('Proje güncelleme hatası:', error);
-                        alert('Proje güncellerken bir hata oluştu.');
-                    }
-                });
-            }
-            
-            // Proje Sil Butonu
-            const deleteProjectBtn = document.getElementById('delete-project-btn');
-            if (deleteProjectBtn) {
-                deleteProjectBtn.addEventListener('click', async () => {
-                    const projectId = document.getElementById('delete-project-select').value;
-
-                    if (!projectId) {
-                        alert('Lütfen silinecek bir proje seçin.');
-                        return;
-                    }
-                    if (!confirm('Bu projeyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz!')) {
-                        return;
-                    }
-
-                    try {
-                        const response = await fetch(`/api/projects/${projectId}`, {
-                            method: 'DELETE'
-                        });
-                        const data = await response.json();
-                        alert(data.message);
-                        if (response.ok) {
-                            await fetchProjectsForSelect(); // Proje selectbox'ını güncelle
-                        }
-                        fetchNotifications(); // Admin olarak yeni bildirimleri görmek için
-                    } catch (error) {
-                        console.error('Proje silme hatası:', error);
-                        alert('Proje silerken bir hata oluştu.');
-                    }
-                });
-            }
-
-            // Yeni Müşteri Ekle Butonu
-            const addCustomerBtn = document.getElementById('add-customer-btn');
-            if (addCustomerBtn) {
-                addCustomerBtn.addEventListener('click', async () => {
-                    const companyName = document.getElementById('new-customer-name').value;
-                    const contactPerson = document.getElementById('new-customer-contact').value;
-                    const phone = document.getElementById('new-customer-phone').value;
-
-                    if (!companyName || !contactPerson || !phone) {
-                        alert('Firma Adı, İlgili Kişi ve Telefon zorunlu alanlardır.');
-                        return;
-                    }
-
-                    try {
-                        const response = await fetch('/api/customers', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ companyName, contactPerson, phone })
-                        });
-                        const data = await response.json();
-                        alert(data.message);
-                        if (response.ok) {
-                            document.getElementById('new-customer-name').value = '';
-                            document.getElementById('new-customer-contact').value = '';
-                            document.getElementById('new-customer-phone').value = '';
-                            await fetchCustomersForSelect(); // Müşteri selectboxlarını güncelle
-                        }
-                        fetchNotifications(); // Admin olarak yeni bildirimleri görmek için
-                    } catch (error) {
-                        console.error('Müşteri ekleme hatası:', error);
-                        alert('Müşteri eklerken bir hata oluştu.');
-                    }
-                });
-            }
-
-            // Müşteri Güncelle Butonu
-            const updateCustomerBtn = document.getElementById('update-customer-btn');
-            if (updateCustomerBtn) {
-                updateCustomerBtn.addEventListener('click', async () => {
-                    const customerId = document.getElementById('update-customer-select').value;
-                    const newCompanyName = document.getElementById('updated-customer-name').value.trim();
-
-                    if (!customerId) {
-                        alert('Lütfen güncellenecek bir müşteri seçin.');
-                        return;
-                    }
-                    if (!newCompanyName) {
-                        alert('Lütfen yeni firma adı belirtin.');
-                        return;
-                    }
-
-                    try {
-                        const response = await fetch(`/api/customers/${customerId}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ companyName: newCompanyName })
-                        });
-                        const data = await response.json();
-                        alert(data.message);
-                        if (response.ok) {
-                            document.getElementById('updated-customer-name').value = '';
-                            await fetchCustomersForSelect(); // Müşteri selectboxlarını güncelle
-                        }
-                        fetchNotifications(); // Admin olarak yeni bildirimleri görmek için
-                    } catch (error) {
-                        console.error('Müşteri güncelleme hatası:', error);
-                        alert('Müşteri güncellerken bir hata oluştu.');
-                    }
-                });
-            }
-
-            // Müşteri Sil Butonu
-            const deleteCustomerBtn = document.getElementById('delete-customer-btn');
-            if (deleteCustomerBtn) {
-                deleteCustomerBtn.addEventListener('click', async () => {
-                    const customerId = document.getElementById('delete-customer-select').value;
-
-                    if (!customerId) {
-                        alert('Lütfen silinecek bir müşteri seçin.');
-                        return;
-                    }
-                    if (!confirm('Bu müşteriyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz!')) {
-                        return;
-                    }
-
-                    try {
-                        const response = await fetch(`/api/customers/${customerId}`, {
-                            method: 'DELETE'
-                        });
-                        const data = await response.json();
-                        alert(data.message);
-                        if (response.ok) {
-                            await fetchCustomersForSelect(); // Müşteri selectboxlarını güncelle
-                            await fetchProjectsForSelect(); // Müşteriyle ilişkili projeler silindiyse proje listesini de güncelle
-                        }
-                        fetchNotifications(); // Admin olarak yeni bildirimleri görmek için
-                    } catch (error) {
-                        console.error('Müşteri silme hatası:', error);
-                        alert('Müşteri silerken bir hata oluştu.');
-                    }
-                });
-            }
-
+            fetchNotificationsFullPage(); // Sayfa yüklendiğinde tüm bildirimleri çek
         });
+
+        // Tüm bildirimleri çekme ve sayfaya render etme fonksiyonu
+        async function fetchNotificationsFullPage() {
+            const fullNotificationListDiv = document.getElementById('fullNotificationList');
+            fullNotificationListDiv.innerHTML = '<div class="no-notifications"><i class="fas fa-spinner fa-spin"></i> Bildirimler yükleniyor...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/activities`); // Tüm aktiviteleri çek
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: 'Sunucudan yanıt alınamadı.' }));
+                    throw new Error(errorData.message || `HTTP hatası! Durum: ${response.status}`);
+                }
+                const notifications = await response.json();
+                renderFullNotifications(notifications);
+            } catch (error) {
+                console.error('Bildirimler çekilemedi:', error);
+                fullNotificationListDiv.innerHTML = '<div class="no-notifications" style="color: var(--danger);">Bildirimler yüklenemedi.</div>';
+                showToast(`Bildirimler yüklenirken hata oluştu: ${error.message}`, true);
+            }
+        }
+
+        // Tüm bildirimleri sayfaya render etme
+        function renderFullNotifications(notifications) {
+            const fullNotificationListDiv = document.getElementById('fullNotificationList');
+            fullNotificationListDiv.innerHTML = '';
+
+            if (notifications.length === 0) {
+                fullNotificationListDiv.innerHTML = '<div class="no-notifications">Henüz hiç bildirim bulunamadı.</div>';
+                return;
+            }
+
+            notifications.forEach(notification => {
+                const isRead = notification.is_read || false; 
+
+                const item = document.createElement('div');
+                item.className = `notification-item ${isRead ? '' : 'unread'}`; 
+                item.innerHTML = `
+                    <div class="notification-item-icon">
+                        <i class="${notification.icon || 'fas fa-info-circle'}"></i>
+                    </div>
+                    <div class="notification-item-content">
+                        <div class="notification-item-title">${notification.title}</div>
+                        <div class="notification-item-description">${notification.description}</div>
+                        <div class="notification-item-time">${notification.time}</div>
+                    </div>
+                `;
+                item.addEventListener('click', () => markNotificationAsReadFullPage(notification.activity_id, item));
+                fullNotificationListDiv.appendChild(item);
+            });
+        }
+
+        // Bildirimi okunmuş olarak işaretle (bildirim.html sayfası için)
+        async function markNotificationAsReadFullPage(activityId, itemElement) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/activities/${activityId}/read`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (response.ok) {
+                    itemElement.classList.remove('unread');
+                    showToast('Bildirim okunmuş olarak işaretlendi.');
+                    // İsteğe bağlı: Ana sayfadaki bildirim sayacını da güncellemek için bir mekanizma ekleyebilirsiniz.
+                    // Örneğin, localStorage'a bir flag kaydedip index.html'de kontrol edebilirsiniz.
+                } else {
+                    const errorData = await response.json();
+                    console.error('Bildirim okunmuş olarak işaretlenemedi:', errorData.message);
+                    showToast('Bildirim okunmuş olarak işaretlenirken hata oluştu.', true);
+                }
+            } catch (error) {
+                console.error('Bildirim okunmuş olarak işaretlenirken ağ hatası:', error);
+                showToast('Bildirim okunmuş olarak işaretlenirken ağ hatası oluştu.', true);
+            }
+        }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
