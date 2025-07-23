@@ -190,6 +190,13 @@ def get_activities():
             sql = "SELECT * FROM activities ORDER BY created_at DESC"
             cursor.execute(sql)
             result = cursor.fetchall()
+            # is_read alanını int olarak döndür (garanti)
+            for row in result:
+                if 'is_read' in row:
+                    try:
+                        row['is_read'] = int(row['is_read'])
+                    except Exception:
+                        row['is_read'] = 0
             return jsonify(result)
     finally:
         connection.close()
