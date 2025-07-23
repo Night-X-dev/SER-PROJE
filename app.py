@@ -130,14 +130,17 @@ def get_db_connection():
 
 @app.route('/api/activities', methods=['GET'])
 def get_activities():
-    # Burada veritabanından bildirim verilerini çekme ve döndürme işlemleri yapılmalı.
-    # Örnek olarak statik bir veri dönelim:
-    activities = [
-        {"id": 1, "title": "Yeni bir proje oluşturuldu", "description": "Ser-55 nolu proje yöneticisi tarafından yeni proje oluşturuldu.", "time": "2 dakika önce"},
-        {"id": 2, "title": "Proje güncellendi", "description": "Ser-32 nolu projede iş akışı güncellendi.", "time": "1 saat önce"},
-        {"id": 3, "title": "Müşteri eklendi", "description": "Yeni bir müşteri sisteme eklendi: Ali Yılmaz", "time": "3 saat önce"}
-    ]
-    return jsonify(activities)
+    """Veritabanından tüm bildirimleri (activities) çeker."""
+    connection = get_db_connection()
+    try:
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            # MySQL 'activities' tablosundan tüm verileri çekmek için SQL sorgusu
+            sql = "SELECT * FROM activities ORDER BY created_at DESC"
+            cursor.execute(sql)
+            result = cursor.fetchall()
+            return jsonify(result)
+    finally:
+        connection.close()
 @app.route('/api/update_user_profile', methods=['POST'])
 def update_user_profile():
     data = request.get_json()
