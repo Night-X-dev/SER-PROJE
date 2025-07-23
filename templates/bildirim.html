@@ -335,10 +335,10 @@
         }
 
         .notification-item.unread {
-            background-color: rgba(9, 128, 211, 0.1);
+            background-color: rgba(9, 128, 211, 0.15); /* Daha belirgin hafif mavi */
         }
         .notification-item.unread:hover {
-            background-color: rgba(9, 128, 211, 0.15);
+            background-color: rgba(9, 128, 211, 0.2); /* Hover'da biraz daha koyu */
         }
 
         .notification-item-icon {
@@ -788,8 +788,8 @@
                 if (response.ok) {
                     itemElement.classList.remove('unread');
                     showToast('Bildirim okunmuş olarak işaretlendi.');
-                    // İsteğe bağlı: Ana sayfadaki bildirim sayacını da güncellemek için bir mekanizma ekleyebilirsiniz.
-                    // Örneğin, localStorage'a bir flag kaydedip index.html'de kontrol edebilirsiniz.
+                    // Bildirim listesini yeniden çek ve render et
+                    fetchNotificationsFullPage(); 
                 } else {
                     const errorData = await response.json();
                     console.error('Bildirim okunmuş olarak işaretlenemedi:', errorData.message);
