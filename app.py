@@ -150,6 +150,27 @@ def mark_all_activities_as_read():
         if connection:
             connection.close()
 
+# Okunmamış Bildirim Sayısı API
+@app.route('/api/activities/unread-count', methods=['GET'])
+def get_unread_activities_count():
+    """Veritabanındaki okunmamış bildirimlerin sayısını döndürür."""
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            sql = "SELECT COUNT(id) as unread_count FROM activities WHERE is_read = 0"
+            cursor.execute(sql)
+            result = cursor.fetchone()
+            return jsonify(result), 200
+    except pymysql.Error as e:
+        print(f"Veritabanı okunmamış bildirim sayısı çekme hatası: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
+    except Exception as e:
+        print(f"Genel okunmamış bildirim sayısı çekme hatası: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+    finally:
+        if connection:
+            connection.close()
+
 #Bildirimleri (Activities) Okundu API
 
 @app.route('/api/activities/<int:activity_id>/read', methods=['PUT'])

@@ -734,7 +734,7 @@
             });
 
             fetchNotificationsFullPage(); // Sayfa yüklendiğinde tüm bildirimleri çek
-            fetchNotificationCountForTopbar(); // Topbar'daki bildirim sayısını çek
+            fetchUnreadNotificationCount(); // Topbar'daki bildirim sayısını çek
         });
 
         // Tüm bildirimleri çekme ve sayfaya render etme fonksiyonu
@@ -844,23 +844,15 @@
         }
 
         // Topbar'daki bildirim sayacını güncellemek için fonksiyon
-        async function fetchNotificationCountForTopbar() {
+        async function fetchUnreadNotificationCount() {
             const notificationButton = document.getElementById('notificationButton');
-            notificationButton.setAttribute('data-count', '0');
-            notificationButton.classList.remove('has-notifications');
-
             try {
-                const response = await fetch(`${API_BASE_URL}/api/activities`); // Tüm aktiviteleri çek
+                const response = await fetch(`${API_BASE_URL}/api/activities/unread-count`);
                 if (!response.ok) {
                     throw new Error(`HTTP hatası! Durum: ${response.status}`);
                 }
-                const notifications = await response.json();
-                let unreadCount = 0;
-                notifications.forEach(notification => {
-                    if (!notification.is_read) {
-                        unreadCount++;
-                    }
-                });
+                const data = await response.json();
+                const unreadCount = data.unread_count || 0;
 
                 if (unreadCount > 0) {
                     notificationButton.setAttribute('data-count', unreadCount);
@@ -870,10 +862,9 @@
                     notificationButton.classList.remove('has-notifications');
                 }
             } catch (error) {
-                console.error('Topbar bildirim sayısı çekilemedi:', error);
-                // Hata durumunda sayacı gösterme
-                notificationButton.setAttribute('data-count', '!'); 
-                notificationButton.classList.add('has-notifications'); // Hata olduğunu belirtmek için kırmızı nokta kalsın
+                console.error('Okunmamış bildirim sayısı çekilemedi:', error);
+                notificationButton.setAttribute('data-count', '!');
+                notificationButton.classList.add('has-notifications');
             }
         }
 

@@ -1813,7 +1813,7 @@
 
         // "Tümünü Okundu Olarak İşaretle" butonu tıklama olayı
         markAllReadBtn.addEventListener('click', markAllNotificationsAsRead);
-        fetchNotifications(); // Sayfa yüklendiğinde bildirimleri de çek
+        fetchUnreadNotificationCount(); // Sayfa yüklendiğinde SADECE okunmamış sayısını çek
     });
 
     // --- API Çağrıları ve Veri İşleme ---
@@ -2117,26 +2117,46 @@
         });
     }
 
-    // Bildirimleri çekme ve panele render etme fonksiyonu
+    // Sadece okunmamış bildirim sayısını çeken fonksiyon
+    async function fetchUnreadNotificationCount() {
+        const notificationButton = document.getElementById('notificationButton');
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/activities/unread-count`);
+            if (!response.ok) {
+                throw new Error(`HTTP hatası! Durum: ${response.status}`);
+            }
+            const data = await response.json();
+            const unreadCount = data.unread_count || 0;
+
+            if (unreadCount > 0) {
+                notificationButton.setAttribute('data-count', unreadCount);
+                notificationButton.classList.add('has-notifications');
+            } else {
+                notificationButton.setAttribute('data-count', '0');
+                notificationButton.classList.remove('has-notifications');
+            }
+        } catch (error) {
+            console.error('Okunmamış bildirim sayısı çekilemedi:', error);
+            notificationButton.setAttribute('data-count', '!');
+            notificationButton.classList.add('has-notifications');
+        }
+    }
+
+    // Bildirimleri çekme ve panele render etme fonksiyonu (panel açıldığında çağrılır)
     async function fetchNotifications() {
         const notificationListDiv = document.getElementById('notificationList');
-        const notificationButton = document.getElementById('notificationButton');
-        
         notificationListDiv.innerHTML = '<div class="no-notifications"><i class="fas fa-spinner fa-spin"></i> Bildirimler yükleniyor...</div>';
-        notificationButton.setAttribute('data-count', '0'); // Yüklenirken sayacı sıfırla
-        notificationButton.classList.remove('has-notifications');
 
         try {
-            // Sadece son 10 bildirimi çekmek için bir limit ekleyebilirsiniz,
-            // veya backend'inizden sadece okunmamış olanları isteyebilirsiniz.
-            // Şimdilik tümünü çekip frontend'de filtreleyelim.
-            const response = await fetch(`${API_BASE_URL}/api/activities`); 
+            const response = await fetch(`${API_BASE_URL}/api/activities`);
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ message: 'Sunucudan yanıt alınamadı.' }));
                 throw new Error(errorData.message || `HTTP hatası! Durum: ${response.status}`);
             }
             const notifications = await response.json();
             renderNotifications(notifications);
+            // Sayacı tekrar senkronize et
+            fetchUnreadNotificationCount();
         } catch (error) {
             console.error('Bildirimler çekilemedi:', error);
             notificationListDiv.innerHTML = '<div class="no-notifications" style="color: var(--danger);">Bildirimler yüklenemedi.</div>';
@@ -2190,7 +2210,8 @@
             notificationListDiv.appendChild(item);
         });
 
-        // Bildirim sayacını güncelle ve badge'i her durumda göster
+        // Okunmamış bildirim sayısını güncelle
+        const unreadCount = notifications.filter(n => !n.is_read).length;
         if (unreadCount > 0) {
             notificationButton.setAttribute('data-count', unreadCount);
             notificationButton.classList.add('has-notifications');
