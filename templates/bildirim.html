@@ -761,13 +761,25 @@
                         <div class="notification-item-time">${notification.time}</div>
                     </div>
                 `;
-                item.addEventListener('click', () => markNotificationAsReadFullPage(notification.activity_id, item));
+                // Düzeltme: notification.id'nin varlığını kontrol et
+                if (notification.id) {
+                    item.addEventListener('click', () => markNotificationAsReadFullPage(notification.id, item));
+                } else {
+                    console.warn('Bildirim ID\'si eksik, tıklama olayı eklenmedi:', notification);
+                }
                 fullNotificationListDiv.appendChild(item);
             });
         }
 
         // Bildirimi okunmuş olarak işaretle (bildirim.html sayfası için)
         async function markNotificationAsReadFullPage(activityId, itemElement) {
+            // Güvenlik kontrolü: activityId'nin geçerli olduğundan emin ol
+            if (!activityId) {
+                console.error('Hata: Bildirim ID\'si eksik veya geçersiz.');
+                showToast('Bildirim ID\'si eksik veya geçersiz.', true);
+                return;
+            }
+
             try {
                 const response = await fetch(`${API_BASE_URL}/api/activities/${activityId}/read`, {
                     method: 'PUT',
