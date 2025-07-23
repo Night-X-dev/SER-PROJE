@@ -221,7 +221,7 @@
         }
 
         .notification-btn::after {
-            content: "3"; /* Bu kısım JS ile dinamik olarak güncellenecek */
+            content: attr(data-count); /* JS ile dinamik olarak güncellenecek */
             position: absolute;
             top: 5px;
             right: 5px;
@@ -1201,16 +1201,8 @@
         padding: 10px 20px;
         border-top: 1px solid var(--border-color);
         text-align: center;
-    }
-
-    .notification-panel-footer a {
-        color: var(--primary-light);
-        text-decoration: none;
         font-size: 14px;
-        font-weight: 500;
-    }
-    .notification-panel-footer a:hover {
-        text-decoration: underline;
+        color: var(--light-gray);
     }
 
     /* Boş bildirim durumu */
@@ -1343,7 +1335,7 @@
                     <i class="fas fa-moon"></i>
                 </div>
                 
-                <div class="notification-btn" id="notificationButton">
+                <div class="notification-btn" id="notificationButton" data-count="0">
                     <i class="fas fa-bell"></i>
                 </div>
                 
@@ -1371,7 +1363,8 @@
                 <div class="no-notifications">Bildirimler yükleniyor...</div>
             </div>
             <div class="notification-panel-footer">
-                <a href="bildirim.html">Tüm Bildirimleri Görüntüle</a>
+                <!-- "Tüm Bildirimleri Görüntüle" linki kaldırıldı -->
+                Daha fazla bildirim için sayfayı yenileyin.
             </div>
         </div>
 
@@ -1917,6 +1910,7 @@
                 throw new Error(errorData.message || 'Aktivite eklenirken bilinmeyen bir hata oluştu.');
             }
             fetchRecentActivities(); // Aktivite eklendikten sonra listeyi yenile
+            fetchNotifications(); // Yeni aktivite eklendiğinde bildirim panelini de yenile
         } catch (error) {
             console.error('Aktivite ekleme hatası:', error);
         }
@@ -2069,11 +2063,14 @@
         const notificationListDiv = document.getElementById('notificationList');
         const notificationButton = document.getElementById('notificationButton');
         notificationListDiv.innerHTML = '<div class="no-notifications"><i class="fas fa-spinner fa-spin"></i> Bildirimler yükleniyor...</div>';
-        notificationButton.classList.remove('has-notifications'); // Yüklenirken sayacı sıfırla
-        notificationButton.querySelector('::after').textContent = ''; // Sayacı temizle
+        notificationButton.setAttribute('data-count', '0'); // Yüklenirken sayacı sıfırla
+        notificationButton.classList.remove('has-notifications');
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/activities`); // Tüm aktiviteleri çek
+            // Sadece son 10 bildirimi çekmek için bir limit ekleyebilirsiniz,
+            // veya backend'inizden sadece okunmamış olanları isteyebilirsiniz.
+            // Şimdilik tümünü çekip frontend'de filtreleyelim.
+            const response = await fetch(`${API_BASE_URL}/api/activities`); 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ message: 'Sunucudan yanıt alınamadı.' }));
                 throw new Error(errorData.message || `HTTP hatası! Durum: ${response.status}`);
@@ -2095,13 +2092,16 @@
 
         if (notifications.length === 0) {
             notificationListDiv.innerHTML = '<div class="no-notifications">Henüz yeni bildiriminiz yok.</div>';
+            notificationButton.setAttribute('data-count', '0');
             notificationButton.classList.remove('has-notifications');
-            notificationButton.querySelector('::after').textContent = '';
             return;
         }
 
         let unreadCount = 0;
-        notifications.forEach(notification => {
+        // Sadece ilk 10 bildirimi göster (veya istediğiniz sayıda)
+        const displayNotifications = notifications.slice(0, 10); 
+
+        displayNotifications.forEach(notification => {
             // Backend'den 'is_read' alanı geliyorsa kullan, yoksa varsayılan olarak okunmamış kabul et
             const isRead = notification.is_read || false; 
             if (!isRead) {
@@ -2127,12 +2127,11 @@
         });
 
         // Bildirim sayacını güncelle
-        const notificationCountElement = notificationButton.querySelector('::after');
         if (unreadCount > 0) {
-            notificationCountElement.textContent = unreadCount;
+            notificationButton.setAttribute('data-count', unreadCount);
             notificationButton.classList.add('has-notifications');
         } else {
-            notificationCountElement.textContent = '';
+            notificationButton.setAttribute('data-count', '0');
             notificationButton.classList.remove('has-notifications');
         }
     }
@@ -2148,10 +2147,11 @@
                 itemElement.classList.remove('unread');
                 // Sayacı güncelle
                 const notificationButton = document.getElementById('notificationButton');
-                const currentCount = parseInt(notificationButton.querySelector('::after').textContent || '0');
+                let currentCount = parseInt(notificationButton.getAttribute('data-count') || '0');
                 if (currentCount > 0) {
-                    notificationButton.querySelector('::after').textContent = currentCount - 1;
-                    if (currentCount - 1 === 0) {
+                    currentCount--;
+                    notificationButton.setAttribute('data-count', currentCount);
+                    if (currentCount === 0) {
                         notificationButton.classList.remove('has-notifications');
                     }
                 }
