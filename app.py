@@ -157,7 +157,7 @@ def get_unread_activities_count():
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
-            sql = "SELECT COUNT(id) as unread_count FROM activities WHERE is_read = 0"
+            sql = "SELECT COUNT(activity_id) as unread_count FROM activities WHERE is_read = 0"
             cursor.execute(sql)
             result = cursor.fetchone()
             return jsonify(result), 200
