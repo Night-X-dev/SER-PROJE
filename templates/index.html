@@ -2162,15 +2162,15 @@
         const displayNotifications = notifications.slice(0, 10); 
 
         displayNotifications.forEach(notification => {
-            // Backend'den 'is_read' alanı geliyorsa kullan, yoksa varsayılan olarak okunmamış kabul et
-            const isRead = notification.is_read || false; 
+            // is_read alanı hem true/false hem 0/1 gelebilir, kesin kontrol
+            const isRead = notification.is_read === true || notification.is_read === 1;
             if (!isRead) {
                 unreadCount++;
             }
 
             const item = document.createElement('div');
             // 'isRead' durumuna göre sınıf ekle
-            item.className = `notification-item ${isRead ? '' : 'unread'}`; 
+            item.className = isRead ? 'notification-item' : 'notification-item unread';
             item.innerHTML = `
                 <div class="notification-item-icon">
                     <i class="${notification.icon || 'fas fa-info-circle'}"></i>
@@ -2182,7 +2182,6 @@
                 </div>
             `;
             // Bildirime tıklayınca okunmuş olarak işaretle
-            // Düzeltme: notification.id'nin varlığını kontrol et
             if (notification.id) {
                 item.addEventListener('click', () => markNotificationAsRead(notification.id, item));
             } else {
@@ -2191,7 +2190,7 @@
             notificationListDiv.appendChild(item);
         });
 
-        // Bildirim sayacını güncelle
+        // Bildirim sayacını güncelle ve badge'i her durumda göster
         if (unreadCount > 0) {
             notificationButton.setAttribute('data-count', unreadCount);
             notificationButton.classList.add('has-notifications');
