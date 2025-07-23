@@ -413,7 +413,6 @@
             padding: 20px;
             color: var(--light-gray);
             font-size: 14px;
-            border-top: 1px solid var(--border-color);
             margin-top: auto; /* Footer'ı alta itmek için */
         }
 
@@ -740,8 +739,8 @@
         // Tüm bildirimleri çekme ve sayfaya render etme fonksiyonu
         async function fetchNotificationsFullPage() {
             const fullNotificationListDiv = document.getElementById('fullNotificationList');
-            fullNotificationListDiv.innerHTML = '<div class="no-notifications"><i class="fas fa-spinner fa-spin"></i> Bildirimler yükleniyor...</div>';
             const unreadCountBadge = document.getElementById('unreadNotificationCount');
+            fullNotificationListDiv.innerHTML = '<div class="no-notifications"><i class="fas fa-spinner fa-spin"></i> Bildirimler yükleniyor...</div>';
             unreadCountBadge.textContent = '...'; // Yüklenirken göster
 
             try {
@@ -791,9 +790,12 @@
                         <div class="notification-item-time">${formatTimeAgo(notification.created_at)}</div>
                     </div>
                 `;
-                // Düzeltme: notification.id'nin varlığını kontrol et
+                // Düzeltme: notification.id'nin varlığını kontrol et ve tıklama olayını ekle
                 if (notification.id) {
-                    item.addEventListener('click', () => markNotificationAsReadFullPage(notification.id, item));
+                    item.addEventListener('click', () => {
+                        console.log('Bildirim öğesine tıklandı. ID:', notification.id); // Debugging için eklendi
+                        markNotificationAsReadFullPage(notification.id, item);
+                    });
                 } else {
                     console.warn('Bildirim ID\'si eksik, tıklama olayı eklenmedi:', notification);
                 }
@@ -831,7 +833,7 @@
                     showToast('Bildirim okunmuş olarak işaretlendi.');
                     // Bildirim listesini yeniden çek ve render et
                     fetchNotificationsFullPage(); 
-                    fetchNotificationCountForTopbar(); // Topbar sayacını da güncelle
+                    fetchUnreadNotificationCount(); // Topbar sayacını da güncelle
                 } else {
                     const errorData = await response.json();
                     console.error('Bildirim okunmuş olarak işaretlenemedi:', errorData.message, 'HTTP Durumu:', response.status);
