@@ -1089,92 +1089,6 @@ def delete_project_api(project_id):
         if connection:
             connection.close()
 
-# Yeni Proje Ekle API
-@app.route('/api/projects', methods=['POST'])
-def add_project():
-    data = request.get_json()
-    project_name = data.get('projectName')
-    reference_no = data.get('projectRef')
-    description = data.get('projectDescription')
-    customer_id = data.get('customerId')
-    project_manager_id = data.get('projectManagerId')
-    contract_date = data.get('contractDate')
-    meeting_date = data.get('meetingDate')
-    start_date_str = data.get('startDate')
-    end_date = data.get('endDate')
-    project_location = data.get('projectLocation')
-    progress_steps = data.get('progressSteps', [])
-
-    initial_status = 'Planlama Aşamasında' # Varsayılan
-    current_date = datetime.date.today()
-
-    meeting_dt = datetime.datetime.strptime(meeting_date, '%Y-%m-%d').date() if meeting_date else None
-    start_dt = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else None
-
-    if meeting_dt and current_date < meeting_dt:
-        initial_status = 'Planlama Aşamasında'
-    elif start_dt and current_date >= start_dt:
-        initial_status = 'Aktif'
-
-    if not all([project_name, customer_id, project_manager_id, start_date_str, end_date]):
-        return jsonify({'message': 'Zorunlu proje bilgileri eksik (Ad, Müşteri, Yönetici, Başlangıç/Bitiş Tarihi)!'}), 400
-
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            sql_project = """
-            INSERT INTO projects
-            (project_name, reference_no, description, customer_id, project_manager_id,
-             contract_date, meeting_date, start_date, end_date, project_location, status)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """
-            cursor.execute(sql_project, (
-                project_name, reference_no, description, customer_id, project_manager_id,
-                contract_date, meeting_date, start_date_str, end_date, project_location, initial_status
-            ))
-            project_id = cursor.lastrowid
-
-
-            # İş adımları için gecikme gününü hesapla ve kaydet
-            if progress_steps:
-                progress_steps.sort(key=lambda x: datetime.datetime.strptime(x['startDate'], '%Y-%m-%d'))
-
-                sql_progress = """
-                INSERT INTO project_progress
-                (project_id, title, description, start_date, end_date, delay_days)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                """
-
-                previous_end_date = None
-                for i, step in enumerate(progress_steps):
-                    step_start_date = datetime.datetime.strptime(step['startDate'], '%Y-%m-%d').date()
-                    step_end_date = datetime.datetime.strptime(step['endDate'], '%Y-%m-%d').date()
-
-                    delay_days = 0
-                    if i > 0 and previous_end_date:
-                        diff = (step_start_date - previous_end_date).days
-                        if diff > 1:
-                            delay_days = diff - 1
-
-                    cursor.execute(sql_progress, (
-                        project_id, step['title'], step['description'], # Frontend'den gelen 'title'ı kullan
-                        step['startDate'], step['endDate'], delay_days
-                    ))
-                    previous_end_date = step_end_date
-
-            connection.commit()
-        return jsonify({'message': 'Proje başarıyla eklendi!', 'projectId': project_id}), 201
-
-    except pymysql.Error as e:
-        print(f"Veritabanı proje ekleme hatası: {e}")
-        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
-    except Exception as e:
-        print(f"Genel proje ekleme hatası: {e}")
-        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
-    finally:
-        if connection:
-            connection.close()
 
 # Proje Yöneticilerini Listele API
 @app.route('/api/project_managers', methods=['GET'])
@@ -1687,42 +1601,6 @@ def get_distinct_roles():
             connection.close()
 from flask import request, jsonify
 
-@app.route('/api/tasks', methods=['POST', 'OPTIONS'])
-def add_task():
-    if request.method == 'OPTIONS':
-        # CORS preflight için boş 200 OK dön
-        return '', 200
-
-    data = request.get_json()
-    title = data.get('title')
-    description = data.get('description')
-    start = data.get('start')
-    end = data.get('end')
-    priority = data.get('priority', 'medium')
-    assigned_user_id = data.get('assigned_user_id')
-    created_by = data.get('created_by')
-
-    # Basit zorunlu alan kontrolü
-    if not all([title, start, assigned_user_id, created_by]):
-        return jsonify({'message': 'Zorunlu alanlar eksik!'}), 400
-
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            sql = """
-                INSERT INTO tasks (title, description, start, end, priority, assigned_user_id, created_by)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """
-            cursor.execute(sql, (title, description, start, end, priority, assigned_user_id, created_by))
-            connection.commit()
-        return jsonify({'message': 'Görev başarıyla eklendi!'}), 201
-    except Exception as e:
-        print(f"Görev ekleme hatası: {e}")
-        return jsonify({'message': 'Görev eklenirken hata oluştu.'}), 500
-    finally:
-        if connection:
-            connection.close()
 
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
