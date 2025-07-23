@@ -773,6 +773,7 @@
 
         // Bildirimi okunmuş olarak işaretle (bildirim.html sayfası için)
         async function markNotificationAsReadFullPage(activityId, itemElement) {
+            console.log('markNotificationAsReadFullPage çağrıldı, activityId:', activityId);
             // Güvenlik kontrolü: activityId'nin geçerli olduğundan emin ol
             if (!activityId) {
                 console.error('Hata: Bildirim ID\'si eksik veya geçersiz.');
@@ -785,14 +786,16 @@
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' }
                 });
+                console.log('API Yanıtı:', response);
                 if (response.ok) {
+                    console.log('Bildirim başarıyla okunmuş olarak işaretlendi (frontend).');
                     itemElement.classList.remove('unread');
                     showToast('Bildirim okunmuş olarak işaretlendi.');
                     // Bildirim listesini yeniden çek ve render et
                     fetchNotificationsFullPage(); 
                 } else {
                     const errorData = await response.json();
-                    console.error('Bildirim okunmuş olarak işaretlenemedi:', errorData.message);
+                    console.error('Bildirim okunmuş olarak işaretlenemedi:', errorData.message, 'HTTP Durumu:', response.status);
                     showToast('Bildirim okunmuş olarak işaretlenirken hata oluştu.', true);
                 }
             } catch (error) {
