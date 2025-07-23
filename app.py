@@ -171,6 +171,7 @@ def get_unread_activities_count():
         if connection:
             connection.close()
 
+
 #Bildirimleri (Activities) Okundu API
 
 @app.route('/api/activities/<int:activity_id>/read', methods=['PUT'])
@@ -180,12 +181,12 @@ def mark_activity_as_read(activity_id):
     try:
         with connection.cursor() as cursor:
             # Bildirimin varlığını kontrol et
-            cursor.execute("SELECT id FROM activities WHERE id = %s", (activity_id,))
+            cursor.execute("SELECT activity_id FROM activities WHERE activity_id = %s", (activity_id,))
             if not cursor.fetchone():
                 return jsonify({'message': 'Bildirim bulunamadı.'}), 404
 
             # is_read sütununu 1 olarak güncelle
-            sql = "UPDATE activities SET is_read = 1 WHERE id = %s"
+            sql = "UPDATE activities SET is_read = 1 WHERE activity_id = %s"
             cursor.execute(sql, (activity_id,))
             connection.commit()
 
