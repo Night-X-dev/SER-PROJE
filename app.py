@@ -128,6 +128,58 @@ def get_db_connection():
             connection.close()
         raise # Hatayı yukarı fırlat, Flask bunu yakalayacaktır
 
+#Bildirimleri (Activities) Tümü Okundu API
+@app.route('/api/activities/mark_all_read', methods=['PUT'])
+def mark_all_activities_as_read():
+    """Tüm bildirimleri veritabanında okunmuş olarak işaretler."""
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            sql = "UPDATE activities SET is_read = 1 WHERE is_read = 0" # Sadece okunmamışları güncelle
+            cursor.execute(sql)
+            connection.commit()
+            rows_affected = cursor.rowcount # Kaç satırın etkilendiğini al
+        return jsonify({'message': f'{rows_affected} bildirim okunmuş olarak işaretlendi.'}), 200
+    except pymysql.Error as e:
+        print(f"Veritabanı tüm bildirimleri güncelleme hatası: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
+    except Exception as e:
+        print(f"Genel tüm bildirimleri güncelleme hatası: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+    finally:
+        if connection:
+            connection.close()
+
+#Bildirimleri (Activities) Okundu API
+
+@app.route('/api/activities/<int:activity_id>/read', methods=['PUT'])
+def mark_activity_as_read(activity_id):
+    """Belirli bir bildirimi (activity) veritabanında okunmuş olarak işaretler."""
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            # Bildirimin varlığını kontrol et
+            cursor.execute("SELECT id FROM activities WHERE id = %s", (activity_id,))
+            if not cursor.fetchone():
+                return jsonify({'message': 'Bildirim bulunamadı.'}), 404
+
+            # is_read sütununu 1 olarak güncelle
+            sql = "UPDATE activities SET is_read = 1 WHERE id = %s"
+            cursor.execute(sql, (activity_id,))
+            connection.commit()
+
+        return jsonify({'message': 'Bildirim başarıyla okunmuş olarak işaretlendi.'}), 200
+    except pymysql.Error as e:
+        print(f"Veritabanı bildirim güncelleme hatası: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
+    except Exception as e:
+        print(f"Genel bildirim güncelleme hatası: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+    finally:
+        if connection:
+            connection.close()
+
+#Bildirimleri (Activities) Çekme API
 @app.route('/api/activities', methods=['GET'])
 def get_activities():
     """Veritabanından tüm bildirimleri (activities) çeker."""

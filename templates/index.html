@@ -1203,7 +1203,30 @@
         text-align: center;
         font-size: 14px;
         color: var(--light-gray);
+        display: flex; /* Butonu ortalamak için */
+        justify-content: center; /* Butonu ortalamak için */
+        align-items: center;
     }
+    .notification-panel-footer button {
+        width: 100%; /* Butonun genişliğini ayarlayın */
+        padding: 8px 15px;
+        border-radius: 8px;
+        border: none;
+        background: linear-gradient(to right, var(--primary), var(--primary-light));
+        color: var(--white);
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+    .notification-panel-footer button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(9, 128, 211, 0.3);
+    }
+
 
     /* Boş bildirim durumu */
     .no-notifications {
@@ -1363,8 +1386,9 @@
                 <div class="no-notifications">Bildirimler yükleniyor...</div>
             </div>
             <div class="notification-panel-footer">
-                <!-- "Tüm Bildirimleri Görüntüle" linki kaldırıldı -->
-                Daha fazla bildirim için sayfayı yenileyin.
+                <button id="markAllReadBtn">
+                    <i class="fas fa-check-double"></i> Tümünü Okundu Olarak İşaretle
+                </button>
             </div>
         </div>
 
@@ -1756,6 +1780,7 @@
         const notificationButton = document.getElementById('notificationButton');
         const notificationPanel = document.getElementById('notificationPanel');
         const closeNotificationPanel = document.getElementById('closeNotificationPanel');
+        const markAllReadBtn = document.getElementById('markAllReadBtn'); // Yeni buton
 
         notificationButton.addEventListener('click', (event) => {
             event.stopPropagation(); // Butona tıklayınca panelin kapanmasını engelle
@@ -1777,6 +1802,9 @@
                 notificationPanel.classList.remove('show');
             }
         });
+
+        // "Tümünü Okundu Olarak İşaretle" butonu tıklama olayı
+        markAllReadBtn.addEventListener('click', markAllNotificationsAsRead);
     });
 
     // --- API Çağrıları ve Veri İşleme ---
@@ -2062,6 +2090,11 @@
     async function fetchNotifications() {
         const notificationListDiv = document.getElementById('notificationList');
         const notificationButton = document.getElementById('notificationButton');
+        
+        // Hata oluştuğu düşünülen satır: Pseudo-element'in textContent'ini doğrudan değiştirmek yerine data-count kullanıyoruz.
+        // Bu satırda `notificationButton.querySelector('::after')` null dönebilir, bu yüzden kaldırıldı.
+        // notificationButton.querySelector('::after').textContent = ''; 
+
         notificationListDiv.innerHTML = '<div class="no-notifications"><i class="fas fa-spinner fa-spin"></i> Bildirimler yükleniyor...</div>';
         notificationButton.setAttribute('data-count', '0'); // Yüklenirken sayacı sıfırla
         notificationButton.classList.remove('has-notifications');
@@ -2122,7 +2155,7 @@
                 </div>
             `;
             // Bildirime tıklayınca okunmuş olarak işaretle
-            item.addEventListener('click', () => markNotificationAsRead(notification.activity_id, item));
+            item.addEventListener('click', () => markNotificationAsRead(notification.id, item)); // activity_id yerine id kullanıldı
             notificationListDiv.appendChild(item);
         });
 
@@ -2165,6 +2198,38 @@
             showToast('Bildirim okunmuş olarak işaretlenirken ağ hatası oluştu.', true);
         }
     }
+
+    // Tüm Bildirimleri Okundu Olarak İşaretle fonksiyonu
+    async function markAllNotificationsAsRead() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/activities/mark_all_read`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if (response.ok) {
+                const result = await response.json();
+                showToast(result.message || 'Tüm bildirimler okunmuş olarak işaretlendi.');
+                // UI'ı güncelle: Tüm bildirimleri okunmuş yap ve sayacı sıfırla
+                const notificationListDiv = document.getElementById('notificationList');
+                notificationListDiv.querySelectorAll('.notification-item').forEach(item => {
+                    item.classList.remove('unread');
+                });
+                const notificationButton = document.getElementById('notificationButton');
+                notificationButton.setAttribute('data-count', '0');
+                notificationButton.classList.remove('has-notifications');
+                // Paneli kapat
+                document.getElementById('notificationPanel').classList.remove('show');
+            } else {
+                const errorData = await response.json();
+                console.error('Tüm bildirimler okunmuş olarak işaretlenemedi:', errorData.message);
+                showToast('Tüm bildirimler okunmuş olarak işaretlenirken hata oluştu.', true);
+            }
+        } catch (error) {
+            console.error('Tüm bildirimler okunmuş olarak işaretlenirken ağ hatası:', error);
+            showToast('Tüm bildirimler okunmuş olarak işaretlenirken ağ hatası oluştu.', true);
+        }
+    }
+
 
     async function deleteProject(id) {
         // Kullanıcının rolünü localStorage'dan veya currentUser'dan al
