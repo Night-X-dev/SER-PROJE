@@ -774,8 +774,11 @@
             let unreadCount = 0;
             notifications.forEach(notification => {
                 // Debugging için notification objesinin tamamını logla
-                console.log('İşlenen bildirim objesi:', notification); 
-                console.log('notification.activity_id değeri:', notification.activity_id);
+                console.log('--- Debugging notification object ---');
+                console.log('Current notification object:', notification);
+                console.log('Type of notification.activity_id:', typeof notification.activity_id);
+                console.log('Value of notification.activity_id:', notification.activity_id);
+                console.log('--- End debugging notification object ---');
 
                 const isRead = notification.is_read || false; 
                 if (!isRead) {
@@ -794,14 +797,14 @@
                         <div class="notification-item-time">${formatTimeAgo(notification.created_at)}</div>
                     </div>
                 `;
-                // Düzeltme: notification.activity_id'nin varlığını kontrol et ve tıklama olayını ekle
-                if (notification.activity_id) { 
+                // Düzeltme: notification.activity_id'nin varlığını ve geçerliliğini kontrol et
+                if (notification.activity_id !== undefined && notification.activity_id !== null && notification.activity_id > 0) { 
                     item.addEventListener('click', () => {
                         console.log('Bildirim öğesine tıklandı. ID:', notification.activity_id); // Debugging için eklendi
                         markNotificationAsReadFullPage(notification.activity_id, item); 
                     });
                 } else {
-                    console.warn('Bildirim ID\'si eksik (activity_id), tıklama olayı eklenmedi:', notification); 
+                    console.warn('Bildirim ID\'si eksik (activity_id) veya geçersiz, tıklama olayı eklenmedi:', notification); 
                 }
                 fullNotificationListDiv.appendChild(item);
             });
