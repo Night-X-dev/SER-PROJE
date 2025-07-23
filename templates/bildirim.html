@@ -773,6 +773,10 @@
 
             let unreadCount = 0;
             notifications.forEach(notification => {
+                // Debugging için notification objesinin tamamını logla
+                console.log('İşlenen bildirim objesi:', notification); 
+                console.log('notification.activity_id değeri:', notification.activity_id);
+
                 const isRead = notification.is_read || false; 
                 if (!isRead) {
                     unreadCount++;
@@ -791,13 +795,13 @@
                     </div>
                 `;
                 // Düzeltme: notification.activity_id'nin varlığını kontrol et ve tıklama olayını ekle
-                if (notification.activity_id) { // Burası notification.id yerine notification.activity_id olarak değiştirildi
+                if (notification.activity_id) { 
                     item.addEventListener('click', () => {
                         console.log('Bildirim öğesine tıklandı. ID:', notification.activity_id); // Debugging için eklendi
-                        markNotificationAsReadFullPage(notification.activity_id, item); // Burası notification.id yerine notification.activity_id olarak değiştirildi
+                        markNotificationAsReadFullPage(notification.activity_id, item); 
                     });
                 } else {
-                    console.warn('Bildirim ID\'si eksik (activity_id), tıklama olayı eklenmedi:', notification); // Uyarı mesajı güncellendi
+                    console.warn('Bildirim ID\'si eksik (activity_id), tıklama olayı eklenmedi:', notification); 
                 }
                 fullNotificationListDiv.appendChild(item);
             });
