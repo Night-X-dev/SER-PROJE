@@ -128,6 +128,16 @@ def get_db_connection():
             connection.close()
         raise # Hatayı yukarı fırlat, Flask bunu yakalayacaktır
 
+@app.route('/api/activities', methods=['GET'])
+def get_activities():
+    # Burada veritabanından bildirim verilerini çekme ve döndürme işlemleri yapılmalı.
+    # Örnek olarak statik bir veri dönelim:
+    activities = [
+        {"id": 1, "title": "Yeni bir proje oluşturuldu", "description": "Ser-55 nolu proje yöneticisi tarafından yeni proje oluşturuldu.", "time": "2 dakika önce"},
+        {"id": 2, "title": "Proje güncellendi", "description": "Ser-32 nolu projede iş akışı güncellendi.", "time": "1 saat önce"},
+        {"id": 3, "title": "Müşteri eklendi", "description": "Yeni bir müşteri sisteme eklendi: Ali Yılmaz", "time": "3 saat önce"}
+    ]
+    return jsonify(activities)
 @app.route('/api/update_user_profile', methods=['POST'])
 def update_user_profile():
     data = request.get_json()
