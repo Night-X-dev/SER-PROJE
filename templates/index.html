@@ -1098,10 +1098,6 @@
         transition: opacity 0.3s ease, transform 0.3s ease;
     }
 
-    .notification-item.unread {
-        background-color: #eaf5ff; /* Hafif mavi arka plan */
-    }
-
     .notification-panel.show {
         display: flex;
         opacity: 1;
@@ -2173,7 +2169,7 @@
             notificationListDiv.appendChild(item);
         });
 
-        // Okunmamış bildirim sayısını güncelle
+        // Bildirim sayacını güncelle
         if (unreadCount > 0) {
             notificationButton.setAttribute('data-count', unreadCount);
             notificationButton.classList.add('has-notifications');
@@ -2182,7 +2178,830 @@
             notificationButton.classList.remove('has-notifications');
         }
     }
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    // Bildirimi okunmuş olarak işaretle
+    async function markNotificationAsRead(activityId, itemElement) {
+        console.log('markNotificationAsRead çağrıldı, activityId:', activityId);
+        // Güvenlik kontrolü: activityId'nin geçerli olduğundan emin ol
+        if (!activityId) {
+            console.error('Hata: Bildirim ID\'si eksik veya geçersiz.');
+            showToast('Bildirim ID\'si eksik veya geçersiz.', true);
+            return;
+        }
+
+        // Eğer zaten okunmuşsa tekrar işlem yapma
+        if (!itemElement.classList.contains('unread')) {
+            console.log('Bildirim zaten okunmuş olarak işaretli.');
+            showToast('Bildirim zaten okunmuş olarak işaretli.');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/activities/${activityId}/read`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            console.log('API Yanıtı:', response);
+            if (response.ok) {
+                console.log('Bildirim başarıyla okunmuş olarak işaretlendi (frontend).');
+                itemElement.classList.remove('unread');
+                showToast('Bildirim okunmuş olarak işaretlendi.');
+                // Sayacı güncelle
+                const notificationButton = document.getElementById('notificationButton');
+                let currentCount = parseInt(notificationButton.getAttribute('data-count') || '0');
+                if (currentCount > 0) {
+                    currentCount--;
+                    notificationButton.setAttribute('data-count', currentCount);
+                    if (currentCount === 0) {
+                        notificationButton.classList.remove('has-notifications');
+                    }
+                }
+            } else {
+                const errorData = await response.json();
+                console.error('Bildirim okunmuş olarak işaretlenemedi:', errorData.message, 'HTTP Durumu:', response.status);
+                showToast('Bildirim okunmuş olarak işaretlenirken hata oluştu.', true);
+            }
+        } catch (error) {
+            console.error('Bildirim okunmuş olarak işaretlenirken ağ hatası:', error);
+            showToast('Bildirim okunmuş olarak işaretlenirken ağ hatası oluştu.', true);
+        }
+    }
+
+    // Tüm Bildirimleri Okundu Olarak İşaretle fonksiyonu
+    async function markAllNotificationsAsRead() {
+        console.log('markAllNotificationsAsRead çağrıldı.');
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/activities/mark_all_read`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            console.log('API Yanıtı (Tümünü Okundu):', response);
+            if (response.ok) {
+                const result = await response.json();
+                showToast(result.message || 'Tüm bildirimler okunmuş olarak işaretlendi.');
+                // UI'ı güncelle: Tüm bildirimleri okunmuş yap ve sayacı sıfırla
+                const notificationListDiv = document.getElementById('notificationList');
+                notificationListDiv.querySelectorAll('.notification-item').forEach(item => {
+                    item.classList.remove('unread');
+                });
+                const notificationButton = document.getElementById('notificationButton');
+                notificationButton.setAttribute('data-count', '0');
+                notificationButton.classList.remove('has-notifications');
+                // Paneli kapat
+                document.getElementById('notificationPanel').classList.remove('show');
+            } else {
+                const errorData = await response.json();
+                console.error('Tüm bildirimler okunmuş olarak işaretlenemedi:', errorData.message, 'HTTP Durumu:', response.status);
+                showToast('Tüm bildirimler okunmuş olarak işaretlenirken hata oluştu.', true);
+            }
+        } catch (error) {
+            console.error('Tüm bildirimler okunmuş olarak işaretlenirken ağ hatası:', error);
+            showToast('Tüm bildirimler okunmuş olarak işaretlenirken ağ hatası oluştu.', true);
+        }
+    }
+
+    // Zamanı "x dakika önce" formatına dönüştüren yardımcı fonksiyon
+    function formatTimeAgo(timestamp) {
+        if (!timestamp) return '';
+        const date = new Date(timestamp);
+        const now = new Date();
+        const seconds = Math.floor((now - date) / 1000);
+
+        let interval = seconds / 31536000;
+        if (interval > 1) return Math.floor(interval) + " yıl önce";
+        interval = seconds / 2592000;
+        if (interval > 1) return Math.floor(interval) + " ay önce";
+        interval = seconds / 86400;
+        if (interval > 1) return Math.floor(interval) + " gün önce";
+        interval = seconds / 3600;
+        if (interval > 1) return Math.floor(interval) + " saat önce";
+        interval = seconds / 60;
+        if (interval > 1) return Math.floor(interval) + " dakika önce";
+        return Math.floor(seconds) + " saniye önce";
+    }
+
+
+    async function deleteProject(id) {
+        // Kullanıcının rolünü localStorage'dan veya currentUser'dan al
+        let role = null;
+        if (typeof currentUser !== 'undefined' && currentUser && currentUser.role) {
+            role = currentUser.role;
+        } else {
+            const storedUser = localStorage.getItem('currentUser');
+            if (storedUser) {
+                try {
+                    const user = JSON.parse(storedUser);
+                    role = user.role;
+                } catch (e) { role = null; }
+            }
+        }
+        if (!role) {
+            showToast('Kullanıcı rolü bulunamadı. Lütfen tekrar giriş yapın.', true);
+            return;
+        }
+        try {
+            // DÜZELTME: API_BASE_URL kullanıldı
+            const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(role)}`);
+            if (!response.ok) throw new Error('Yetki sorgusu başarısız');
+            const perms = await response.json();
+            const permission = Array.isArray(perms) ? perms[0] : perms;
+            if (permission.proje_sil != 1) {
+                showToast('Proje silme yetkiniz yok!', true);
+                return;
+            }
+        } catch (error) {
+            showToast('Yetki sorgusu sırasında hata oluştu.', true);
+            return;
+        }
+        // --- BURADAN SONRAKİ KISIM ESKİ SİLME KODUNUZ ---
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/projects/${id}`, {
+                method: 'DELETE',
+            });
+            const result = await response.json();
+            if (response.ok) {
+                showToast(result.message || 'Proje başarıyla silindi');
+                fetchProjects();
+                // Proje adını bulmak için allProjectsData'yı kullan
+                const project = allProjectsData.find(p => String(p.project_id) === String(id));
+                const projectNameForActivity = project ? project.project_name : `ID: ${id}`;
+                // raw_description ve action_type gönderiyoruz
+                addActivity('Proje Silindi', `"${projectNameForActivity}" projesi silindi.`, id, 'fas fa-trash', 'project_delete');
+            } else {
+                throw new Error(result.message || 'Proje silinirken bir hata oluştu.');
+            }
+        } catch (error) {
+            console.error('Proje silme hatası:', error);
+            showToast(`Proje silinirken hata oluştu: ${error.message}`, true);
+        }
+    }
+
+    // Düzenleme Modalı Açma
+    let currentEditProjectId = null;
+    
+    function openEditModal(id) {
+        const project = allProjectsData.find(p => p.project_id == id);
+        if (!project) {
+            showToast('Düzenlenecek proje bulunamadı.', true);
+            return;
+        }
+        
+        currentEditProjectId = id;
+        
+        document.getElementById('editProjectName').value = project.project_name;
+        document.getElementById('editRefNo').value = project.reference_no || '';
+        document.getElementById('editCustomer').value = project.customer_name;
+        document.getElementById('editStatus').value = project.status;
+        document.getElementById('editStartDate').value = formatDateForInput(project.start_date);
+        document.getElementById('editEndDate').value = formatDateForInput(project.end_date);
+        document.getElementById('editManager').value = project.project_manager_name;
+        
+        // Modalı göstermek için Bootstrap fonksiyonunu kullan
+        const editModalElement = document.getElementById('editModal');
+        const editModal = new bootstrap.Modal(editModalElement);
+        editModal.show();
+    }
+
+    // Tarih formatı dönüşümü (DD.MM.YYYY -> YYYY-MM-DD)
+    function formatDateForInput(dateStr) {
+        if (!dateStr) return '';
+        const parts = dateStr.split('.');
+        if (parts.length !== 3) return dateStr; // Zaten YYYY-MM-DD ise direkt döndür
+        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+
+    // Proje Değişikliklerini Kaydetme (API çağrısı yapar)
+    document.getElementById('saveProjectEdit').addEventListener('click', async function() {
+        // Kullanıcının rolünü localStorage'dan veya currentUser'dan al
+        let role = null;
+        if (typeof currentUser !== 'undefined' && currentUser && currentUser.role) {
+            role = currentUser.role;
+        } else {
+            const storedUser = localStorage.getItem('currentUser');
+            if (storedUser) {
+                try {
+                    const user = JSON.parse(storedUser);
+                    role = user.role;
+                } catch (e) { role = null; }
+            }
+        }
+        if (!role) {
+            showToast('Kullanıcı rolü bulunamadı. Lütfen tekrar giriş yapın.', true);
+            return;
+        }
+        try {
+            // DÜZELTME: API_BASE_URL kullanıldı
+            const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(role)}`);
+            if (!response.ok) throw new Error('Yetki sorgusu başarısız');
+            const perms = await response.json();
+            const permission = Array.isArray(perms) ? perms[0] : perms;
+            if (permission.proje_duzenle != 1) {
+                showToast('Proje düzenleme yetkiniz yok!', true);
+                return;
+            }
+        } catch (error) {
+            showToast('Yetki sorgusu sırasında hata oluştu.', true);
+            return;
+        }
+        // --- BURADAN SONRAKİ KISIM ESKİ DÜZENLEME KODUNUZ ---
+        const name = document.getElementById('editProjectName').value.trim();
+        const ref = document.getElementById('editRefNo').value.trim();
+        const status = document.getElementById('editStatus').value;
+        const start = document.getElementById('editStartDate').value;
+        const end = document.getElementById('editEndDate').value;
+        
+        if (!name || !status || !start || !end) {
+            showToast('Lütfen Proje Adı, Durum, Başlangıç ve Bitiş Tarihi alanlarını doldurun!', true);
+            return;
+        }
+
+        const updatedData = {
+            project_name: name,
+            reference_no: ref || null,
+            status: status,
+            start_date: start,
+            end_date: end
+        };
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/projects/${currentEditProjectId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedData)
+            });
+            const result = await response.json();
+            if (response.ok) {
+                showToast(result.message || 'Proje başarıyla güncellendi');
+                // Modalı kapatmak için Bootstrap fonksiyonunu kullan
+                const editModalElement = document.getElementById('editModal');
+                const editModal = bootstrap.Modal.getInstance(editModalElement);
+                if (editModal) editModal.hide();
+                fetchProjects(); 
+                // raw_description ve action_type gönderiyoruz
+                addActivity('Proje Güncellendi', 'projesi güncellendi.', currentEditProjectId, 'fas fa-edit', 'project_update');
+            } else {
+                throw new Error(result.message || 'Proje güncellenirken bir hata oluştu.');
+            }
+        } catch (error) {
+            console.error('Proje güncelleme hatası:', error);
+            showToast(`Proje güncellenirken hata oluştu: ${error.message}`, true);
+        }
+    });
+
+    // Modalı Kapatma (Bootstrap modalını kapatmak için)
+    // Bu fonksiyon artık doğrudan kullanılmayacak, Bootstrap'ın data-bs-dismiss="modal" özelliği veya getInstance().hide() kullanılacak.
+    // Ancak yine de eski kullanımlar için bırakılabilir veya kaldırılabilir.
+    function closeModal() {
+        const editModalElement = document.getElementById('editModal');
+        const editModal = bootstrap.Modal.getInstance(editModalElement);
+        if (editModal) editModal.hide();
+        currentEditProjectId = null;
+    }
+
+    // PDF Oluşturma Fonksiyonu
+    document.getElementById('exportPdf').addEventListener('click', async function() {
+        // Kullanıcının rolünü localStorage'dan veya currentUser'dan al
+        let role = null;
+        if (typeof currentUser !== 'undefined' && currentUser && currentUser.role) {
+            role = currentUser.role;
+        } else {
+            // Yedek: localStorage'dan çek
+            const storedUser = localStorage.getItem('currentUser');
+            if (storedUser) {
+                try {
+                    const user = JSON.parse(storedUser);
+                    role = user.role;
+                } catch (e) { role = null; }
+            }
+        }
+        if (!role) {
+            showToast('Kullanıcı rolü bulunamadı. Lütfen tekrar giriş yapın.', true);
+            return;
+        }
+        try {
+            // DÜZELTME: API_BASE_URL kullanıldı
+            const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(role)}`);
+            if (!response.ok) throw new Error('Yetki sorgusu başarısız');
+            const perms = await response.json();
+            const permission = Array.isArray(perms) ? perms[0] : perms;
+            if (permission.pdf_olusturma != 1) {
+                showToast('PDF oluşturma yetkiniz yok!', true);
+                return;
+            }
+        } catch (error) {
+            showToast('Yetki sorgusu sırasında hata oluştu.', true);
+            return;
+        }
+        // --- BURADAN SONRAKİ KISIM ESKİ PDF OLUŞTURMA KODUNUZ ---
+        const filtersContainer = document.getElementById('filtersContainer');
+        const originalFilterDisplay = filtersContainer.style.display;
+        filtersContainer.style.display = 'none';
+
+        const table = document.getElementById('projectsTable');
+        const tableParent = table.parentElement;
+        const originalTableClass = table.className;
+        const originalBodyBg = document.body.style.backgroundColor;
+        const originalTableColor = table.style.color;
+        const originalTableBg = tableParent.style.backgroundColor;
+        const styleElemId = 'pdf-table-style';
+
+        // Karanlık tema mı?
+        const isDark = document.body.getAttribute('data-theme') === 'dark';
+
+        // PDF için tabloya geçici tema ve şık bir görünüm uygula
+        table.classList.add('pdf-export-table');
+        if (isDark) {
+            document.body.style.backgroundColor = '#181c20';
+            tableParent.style.backgroundColor = '#181c20';
+            table.style.backgroundColor = '#181c20';
+            table.style.color = '#f1f1f1';
+        } else {
+            document.body.style.backgroundColor = '#fff';
+            tableParent.style.backgroundColor = '#fff';
+            table.style.backgroundColor = '#fff';
+            table.style.color = '#222';
+        }
+
+        // "İşlemler" sütununu ve hücrelerini gizle
+        const ths = table.querySelectorAll('thead th');
+        let actionColIndex = -1;
+        ths.forEach((th, idx) => {
+            if (th.textContent.trim() === 'İşlemler') {
+                actionColIndex = idx;
+                th.style.display = 'none';
+            }
+        });
+        if (actionColIndex !== -1) {
+            table.querySelectorAll('tbody tr').forEach(tr => {
+                const tds = tr.querySelectorAll('td');
+                if (tds[actionColIndex]) tds[actionColIndex].style.display = 'none';
+            });
+        }
+
+        // Tablo başlıklarını ve satırlarını daha şık yap
+        const style = document.createElement('style');
+        style.id = styleElemId;
+        style.innerHTML = isDark ? `
+        .pdf-export-table th {
+            background: #23272e !important;
+            color: #fff !important;
+            font-size: 13px;
+            border-bottom: 2px solid #0980d3 !important;
+        }
+        .pdf-export-table td {
+            font-size: 12px;
+            border-bottom: 1px solid #333 !important;
+            background: #181c20 !important;
+            color: #f1f1f1 !important;
+        }
+        .pdf-export-table tr:nth-child(even) td {
+            background: #23272e !important;
+        }
+        .pdf-export-table .status-badge {
+            font-size: 11px !important;
+            padding: 4px 8px !important;
+        }
+        ` : `
+        .pdf-export-table th {
+            background: #005c9d !important;
+            color: #fff !important;
+            font-size: 13px;
+            border-bottom: 2px solid #0980d3 !important;
+        }
+        .pdf-export-table td {
+            font-size: 12px;
+            border-bottom: 1px solid #e1e5e9 !important;
+            background: #f8f9fa !important;
+        }
+        .pdf-export-table tr:nth-child(even) td {
+            background: #e9f3fa !important;
+        }
+        .pdf-export-table .status-badge {
+            font-size: 11px !important;
+            padding: 4px 8px !important;
+        }
+        `;
+        document.head.appendChild(style);
+
+        // Tüm action-btn'leri gizle
+        document.querySelectorAll('.action-btn').forEach(btn => {
+            btn.style.display = 'none';
+        });
+
+        setTimeout(() => {
+            html2canvas(table, {
+                scale: 2,
+                backgroundColor: isDark ? '#181c20' : '#ffffff'
+            }).then(canvas => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'pt', 'a4');
+                doc.setFontSize(20);
+                doc.setTextColor(isDark ? '#f1f1f1' : '#222'); // PDF başlık rengini temaya göre ayarla
+                doc.text('Ser Elektrik - Proje Listesi', 40, 30);
+                doc.setFontSize(12);
+                doc.setTextColor(isDark ? '#e0e0e0' : '#5e6870'); // PDF tarih rengini temaya göre ayarla
+                doc.text('Tarih: ' + new Date().toLocaleDateString('tr-TR'), 40, 45);
+
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = doc.internal.pageSize.getWidth() - 40;
+                const pageHeight = doc.internal.pageSize.getHeight();
+                const imgHeight = canvas.height * imgWidth / canvas.width;
+                let heightLeft = imgHeight;
+                let position = 60;
+
+                doc.addImage(imgData, 'PNG', 20, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight - 100;
+
+                doc.save('ser_elektrik_proje_listesi_' + new Date().toLocaleDateString('tr-TR') + '.pdf');
+
+                // Temizlik: geçici stilleri kaldır
+                filtersContainer.style.display = originalFilterDisplay;
+                document.querySelectorAll('.action-btn').forEach(btn => {
+                    btn.style.display = 'flex';
+                });
+                table.className = originalTableClass;
+                document.body.style.backgroundColor = originalBodyBg;
+                tableParent.style.backgroundColor = originalTableBg;
+                table.style.backgroundColor = '';
+                table.style.color = originalTableColor;
+                if (actionColIndex !== -1) {
+                    if (ths[actionColIndex]) ths[actionColIndex].style.display = '';
+                    table.querySelectorAll('tbody tr').forEach(tr => {
+                        const tds = tr.querySelectorAll('td');
+                        if (tds[actionColIndex]) tds[actionColIndex].style.display = '';
+                    });
+                }
+                const styleElem = document.getElementById(styleElemId);
+                if (styleElem) styleElem.remove();
+
+                showToast('PDF raporu başarıyla oluşturuldu');
+                addActivity('PDF Oluşturuldu', 'Proje listesinin PDF raporu oluşturuldu.', null, 'fas fa-file-pdf', 'pdf_export');
+            });
+        }, 500);
+    });
+
+    // Filtreleri uygula ve tabloyu render etme fonksiyonu
+    function applyFiltersAndRenderTable() {
+        const projectNameFilter = document.getElementById('filterProjectName').value.toLowerCase();
+        const refNoFilter = document.getElementById('filterRefNo').value.toLowerCase();
+        const customerFilter = document.getElementById('filterCustomer').value.toLowerCase();
+        const statusFilter = document.getElementById('filterStatus').value;
+        
+        filteredProjects = allProjectsData.filter(project => {
+            const projectName = project.project_name.toLowerCase();
+            const refNo = (project.reference_no || '').toLowerCase();
+            const customer = project.customer_name.toLowerCase();
+            const status = project.status;
+            
+            const nameMatch = projectName.includes(projectNameFilter);
+            const refMatch = refNo.includes(refNoFilter);
+            const customerMatch = customer.includes(customerFilter);
+            const statusMatch = statusFilter === '' || status === statusFilter;
+            
+            return nameMatch && refMatch && customerMatch && statusMatch;
+        });
+        currentPage = 1; // Filtreler değiştiğinde ilk sayfaya dön
+        renderProjectsTable(filteredProjects);
+    }
+
+    // Grafik Güncelleme Fonksiyonu
+    function updateChart(stats) {
+        const ctx = document.getElementById('projectChart').getContext('2d');
+        
+        if (projectChartInstance) {
+            projectChartInstance.destroy(); 
+        }
+        
+        // Tema kontrolü
+        const isDark = document.body.getAttribute('data-theme') === 'dark';
+        const legendColor = isDark ? '#fff' : '#222';
+
+        const chartColors = [
+            '#2ed573',   // Aktif - Yeşil
+            '#ff4757',   // Aktif (Gecikmeli) - Kırmızı
+            '#ffc107',   // Planlama - Sarı
+            '#0980d3',   // Tamamlandı - Mavi
+            '#b71c1c'    // Gecikti - Koyu Kırmızı
+        ];
+        // Negatif değerleri 0'a çek
+        const dataArr = [
+            Math.max(0, stats.active),
+            Math.max(0, stats.activeDelayed),
+            Math.max(0, stats.planning),
+            Math.max(0, stats.completed),
+            Math.max(0, stats.delayed)
+        ];
+        const labels = ['Aktif', 'Aktif (Gecikmeli)', 'Planlama', 'Tamamlandı', 'Gecikti'];
+        // Eğer tümü 0 ise, en azından bir dilim 1 olsun ki grafik gözüksün
+        const allZero = dataArr.every(v => v === 0);
+        if (allZero) dataArr[0] = 1;
+
+        projectChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: dataArr,
+                    backgroundColor: chartColors, 
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: legendColor
+                        }
+                    },
+                    tooltip: {
+                        bodyColor: legendColor,
+                        titleColor: legendColor,
+                        backgroundColor: isDark ? '#222' : '#fff',
+                    }
+                }
+            }
+        });
+    }
+
+    // --- Sayfalandırma Fonksiyonları ---
+    function updateRowsPerPage() {
+        // Ekran genişliğine göre sayfa başına gösterilecek proje sayısını ayarla
+        if (window.innerWidth <= 576) { // Mobil cihazlar için
+            rowsPerPage = 8;
+        } else { // Masaüstü ve tabletler için
+            rowsPerPage = 10;
+        }
+    }
+
+    function updatePagination(totalItems, currentP, totalP) {
+        totalProjectsCountSpan.textContent = totalItems;
+        currentPageSpan.textContent = currentP;
+        totalPagesSpan.textContent = totalP;
+
+        prevPageButton.disabled = currentP === 1;
+        nextPageButton.disabled = currentP === totalP || totalP === 0;
+
+        pageNumbersContainer.innerHTML = '';
+        // Sadece mevcut sayfa etrafında birkaç numara göster
+        const maxPageButtons = 5;
+        let startPage = Math.max(1, currentP - Math.floor(maxPageButtons / 2));
+        let endPage = Math.min(totalP, startPage + maxPageButtons - 1);
+
+        if (endPage - startPage + 1 < maxPageButtons) {
+            startPage = Math.max(1, endPage - maxPageButtons + 1);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            const pageButton = document.createElement('button');
+            pageButton.className = `page-btn ${i === currentP ? 'active' : ''}`;
+            pageButton.textContent = i;
+            pageButton.addEventListener('click', () => {
+                currentPage = i;
+                renderProjectsTable(filteredProjects);
+            });
+            pageNumbersContainer.appendChild(pageButton);
+        }
+    }
+    
+    // Sayfalandırma butonları olay dinleyicileri
+    prevPageButton.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            renderProjectsTable(filteredProjects);
+        }
+    });
+
+    nextPageButton.addEventListener('click', () => {
+        if (currentPage < Math.ceil(filteredProjects.length / rowsPerPage)) {
+            currentPage++;
+            renderProjectsTable(filteredProjects);
+        }
+    });
+
+
+    // Sayfa yüklendiğinde tüm verileri çek
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchProjects();
+        fetchDashboardStats();
+        fetchRecentActivities();
+        // fetchNotifications(); // Bu zaten yukarıdaki DOMContentLoaded içinde çağrılıyor
+
+        document.getElementById('filterBtn').addEventListener('click', function() {
+            const filtersContainer = document.getElementById('filtersContainer');
+            if (filtersContainer.style.display === 'grid') {
+                filtersContainer.style.display = 'none';
+                this.innerHTML = '<i class="fas fa-filter"></i> Filtrele';
+            } else {
+                filtersContainer.style.display = 'grid';
+                this.innerHTML = '<i class="fas fa-times"></i> Filtreleri Kapat';
+            }
+        });
+        
+        document.getElementById('resetFilters').addEventListener('click', function() {
+            document.getElementById('filterProjectName').value = '';
+            document.getElementById('filterRefNo').value = '';
+            document.getElementById('filterCustomer').value = '';
+            document.getElementById('filterStatus').value = '';
+            applyFiltersAndRenderTable(); // Burası güncellendi
+        });
+        
+        document.getElementById('filterProjectName').addEventListener('input', applyFiltersAndRenderTable); // Burası güncellendi
+        document.getElementById('filterRefNo').addEventListener('input', applyFiltersAndRenderTable); // Burası güncellendi
+        document.getElementById('filterCustomer').addEventListener('input', applyFiltersAndRenderTable); // Burası güncellendi
+        document.getElementById('filterStatus').addEventListener('change', applyFiltersAndRenderTable); // Burası güncellendi
+        
+        // Bootstrap modalını kapatmak için event listener
+        const editModalElement = document.getElementById('editModal');
+        editModalElement.addEventListener('hidden.bs.modal', function () {
+            currentEditProjectId = null; // Modal kapandığında ID'yi sıfırla
+        });
+        
+        document.getElementById('refreshData').addEventListener('click', () => {
+            fetchProjects();
+            fetchDashboardStats();
+            fetchRecentActivities();
+            fetchNotifications(); // Veriler yenilendiğinde bildirimleri de yenile
+            showToast('Veriler başarıyla yenilendi');
+        });
+    });
+
+    function showProjectDetails(id) {
+        const project = allProjectsData.find(p => p.project_id == id);
+        if (!project) {
+            showToast('Proje bulunamadı.', true);
+            return;
+        }
+        // Modal içindeki alanları doldur
+        document.getElementById('projectName').textContent = project.project_name;
+        document.getElementById('projectRefNo').textContent = project.reference_no || '-';
+        document.getElementById('projectCustomer').textContent = project.customer_name;
+        document.getElementById('projectLocation').textContent = project.location || '-';
+        document.getElementById('projectStatus').textContent = project.status;
+        document.getElementById('projectStartDate').textContent = project.start_date;
+        document.getElementById('projectEndDate').textContent = project.end_date;
+        document.getElementById('projectResponsible').textContent = project.project_manager_name;
+        document.getElementById('projectDescription').textContent = project.description || '-';
+        // Modalı aç
+        const modal = new bootstrap.Modal(document.getElementById('projectModal'));
+        modal.show();
+    }
+
+    let userPermissions = null;
+
+    async function fetchUserPermissions(role) {
+        if (role === "Admin") {
+            userPermissions = {
+                proje_ekle: 1,
+                proje_duzenle: 1,
+                proje_sil: 1,
+                pdf_olusturma: 1,
+                musteri_duzenleme: 1
+            };
+            updateButtonPermissions();
+            attachTableEventListeners(); // Yetki geldikten sonra eventleri ata
+            return;
+        }
+        try {
+            // DÜZELTME: API_BASE_URL kullanıldı
+            const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(role)}`);
+            if (!response.ok) throw new Error('Yetki bilgisi alınamadı');
+            const perms = await response.json();
+            userPermissions = Array.isArray(perms) ? perms[0] : perms;
+            console.log('userPermissions:', userPermissions);
+            updateButtonPermissions();
+            attachTableEventListeners(); // Yetki geldikten sonra eventleri ata
+        } catch (error) {
+            userPermissions = null;
+            showToast('Yetki bilgisi alınamadı. Lütfen tekrar giriş yapın.', true);
+        }
+    }
+
+    if (currentUser && currentUser.role) {
+        fetchUserPermissions(currentUser.role);
+    }
+
+    function updateButtonPermissions() {
+        if (!userPermissions) return;
+        document.getElementById('exportPdf').disabled = userPermissions.pdf_olusturma != 1;
+        // Proje düzenleme ve silme için butonlar dinamik üretildiğinden, event içinde kontrol yeterli.
+    }
+
+    async function handleEditCustomer(customerId) {
+        // Kullanıcının rolünü al
+        let role = null;
+        if (typeof currentUser !== 'undefined' && currentUser && currentUser.role) {
+            role = currentUser.role;
+        } else {
+            const storedUser = localStorage.getItem('currentUser');
+            if (storedUser) {
+                try {
+                    const user = JSON.parse(storedUser);
+                    role = user.role;
+                } catch (e) { role = null; }
+            }
+        }
+        if (!role) {
+            showToast('Kullanıcı rolü bulunamadı. Lütfen tekrar giriş yapın.', true);
+            return;
+        }
+        try {
+            // DÜZELTME: API_BASE_URL kullanıldı
+            const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(role)}`);
+            if (!response.ok) throw new Error('Yetki sorgusu başarısız');
+            const perms = await response.json();
+            const permission = Array.isArray(perms) ? perms[0] : perms;
+            if (permission.musteri_duzenleme != 1) {
+                showToast('Müşteri düzenleme yetkiniz yok!', true);
+                return;
+            }
+            // Yetkisi varsa yönlendir
+            window.location.href = `projeler.html?editCustomer=${customerId}`;
+        } catch (error) {
+            showToast('Yetki sorgusu sırasında hata oluştu.', true);
+        }
+    }
+
+    async function handleEditProject(projectId) {
+        // Kullanıcının rolünü al
+        let role = null;
+        if (typeof currentUser !== 'undefined' && currentUser && currentUser.role) {
+            role = currentUser.role;
+        } else {
+            const storedUser = localStorage.getItem('currentUser');
+            if (storedUser) {
+                try {
+                    const user = JSON.parse(storedUser);
+                    role = user.role;
+                } catch (e) { role = null; }
+            }
+        }
+        if (!role) {
+            showToast('Kullanıcı rolü bulunamadı. Lütfen tekrar giriş yapın.', true);
+            return;
+        }
+        try {
+            // DÜZELTME: API_BASE_URL kullanıldı
+            const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(role)}`);
+            if (!response.ok) throw new Error('Yetki sorgusu başarısız');
+            const perms = await response.json();
+            const permission = Array.isArray(perms) ? perms[0] : perms;
+            if (permission.proje_duzenle != 1) {
+                showToast('Proje düzenleme yetkiniz yok!', true);
+                return;
+            }
+            // Yetkisi varsa yönlendir
+            window.location.href = `projeler.html?editProject=${projectId}`;
+        } catch (error) {
+            showToast('Yetki sorgusu sırasında hata oluştu.', true);
+        }
+    }
+
+    // Custom Confirm Modal (alert yerine kullanılacak)
+    function showConfirmModal(title, message, onConfirm) {
+        const modalHtml = `
+            <div class="modal fade" id="customConfirmModal" tabindex="-1" aria-labelledby="customConfirmModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="customConfirmModalLabel">${title}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>${message}</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                            <button type="button" class="btn btn-danger" id="confirmActionBtn">Onayla</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Eğer modal zaten varsa kaldırma (çoklu açılmasını engeller)
+        const existingModal = document.getElementById('customConfirmModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const confirmModalElement = document.getElementById('customConfirmModal');
+        const confirmModal = new bootstrap.Modal(confirmModalElement);
+        confirmModal.show();
+
+        document.getElementById('confirmActionBtn').onclick = () => {
+            onConfirm();
+            confirmModal.hide();
+        };
+
+        confirmModalElement.addEventListener('hidden.bs.modal', () => {
+            confirmModalElement.remove(); // Modal kapandığında DOM'dan kaldır
+        });
+    }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
