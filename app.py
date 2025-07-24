@@ -140,6 +140,7 @@ def mark_all_notifications_as_read():
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
+            # notifications tablosundaki 'id' sütununu kullan
             sql = "UPDATE notifications SET is_read = 1 WHERE is_read = 0" # Sadece okunmamışları güncelle
             cursor.execute(sql)
             connection.commit()
@@ -162,6 +163,7 @@ def get_unread_notifications_count():
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
+            # notifications tablosundaki 'id' sütununu kullan
             sql = "SELECT COUNT(id) as unread_count FROM notifications WHERE is_read = 0"
             cursor.execute(sql)
             result = cursor.fetchone()
@@ -185,11 +187,13 @@ def mark_notification_as_read(notification_id):
     try:
         with connection.cursor() as cursor:
             # Bildirimin varlığını kontrol et
+            # notifications tablosundaki 'id' sütununu kullan
             cursor.execute("SELECT id FROM notifications WHERE id = %s", (notification_id,))
             if not cursor.fetchone():
                 return jsonify({'message': 'Bildirim bulunamadı.'}), 404
 
             # is_read sütununu 1 olarak güncelle
+            # notifications tablosundaki 'id' sütununu kullan
             sql = "UPDATE notifications SET is_read = 1 WHERE id = %s"
             cursor.execute(sql, (notification_id,))
             connection.commit()
@@ -213,7 +217,7 @@ def get_notifications():
     try:
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
             # 'notifications' tablosundan tüm verileri çekmek için SQL sorgusu
-            # icon ve project_id olmadığı için sorgudan çıkarıldı
+            # Yeni tablo yapısına göre 'id' ve 'message' kullanıldı, 'icon' ve 'project_id' kaldırıldı.
             sql = "SELECT id, user_id, title, message, is_read, created_at FROM notifications ORDER BY created_at DESC"
             cursor.execute(sql)
             result = cursor.fetchall()
@@ -245,6 +249,7 @@ def add_notification():
         connection = get_db_connection()
         with connection.cursor() as cursor:
             # Bildirim tablosuna ekleme
+            # Yeni tablo yapısına göre 'message' kullanıldı, 'icon' ve 'action_type' kaldırıldı.
             sql = """
             INSERT INTO notifications (user_id, title, message, created_at)
             VALUES (%s, %s, %s, NOW())
@@ -254,6 +259,8 @@ def add_notification():
         return jsonify({'message': 'Bildirim başarıyla kaydedildi!'}), 201
     except pymysql.Error as e:
         print(f"Veritabanı bildirim kaydetme hatası: {e}")
+        if e.args[0] == 1062:
+            return jsonify({'message': 'Bu e-posta adresi zaten kullanılıyor.'}), 409
         return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
         print(f"Genel bildirim kaydetme hatası: {e}")
@@ -1204,6 +1211,7 @@ def get_dashboard_activity():
         with connection.cursor() as cursor:
             # notifications tablosundan çekiyoruz
             # icon alanı olmadığı için, varsayılan bir ikon kullanacağız veya frontend'de belirlenecek
+            # project_id alanı olmadığı için JOIN'den kaldırıldı
             sql = """
                 SELECT n.id, n.title, n.message, n.created_at, u.fullname AS user_fullname
                 FROM notifications n
