@@ -1729,7 +1729,8 @@
         return `<span class="status-badge ${statusClass}">${statusText}</span>`;
       }
 
-      // Aktivite loglama
+      // Aktivite loglama (Bu fonksiyon artık frontend'den doğrudan çağrılmayacak, sadece backend'den çağrılacak)
+      /*
       async function addActivity(title, rawDescription, project_id, icon = "fas fa-info-circle", actionType = "other") {
         if (!currentUser || !currentUser.id) {
           console.warn("Kullanıcı oturumu bulunamadı, aktivite kaydedilemedi.");
@@ -1761,6 +1762,7 @@
           console.error('Aktivite ekleme hatası:', error);
         }
       }
+      */
 
       // --- Proje Listesi ve İşlemleri ---
       async function fetchProjects() {
@@ -2015,6 +2017,8 @@
           if (response.ok) {
             showToast(data.message || "Proje başarıyla silindi");
             fetchProjects();
+            // addActivity çağrısı backend tarafından yapıldığı için buradan kaldırıldı.
+            /*
             addActivity(
               "Proje Silindi",
               `\"${projectName}\" projesi silindi.`,
@@ -2022,6 +2026,7 @@
               "fas fa-trash",
               "project_delete"
             );
+            */
           } else {
             showToast(`Hata: ${data.message}`, true);
           }
@@ -2290,6 +2295,8 @@ async function renderEditModal(project) {
           const data = await response.json();
           if (response.ok) {
             showToast("Proje başarıyla güncellendi!");
+            // addActivity çağrısı backend tarafından yapıldığı için buradan kaldırıldı.
+            /*
             addActivity(
               "Proje Güncellendi",
               `${projectName} adlı proje güncellendi.`,
@@ -2297,6 +2304,7 @@ async function renderEditModal(project) {
               "fas fa-pen-to-square",
               "project_update"
             );
+            */
             fetchProjects(); // Listeyi yenile
             closeProjectModal();
           } else {
@@ -2505,7 +2513,8 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
                     showToast("İş adımı başarıyla eklendi.");
                     formElement.remove(); // Formu kapat
                     fetchProgressSteps(projectId, true); // Adımları yeniden yükle (düzenleme modunda kal)
-                    addActivity('İş Adımı Eklendi', `Proje ID: ${projectId} için "${stepName}" iş adımı eklendi.`, 'fas fa-tasks');
+                    // addActivity çağrısı backend tarafından yapıldığı için buradan kaldırıldı.
+                    // addActivity('İş Adımı Eklendi', `Proje ID: ${projectId} için "${stepName}" iş adımı eklendi.`, 'fas fa-tasks');
                 } else {
                     showToast(`Hata: ${data.message}`, true);
                 }
@@ -2536,11 +2545,14 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
             showToast("İş adımı başarıyla güncellendi.");
             fetchProjects(); // Projeler listesini de yenile (durum güncellenmiş olabilir)
             fetchProgressSteps(projectId, true); // Adımları yenile (düzenleme modunda kal)
+            // addActivity çağrısı backend tarafından yapıldığı için buradan kaldırıldı.
+            /*
             addActivity(
               "İş Adımı Güncellendi",
               `Proje ID: ${projectId} için "${updatedStepData.step_name}" iş adımı güncellendi.`,
               "fas fa-pen"
             );
+            */
           } else {
             showToast(`Hata: ${data.message}`, true);
           }
@@ -2561,11 +2573,14 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
               showToast("İş adımı başarıyla silindi!");
               fetchProjects(); // Projeler listesini de yenile (durum güncellenmiş olabilir)
               fetchProgressSteps(projectId, true); // Adımları yenile (düzenleme modunda kal)
+              // addActivity çağrısı backend tarafından yapıldığı için buradan kaldırıldı.
+              /*
               addActivity(
                 "İş Adımı Silindi",
                 `Proje ID: ${projectId} için bir iş adımı silindi.`,
                 "fas fa-times"
               );
+              */
             } else {
               showToast(`Hata: ${data.message}`, true);
             }
@@ -2702,6 +2717,8 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
         // Yeni pencere yüklendiğinde aktivite kaydı
         newWindow.onload = () => {
             showToast(`${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi hazır.`);
+            // addActivity çağrısı backend tarafından yapıldığı için buradan kaldırıldı.
+            /*
             addActivity(
                 "PDF Raporu Önizlendi",
                 `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi açıldı.`,
@@ -2709,6 +2726,7 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
                 "fas fa-file-pdf",
                 "pdf_preview"
             );
+            */
         };
       }
 
@@ -2849,6 +2867,8 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
         try {
             await html2pdf().from(element).set(options).save();
             showToast("Tüm projeler PDF olarak başarıyla dışa aktarıldı!");
+            // addActivity çağrısı backend tarafından yapıldığı için buradan kaldırıldı.
+            /*
             addActivity(
                 "Tüm Projeler PDF Dışa Aktarıldı",
                 "Tüm projeler PDF olarak indirildi.",
@@ -2856,6 +2876,7 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
                 "fas fa-file-pdf",
                 "pdf_export_all"
             );
+            */
         } catch (error) {
             console.error("Tüm projeleri PDF'e aktarırken hata oluştu:", error);
             showToast(`PDF oluşturulurken hata oluştu: ${error.message}`, true);
