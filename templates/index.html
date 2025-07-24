@@ -1928,7 +1928,8 @@
     // Son Aktiviteleri Backend'den Çekme (Şimdi kullanıcıya özel aktivite ekleme)
     async function fetchRecentActivities() {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/dashboard/activity`);
+            // notifications tablosundan çekiyoruz
+            const response = await fetch(`${API_BASE_URL}/api/notifications`);
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ message: 'Sunucudan yanıt alınamadı.' }));
                 throw new Error(errorData.message || `HTTP hatası! Durum: ${response.status}`);
@@ -1943,35 +1944,34 @@
     }
 
     // Aktivite ekleme fonksiyonu (Frontend'den çağrılabilir)
-    async function addActivity(title, rawDescription, project_id, icon = "fas fa-info-circle", actionType = "other") {
-        if (!currentUser || !currentUser.id) {
-            console.warn("Kullanıcı oturumu bulunamadı, aktivite kaydedilemedi.");
+    // Bu fonksiyon artık doğrudan 'activities' tablosuna değil, 'notifications' tablosuna ekleyecek.
+    async function addActivity(title, message, user_id, icon = "fas fa-info-circle") {
+        if (!user_id) {
+            console.warn("Kullanıcı ID'si bulunamadı, bildirim kaydedilemedi.");
             return;
         }
 
-        const activityData = {
-            user_id: currentUser.id,
-            project_id: project_id, // null olabilir
+        const notificationData = {
+            user_id: user_id,
             title: title,
-            raw_description: rawDescription, // Ham açıklama gönderiyoruz
-            icon: icon,
-            action_type: actionType // Eylem tipini gönderiyoruz
+            message: message, 
+            // icon ve action_type artık notifications tablosunda yok, backend'de yönetiliyor
         };
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/activities`, {
+            const response = await fetch(`${API_BASE_URL}/api/notifications`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(activityData)
+                body: JSON.stringify(notificationData)
             });
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.message || 'Aktivite eklenirken bilinmeyen bir hata oluştu.');
+                throw new Error(errorData.message || 'Bildirim eklenirken bilinmeyen bir hata oluştu.');
             }
-            fetchRecentActivities(); // Aktivite eklendikten sonra listeyi yenile
-            fetchNotifications(); // Yeni aktivite eklendiğinde bildirim panelini de yenile
+            fetchRecentActivities(); // Bildirim eklendikten sonra listeyi yenile
+            fetchUnreadNotificationCount(); // Yeni bildirim eklendiğinde okunmamış sayısını da yenile
         } catch (error) {
-            console.error('Aktivite ekleme hatası:', error);
+            console.error('Bildirim ekleme hatası:', error);
         }
     }
 
@@ -2097,19 +2097,18 @@
         }
 
         activities.forEach(activity => {
-            // Arka uçtan gelen 'description' artık son ve doğru formatta olmalı.
-            // Bu nedenle, ön uçta herhangi bir düzeltme yapmaya gerek yok.
-            const description = activity.description; 
+            // Arka uçtan gelen 'message' artık son ve doğru formatta olmalı.
+            const message = activity.message; 
 
             const item = document.createElement('div');
             item.className = 'activity-item';
             item.innerHTML = `
                 <div class="activity-icon">
-                    <i class="${activity.icon}"></i>
+                    <i class="${activity.icon || 'fas fa-info-circle'}"></i>
                 </div>
                 <div class="activity-content">
                     <div class="activity-title">${activity.title}</div>
-                    <div class="activity-desc">${description}</div>
+                    <div class="activity-desc">${message}</div>
                     <div class="activity-time">${formatTimeAgo(activity.created_at)}</div>
                 </div>
             `;
@@ -2121,7 +2120,8 @@
     async function fetchUnreadNotificationCount() {
         const notificationButton = document.getElementById('notificationButton');
         try {
-            const response = await fetch(`${API_BASE_URL}/api/activities/unread-count`);
+            // notifications endpoint'ini kullan
+            const response = await fetch(`${API_BASE_URL}/api/notifications/unread-count`);
             if (!response.ok) {
                 throw new Error(`HTTP hatası! Durum: ${response.status}`);
             }
@@ -2148,7 +2148,8 @@
         notificationListDiv.innerHTML = '<div class="no-notifications"><i class="fas fa-spinner fa-spin"></i> Bildirimler yükleniyor...</div>';
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/activities`);
+            // notifications endpoint'ini kullan
+            const response = await fetch(`${API_BASE_URL}/api/notifications`);
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ message: 'Sunucudan yanıt alınamadı.' }));
                 throw new Error(errorData.message || `HTTP hatası! Durum: ${response.status}`);
@@ -2178,7 +2179,7 @@
         }
 
         let unreadCount = 0;
-        // Sadece ilk 10 bildirimi göster (ve   ya istediğiniz sayıda)
+        // Sadece ilk 10 bildirimi göster (veya istediğiniz sayıda)
         const displayNotifications = notifications.slice(0, 10); 
 
         displayNotifications.forEach(notification => {
@@ -2197,16 +2198,16 @@
                 </div>
                 <div class="notification-item-content">
                     <div class="notification-item-title">${notification.title}</div>
-                    <div class="notification-item-description">${notification.description}</div>
+                    <div class="notification-item-description">${notification.message}</div>
                     <div class="notification-item-time">${formatTimeAgo(notification.created_at)}</div>
                 </div>
             `;
             // Bildirime tıklayınca okunmuş olarak işaretle
-            // DÜZELTME: notification.id yerine notification.activity_id kullanıldı
-            if (notification.activity_id) { 
-                item.addEventListener('click', () => markNotificationAsRead(notification.activity_id, item));
+            // notifications tablosunda 'id' kullanıldığı için 'notification.id' kullanıldı
+            if (notification.id) { 
+                item.addEventListener('click', () => markNotificationAsRead(notification.id, item));
             } else {
-                console.warn('Bildirim ID\'si eksik (activity_id), tıklama olayı eklenmedi:', notification);
+                console.warn('Bildirim ID\'si eksik (id), tıklama olayı eklenmedi:', notification);
             }
             notificationListDiv.appendChild(item);
         });
@@ -2222,10 +2223,10 @@
     }
 
     // Bildirimi okunmuş olarak işaretle
-    async function markNotificationAsRead(activityId, itemElement) {
-        console.log('markNotificationAsRead çağrıldı, activityId:', activityId);
-        // Güvenlik kontrolü: activityId'nin geçerli olduğundan emin ol
-        if (!activityId) {
+    async function markNotificationAsRead(notificationId, itemElement) {
+        console.log('markNotificationAsRead çağrıldı, notificationId:', notificationId);
+        // Güvenlik kontrolü: notificationId'nin geçerli olduğundan emin ol
+        if (!notificationId) {
             console.error('Hata: Bildirim ID\'si eksik veya geçersiz.');
             showToast('Bildirim ID\'si eksik veya geçersiz.', true);
             return;
@@ -2239,7 +2240,8 @@
         }
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/activities/${activityId}/read`, {
+            // notifications endpoint'ini kullan
+            const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -2273,7 +2275,8 @@
     async function markAllNotificationsAsRead() {
         console.log('markAllNotificationsAsRead çağrıldı.');
         try {
-            const response = await fetch(`${API_BASE_URL}/api/activities/mark_all_read`, {
+            // notifications endpoint'ini kullan
+            const response = await fetch(`${API_BASE_URL}/api/notifications/mark_all_read`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -2367,8 +2370,10 @@
                 // Proje adını bulmak için allProjectsData'yı kullan
                 const project = allProjectsData.find(p => String(p.project_id) === String(id));
                 const projectNameForActivity = project ? project.project_name : `ID: ${id}`;
-                // raw_description ve action_type gönderiyoruz
-                addActivity('Proje Silindi', `"${projectNameForActivity}" projesi silindi.`, id, 'fas fa-trash', 'project_delete');
+                // addActivity'ye sadece user_id, title ve message gönderiyoruz
+                if (currentUser && currentUser.id) {
+                    addActivity('Proje Silindi', `"${projectNameForActivity}" projesi silindi.`, currentUser.id);
+                }
             } else {
                 throw new Error(result.message || 'Proje silinirken bir hata oluştu.');
             }
@@ -2479,8 +2484,10 @@
                 const editModal = bootstrap.Modal.getInstance(editModalElement);
                 if (editModal) editModal.hide();
                 fetchProjects(); 
-                // raw_description ve action_type gönderiyoruz
-                addActivity('Proje Güncellendi', 'projesi güncellendi.', currentEditProjectId, 'fas fa-edit', 'project_update');
+                // addActivity'ye sadece user_id, title ve message gönderiyoruz
+                if (currentUser && currentUser.id) {
+                    addActivity('Proje Güncellendi', `"${name}" projesi güncellendi.`, currentUser.id);
+                }
             } else {
                 throw new Error(result.message || 'Proje güncellenirken bir hata oluştu.');
             }
@@ -2677,7 +2684,10 @@
                 if (styleElem) styleElem.remove();
 
                 showToast('PDF raporu başarıyla oluşturuldu');
-                addActivity('PDF Oluşturuldu', 'Proje listesinin PDF raporu oluşturuldu.', null, 'fas fa-file-pdf', 'pdf_export');
+                // addActivity'ye sadece user_id, title ve message gönderiyoruz
+                if (currentUser && currentUser.id) {
+                    addActivity('PDF Oluşturuldu', 'Proje listesinin PDF raporu oluşturuldu.', currentUser.id);
+                }
             });
         }, 500);
     });

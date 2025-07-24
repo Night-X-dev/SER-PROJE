@@ -744,7 +744,8 @@
             unreadCountBadge.textContent = '...'; // Yüklenirken göster
 
             try {
-                const response = await fetch(`${API_BASE_URL}/api/activities`); // Tüm aktiviteleri çek
+                // API çağrısını /api/notifications olarak güncelledik
+                const response = await fetch(`${API_BASE_URL}/api/notifications`); 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ message: 'Sunucudan yanıt alınamadı.' }));
                     throw new Error(errorData.message || `HTTP hatası! Durum: ${response.status}`);
@@ -776,8 +777,9 @@
                 // Debugging için notification objesinin tamamını logla
                 console.log('--- Debugging notification object ---');
                 console.log('Current notification object:', notification);
-                console.log('Type of notification.activity_id:', typeof notification.activity_id);
-                console.log('Value of notification.activity_id:', notification.activity_id);
+                // activity_id yerine id kullanıldı
+                console.log('Type of notification.id:', typeof notification.id); 
+                console.log('Value of notification.id:', notification.id);
                 console.log('--- End debugging notification object ---');
 
                 const isRead = notification.is_read || false; 
@@ -793,18 +795,18 @@
                     </div>
                     <div class="notification-item-content">
                         <div class="notification-item-title">${notification.title}</div>
-                        <div class="notification-item-description">${notification.description}</div>
+                        <div class="notification-item-description">${notification.message}</div> <!-- description yerine message kullanıldı -->
                         <div class="notification-item-time">${formatTimeAgo(notification.created_at)}</div>
                     </div>
                 `;
-                // Düzeltme: notification.activity_id'nin varlığını ve geçerliliğini kontrol et
-                if (notification.activity_id !== undefined && notification.activity_id !== null && notification.activity_id > 0) { 
+                // Düzeltme: notification.id'nin varlığını ve geçerliliğini kontrol et
+                if (notification.id !== undefined && notification.id !== null && notification.id > 0) { 
                     item.addEventListener('click', () => {
-                        console.log('Bildirim öğesine tıklandı. ID:', notification.activity_id); // Debugging için eklendi
-                        markNotificationAsReadFullPage(notification.activity_id, item); 
+                        console.log('Bildirim öğesine tıklandı. ID:', notification.id); // Debugging için eklendi
+                        markNotificationAsReadFullPage(notification.id, item); // id kullanıldı
                     });
                 } else {
-                    console.warn('Bildirim ID\'si eksik (activity_id) veya geçersiz, tıklama olayı eklenmedi:', notification); 
+                    console.warn('Bildirim ID\'si eksik (id) veya geçersiz, tıklama olayı eklenmedi:', notification); 
                 }
                 fullNotificationListDiv.appendChild(item);
             });
@@ -812,10 +814,10 @@
         }
 
         // Bildirimi okunmuş olarak işaretle (bildirim.html sayfası için)
-        async function markNotificationAsReadFullPage(activityId, itemElement) {
-            console.log('markNotificationAsReadFullPage çağrıldı, activityId:', activityId);
-            // Güvenlik kontrolü: activityId'nin geçerli olduğundan emin ol
-            if (!activityId) {
+        async function markNotificationAsReadFullPage(notificationId, itemElement) { // activityId yerine notificationId kullanıldı
+            console.log('markNotificationAsReadFullPage çağrıldı, notificationId:', notificationId);
+            // Güvenlik kontrolü: notificationId'nin geçerli olduğundan emin ol
+            if (!notificationId) {
                 console.error('Hata: Bildirim ID\'si eksik veya geçersiz.');
                 showToast('Bildirim ID\'si eksik veya geçersiz.', true);
                 return;
@@ -829,7 +831,8 @@
             }
 
             try {
-                const response = await fetch(`${API_BASE_URL}/api/activities/${activityId}/read`, {
+                // API çağrısını /api/notifications/{id}/read olarak güncelledik
+                const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -856,7 +859,8 @@
         async function fetchUnreadNotificationCount() {
             const notificationButton = document.getElementById('notificationButton');
             try {
-                const response = await fetch(`${API_BASE_URL}/api/activities/unread-count`);
+                // API çağrısını /api/notifications/unread-count olarak güncelledik
+                const response = await fetch(`${API_BASE_URL}/api/notifications/unread-count`);
                 if (!response.ok) {
                     throw new Error(`HTTP hatası! Durum: ${response.status}`);
                 }
