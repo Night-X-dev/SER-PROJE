@@ -1202,60 +1202,82 @@ def get_dashboard_stats():
             connection.close()
 
 
-# Dashboard Son Aktivite API (notifications tablosundan çeker)
+# Dashboard Son Aktivite API (Şimdi 'activities' tablosundan çeker)
 @app.route('/api/dashboard/activity', methods=['GET'])
 def get_dashboard_activity():
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # notifications tablosundan çekiyoruz
-            # icon alanı olmadığı için, varsayılan bir ikon kullanacağız veya frontend'de belirlenecek
-            # project_id alanı olmadığı için JOIN'den kaldırıldı
+            # activities tablosundan çekiyoruz
             sql = """
-                SELECT n.id, n.title, n.message, n.created_at, u.fullname AS user_fullname
-                FROM notifications n
-                JOIN users u ON n.user_id = u.id
-                ORDER BY n.created_at DESC
+                SELECT a.id, a.title, a.description, a.icon, a.created_at, u.fullname AS user_fullname
+                FROM activities a
+                JOIN users u ON a.user_id = u.id
+                ORDER BY a.created_at DESC
                 LIMIT 4
             """
             cursor.execute(sql)
-            notifications_from_db = cursor.fetchall()
+            activities_from_db = cursor.fetchall()
 
             activities_for_frontend = []
-            for item in notifications_from_db:
+            for item in activities_from_db:
                 created_at_dt = item['created_at']
 
-                time_ago = "Bilinmeyen zaman"
-                if isinstance(created_at_dt, datetime.datetime):
-                    time_diff = datetime.datetime.now() - created_at_dt
-                    if time_diff.total_seconds() < 60:
-                        time_ago = f"{int(time_diff.total_seconds())} saniye önce"
-                    elif time_diff.total_seconds() < 3600:
-                        time_ago = f"{int(time_diff.total_seconds() / 60)} dakika önce"
-                    elif time_diff.total_seconds() < 86400:
-                        time_ago = f"{int(time_diff.total_seconds() / 3600)} saat önce"
-                    else:
-                        time_ago = f"{int(time_diff.total_seconds() / 86400)} gün önce"
-                
-                # Kullanıcı adını başlığa veya mesaja ekleyebiliriz
-                # Burada sadece mesajı gösteriyoruz, başlık zaten yeterli
+                # Frontend'deki formatTimeAgo fonksiyonu için gerekli olan created_at'i isoformat olarak gönderiyoruz.
                 activities_for_frontend.append({
-                    "id": item['id'], # Yeni notification id
-                    "icon": "fas fa-info-circle", # Varsayılan ikon
+                    "id": item['id'],
+                    "icon": item['icon'] or "fas fa-info-circle", # DB'de ikon yoksa varsayılan
                     "title": item['title'],
-                    "description": item['message'],  # 'message' olarak değişti
-                    "created_at": created_at_dt.isoformat(), # Frontend'de formatTimeAgo kullanmak için
-                    "time": time_ago, # Bu alan frontend'de formatTimeAgo ile oluşturulacak
+                    "description": item['description'],
+                    "created_at": created_at_dt.isoformat(),
                 })
 
         return jsonify(activities_for_frontend), 200
+    except pymysql.Error as e:
+        print(f"Veritabanı aktivite çekme hatası: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
         print(f"Genel aktivite çekme hatası: {e}")
         return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
+
+# Yeni Aktivite Ekle API (activities tablosu için)
+@app.route('/api/activities', methods=['POST'])
+def add_activity_to_db():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    title = data.get('title')
+    description = data.get('description')
+    icon = data.get('icon', 'fas fa-info-circle') # Varsayılan ikon
+
+    # Zorunlu alan kontrolü
+    if not all([user_id, title, description]):
+        return jsonify({'message': 'Kullanıcı ID, başlık ve açıklama zorunludur.'}), 400
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            sql = """
+            INSERT INTO activities (user_id, title, description, icon, created_at)
+            VALUES (%s, %s, %s, %s, NOW())
+            """
+            cursor.execute(sql, (user_id, title, description, icon))
+            connection.commit()
+        return jsonify({'message': 'Aktivite başarıyla kaydedildi!'}), 201
+    except pymysql.Error as e:
+        print(f"Veritabanı aktivite kaydetme hatası: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
+    except Exception as e:
+        print(f"Genel aktivite kaydetme hatası: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+    finally:
+        if connection:
+            connection.close()
+
 
 # Projenin İş Gidişatı Adımlarını Çekme API'si
 @app.route('/api/projects/<int:project_id>/progress', methods=['GET'])
