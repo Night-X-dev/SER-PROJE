@@ -6,13 +6,37 @@ import bcrypt
 import os
 import json
 import datetime
-import dotenv
 from dotenv import load_dotenv
-import urllib.parse 
 
 load_dotenv()
 
 app = Flask(__name__)
+
+# CORS (Cross-Origin Resource Sharing) ayarları
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+DB_HOST = os.getenv("DB_HOST")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_NAME = os.getenv("DB_NAME")
+
+def get_db_connection():
+    """Veritabanı bağlantısı kurar ve döndürür."""
+    connection = None
+    try:
+        connection = pymysql.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_NAME,
+            cursorclass=pymysql.cursors.DictCursor # Sorgu sonuçlarını sözlük olarak almak için
+        )
+        print("MySQL veritabanına başarıyla bağlandı!")
+        return connection
+    except pymysql.Error as e:
+        print(f"MySQL bağlantı hatası: {e}")
+        if connection:
+            connection.close()
+        raise # Hatayı yukarı fırlat, Flask bunu yakalayacaktır
 
 @app.route('/')
 def serve_login_page():
@@ -49,258 +73,40 @@ def serve_projeler_page():
     """/projeler.html URL'ye gelen istekleri projeler.html sayfasına yönlendirir."""
     return render_template('projeler.html')
 
-@app.route('/raporlar.html')
-def serve_raporlar_page():
-    """/raporlar.html URL'ye gelen istekleri raporlar.html sayfasına yönlendirir."""
-    return render_template('raporlar.html')
+@app.route('/sifre_sifirlama.html')
+def serve_sifre_sifirlama_page():
+    """/sifre_sifirlama.html URL'ye gelen istekleri sifre_sifirlama.html sayfasına yönlendirir."""
+    return render_template('sifre_sifirlama.html')
+
+@app.route('/unauthorized.html')
+def serve_unauthorized_page():
+    """/unauthorized.html URL'ye gelen istekleri unauthorized.html sayfasına yönlendirir."""
+    return render_template('unauthorized.html')
+
+@app.route('/kullanici_ekle.html')
+def serve_kullanici_ekle_page():
+    """/kullanici_ekle.html URL'ye gelen istekleri kullanici_ekle.html sayfasına yönlendirir."""
+    return render_template('kullanici_ekle.html')
+
+@app.route('/kullanicilar.html')
+def serve_kullanicilar_page():
+    """/kullanicilar.html URL'ye gelen istekleri kullanicilar.html sayfasına yönlendirir."""
+    return render_template('kullanicilar.html')
+
+@app.route('/projelerim.html')
+def serve_projelerim_page():
+    """/projelerim.html URL'ye gelen istekleri projelerim.html sayfasına yönlendirir."""
+    return render_template('projelerim.html')
 
 @app.route('/takvim.html')
 def serve_takvim_page():
     """/takvim.html URL'ye gelen istekleri takvim.html sayfasına yönlendirir."""
     return render_template('takvim.html')
 
-@app.route('/waiting.html')
-def serve_waiting_page():
-    """/waiting.html URL'ye gelen istekleri waiting.html sayfasına yönlendirir."""
-    return render_template('waiting.html')
-
-@app.route('/yeni_musteri.html')
-def serve_yeni_musteri_page():
-    """/yeni_musteri.html URL'ye gelen istekleri yeni_musteri.html sayfasına yönlendirir."""
-    return render_template('yeni_musteri.html')
-
-@app.route('/bildirim.html')
-def serve_bildirim_page():
-    """/bildirim.html URL'ye gelen istekleri bildirim.html sayfasına yönlendirir."""
-    return render_template('bildirim.html')
-
-# CORS (Cross-Origin Resource Sharing) ayarları
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
-
-def get_db_connection():
-    connection = None
-    try:
-        host = None
-        port = None
-        user = None
-        password = None
-        database = None
-
-        public_url = os.getenv("MYSQL_PUBLIC_URL")
-        print(f"DEBUG: MYSQL_PUBLIC_URL from env: '{public_url}'") # Added more detailed logging
-
-        if public_url:
-            try:
-                parsed_url = urllib.parse.urlparse(public_url)
-                host = parsed_url.hostname
-                port = parsed_url.port if parsed_url.port else 3306
-                user = parsed_url.username
-                password = parsed_url.password
-                database = parsed_url.path.lstrip('/')
-                print(f"DEBUG: Using parsed public URL. Host={host}, Port={port}, User={user}, DB={database}")
-            except Exception as url_parse_e:
-                print(f"ERROR: Failed to parse MYSQL_PUBLIC_URL: {url_parse_e}. Falling back to individual env vars.")
-                # URL ayrıştırma hatası durumunda tekil ortam değişkenlerine geri dön
-                host = os.getenv("MYSQL_HOST") or "localhost"
-                port = int(os.getenv("MYSQL_PORT") or 3306)
-                user = os.getenv("MYSQL_USER") or "root"
-                password = os.getenv("MYSQL_PASSWORD") or ""
-                database = os.getenv("MYSQL_DATABASE") or "ser"
-                print(f"DEBUG: Using individual env vars fallback: Host={host}, Port={port}, User={user}, DB={database}")
-        else:
-            print("DEBUG: MYSQL_PUBLIC_URL not found or empty. Using individual env vars.")
-            # MYSQL_PUBLIC_URL yoksa tekil ortam değişkenlerini veya varsayılanları kullan
-            host = os.getenv("MYSQL_HOST") or "localhost"
-            port = int(os.getenv("MYSQL_PORT") or 3306)
-            user = os.getenv("MYSQL_USER") or "root"
-            password = os.getenv("MYSQL_PASSWORD") or ""
-            database = os.getenv("MYSQL_DATABASE") or "ser"
-            print(f"DEBUG: Using individual env vars: Host={host}, Port={port}, User={user}, DB={database}")
-
-        connection = pymysql.connect(
-            host=host,
-            user=user,
-            password=password,
-            database=database,
-            port=port, 
-            cursorclass=pymysql.cursors.DictCursor # Sorgu sonuçlarını sözlük olarak almak için
-        )
-        print("MySQL veritabanına başarıyla bağlandı!")
-        return connection
-    except pymysql.Error as e:
-        print(f"MySQL bağlantı hatası: {e}")
-        if connection:
-            connection.close()
-        raise # Hatayı yukarı fırlat, Flask bunu yakalayacaktır
-
-# Bildirimleri Tümü Okundu API (notifications tablosu için)
-@app.route('/api/notifications/mark_all_read', methods=['PUT'])
-def mark_all_notifications_as_read():
-    """Tüm bildirimleri veritabanında okunmuş olarak işaretler."""
-    connection = get_db_connection()
-    try:
-        with connection.cursor() as cursor:
-            # notifications tablosundaki 'id' sütununu kullan
-            sql = "UPDATE notifications SET is_read = 1 WHERE is_read = 0" # Sadece okunmamışları güncelle
-            cursor.execute(sql)
-            connection.commit()
-            rows_affected = cursor.rowcount # Kaç satırın etkilendiğini al
-        return jsonify({'message': f'{rows_affected} bildirim okunmuş olarak işaretlendi.'}), 200
-    except pymysql.Error as e:
-        print(f"Veritabanı tüm bildirimleri güncelleme hatası: {e}")
-        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
-    except Exception as e:
-        print(f"Genel tüm bildirimleri güncelleme hatası: {e}")
-        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
-    finally:
-        if connection:
-            connection.close()
-
-# Okunmamış Bildirim Sayısı API (notifications tablosu için)
-@app.route('/api/notifications/unread-count', methods=['GET'])
-def get_unread_notifications_count():
-    """Veritabanındaki okunmamış bildirimlerin sayısını döndürür."""
-    connection = get_db_connection()
-    try:
-        with connection.cursor() as cursor:
-            # notifications tablosundaki 'id' sütununu kullan
-            sql = "SELECT COUNT(id) as unread_count FROM notifications WHERE is_read = 0"
-            cursor.execute(sql)
-            result = cursor.fetchone()
-            return jsonify(result), 200
-    except pymysql.Error as e:
-        print(f"Veritabanı okunmamış bildirim sayısı çekme hatası: {e}")
-        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
-    except Exception as e:
-        print(f"Genel okunmamış bildirim sayısı çekme hatası: {e}")
-        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
-    finally:
-        if connection:
-            connection.close()
-
-
-# Bildirimi Okundu API (notifications tablosu için)
-@app.route('/api/notifications/<int:notification_id>/read', methods=['PUT'])
-def mark_notification_as_read(notification_id):
-    """Belirli bir bildirimi veritabanında okunmuş olarak işaretler."""
-    connection = get_db_connection()
-    try:
-        with connection.cursor() as cursor:
-            # Bildirimin varlığını kontrol et
-            # notifications tablosundaki 'id' sütununu kullan
-            cursor.execute("SELECT id FROM notifications WHERE id = %s", (notification_id,))
-            if not cursor.fetchone():
-                return jsonify({'message': 'Bildirim bulunamadı.'}), 404
-
-            # is_read sütununu 1 olarak güncelle
-            # notifications tablosundaki 'id' sütununu kullan
-            sql = "UPDATE notifications SET is_read = 1 WHERE id = %s"
-            cursor.execute(sql, (notification_id,))
-            connection.commit()
-
-        return jsonify({'message': 'Bildirim başarıyla okunmuş olarak işaretlendi.'}), 200
-    except pymysql.Error as e:
-        print(f"Veritabanı bildirim güncelleme hatası: {e}")
-        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
-    except Exception as e:
-        print(f"Genel bildirim güncelleme hatası: {e}")
-        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
-    finally:
-        if connection:
-            connection.close()
-
-# Bildirimleri Çekme API (notifications tablosu için)
-@app.route('/api/notifications', methods=['GET'])
-def get_notifications():
-    """Veritabanından tüm bildirimleri çeker."""
-    connection = get_db_connection()
-    try:
-        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            # 'notifications' tablosundan tüm verileri çekmek için SQL sorgusu
-            # Yeni tablo yapısına göre 'id' ve 'message' kullanıldı, 'icon' ve 'project_id' kaldırıldı.
-            sql = "SELECT id, user_id, title, message, is_read, created_at FROM notifications ORDER BY created_at DESC"
-            cursor.execute(sql)
-            result = cursor.fetchall()
-            # is_read alanını int olarak döndür (garanti)
-            for row in result:
-                if 'is_read' in row:
-                    try:
-                        row['is_read'] = int(row['is_read'])
-                    except Exception:
-                        row['is_read'] = 0
-            return jsonify(result)
-    finally:
-        connection.close()
-
-# Yeni Bildirim Ekle API (notifications tablosu için)
-@app.route('/api/notifications', methods=['POST'])
-def add_notification():
-    data = request.get_json()
-    user_id = data.get('user_id')
-    title = data.get('title')
-    message = data.get('message') # 'raw_description' yerine 'message' kullanıldı
-
-    # Zorunlu alan kontrolü
-    if not all([user_id, title, message]):
-        return jsonify({'message': 'Kullanıcı ID, başlık ve mesaj zorunludur.'}), 400
-
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # Bildirim tablosuna ekleme
-            # Yeni tablo yapısına göre 'message' kullanıldı, 'icon' ve 'action_type' kaldırıldı.
-            sql = """
-            INSERT INTO notifications (user_id, title, message, created_at)
-            VALUES (%s, %s, %s, NOW())
-            """
-            cursor.execute(sql, (user_id, title, message))
-            connection.commit()
-        return jsonify({'message': 'Bildirim başarıyla kaydedildi!'}), 201
-    except pymysql.Error as e:
-        print(f"Veritabanı bildirim kaydetme hatası: {e}")
-        if e.args[0] == 1062:
-            return jsonify({'message': 'Bu e-posta adresi zaten kullanılıyor.'}), 409
-        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
-    except Exception as e:
-        print(f"Genel bildirim kaydetme hatası: {e}")
-        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
-    finally:
-        if connection:
-            connection.close()
-
-# Yeni Aktivite Ekle API (activities tablosu için)
-@app.route('/api/activities', methods=['POST'])
-def add_activity():
-    data = request.get_json()
-    user_id = data.get('user_id')
-    title = data.get('title')
-    description = data.get('description')
-    icon = data.get('icon', 'fas fa-info-circle') # Varsayılan ikon
-
-    if not all([user_id, title, description]):
-        return jsonify({'message': 'Kullanıcı ID, başlık ve açıklama zorunludur.'}), 400
-
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            sql = """
-            INSERT INTO activities (user_id, title, description, icon, created_at)
-            VALUES (%s, %s, %s, %s, NOW())
-            """
-            cursor.execute(sql, (user_id, title, description, icon))
-            connection.commit()
-        return jsonify({'message': 'Aktivite başarıyla kaydedildi!'}), 201
-    except pymysql.Error as e:
-        print(f"Veritabanı aktivite kaydetme hatası: {e}")
-        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
-    except Exception as e:
-        print(f"Genel aktivite kaydetme hatası: {e}")
-        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
-    finally:
-        if connection:
-            connection.close()
+@app.route('/raporlar.html')
+def serve_raporlar_page():
+    """/raporlar.html URL'ye gelen istekleri raporlar.html sayfasına yönlendirir."""
+    return render_template('raporlar.html')
 
 @app.route('/api/update_user_profile', methods=['POST'])
 def update_user_profile():
@@ -384,50 +190,7 @@ def update_user_profile():
     finally:
         if connection:
             connection.close()
-    data = request.get_json()
-    user_id = data.get('userId')
-    current_password = data.get('currentPassword')
-    new_password = data.get('newPassword')
 
-    if not all([user_id, current_password, new_password]):
-        return jsonify({'message': 'Tüm alanlar gereklidir.'}), 400
-
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # Kullanıcının mevcut şifresini veritabanından çek
-            cursor.execute("SELECT password FROM users WHERE id = %s", (user_id,))
-            user = cursor.fetchone() # password alanı dönecek
-
-            if not user:
-                return jsonify({'message': 'Kullanıcı bulunamadı.'}), 404
-
-            # 'password' anahtarını kullanarak hash'lenmiş şifreye erişiyoruz
-            stored_password_hash = user['password'] 
-
-            # Girilen mevcut şifreyi, veritabanındaki hash ile karşılaştır
-            if not bcrypt.checkpw(current_password.encode('utf-8'), stored_password_hash.encode('utf-8')):
-                return jsonify({'message': 'Mevcut şifre yanlış.'}), 401
-
-            # Yeni şifreyi hash'le
-            hashed_new_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-            # Veritabanında şifreyi güncelle
-            cursor.execute("UPDATE users SET password = %s WHERE id = %s", (hashed_new_password, user_id))
-            connection.commit()
-
-            return jsonify({'message': 'Şifre başarıyla değiştirildi.'}), 200
-
-    except pymysql.Error as e:
-        print(f"Veritabanı şifre değiştirme hatası: {e}")
-        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
-    except Exception as e:
-        print(f"Genel şifre değiştirme hatası: {e}")
-        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
-    finally:
-        if connection:
-            connection.close()
 @app.route('/api/pending-users', methods=['GET'])
 def get_pending_users():
     connection = None
@@ -447,7 +210,6 @@ def get_pending_users():
     finally:
         if connection:
             connection.close()
-# app.py dosyanızdaki diğer rotaların altına veya uygun bir yere ekleyin
 
 @app.route('/api/users/approve/<int:user_id>', methods=['PATCH'])
 def approve_user(user_id):
@@ -480,7 +242,7 @@ def approve_user(user_id):
     finally:
         if connection:
             connection.close()
-# Diğer rotalarınız ve fonksiyonlarınız...
+
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
     connection = None
@@ -509,7 +271,6 @@ def delete_user(user_id):
         if connection:
             connection.close()
 
-# Veritabanı bağlantısı oluşturan yardımcı fonksiyon
 # Konum verilerini (il/ilçe) JSON dosyasından yükle
 TURKEY_LOCATIONS = {}
 try:
@@ -849,7 +610,7 @@ def update_customer(customer_id):
                 updates.append("city = %s")
                 params.append(city)
             if district is not None:
-                updates.append("district = %s")
+                updates.append("district = " "%s")
                 params.append(district)
             if postal_code is not None:
                 updates.append("postal_code = %s")
@@ -938,7 +699,7 @@ def get_projects():
                 END
                 WHERE status != 'Tamamlandı'; -- Sadece tamamlanmamış projeleri kontrol et
             """)
-            connection.commit() # Genel durum güncelleyicilerini kaydet
+            connection.commit() # Genel durum güncellemelerini kaydet
 
             # Projeleri ve ilgili gecikme bilgilerini çek
             sql = """
@@ -1155,6 +916,7 @@ def delete_project_api(project_id):
             #         user_ids_to_notify.append(uid)
 
            
+
         return jsonify({'message': 'Proje başarıyla silindi!'}), 200
 
     except pymysql.Error as e:
@@ -1169,6 +931,101 @@ def delete_project_api(project_id):
         if connection:
             connection.close()
 
+# Yeni Proje Ekle API
+@app.route('/api/projects', methods=['POST'])
+def add_project():
+    data = request.get_json()
+    project_name = data.get('projectName')
+    reference_no = data.get('projectRef')
+    description = data.get('projectDescription')
+    customer_id = data.get('customerId')
+    project_manager_id = data.get('projectManagerId')
+    contract_date = data.get('contractDate')
+    meeting_date = data.get('meetingDate')
+    start_date_str = data.get('startDate')
+    end_date = data.get('endDate')
+    project_location = data.get('projectLocation')
+    progress_steps = data.get('progressSteps', [])
+
+    initial_status = 'Planlama Aşamasında' # Varsayılan
+    current_date = datetime.date.today()
+
+    meeting_dt = datetime.datetime.strptime(meeting_date, '%Y-%m-%d').date() if meeting_date else None
+    start_dt = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date() if start_date_str else None
+
+    if meeting_dt and current_date < meeting_dt:
+        initial_status = 'Planlama Aşamasında'
+    elif start_dt and current_date >= start_dt:
+        initial_status = 'Aktif'
+
+    if not all([project_name, customer_id, project_manager_id, start_date_str, end_date]):
+        return jsonify({'message': 'Zorunlu proje bilgileri eksik (Ad, Müşteri, Yönetici, Başlangıç/Bitiş Tarihi)!'}), 400
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            sql_project = """
+            INSERT INTO projects
+            (project_name, reference_no, description, customer_id, project_manager_id,
+             contract_date, meeting_date, start_date, end_date, project_location, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(sql_project, (
+                project_name, reference_no, description, customer_id, project_manager_id,
+                contract_date, meeting_date, start_date_str, end_date, project_location, initial_status
+            ))
+            project_id = cursor.lastrowid
+
+
+            # İş adımları için gecikme gününü hesapla ve kaydet
+            if progress_steps:
+                progress_steps.sort(key=lambda x: datetime.datetime.strptime(x['startDate'], '%Y-%m-%d'))
+
+                sql_progress = """
+                INSERT INTO project_progress
+                (project_id, title, description, start_date, end_date, delay_days)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """
+
+                previous_end_date = None
+                for i, step in enumerate(progress_steps):
+                    step_start_date = datetime.datetime.strptime(step['startDate'], '%Y-%m-%d').date()
+                    step_end_date = datetime.datetime.strptime(step['endDate'], '%Y-%m-%d').date()
+
+                    delay_days = 0
+                    if i > 0 and previous_end_date:
+                        diff = (step_start_date - previous_end_date).days
+                        if diff > 1:
+                            delay_days = diff - 1
+
+                    cursor.execute(sql_progress, (
+                        project_id, step['title'], step['description'], # Frontend'den gelen 'title'ı kullan
+                        step['startDate'], step['endDate'], delay_days
+                    ))
+                    previous_end_date = step_end_date
+
+            connection.commit()
+
+            # Proje yöneticisine bildirim ekle
+            message = f'"{project_name}" adlı yeni proje eklendi.'
+            notif_type = 'project_create'
+            cursor.execute("""
+                INSERT INTO notifications (user_id, project_id, message, type, is_read, created_at)
+                VALUES (%s, %s, %s, %s, %s, NOW())
+            """, (project_manager_id, project_id, message, notif_type, False))
+            connection.commit()
+        return jsonify({'message': 'Proje başarıyla eklendi!', 'projectId': project_id}), 201
+
+    except pymysql.Error as e:
+        print(f"Veritabanı proje ekleme hatası: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
+    except Exception as e:
+        print(f"Genel proje ekleme hatası: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+    finally:
+        if connection:
+            connection.close()
 
 # Proje Yöneticilerini Listele API
 @app.route('/api/project_managers', methods=['GET'])
@@ -1235,68 +1092,157 @@ def get_dashboard_stats():
             connection.close()
 
 
-# Dashboard Son Aktivite API (activities tablosundan çeker)
-# Dashboard Son Aktivite API (activities tablosundan çeker)
-@app.route('/api/dashboard/activity', methods=['GET'])
-def get_recent_activities():
+# Son Aktivite Ekle API (Yeni)
+@app.route('/api/activities', methods=['POST'])
+def add_activity_log():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    project_id = data.get('project_id')  # Proje ID'si (null olabilir)
+    title = data.get('title')  # <-- Eksikse ekle!
+    action_type = data.get('action_type') # Yeni alan: 'project_update', 'task_update', 'project_delete', 'pdf_export'
+    raw_description = data.get('raw_description') # Yeni alan: Ham açıklama (örn: "iş adımı güncellendi", "projesi silindi")
+    icon = data.get('icon', 'fas fa-info-circle')
+
+    # Zorunlu alan kontrolü
+    if not all([user_id, title, action_type, raw_description]):
+        return jsonify({'message': 'Kullanıcı, başlık, eylem türü ve ham açıklama zorunludur.'}), 400
+
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            sql = """
-                SELECT id, title, description, icon, created_at
-                FROM activities
-                ORDER BY created_at DESC
-                LIMIT 4
-            """
-            cursor.execute(sql)
-            rows = cursor.fetchall()
+            # Kullanıcı adını çek
+            cursor.execute("SELECT fullname FROM users WHERE id = %s", (user_id,))
+            user = cursor.fetchone()
 
-        activities = []
-        now = datetime.datetime.now()
+            if not user:
+                return jsonify({'message': 'Kullanıcı bulunamadı.'}), 404
 
-        for item in rows:
-            created_at = item.get('created_at')
-            if isinstance(created_at, datetime.datetime):
-                created_iso = created_at.isoformat()
-                diff = now - created_at
-            elif isinstance(created_at, datetime.date):
-                dt = datetime.datetime.combine(created_at, datetime.time())
-                created_iso = dt.isoformat()
-                diff = now - dt
-            else:
-                created_iso = str(created_at) if created_at is not None else None
-                diff = None
+            user_fullname = user['fullname']
+            final_description = "" # Son açıklama burada oluşturulacak
 
-            time_ago = "Bilinmeyen zaman"
-            if diff is not None:
-                sec = int(diff.total_seconds())
-                if sec < 60:
-                    time_ago = f"{sec} saniye önce"
-                elif sec < 3600:
-                    time_ago = f"{sec // 60} dakika önce"
-                elif sec < 86400:
-                    time_ago = f"{sec // 3600} saat önce"
+            # Proje bilgilerini çek (eğer project_id varsa)
+            project_name = None
+            if project_id:
+                cursor.execute("SELECT project_name FROM projects WHERE project_id = %s", (project_id,))
+                project_result = cursor.fetchone()
+                if project_result:
+                    project_name = project_result['project_name']
+
+            # Eylem türüne göre açıklama formatını belirle
+            if action_type == 'project_create':
+                if project_name:
+                    final_description = f'{user_fullname} tarafından: "{project_name}" adlı yeni proje eklendi.'
+                elif raw_description:
+                    final_description = f'{user_fullname} tarafından: {raw_description}'
                 else:
-                    time_ago = f"{sec // 86400} gün önce"
+                    final_description = f'{user_fullname} tarafından: Yeni proje eklendi.'
 
-            activities.append({
-                "id": item.get('id'),
-                "icon": (item.get('icon') or "fas fa-info-circle"),
-                "title": item.get('title'),
-                "description": item.get('description'),
-                "created_at": created_iso,
-                "time": time_ago
-            })
+            elif action_type == 'project_update':
+                if project_name:
+                    final_description = f'{user_fullname} tarafından: "{project_name}" adlı proje güncellendi.'
+                elif raw_description:
+                    final_description = f'{user_fullname} tarafından: {raw_description}'
+                else:
+                    final_description = f'{user_fullname} tarafından: Proje güncellendi.'
 
-        return jsonify(activities), 200
+            elif action_type == 'project_delete':
+                if project_name:
+                    final_description = f'{user_fullname} tarafından: "{project_name}" adlı proje silindi.'
+                elif raw_description:
+                    final_description = f'{user_fullname} tarafından: {raw_description}'
+                else:
+                    final_description = f'{user_fullname} tarafından: Proje silindi.'
+
+            elif action_type == 'task_update':
+                if project_name and raw_description:
+                    final_description = f'{user_fullname} tarafından: "{project_name}" projesinde "{raw_description}" iş adımı güncellendi.'
+                elif raw_description:
+                    final_description = f'{user_fullname} tarafından: {raw_description} iş adımı güncellendi.'
+                else:
+                    final_description = f'{user_fullname} tarafından: Bir iş adımı güncellendi.'
+
+            elif action_type == 'task_create':
+                if project_name and raw_description:
+                    final_description = f'{user_fullname} tarafından: "{project_name}" projesine "{raw_description}" iş adımı eklendi.'
+                elif raw_description:
+                    final_description = f'{user_fullname} tarafından: {raw_description} iş adımı eklendi.'
+                else:
+                    final_description = f'{user_fullname} tarafından: Bir iş adımı eklendi.'
+
+            elif action_type == 'task_delete':
+                if project_name and raw_description:
+                    final_description = f'{user_fullname} tarafından: "{project_name}" projesinden "{raw_description}" iş adımı silindi.'
+                elif raw_description:
+                    final_description = f'{user_fullname} tarafından: {raw_description} iş adımı silindi.'
+                else:
+                    final_description = f'{user_fullname} tarafından: Bir iş adımı silindi.'
+            elif action_type == 'pdf_export':
+                final_description = f'{user_fullname} tarafından: {raw_description}' # raw_description: "Proje listesinin PDF raporu oluşturuldu."
+            else:
+                final_description = f'{user_fullname} tarafından: {raw_description}' # Varsayılan veya diğer tipler
+
+            sql = """
+            INSERT INTO activities (user_id, title, description, icon, created_at)
+            VALUES (%s, %s, %s, %s, NOW())
+            """
+            cursor.execute(sql, (user_id, title, final_description, icon))
+            connection.commit()
+        return jsonify({'message': 'Aktivite başarıyla kaydedildi!'}), 201
+    except pymysql.Error as e:
+        print(f"Veritabanı aktivite kaydetme hatası: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"Genel aktivite çekme hatası: {e}")
-        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.', 'detail': str(e)}), 500
+        print(f"Genel aktivite kaydetme hatası: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
+# Dashboard Son Aktivite API (Aktiviteler tablosundan çeker)
+@app.route('/api/dashboard/activity', methods=['GET'])
+def get_dashboard_activity():
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT a.title, a.description, a.created_at, a.icon
+                FROM activities a
+                ORDER BY a.created_at DESC
+                LIMIT 4
+            """)
+            activities_from_db = cursor.fetchall()
 
+            activities_for_frontend = []
+            for item in activities_from_db:
+                created_at_dt = item['created_at']
+
+                time_ago = "Bilinmeyen zaman"
+                if isinstance(created_at_dt, datetime.datetime):
+                    time_diff = datetime.datetime.now() - created_at_dt
+                    if time_diff.total_seconds() < 60:
+                        time_ago = f"{int(time_diff.total_seconds())} saniye önce"
+                    elif time_diff.total_seconds() < 3600:
+                        time_ago = f"{int(time_diff.total_seconds() / 60)} dakika önce"
+                    elif time_diff.total_seconds() < 86400:
+                        time_ago = f"{int(time_diff.total_seconds() / 3600)} saat önce"
+                    else:
+                        time_ago = f"{int(time_diff.total_seconds() / 86400)} gün önce"
+
+                activities_for_frontend.append({
+                    "icon": item['icon'],
+                    "title": item['title'],
+                    "description": item['description'],  # Artık doğrudan düzgün açıklama!
+                    "time": time_ago,
+                })
+
+        return jsonify(activities_for_frontend), 200
+    except Exception as e:
+        print(f"Genel aktivite çekme hatası: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+    finally:
+        if connection:
+            connection.close()
 # Projenin İş Gidişatı Adımlarını Çekme API'si
 @app.route('/api/projects/<int:project_id>/progress', methods=['GET'])
 def get_project_progress_steps(project_id):
@@ -1306,17 +1252,17 @@ def get_project_progress_steps(project_id):
         with connection.cursor() as cursor:
             sql = """
             SELECT
-                progress_id,          -- Tablonuzdaki sütun adı
+                progress_id,          # Tablonuzdaki sütun adı
                 project_id,
-                title AS step_name,   -- Frontend'de `step_name` olarak kullanılacak
+                title AS step_name,   # Frontend'de `step_name` olarak kullanılacak
                 description,
                 start_date,
                 end_date,
                 delay_days,
-                created_at            -- `created_at` sütunu da çekilebilir
+                created_at            # `created_at` sütunu da çekilebilir
             FROM project_progress
             WHERE project_id = %s
-            ORDER BY start_date ASC, created_at ASC -- Sıralama önemli
+            ORDER BY start_date ASC, created_at ASC # Sıralama önemli
             """
             cursor.execute(sql, (project_id,))
             steps = cursor.fetchall()
@@ -1590,8 +1536,43 @@ def get_distinct_roles():
     finally:
         if connection:
             connection.close()
-from flask import request, jsonify
 
+@app.route('/api/tasks', methods=['POST', 'OPTIONS'])
+def add_task():
+    if request.method == 'OPTIONS':
+        # CORS preflight için boş 200 OK dön
+        return '', 200
+
+    data = request.get_json()
+    title = data.get('title')
+    description = data.get('description')
+    start = data.get('start')
+    end = data.get('end')
+    priority = data.get('priority', 'medium')
+    assigned_user_id = data.get('assigned_user_id')
+    created_by = data.get('created_by')
+
+    # Basit zorunlu alan kontrolü
+    if not all([title, start, assigned_user_id, created_by]):
+        return jsonify({'message': 'Zorunlu alanlar eksik!'}), 400
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            sql = """
+                INSERT INTO tasks (title, description, start, end, priority, assigned_user_id, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(sql, (title, description, start, end, priority, assigned_user_id, created_by))
+            connection.commit()
+        return jsonify({'message': 'Görev başarıyla eklendi!'}), 201
+    except Exception as e:
+        print(f"Görev ekleme hatası: {e}")
+        return jsonify({'message': 'Görev eklenirken hata oluştu.'}), 500
+    finally:
+        if connection:
+            connection.close()
 
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
@@ -1674,6 +1655,7 @@ def delete_task(task_id):
     finally:
         if connection:
             connection.close()
+
 @app.route('/api/manager-stats')
 def manager_stats():
     connection = get_db_connection()
@@ -1682,7 +1664,7 @@ def manager_stats():
             sql = """
             SELECT 
                 p.project_manager_id,
-f time_diff.total_seconds() < 3600:                u.fullname as manager_name,
+                u.fullname as manager_name,
                 COUNT(DISTINCT p.project_id) AS total_projects,
                 SUM(CASE 
                         WHEN p.status = 'Bitti' AND (
@@ -1758,4 +1740,3 @@ def worker_performance():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=3001, debug=True)
-
