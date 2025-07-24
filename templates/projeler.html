@@ -1729,8 +1729,7 @@
         return `<span class="status-badge ${statusClass}">${statusText}</span>`;
       }
 
-      // Aktivite loglama (Bu fonksiyon artık frontend'den doğrudan çağrılmayacak, sadece backend'den çağrılacak)
-      /*
+      // Aktivite loglama fonksiyonu (frontend'den backend'e istek gönderecek)
       async function addActivity(title, rawDescription, project_id, icon = "fas fa-info-circle", actionType = "other") {
         if (!currentUser || !currentUser.id) {
           console.warn("Kullanıcı oturumu bulunamadı, aktivite kaydedilemedi.");
@@ -1741,12 +1740,10 @@
           user_id: currentUser.id,
           project_id: project_id, // null olabilir
           title: title,
-          description: rawDescription, // 'raw_description' yerine 'description' kullanıldı
+          description: rawDescription,
           icon: icon,
-          action_type: actionType // Bu alan backend'de kullanılmıyor, kaldırılabilir veya bildirim için kullanılabilir
+          action_type: actionType
         };
-
-        console.log(activityData); // Hata ayıklama için
 
         try {
           const response = await fetch(`${API_BASE_URL}/api/activities`, {
@@ -1758,11 +1755,12 @@
             const errorData = await response.json();
             throw new Error(errorData.message || 'Aktivite eklenirken bilinmeyen bir hata oluştu.');
           }
+          console.log("Aktivite başarıyla kaydedildi:", activityData);
         } catch (error) {
           console.error('Aktivite ekleme hatası:', error);
         }
       }
-      */
+      
 
       // --- Proje Listesi ve İşlemleri ---
       async function fetchProjects() {
@@ -2017,16 +2015,14 @@
           if (response.ok) {
             showToast(data.message || "Proje başarıyla silindi");
             fetchProjects();
-            // addActivity çağrısı backend tarafından yapıldığı için buradan kaldırıldı.
-            /*
+            // Aktivite kaydı eklendi
             addActivity(
               "Proje Silindi",
-              `\"${projectName}\" projesi silindi.`,
+              `"${projectName}" projesi silindi.`,
               id,
               "fas fa-trash",
               "project_delete"
             );
-            */
           } else {
             showToast(`Hata: ${data.message}`, true);
           }
@@ -2295,8 +2291,6 @@ async function renderEditModal(project) {
           const data = await response.json();
           if (response.ok) {
             showToast("Proje başarıyla güncellendi!");
-            // addActivity çağrısı backend tarafından yapıldığı için buradan kaldırıldı.
-            /*
             addActivity(
               "Proje Güncellendi",
               `${projectName} adlı proje güncellendi.`,
@@ -2304,7 +2298,6 @@ async function renderEditModal(project) {
               "fas fa-pen-to-square",
               "project_update"
             );
-            */
             fetchProjects(); // Listeyi yenile
             closeProjectModal();
           } else {
@@ -2513,8 +2506,7 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
                     showToast("İş adımı başarıyla eklendi.");
                     formElement.remove(); // Formu kapat
                     fetchProgressSteps(projectId, true); // Adımları yeniden yükle (düzenleme modunda kal)
-                    // addActivity çağrısı backend tarafından yapıldığı için buradan kaldırıldı.
-                    // addActivity('İş Adımı Eklendi', `Proje ID: ${projectId} için "${stepName}" iş adımı eklendi.`, 'fas fa-tasks');
+                    addActivity('İş Adımı Eklendi', `Proje ID: ${projectId} için "${stepName}" iş adımı eklendi.`, projectId, 'fas fa-tasks', 'progress_add');
                 } else {
                     showToast(`Hata: ${data.message}`, true);
                 }
@@ -2545,14 +2537,13 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
             showToast("İş adımı başarıyla güncellendi.");
             fetchProjects(); // Projeler listesini de yenile (durum güncellenmiş olabilir)
             fetchProgressSteps(projectId, true); // Adımları yenile (düzenleme modunda kal)
-            // addActivity çağrısı backend tarafından yapıldığı için buradan kaldırıldı.
-            /*
             addActivity(
               "İş Adımı Güncellendi",
               `Proje ID: ${projectId} için "${updatedStepData.step_name}" iş adımı güncellendi.`,
-              "fas fa-pen"
+              projectId,
+              "fas fa-pen",
+              "progress_update"
             );
-            */
           } else {
             showToast(`Hata: ${data.message}`, true);
           }
@@ -2573,14 +2564,13 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
               showToast("İş adımı başarıyla silindi!");
               fetchProjects(); // Projeler listesini de yenile (durum güncellenmiş olabilir)
               fetchProgressSteps(projectId, true); // Adımları yenile (düzenleme modunda kal)
-              // addActivity çağrısı backend tarafından yapıldığı için buradan kaldırıldı.
-              /*
               addActivity(
                 "İş Adımı Silindi",
                 `Proje ID: ${projectId} için bir iş adımı silindi.`,
-                "fas fa-times"
+                projectId,
+                "fas fa-times",
+                "progress_delete"
               );
-              */
             } else {
               showToast(`Hata: ${data.message}`, true);
             }
@@ -2717,8 +2707,6 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
         // Yeni pencere yüklendiğinde aktivite kaydı
         newWindow.onload = () => {
             showToast(`${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi hazır.`);
-            // addActivity çağrısı backend tarafından yapıldığı için buradan kaldırıldı.
-            /*
             addActivity(
                 "PDF Raporu Önizlendi",
                 `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi açıldı.`,
@@ -2726,7 +2714,6 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
                 "fas fa-file-pdf",
                 "pdf_preview"
             );
-            */
         };
       }
 
@@ -2867,16 +2854,13 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
         try {
             await html2pdf().from(element).set(options).save();
             showToast("Tüm projeler PDF olarak başarıyla dışa aktarıldı!");
-            // addActivity çağrısı backend tarafından yapıldığı için buradan kaldırıldı.
-            /*
             addActivity(
                 "Tüm Projeler PDF Dışa Aktarıldı",
                 "Tüm projeler PDF olarak indirildi.",
-                null,
+                null, // Proje ID'si yok, tüm projeler
                 "fas fa-file-pdf",
                 "pdf_export_all"
             );
-            */
         } catch (error) {
             console.error("Tüm projeleri PDF'e aktarırken hata oluştu:", error);
             showToast(`PDF oluşturulurken hata oluştu: ${error.message}`, true);
@@ -3065,6 +3049,10 @@ async function checkPermission(permissionKey) {
     if (!role) {
         showToast('Kullanıcı rolü bulunamadı. Lütfen tekrar giriş yapın.', true);
         return false;
+    }
+    // Admin rolü için tüm yetkileri varsay
+    if (role === 'Admin') {
+        return true;
     }
     try {
         const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(role)}`);
