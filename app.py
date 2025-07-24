@@ -895,7 +895,7 @@ def update_customer(customer_id):
             log_activity(
                 user_id=user_id,
                 title='Müşteri Güncellendi',
-                description=f'"{old_customer_name}" (ID: {customer_id}) adlı müşteri bilgileri güncellendi.',
+                description=f'"{old_customer_name}" adlı müşteri bilgileri güncellendi.',
                 icon='fas fa-user-edit'
             )
 
@@ -942,7 +942,7 @@ def delete_customer(customer_id):
             log_activity(
                 user_id=user_id,
                 title='Müşteri Silindi',
-                description=f'"{customer_name}" (ID: {customer_id}) adlı müşteri silindi.',
+                description=f'"{customer_name}" adlı müşteri silindi.',
                 icon='fas fa-user-minus'
             )
 
@@ -1156,7 +1156,7 @@ def update_project(project_id):
             log_activity(
                 user_id=user_id,
                 title='Proje Güncellendi',
-                description=f'"{old_project_name}" (ID: {project_id}) adlı proje bilgileri güncellendi.',
+                description=f'"{old_project_name}" adlı proje bilgileri güncellendi.',
                 icon='fas fa-edit'
             )
 
@@ -1209,7 +1209,7 @@ def delete_project_api(project_id):
             log_activity(
                 user_id=user_id,
                 title='Proje Silindi',
-                description=f'"{project_name}" (ID: {project_id}) adlı proje silindi.',
+                description=f'"{project_name}" adlı proje silindi.',
                 icon='fas fa-trash'
             )
            
@@ -1400,7 +1400,7 @@ def add_project():
         log_activity(
             user_id=user_id,
             title='Yeni Proje Eklendi',
-            description=f'"{project_name}" adlı yeni proje (ID: {new_project_id}) oluşturuldu.',
+            description=f'"{project_name}" adlı yeni proje oluşturuldu.',
             icon='fas fa-plus'
         )
         return jsonify({"message": "Proje başarıyla eklendi", "project_id": new_project_id}), 201
@@ -1874,11 +1874,11 @@ def worker_performance():
                 u.fullname AS manager_name,
                 COUNT(DISTINCT p.project_id) AS total_projects,
                 SUM(CASE 
-                        WHEN p.status = 'Bitti' AND (
+                        WHEN p.status = 'Bitti' AND (\
                             SELECT SUM(pr.delay_days) 
                             FROM project_progress pr 
                             WHERE pr.project_id = p.project_id
-                        ) IS NULL OR (
+                        ) IS NULL OR (\
                             SELECT SUM(pr.delay_days) 
                             FROM project_progress pr 
                             WHERE pr.project_id = p.project_id
