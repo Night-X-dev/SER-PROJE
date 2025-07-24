@@ -1925,29 +1925,30 @@
     }
 
     // Son Aktiviteleri Backend'den Çekme (Şimdi activities tablosundan çekecek)
-    async function fetchRecentActivities() {
-        try {
-            // app.py'deki /api/dashboard/activity endpoint'ini kullan
-            const response = await fetch(`${API_BASE_URL}/api/dashboard/activity`);
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: 'Sunucudan yanıt alınamadı.' }));
-                throw new Error(errorData.message || `HTTP hatası! Durum: ${response.status}`);
-            }
-            const activities = await response.json();
-            renderActivities(activities);
-        } catch (error) {
-            console.error('Aktiviteler çekilemedi:', error);
-            // Hata mesajını daha anlaşılır hale getirelim
-            let errorMessage = 'Aktiviteler yüklenirken bir sorun oluştu.';
-            if (error.message.includes('500')) {
-                errorMessage = 'Sunucu tarafında bir hata oluştu. Lütfen konsolu kontrol edin.';
-            } else if (error.message.includes('Sunucudan yanıt alınamadı')) {
-                errorMessage = 'Sunucuya ulaşılamıyor. Ağ bağlantınızı kontrol edin.';
-            }
-            showToast(errorMessage, true);
-            document.getElementById('activityList').innerHTML = `<div style="text-align: center; color: var(--danger);">${errorMessage}</div>`;
+   async function fetchRecentActivities() {
+    try {
+        const response = await fetch('/api/dashboard/activity');
+        if (!response.ok) {
+            throw new Error('Sunucu hatası, lütfen daha sonra tekrar deneyin.');
         }
+        const activities = await response.json();
+        // Aktiviteleri HTML'e yazdır
+        const activityList = document.getElementById('activity-list');
+        activityList.innerHTML = '';
+        activities.forEach(activity => {
+            const activityItem = document.createElement('div');
+            activityItem.innerHTML = `
+                <h4>${activity.title}</h4>
+                <p>${activity.description}</p>
+                <p>${activity.created_at}</p>
+            `;
+            activityList.appendChild(activityItem);
+        });
+    } catch (error) {
+        console.error(error);
+        alert('Aktiviteler çekilemedi: ' + error.message);
     }
+}
 
     // Aktivite ekleme fonksiyonu (Frontend'den çağrılabilir)
     async function addActivity(title, description, user_id, icon = "fas fa-info-circle") {

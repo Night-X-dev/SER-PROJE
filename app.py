@@ -938,7 +938,7 @@ def get_projects():
                 END
                 WHERE status != 'Tamamlandı'; -- Sadece tamamlanmamış projeleri kontrol et
             """)
-            connection.commit() # Genel durum güncellemelerini kaydet
+            connection.commit() # Genel durum güncelleyicilerini kaydet
 
             # Projeleri ve ilgili gecikme bilgilerini çek
             sql = """
@@ -1663,7 +1663,12 @@ def delete_task(task_id):
     finally:
         if connection:
             connection.close()
-
+@app.route('/api/dashboard/activity', methods=['GET'])
+def get_recent_activities():
+    conn = get_db_connection()
+    activities = conn.execute('SELECT * FROM activities ORDER BY created_at DESC LIMIT 10').fetchall()
+    conn.close()
+    return jsonify([dict(row) for row in activities])
 @app.route('/api/manager-stats')
 def manager_stats():
     connection = get_db_connection()
@@ -1748,3 +1753,4 @@ def worker_performance():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=3001, debug=True)
+
