@@ -1257,7 +1257,7 @@ def get_recent_activities():
                 created_at,
                 is_read
             FROM
-                activity
+                activities
             ORDER BY
                 created_at DESC
             LIMIT 5;
