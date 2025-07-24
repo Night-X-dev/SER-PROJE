@@ -1247,7 +1247,6 @@ def get_recent_activities():
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
-            # activity_id, user_id, title, description, icon, created_at, is_read sütunlarını çek
             sql = """
             SELECT
                 activity_id,
@@ -1258,16 +1257,19 @@ def get_recent_activities():
                 created_at,
                 is_read
             FROM
-                activity     -- Tablo adınızın 'activity' olduğundan emin olun
+                activity
             ORDER BY
                 created_at DESC
-            LIMIT 5;         -- Dashboard için son 5 aktiviteyi çekiyoruz
+            LIMIT 5;
             """
             cursor.execute(sql)
             activities = cursor.fetchall()
+            # Debugging için buraya print ekleyebilirsiniz
+            # print("Çekilen aktiviteler:", activities)
             return jsonify(activities)
     except pymysql.Error as e:
         print(f"Veritabanı hatası (recent_activities): {e}")
+        # Bu hata tarayıcıya 500 kodu döndürür. Loglarda görünmeli.
         return jsonify({"error": "Veritabanı hatası oluştu."}), 500
     finally:
         connection.close()
