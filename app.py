@@ -1238,16 +1238,13 @@ def get_dashboard_stats():
 # Dashboard Son Aktivite API (activities tablosundan çeker)
 @app.route('/api/dashboard/activity', methods=['GET'])
 def get_recent_activities():
-    connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # activities tablosundan çekiyoruz
             sql = """
-                SELECT a.id, a.title, a.description, a.icon, a.created_at, u.fullname AS user_fullname
-                FROM activities a
-                JOIN users u ON a.user_id = u.id
-                ORDER BY a.created_at DESC
+                SELECT id, title, description, icon, created_at
+                FROM activities
+                ORDER BY created_at DESC
                 LIMIT 4
             """
             cursor.execute(sql)
@@ -1282,9 +1279,6 @@ def get_recent_activities():
     except Exception as e:
         print(f"Genel aktivite çekme hatası: {e}")
         return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
-    finally:
-        if connection:
-            connection.close()
 # Projenin İş Gidişatı Adımlarını Çekme API'si
 @app.route('/api/projects/<int:project_id>/progress', methods=['GET'])
 def get_project_progress_steps(project_id):
