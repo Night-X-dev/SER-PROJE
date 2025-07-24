@@ -1257,19 +1257,17 @@ def get_recent_activities():
 
         for item in rows:
             created_at = item.get('created_at')
-
-            # created_at güvenli dönüştürme
             if isinstance(created_at, datetime.datetime):
                 created_iso = created_at.isoformat()
                 diff = now - created_at
             elif isinstance(created_at, datetime.date):
-                created_iso = datetime.datetime.combine(created_at, datetime.time()).isoformat()
-                diff = now - datetime.datetime.combine(created_at, datetime.time())
+                dt = datetime.datetime.combine(created_at, datetime.time())
+                created_iso = dt.isoformat()
+                diff = now - dt
             else:
                 created_iso = str(created_at) if created_at is not None else None
                 diff = None
 
-            # time_ago hesapla
             time_ago = "Bilinmeyen zaman"
             if diff is not None:
                 sec = int(diff.total_seconds())
@@ -1294,7 +1292,7 @@ def get_recent_activities():
         return jsonify(activities), 200
     except Exception as e:
         print(f"Genel aktivite çekme hatası: {e}")
-        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.', 'detail': str(e)}), 500
     finally:
         if connection:
             connection.close()
