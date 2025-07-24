@@ -1275,6 +1275,7 @@
     <script>
         // API Base URL (Yerel Flask sunucusu URL'si)
         const API_BASE_URL = 'https://ser-proje.onrender.com'; 
+        let currentUser = null; // currentUser'ı global olarak tanımla
 
         // Genel Toast bildirim fonksiyonu
         function showToast(message, isError = false) {
@@ -1297,11 +1298,59 @@
             }, 3000); // 3 saniye sonra kaybolur
         }
 
+        // Custom Confirm Modal (alert yerine kullanılacak)
+        function showConfirmModal(title, message, onConfirm) {
+            const modalHtml = `
+                <div class="modal fade" id="customConfirmModal" tabindex="-1" aria-labelledby="customConfirmModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="customConfirmModalLabel">${title}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>${message}</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                                <button type="button" class="btn btn-danger" id="confirmActionBtn">Onayla</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Eğer modal zaten varsa kaldırma (çoklu açılmasını engeller)
+            const existingModal = document.getElementById('customConfirmModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const confirmModalElement = document.getElementById('customConfirmModal');
+            const confirmModal = new bootstrap.Modal(confirmModalElement);
+            confirmModal.show();
+
+            document.getElementById('confirmActionBtn').onclick = () => {
+                onConfirm();
+                confirmModal.hide();
+            };
+
+            confirmModalElement.addEventListener('hidden.bs.modal', () => {
+                confirmModalElement.remove(); // Modal kapandığında DOM'dan kaldır
+            });
+        }
+
         function getCurrentUserRole() {
+            // currentUser'ın global olarak tanımlandığından emin olun
+            if (currentUser && currentUser.role) {
+                return currentUser.role;
+            }
             const storedUser = localStorage.getItem('currentUser');
             if (storedUser) {
                 try {
                     const user = JSON.parse(storedUser);
+                    currentUser = user; // currentUser'ı set et
                     return user.role;
                 } catch (e) { return null; }
             }
@@ -1314,13 +1363,21 @@
                 showToast('Kullanıcı rolü bulunamadı. Lütfen tekrar giriş yapın.', true);
                 return false;
             }
+            // Admin rolü için tüm yetkileri varsay
+            if (role === 'Admin') {
+                return true;
+            }
             try {
                 const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(role)}`);
                 if (!response.ok) throw new Error('Yetki sorgusu başarısız');
                 const perms = await response.json();
                 const permission = Array.isArray(perms) ? perms[0] : perms;
-                if (permission['musteri_duzenleme'] != 1) {
-                    showToast('Müşteri ekleme yetkiniz yok!', true);
+                // 'musteri_duzenleme' ve 'proje_sil' gibi anahtarları kontrol et
+                if (permission[permissionKey] != 1) {
+                    let msg = 'Bu işlem için yetkiniz yok!';
+                    if (permissionKey === 'musteri_duzenleme') msg = 'Müşteri düzenleme yetkiniz yok!';
+                    else if (permissionKey === 'proje_sil') msg = 'Müşteri silme yetkiniz yok!'; // Müşteri silme yetkisi için
+                    showToast(msg, true);
                     return false;
                 }
                 return true;
@@ -1395,8 +1452,8 @@
                 }, 2000); // 2 saniye sonra yönlendir
             } else {
                 try {
-                    const user = JSON.parse(storedUser);
-                    updateUserInfo(user);
+                    currentUser = JSON.parse(storedUser); // currentUser'ı burada set et
+                    updateUserInfo(currentUser);
                 } catch (e) {
                     console.error("Kayıtlı kullanıcı verisi bozuk:", e);
                     localStorage.removeItem('currentUser');
@@ -1618,6 +1675,10 @@
                     btn.onclick = null; // Eski dinleyicileri temizle
                     btn.addEventListener('click', async function() {
                         const customerId = this.getAttribute('data-id');
+                        // Müşteri düzenleme yetkisi kontrolü
+                        const hasPermission = await checkPermission('musteri_duzenleme');
+                        if (!hasPermission) return;
+
                         try {
                             const response = await fetch(`${API_BASE_URL}/api/customers/${customerId}`);
                             if (!response.ok) throw new Error('Müşteri bilgileri çekilemedi.');
@@ -1651,23 +1712,28 @@
                     btn.onclick = null; // Eski dinleyicileri temizle
                     btn.addEventListener('click', async function() {
                         const customerId = this.getAttribute('data-id');
-                        // Müşterinin proje sayısı kontrol ediliyor
+                        // Müşteri silme yetkisi kontrolü
+                        const hasPermission = await checkPermission('proje_sil'); // Yetki anahtarı 'proje_sil' olarak varsayıldı, gerekirse değiştirin.
+                        if (!hasPermission) return;
+
                         const customerToDelete = allCustomersData.find(c => c.customer_id == customerId);
-                        let confirmationMessage = `ID ${customerId} olan müşteriyi silmek istediğinizden emin misiniz?`;
+                        let confirmationMessage = `ID ${customerId} olan müşteriyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`;
 
                         if (customerToDelete && customerToDelete.project_count > 0) {
                             confirmationMessage = `ID ${customerToDelete.customer_id} (${customerToDelete.customer_name}) adlı müşterinin ${customerToDelete.project_count} adet projesi bulunmaktadır. Yine de silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`;
                         }
 
-                        // showToast ile onay mesajı göster
-                        showToast(confirmationMessage, false); // isError=false ile normal bildirim
+                        // showConfirmModal ile onay al
+                        showConfirmModal('Müşteriyi Sil', confirmationMessage, async () => {
+                            try {
+                                // currentUser.id'yi query parametresi olarak gönder
+                                const userId = currentUser ? currentUser.id : null;
+                                if (!userId) {
+                                    showToast('Kullanıcı ID\'si bulunamadı. Lütfen tekrar giriş yapın.', true);
+                                    return;
+                                }
 
-                        // Kullanıcıya onay için bir süre tanıyın ve ardından işlemi otomatik olarak gerçekleştirin veya
-                        // daha iyi bir UX için özel bir onay modalı kullanın.
-                        // Şimdilik, doğrudan silme işlemini çağırıyoruz, ancak gerçek bir uygulamada bu bir onay modalı olmalıdır.
-                        if (confirm("Bu işlemi onaylıyor musunuz?")) { // Geçici olarak confirm() kullanıldı
-                             try {
-                                const response = await fetch(`${API_BASE_URL}/api/customers/${customerId}`, {
+                                const response = await fetch(`${API_BASE_URL}/api/customers/${customerId}?user_id=${userId}`, {
                                     method: 'DELETE'
                                 });
                                 const result = await response.json();
@@ -1681,7 +1747,7 @@
                                 console.error('Müşteri silme hatası:', error);
                                 showToast('Müşteri silinirken bir hata oluştu. Lütfen backend sunucusunun çalıştığından emin olun.', true);
                             }
-                        }
+                        });
                     });
                 });
             }
@@ -1689,6 +1755,10 @@
             // Müşteri Değişikliklerini Kaydet Butonu
             saveCustomerChangesBtn.addEventListener('click', async () => {
                 const customerId = editCustomerIdInput.value;
+                // Müşteri düzenleme yetkisi kontrolü
+                const hasPermission = await checkPermission('musteri_duzenleme');
+                if (!hasPermission) return;
+
                 const updatedData = {
                     companyName: editCompanyNameInput.value,
                     status: editStatusSelect.value,
@@ -1701,11 +1771,17 @@
                     district: editDistrictInput.value,
                     postalCode: editPostalCodeInput.value,
                     address: editAddressInput.value,
-                    notes: editNotesInput.value
+                    notes: editNotesInput.value,
+                    user_id: currentUser ? currentUser.id : null // user_id'yi ekle
                 };
 
                 if (!updatedData.companyName || !updatedData.contactPerson || !updatedData.phone) {
                     showToast('Firma Adı, İlgili Kişi ve Telefon alanları boş bırakılamaz.', true);
+                    return;
+                }
+                
+                if (!updatedData.user_id) {
+                    showToast('Kullanıcı ID\'si bulunamadı. Lütfen tekrar giriş yapın.', true);
                     return;
                 }
 
@@ -1735,6 +1811,9 @@
 
             // --- PDF Export Fonksiyonu ---
             exportPdfBtn.addEventListener('click', async function() {
+                const hasPermission = await checkPermission('pdf_olusturma'); // PDF oluşturma yetkisi kontrolü
+                if (!hasPermission) return;
+
                 try {
                     // Müşterileri API'den çek
                     const response = await fetch(`${API_BASE_URL}/api/customers`);
@@ -1814,7 +1893,7 @@
                     
                     // PDF'i indir
                     doc.save(`ser_elektrik_musteriler_${new Date().getTime()}.pdf`);
-                    
+                    showToast('PDF raporu başarıyla oluşturuldu!');
                 } catch (error) {
                     console.error('PDF oluşturma hatası:', error);
                     showToast('PDF oluşturulurken hata oluştu!', true);
