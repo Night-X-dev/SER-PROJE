@@ -1236,8 +1236,10 @@ def get_dashboard_stats():
 
 
 # Dashboard Son Aktivite API (activities tablosundan çeker)
+# Dashboard Son Aktivite API (activities tablosundan çeker)
 @app.route('/api/dashboard/activity', methods=['GET'])
 def get_recent_activities():
+    connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
@@ -1248,37 +1250,55 @@ def get_recent_activities():
                 LIMIT 4
             """
             cursor.execute(sql)
-            activities_from_db = cursor.fetchall()
+            rows = cursor.fetchall()
 
-            activities_for_frontend = []
-            for item in activities_from_db:
-                created_at_dt = item['created_at']
+        activities = []
+        now = datetime.datetime.now()
 
-                time_ago = "Bilinmeyen zaman"
-                if isinstance(created_at_dt, datetime.datetime):
-                    time_diff = datetime.datetime.now() - created_at_dt
-                    if time_diff.total_seconds() < 60:
-                        time_ago = f"{int(time_diff.total_seconds())} saniye önce"
-                    elif time_diff.total_seconds() < 3600:
-                        time_ago = f"{int(time_diff.total_seconds() / 60)} dakika önce"
-                    elif time_diff.total_seconds() < 86400:
-                        time_ago = f"{int(time_diff.total_seconds() / 3600)} saat önce"
-                    else:
-                        time_ago = f"{int(time_diff.total_seconds() / 86400)} gün önce"
-                
-                activities_for_frontend.append({
-                    "id": item['id'],
-                    "icon": item['icon'] or "fas fa-info-circle", # DB'den gelen ikon yoksa varsayılan
-                    "title": item['title'],
-                    "description": item['description'],
-                    "created_at": created_at_dt.isoformat(),
-                    "time": time_ago,
-                })
+        for item in rows:
+            created_at = item.get('created_at')
 
-        return jsonify(activities_for_frontend), 200
+            # created_at güvenli dönüştürme
+            if isinstance(created_at, datetime.datetime):
+                created_iso = created_at.isoformat()
+                diff = now - created_at
+            elif isinstance(created_at, datetime.date):
+                created_iso = datetime.datetime.combine(created_at, datetime.time()).isoformat()
+                diff = now - datetime.datetime.combine(created_at, datetime.time())
+            else:
+                created_iso = str(created_at) if created_at is not None else None
+                diff = None
+
+            # time_ago hesapla
+            time_ago = "Bilinmeyen zaman"
+            if diff is not None:
+                sec = int(diff.total_seconds())
+                if sec < 60:
+                    time_ago = f"{sec} saniye önce"
+                elif sec < 3600:
+                    time_ago = f"{sec // 60} dakika önce"
+                elif sec < 86400:
+                    time_ago = f"{sec // 3600} saat önce"
+                else:
+                    time_ago = f"{sec // 86400} gün önce"
+
+            activities.append({
+                "id": item.get('id'),
+                "icon": (item.get('icon') or "fas fa-info-circle"),
+                "title": item.get('title'),
+                "description": item.get('description'),
+                "created_at": created_iso,
+                "time": time_ago
+            })
+
+        return jsonify(activities), 200
     except Exception as e:
         print(f"Genel aktivite çekme hatası: {e}")
         return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+    finally:
+        if connection:
+            connection.close()
+
 # Projenin İş Gidişatı Adımlarını Çekme API'si
 @app.route('/api/projects/<int:project_id>/progress', methods=['GET'])
 def get_project_progress_steps(project_id):

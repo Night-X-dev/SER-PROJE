@@ -1927,29 +1927,21 @@
     // Son Aktiviteleri Backend'den Çekme (Şimdi activities tablosundan çekecek)
   async function fetchRecentActivities() {
     try {
-        const response = await fetch('/api/dashboard/activity');
+        const response = await fetch(`${API_BASE_URL}/api/dashboard/activity`);
         if (!response.ok) {
-            throw new Error('Sunucu hatası, lütfen daha sonra tekrar deneyin.');
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.message || `HTTP ${response.status}`);
         }
         const activities = await response.json();
-        // Aktiviteleri HTML'e yazdır
-        const activityList = document.getElementById('activity-list');
-        activityList.innerHTML = '';
-        activities.forEach(activity => {
-            const activityItem = document.createElement('div');
-            activityItem.innerHTML = `
-                <h4>${activity.title}</h4>
-                <p>${activity.description}</p>
-                <p>${activity.created_at}</p>
-                <p>${activity.time}</p>
-            `;
-            activityList.appendChild(activityItem);
-        });
+        renderActivities(activities); // zaten aşağıda var
     } catch (error) {
-        console.error(error);
-        alert('Aktiviteler çekilemedi: ' + error.message);
+        console.error('Aktiviteler çekilemedi:', error);
+        showToast(`Aktiviteler yüklenemedi: ${error.message}`, true);
+        document.getElementById('activityList').innerHTML =
+            '<div style="text-align:center;color:var(--danger);">Aktiviteler yüklenemedi.</div>';
     }
 }
+
 
     // Aktivite ekleme fonksiyonu (Frontend'den çağrılabilir)
     async function addActivity(title, description, user_id, icon = "fas fa-info-circle") {
