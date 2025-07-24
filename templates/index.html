@@ -1,1592 +1,1591 @@
-    <!DOCTYPE html>
-    <html lang="tr">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Ser Elektrik Otomasyon - Dashboard</title>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-        <style>
-            /* --- anasayfa.html'den alınan tüm CSS buraya gelecek --- */
-            :root {
-                --primary: #005c9d;
-                --primary-light: #0980d3;
-                --white: #ffffff;
-                --light-gray: #97a1aa;
-                --dark-gray: #5e6870;
-                --bg-color: #f8f9fa;
-                --card-bg: #ffffff;
-                --text-color: #333333;
-                --input-bg: #f0f4f8;
-                --border-color: #e1e5e9;
-                --sidebar-bg: #ffffff;
-                --topbar-bg: #ffffff;
-                --success: #2ed573;
-                --danger: #ff4757;
-                --warning: #ffc107;
-                --info: #0980d3;
-                --primary-light-bg: rgba(9, 128, 211, 0.1); /* Yeni: Hafif birincil renk arka planı */
-            }
-
-            [data-theme="dark"] {
-                --bg-color: #121212;
-                --card-bg: #1e1e1e;
-                --text-color: #e0e0e0;
-                --input-bg: #2d2d2d;
-                --border-color: #3a3a3a;
-                --sidebar-bg: #1a1a1a;
-                --topbar-bg: #1a1a1a;
-                --primary-light-bg: rgba(9, 128, 211, 0.2); /* Koyu tema için hafif birincil renk arka planı */
-            }
-
-            /* Chart.js renkleri için doğrudan HEX değerleri (mevcut temayla uyumlu) */
-            .chart-color-info { background-color: #0980d3; }
-            .chart-color-success { background-color: #2ed573; }
-            .chart-color-danger { background-color: #ff4757; }
-            .chart-color-warning { background-color: #ffc107; }
-
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                transition: background-color 0.3s, color 0.3s;
-            }
-
-            body {
-                background-color: var(--bg-color);
-                color: var(--text-color);
-                display: flex;
-                min-height: 100vh;
-                overflow-x: hidden; /* Yatay kaydırmayı engelle */
-            }
-
-            /* Hamburger menü butonu */
-            .hamburger-menu {
-                display: none; /* Varsayılan olarak gizli */
-                background-color: var(--primary);
-                color: var(--white);
-                border: none;
-                border-radius: 8px;
-                padding: 10px 12px;
-                cursor: pointer;
-                font-size: 20px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-                margin-right: 15px; /* Sağında boşluk bırak */
-                flex-shrink: 0; /* Küçülmesini engelle */
-            }
-
-            .sidebar {
-                width: 260px;
-                background-color: var(--sidebar-bg);
-                border-right: 1px solid var(--border-color);
-                height: 100vh;
-                position: fixed; /* Masaüstünde sabit */
-                overflow-y: auto;
-                padding: 20px 0;
-                z-index: 1000;
-                transform: translateX(0); /* Masaüstünde görünür */
-                transition: transform 0.3s ease-in-out;
-            }
-
-            .sidebar.show { /* Mobil görünümde açıldığında */
-                transform: translateX(0);
-            }
-            .sidebar.hidden { /* Mobil görünümde gizli */
-                transform: translateX(-100%);
-            }
-
-            .logo-container {
-                display: flex;
-                align-items: center;
-                padding: 0 20px 25px 20px;
-                border-bottom: 1px solid var(--border-color);
-                margin-bottom: 25px;
-            }
-
-            .logo-icon {
-                background: linear-gradient(135deg, var(--primary), var(--primary-light));
-                width: 40px;
-                height: 40px;
-                border-radius: 10px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: var(--white);
-                font-size: 20px;
-                margin-right: 12px;
-            }
-
-            .logo-text {
-                font-size: 20px;
-                font-weight: 700;
-                color: var(--primary);
-            }
-
-            .nav-item {
-                padding: 12px 25px;
-                display: flex;
-                align-items: center;
-                color: var(--text-color);
-                text-decoration: none;
-                border-left: 3px solid transparent;
-                margin-bottom: 5px;
-                transition: all 0.2s;
-            }
-
-            .nav-item:hover, .nav-item.active {
-                background-color: rgba(9, 128, 211, 0.1);
-                border-left-color: var(--primary-light);
-                color: var(--primary-light);
-            }
-
-            .nav-item i {
-                font-size: 18px;
-                margin-right: 15px;
-                width: 24px;
-                text-align: center;
-            }
-
-            .main-content {
-                flex: 1;
-                margin-left: 260px; /* Sidebar genişliği kadar boşluk */
-                transition: margin-left 0.3s ease-in-out;
-                width: calc(100% - 260px); /* Kalan genişliği kapla */
-            }
-
-            .main-content.expanded {
-                margin-left: 0; /* Sidebar gizlendiğinde boşluk sıfırla */
-                width: 100%;
-            }
-
-            /* Topbar */
-            .topbar {
-                background-color: var(--topbar-bg);
-                border-bottom: 1px solid var(--border-color);
-                padding: 15px 30px; /* Takvim.html ile aynı padding */
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                position: sticky;
-                top: 0;
-                z-index: 100;
-                flex-wrap: nowrap; /* Masaüstünde sarmalamayı engelle */
-                gap: 15px; /* Öğeler arası boşluk */
-            }
-
-            .search-container {
-                position: relative;
-                width: 300px; /* Masaüstü varsayılan */
-                flex-grow: 1; /* Esnek genişlik */
-            }
-
-            .search-container input {
-                width: 100%;
-                padding: 10px 15px 10px 40px;
-                border-radius: 8px;
-                border: 1px solid var(--border-color);
-                background-color: var(--input-bg);
-                color: var(--text-color);
-            }
-
-            .search-container i {
-                position: absolute;
-                left: 15px;
-                top: 50%;
-                transform: translateY(-50%);
-                color: var(--light-gray);
-            }
-
-            .topbar-actions {
-                display: flex;
-                align-items: center;
-                gap: 20px;
-                margin-left: auto; /* Masaüstünde sağa it */
-                flex-shrink: 0; /* Küçülmesini engelle */
-            }
-
-            .notification-btn, .theme-toggle {
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background-color: var(--input-bg);
-                color: var(--text-color);
-                cursor: pointer;
-                position: relative;
-                flex-shrink: 0; /* Küçülmesini engelle */
-            }
-
-            .notification-btn::after {
-                content: attr(data-count); /* JS ile dinamik olarak güncellenecek */
-                position: absolute;
-                top: 5px;
-                right: 5px;
-                background-color: #ff4757;
-                color: white;
-                font-size: 10px;
-                width: 16px;
-                height: 16px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                /* Başlangıçta gizli, bildirim varsa gösterilecek */
-                opacity: 0; 
-                transform: scale(0);
-                transition: all 0.2s ease-out;
-            }
-            .notification-btn.has-notifications::after {
-                opacity: 1;
-                transform: scale(1);
-            }
-
-            .user-profile {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                cursor: pointer;
-                flex-shrink: 0;
-            }
-
-            .user-avatar {
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                background: linear-gradient(135deg, var(--primary), var(--primary-light));
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: var(--white);
-                font-weight: 600;
-            }
-
-            .user-info {
-                display: flex;
-                flex-direction: column;
-            }
-
-            .user-name {
-                font-weight: 600;
-                font-size: 15px;
-            }
-
-            .user-role {
-                font-size: 13px;
-                color: var(--light-gray);
-            }
-
-            /* Tek Çıkış Butonu Stilleri */
-            .logout-btn {
-                display: flex; /* Varsayılan olarak masaüstünde görünür */
-                align-items: center;
-                justify-content: center;
-                padding: 10px 20px; /* Standart padding */
-                border-radius: 10px;
-                font-size: 15px;
-                font-weight: 600;
-                gap: 8px;
-                transition: all 0.3s ease;
-                background: transparent;
-                border: 1px solid var(--primary-light);
-                color: var(--primary-light);
-                margin-left: 10px; /* Masaüstünde sağa boşluk */
-            }
-
-            .logout-btn:hover {
-                background-color: var(--primary); /* Takvim.html'deki gibi hover rengi */
-                color: var(--white); /* Takvim.html'deki gibi yazı rengi */
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(0,0,0,0.2); /* Takvim.html'deki gibi gölge */
-            }
-
-            .dashboard-content {
-                padding: 30px;
-            }
-
-            .page-title {
-                font-size: 28px;
-                margin-bottom: 25px;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-            }
-
-            .page-title i {
-                color: var(--primary-light);
-            }
-
-            .stats-container {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-                gap: 20px;
-                margin-bottom: 30px;
-            }
-
-            .stat-card {
-                background-color: var(--card-bg);
-                border-radius: 12px;
-                padding: 20px;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-                display: flex;
-                flex-direction: column;
-            }
-
-            .stat-card-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 15px;
-            }
-
-            .stat-card-title {
-                color: var(--light-gray);
-                font-size: 15px;
-            }
-
-            .stat-card-icon {
-                width: 40px;
-                height: 40px;
-                border-radius: 10px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background-color: rgba(9, 128, 211, 0.1);
-                color: var(--primary-light);
-            }
-
-            .stat-card-value {
-                font-size: 28px;
-                font-weight: 700;
-                margin-bottom: 5px;
-            }
-
-            .stat-card-change {
-                font-size: 13px;
-                color: #2ed573;
-                display: flex;
-                align-items: center;
-            }
-
-            .stat-card-change.down {
-                color: #ff4757;
-            }
-
-            .charts-activity-container {
-                display: grid;
-                grid-template-columns: 2fr 1fr;
-                gap: 25px;
-                margin-bottom: 30px;
-            }
-
-            .card {
-                background-color: var(--card-bg);
-                border-radius: 12px;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-                overflow: hidden;
-                height: 100%;
-            }
-
-            .card-header {
-                padding: 18px 20px;
-                border-bottom: 1px solid var(--border-color);
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .card-title {
-                font-size: 18px;
-                font-weight: 600;
-            }
-
-            .card-link {
-                color: var(--primary-light);
-                font-size: 14px;
-                text-decoration: none;
-            }
-
-            .card-body {
-                padding: 20px;
-            }
-
-            .chart-container {
-                height: 300px;
-                position: relative;
-            }
-
-            .activity-item {
-                display: flex;
-                padding: 15px 0;
-                border-bottom: 1px solid var(--border-color);
-                /* Make activity items visually static */
-                cursor: default; 
-                pointer-events: none;
-            }
-
-            .activity-item:last-child {
-                border-bottom: none;
-            }
-
-            .activity-icon {
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background-color: rgba(9, 128, 211, 0.1);
-                color: var(--primary-light);
-                font-size: 18px;
-                margin-right: 15px;
-                flex-shrink: 0;
-            }
-
-            .activity-content {
-                flex: 1;
-            }
-
-            .activity-title {
-                font-weight: 600;
-                margin-bottom: 5px;
-            }
-
-            .activity-desc {
-                color: var(--light-gray);
-                font-size: 14px;
-                margin-bottom: 5px;
-            }
-
-            .activity-time {
-                font-size: 12px;
-                color: var(--light-gray);
-            }
-
-            .projects-container {
-                background-color: var(--card-bg);
-                border-radius: 12px;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-                overflow: hidden;
-                margin-bottom: 30px;
-            }
-
-            .projects-header {
-                padding: 15px 20px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                border-bottom: 1px solid var(--border-color);
-                flex-wrap: wrap; /* Mobil görünümde alt alta gelmesi için */
-                gap: 15px; /* Öğeler arası boşluk */
-            }
-
-            .projects-actions {
-                display: flex;
-                gap: 15px;
-                flex-wrap: wrap; /* Mobil görünümde alt alta gelmesi için */
-                justify-content: flex-end; /* Sağ tarafa hizala */
-            }
-            .btn {
-                padding: 8px 15px;
-                border-radius: 8px;
-                border: none;
-                background: linear-gradient(to right, var(--primary), var(--primary-light));
-                color: var(--white);
-                font-weight: 500;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                transition: all 0.2s;
-            }
-
-            .btn-outline {
-                background: transparent;
-                border: 1px solid var(--primary-light);
-                color: var(--primary-light);
-            }
-
-            .btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 5px 15px rgba(9, 128, 211, 0.3);
-            }
-
-            .btn i {
-                font-size: 14px;
-            }
-
-            .table-container {
-                overflow-x: auto; /* Tablo içeriği taşarsa yatay kaydırma */
-            }
-            .projects-table td {
-                padding: 15px 20px;
-                border-bottom: 1px solid var(--border-color);
-                color: var(--text-color); 
-            }
-            .projects-table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-
-            .projects-table th {
-                text-align: left;
-                padding: 15px 20px;
-                background-color: rgba(9, 128, 211, 0.05);
-                color: var(--light-gray);
-                font-weight: 500;
-                border-bottom: 1px solid var(--border-color);
-            }
-
-            .projects-table td {
-                padding: 15px 20px;
-                border-bottom: 1px solid var(--border-color);
-                color: var(--text-color); 
-            }
-
-            /* Adjusted status badge styles to match actual backend status values */
-            .status-badge {
-                padding: 5px 10px;
-                border-radius: 20px;
-                font-size: 12px;
-                font-weight: 500;
-                display: inline-block;
-            }
-
-            .status-Aktif { 
-                background-color: rgba(46, 213, 115, 0.1);
-                color: #2ed573;
-            }
-
-            .status-Tamamlandı { 
-                background-color: rgba(9, 128, 211, 0.1);
-                color: var(--primary-light);
-            }
-
-            .status-Gecikti { 
-                background-color: rgba(255, 71, 87, 0.1);
-                color: #ff4757;
-            }
-
-            .status-Planlama-Aşamasında { 
-                background-color: rgba(255, 193, 7, 0.1);
-                color: #ffc107;
-            }
-            .status-Aktif-İş-Gecikmeli {
-                background-color: rgba(46, 213, 115, 0.1);
-                color: rgb(0, 181, 57);
-                border: 1px dashed rgb(255, 0, 0);
-            }
-
-            .status-Planlama-İş-Gecikmeli {
-                background-color: rgba(255, 193, 7, 0.15);
-                color: darkgoldenrod;
-                border: 1px dashed darkgoldenrod;
-            }
-
-            /* Filtreleme alanı için yeni stiller */
-            .filters-container {
-                display: none; /* Varsayılan olarak gizli */
-                grid-template-columns: 1fr;
-                gap: 15px;
-                margin-bottom: 25px;
-                background-color: var(--card-bg);
-                border-radius: 12px;
-                padding: 20px;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            }
-
-            .filters-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 10px;
-            }
-
-            .filter-title {
-                font-weight: 600;
-                font-size: 16px;
-            }
-
-            .filter-reset {
-                color: var(--primary-light);
-                cursor: pointer;
-                font-size: 14px;
-            }
-
-            .filter-row {
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 15px;
-            }
-
-            .filter-group {
-                display: flex;
-                flex-direction: column;
-            }
-
-            .filter-label {
-                font-size: 13px;
-                margin-bottom: 5px;
-                color: var(--light-gray);
-            }
-
-            .filter-input {
-                padding: 10px 12px;
-                border-radius: 8px;
-                border: 1px solid var(--border-color);
-                background-color: var(--input-bg);
-                color: var(--text-color);
-                font-size: 14px;
-                width: 100%;
-            }
-
-            /* Responsive tasarım iyileştirmeleri */
-            @media (max-width: 1200px) {
-                .filter-row {
-                    grid-template-columns: repeat(2, 1fr);
-                }
-            }
-
-            @media (max-width: 992px) {
-                .charts-activity-container {
-                    grid-template-columns: 1fr;
-                }
-                
-                .sidebar {
-                    width: 260px; /* Mobil görünümde açıkken genişlik */
-                    position: fixed; /* Mobil görünümde sabit */
-                    transform: translateX(-100%); /* Varsayılan olarak gizli */
-                    box-shadow: 0 0 20px rgba(0,0,0,0.3);
-                }
-                .sidebar.show {
-                    transform: translateX(0); /* Açıldığında görünür */
-                }
-                
-                .logo-text, .nav-text {
-                    display: block; /* Mobil menü açıkken görünür */
-                }
-                
-                .logo-container {
-                    justify-content: flex-start;
-                    padding: 0 20px 25px 20px;
-                }
-                
-                .logo-icon {
-                    margin-right: 12px;
-                }
-                
-                .nav-item {
-                    justify-content: flex-start;
-                    padding: 12px 25px;
-                }
-                
-                .nav-item i {
-                    margin-right: 15px;
-                }
-                
-                .main-content {
-                    margin-left: 0; /* Mobil görünümde boşluk yok */
-                    width: 100%;
-                }
-
-                .hamburger-menu {
-                    display: block;
-                    order: 1;
-                    margin-right: 10px; /* Takvim.html ile aynı margin */
-                }
-
-                .topbar {
-                    padding: 15px; /* Takvim.html ile aynı padding */
-                    flex-wrap: wrap;
-                    justify-content: flex-start;
-                    gap: 10px; /* Takvim.html ile aynı gap */
-                }
-                .search-container {
-                    order: 2;
-                    flex-grow: 1;
-                    margin-right: 0; /* Takvim.html ile aynı margin */
-                }
-                .topbar-actions {
-                    order: 3;
-                    width: 100%;
-                    justify-content: flex-end;
-                    margin-top: 10px; /* Takvim.html ile aynı margin */
-                    gap: 10px; /* Takvim.html ile aynı gap */
-                }
-                .user-profile {
-                    flex-grow: 0;
-                }
-                .logout-btn {
-                    padding: 8px 10px; /* Takvim.html ile aynı padding */
-                    font-size: 14px; /* Takvim.html ile aynı font-size */
-                    margin-left: 0; /* Takvim.html ile aynı margin */
-                }
-            }
-
-            @media (max-width: 768px) {
-                .filter-row {
-                    grid-template-columns: 1fr;
-                }
-                
-                .dashboard-content {
-                    padding: 15px;
-                }
-                
-                .projects-header {
-                    flex-direction: column;
-                    align-items: flex-start;
-                    gap: 15px;
-                }
-                
-                .projects-actions {
-                    width: 100%;
-                    flex-direction: column;
-                    gap: 10px;
-                }
-                
-                .projects-actions .btn {
-                    width: 100%;
-                    justify-content: center;
-                }
-            }
-
-            @media (max-width: 576px) {
-                .stats-container {
-                    grid-template-columns: 1fr;
-                }
-                
-                .filter-row {
-                    grid-template-columns: 1fr;
-                }
-                
-                .page-title {
-                    font-size: 22px;
-                }
-                
-                .stat-card-value {
-                    font-size: 24px;
-                }
-                
-                .user-info {
-                    display: none; /* Mobil görünümde kullanıcı adını gizle */
-                }
-
-                /* Proje tablosu responsive düzenlemesi */
-                .projects-table, .projects-table thead, .projects-table tbody, .projects-table th, .projects-table td, .projects-table tr {
-                    display: block;
-                }
-                .projects-table thead {
-                    display: none; /* Başlıkları gizle */
-                }
-                .projects-table tr {
-                    margin-bottom: 15px;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-                    background: var(--card-bg); /* Temaya uygun kart rengi */
-                    border: 1px solid var(--border-color); /* Kart kenarlığı */
-                }
-                .projects-table td {
-                    padding: 10px 15px; /* Daha uygun padding */
-                    border: none; /* Hücre kenarlıklarını kaldır */
-                    position: relative;
-                    text-align: left;
-                    display: flex; /* İçeriği yan yana hizala */
-                    justify-content: space-between; /* Başlık ve değeri ayır */
-                    align-items: center;
-                    font-size: 14px; /* Mobil için yazı boyutu */
-                }
-                .projects-table td:before {
-                    content: attr(data-label);
-                    font-weight: bold;
-                    color: var(--primary); /* Başlık rengi temaya uygun */
-                    display: block;
-                    margin-right: 15px; /* Başlık ile değer arası boşluk */
-                    min-width: 120px; /* Başlık için minimum genişlik */
-                    font-size: 13px;
-                    flex-shrink: 0; /* Küçülmesini engelle */
-                }
-                
-                .status-badge {
-                    padding: 4px 8px;
-                    font-size: 11px;
-                }
-
-                .action-btn {
-                    width: 38px; /* Sabit genişlik */
-                    height: 38px; /* Sabit yükseklik */
-                    padding: 0; /* Padding'i sıfırla */
-                    font-size: 16px;
-                }
-                .action-btn i {
-                    margin: 0; /* İkonun margin'ini sıfırla */
-                }
-                .projects-table td[data-label="İşlemler"] {
-                    justify-content: center; /* İşlem butonlarını ortala */
-                }
-                .projects-table td[data-label="İşlemler"]::before {
-                    display: none; /* İşlemler başlığını gizle */
-                }
-
-                /* Takvim.html'deki mobil topbar düzenini buraya uygula */
-                .topbar {
-                    padding: 10px; /* Takvim.html ile aynı padding */
-                    flex-wrap: nowrap;
-                    gap: 8px; /* Takvim.html ile aynı gap */
-                    flex-direction: row; 
-                    justify-content: flex-start;
-                    align-items: center;
-                }
-                .hamburger-menu {
-                    order: 1;
-                }
-                .search-container {
-                    flex-grow: 1;
-                    order: 2;
-                    margin-left: 0;
-                    width: auto;
-                }
-                .topbar-actions {
-                    width: auto;
-                    order: 3;
-                    justify-content: flex-end;
-                    margin-left: auto;
-                    flex-wrap: nowrap;
-                    gap: 5px; /* Takvim.html ile aynı gap */
-                }
-                .logout-btn .logout-text {
-                    display: none;
-                }
-                .logout-btn i {
-                    margin-right: 0;
-                }
-            }
-
-            /* PDF export için geçici tablo stili */
-            .pdf-export-table {
-                border: 1px solid #005c9d !important;
-                border-radius: 8px !important;
-                overflow: hidden !important;
-                background: #fff !important;
-                color: #222 !important;
-            }
-            [data-theme="dark"] .pdf-export-table {
-                background: #181c20 !important;
-                color: #f1f1f1 !important;
-            }
-            
-            /* Toast bildirimi */
-            .toast {
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                background-color: var(--success);
-                color: white;
-                padding: 12px 20px;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                z-index: 10000;
-                opacity: 0;
-                transform: translateY(20px);
-                transition: all 0.3s ease;
-            }
-            
-            .toast.show {
-                opacity: 1;
-                transform: translateY(0);
-            }
-            
-            .toast.error {
-                background-color: var(--danger);
-            }
-            
-            .footer {
-                text-align: center;
-                padding: 20px;
-                color: var(--light-gray);
-                font-size: 14px;
-                border-top: 1px solid var(--border-color);
-                margin-top: 30px;
-            }
-
-            /* --- PROJELER.HTML İLE AYNI ACTION-BTN TASARIMI --- */
-        .action-btn {
-            width: auto;
-            min-width: 38px;
-            height: 38px;
-            padding: 0 10px;
-            border-radius: 10px;
-            font-size: 16px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease-in-out;
-            background-color: var(--input-bg);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            cursor: pointer;
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ser Elektrik Otomasyon - Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* --- anasayfa.html'den alınan tüm CSS buraya gelecek --- */
+        :root {
+            --primary: #005c9d;
+            --primary-light: #0980d3;
+            --white: #ffffff;
+            --light-gray: #97a1aa;
+            --dark-gray: #5e6870;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --input-bg: #f0f4f8;
+            --border-color: #e1e5e9;
+            --sidebar-bg: #ffffff;
+            --topbar-bg: #ffffff;
+            --success: #2ed573;
+            --danger: #ff4757;
+            --warning: #ffc107;
+            --info: #0980d3;
+            --primary-light-bg: rgba(9, 128, 211, 0.1); /* Yeni: Hafif birincil renk arka planı */
         }
-        .action-btn:hover {
-            background-color: var(--primary-light);
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --input-bg: #2d2d2d;
+            --border-color: #3a3a3a;
+            --sidebar-bg: #1a1a1a;
+            --topbar-bg: #1a1a1a;
+            --primary-light-bg: rgba(9, 128, 211, 0.2); /* Koyu tema için hafif birincil renk arka planı */
+        }
+
+        /* Chart.js renkleri için doğrudan HEX değerleri (mevcut temayla uyumlu) */
+        .chart-color-info { background-color: #0980d3; }
+        .chart-color-success { background-color: #2ed573; }
+        .chart-color-danger { background-color: #ff4757; }
+        .chart-color-warning { background-color: #ffc107; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden; /* Yatay kaydırmayı engelle */
+        }
+
+        /* Hamburger menü butonu */
+        .hamburger-menu {
+            display: none; /* Varsayılan olarak gizli */
+            background-color: var(--primary);
             color: var(--white);
-            box-shadow: 0 4px 12px rgba(9, 128, 211, 0.2);
-            transform: translateY(-1px) scale(1.02);
-            border-color: var(--primary-light);
-        }
-        [data-theme="dark"] .card-title,
-        [data-theme="dark"] .card-header,
-        [data-theme="dark"] .charts-activity-container .card-header {
-            color: #fff !important;
-        }
-        [data-theme="dark"] .activity-title {
-            color: #fff !important;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            font-size: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            margin-right: 15px; /* Sağında boşluk bırak */
+            flex-shrink: 0; /* Küçülmesini engelle */
         }
 
-        /* Modal için ek stiller (Bootstrap modalını özelleştirmek için) */
-        .modal-content {
-            background-color: var(--card-bg);
-            color: var(--text-color);
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            height: 100vh;
+            position: fixed; /* Masaüstünde sabit */
+            overflow-y: auto;
+            padding: 20px 0;
+            z-index: 1000;
+            transform: translateX(0); /* Masaüstünde görünür */
+            transition: transform 0.3s ease-in-out;
         }
 
-        .modal-header {
-            border-bottom-color: var(--border-color);
+        .sidebar.show { /* Mobil görünümde açıldığında */
+            transform: translateX(0);
+        }
+        .sidebar.hidden { /* Mobil görünümde gizli */
+            transform: translateX(-100%);
         }
 
-        .modal-title {
-            color: var(--primary);
-            font-weight: 600;
+        .logo-container {
             display: flex;
             align-items: center;
-            gap: 10px;
+            padding: 0 20px 25px 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 25px;
         }
 
-        .modal-body p {
-            margin-bottom: 8px;
+        .logo-icon {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 20px;
+            margin-right: 12px;
         }
 
-        .modal-body strong {
-            color: var(--dark-gray);
+        .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
         }
 
-        .modal-body hr {
-            border-top: 1px solid var(--border-color);
-            margin: 20px 0;
-        }
-
-        .modal-body h6 {
-            color: var(--primary-light);
-            margin-bottom: 15px;
-            font-weight: 600;
-        }
-
-        .input-group .form-control {
-            background-color: var(--input-bg);
+        .nav-item {
+            padding: 12px 25px;
+            display: flex;
+            align-items: center;
             color: var(--text-color);
-            border-color: var(--border-color);
+            text-decoration: none;
+            border-left: 3px solid transparent;
+            margin-bottom: 5px;
+            transition: all 0.2s;
         }
 
-        .input-group .btn-primary {
-            background-color: var(--primary);
-            border-color: var(--primary);
+        .nav-item:hover, .nav-item.active {
+            background-color: rgba(9, 128, 211, 0.1);
+            border-left-color: var(--primary-light);
+            color: var(--primary-light);
         }
 
-        .input-group .btn-primary:hover {
-            background-color: var(--primary-light);
-            border-color: var(--primary-light);
+        .nav-item i {
+            font-size: 18px;
+            margin-right: 15px;
+            width: 24px;
+            text-align: center;
         }
 
-        .modal-footer {
-            border-top-color: var(--border-color);
+        .main-content {
+            flex: 1;
+            margin-left: 260px; /* Sidebar genişliği kadar boşluk */
+            transition: margin-left 0.3s ease-in-out;
+            width: calc(100% - 260px); /* Kalan genişliği kapla */
         }
 
-        .modal-footer .btn-secondary {
-            background-color: var(--light-gray);
-            border-color: var(--light-gray);
-            color: white;
+        .main-content.expanded {
+            margin-left: 0; /* Sidebar gizlendiğinde boşluk sıfırla */
+            width: 100%;
         }
 
-        /* Pagination */
-        .pagination {
+        /* Topbar */
+        .topbar {
+            background-color: var(--topbar-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 30px; /* Takvim.html ile aynı padding */
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px 20px;
-            border-top: 1px solid var(--border-color);
-            flex-wrap: wrap; /* Küçük ekranlarda sarmalamak için */
-            gap: 10px; /* Elemanlar arası boşluk */
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            flex-wrap: nowrap; /* Masaüstünde sarmalamayı engelle */
+            gap: 15px; /* Öğeler arası boşluk */
         }
 
-        .pagination-info {
-            font-size: 14px;
+        .search-container {
+            position: relative;
+            width: 300px; /* Masaüstü varsayılan */
+            flex-grow: 1; /* Esnek genişlik */
+        }
+
+        .search-container input {
+            width: 100%;
+            padding: 10px 15px 10px 40px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+        }
+
+        .search-container i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
             color: var(--light-gray);
         }
 
-        .pagination-controls {
+        .topbar-actions {
             display: flex;
-            gap: 10px;
             align-items: center;
+            gap: 20px;
+            margin-left: auto; /* Masaüstünde sağa it */
+            flex-shrink: 0; /* Küçülmesini engelle */
         }
 
-        #pageNumbers {
-            display: flex;
-            gap: 5px;
-        }
-
-        .page-btn {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
+        .notification-btn, .theme-toggle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             background-color: var(--input-bg);
             color: var(--text-color);
             cursor: pointer;
-            border: none;
+            position: relative;
+            flex-shrink: 0; /* Küçülmesini engelle */
+        }
+
+        .notification-btn::after {
+            content: attr(data-count); /* JS ile dinamik olarak güncellenecek */
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #ff4757;
+            color: white;
+            font-size: 10px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Başlangıçta gizli, bildirim varsa gösterilecek */
+            opacity: 0; 
+            transform: scale(0);
+            transition: all 0.2s ease-out;
+        }
+        .notification-btn.has-notifications::after {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
             flex-shrink: 0;
         }
 
-        .page-btn.active {
-            background: linear-gradient(to right, var(--primary), var(--primary-light));
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            display: flex;
+            align-items: center;
+            justify-content: center;
             color: var(--white);
+            font-weight: 600;
         }
 
-        .page-btn:hover:not(.active) {
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .user-role {
+            font-size: 13px;
+            color: var(--light-gray);
+        }
+
+        /* Tek Çıkış Butonu Stilleri */
+        .logout-btn {
+            display: flex; /* Varsayılan olarak masaüstünde görünür */
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px; /* Standart padding */
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            gap: 8px;
+            transition: all 0.3s ease;
+            background: transparent;
+            border: 1px solid var(--primary-light);
+            color: var(--primary-light);
+            margin-left: 10px; /* Masaüstünde sağa boşluk */
+        }
+
+        .logout-btn:hover {
+            background-color: var(--primary); /* Takvim.html'deki gibi hover rengi */
+            color: var(--white); /* Takvim.html'deki gibi yazı rengi */
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2); /* Takvim.html'deki gibi gölge */
+        }
+
+        .dashboard-content {
+            padding: 30px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .page-title i {
+            color: var(--primary-light);
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .stat-card-title {
+            color: var(--light-gray);
+            font-size: 15px;
+        }
+
+        .stat-card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             background-color: rgba(9, 128, 211, 0.1);
             color: var(--primary-light);
         }
 
-        /* Responsive pagination */
-        @media (max-width: 576px) {
-            .pagination {
-                flex-direction: column; /* Sayfalandırma bilgilerini ve kontrollerini dikey sırala */
-                align-items: center;
-            }
-
-            .pagination-controls {
-                margin-top: 10px;
-            }
+        .stat-card-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
         }
 
-        /* Bildirim Paneli Stilleri */
-        .notification-panel {
-            position: fixed; /* Düzeltme: absolute yerine fixed */
-            top: 60px; /* Topbar yüksekliğine göre ayarlanabilir */
-            right: 20px;
-            width: 350px;
-            max-height: 450px;
+        .stat-card-change {
+            font-size: 13px;
+            color: #2ed573;
+            display: flex;
+            align-items: center;
+        }
+
+        .stat-card-change.down {
+            color: #ff4757;
+        }
+
+        .charts-activity-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .card {
             background-color: var(--card-bg);
             border-radius: 12px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            border: 1px solid var(--border-color);
-            z-index: 1000;
-            display: none; /* Varsayılan olarak gizli */
-            flex-direction: column;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
             overflow: hidden;
-            opacity: 0;
-            transform: translateY(-10px);
-            transition: opacity 0.3s ease, transform 0.3s ease;
+            height: 100%;
         }
 
-        .notification-panel.show {
-            display: flex;
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .notification-panel-header {
-            padding: 15px 20px;
+        .card-header {
+            padding: 18px 20px;
             border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+
+        .card-title {
+            font-size: 18px;
             font-weight: 600;
-            color: var(--text-color);
         }
 
-        .notification-panel-header .close-btn {
-            background: none;
-            border: none;
-            font-size: 20px;
-            color: var(--light-gray);
-            cursor: pointer;
-            transition: color 0.2s;
+        .card-link {
+            color: var(--primary-light);
+            font-size: 14px;
+            text-decoration: none;
         }
 
-        .notification-panel-header .close-btn:hover {
-            color: var(--primary);
+        .card-body {
+            padding: 20px;
         }
 
-        .notification-list {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 10px 0;
+        .chart-container {
+            height: 300px;
+            position: relative;
         }
 
-        .notification-item {
+        .activity-item {
             display: flex;
-            align-items: flex-start;
-            padding: 12px 20px;
+            padding: 15px 0;
             border-bottom: 1px solid var(--border-color);
-            cursor: pointer;
-            transition: background-color 0.2s;
+            /* Make activity items visually static */
+            cursor: default; 
+            pointer-events: none;
         }
 
-        .notification-item:last-child {
+        .activity-item:last-child {
             border-bottom: none;
         }
 
-        .notification-item:hover {
-            background-color: rgba(9, 128, 211, 0.05);
-        }
-
-        /* Okunmamış bildirimler için arkaplan rengi ve sol kenarlık */
-        .notification-item.unread {
-            background-color: var(--primary-light-bg); /* Hafif birincil renk arka planı */
-            border-left: 4px solid var(--primary); /* Sol tarafta renkli bir çizgi */
-        }
-        .notification-item.unread:hover {
-            background-color: rgba(9, 128, 211, 0.2); /* Hover'da biraz daha koyu */
-        }
-
-        .notification-item-icon {
-            width: 35px;
-            height: 35px;
+        .activity-icon {
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             background-color: rgba(9, 128, 211, 0.1);
             color: var(--primary-light);
-            font-size: 16px;
-            margin-right: 12px;
+            font-size: 18px;
+            margin-right: 15px;
             flex-shrink: 0;
         }
-        /* Okunmamış bildirim ikonunun arka planı ve rengi */
-        .notification-item.unread .notification-item-icon {
-            background-color: var(--primary-light);
-            color: var(--white);
+
+        .activity-content {
+            flex: 1;
         }
 
-        .notification-item-content {
-            flex-grow: 1;
-        }
-
-        .notification-item-title {
+        .activity-title {
             font-weight: 600;
-            font-size: 15px;
-            margin-bottom: 4px;
-            color: var(--text-color);
+            margin-bottom: 5px;
         }
 
-        .notification-item-description {
-            font-size: 13px;
+        .activity-desc {
             color: var(--light-gray);
-            line-height: 1.4;
-        }
-
-        .notification-item-time {
-            font-size: 11px;
-            color: var(--light-gray);
-            margin-top: 5px;
-            text-align: right;
-        }
-
-        .notification-panel-footer {
-            padding: 10px 20px;
-            border-top: 1px solid var(--border-color);
-            text-align: center;
             font-size: 14px;
-            color: var(--light-gray);
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            margin-bottom: 5px;
         }
-        /* "Tümünü Okundu Olarak İşaretle" butonu için minimalist stil */
-        .notification-panel-footer button {
-            width: auto; /* Genişliği içeriğe göre ayarla */
-            padding: 5px 10px; /* Daha küçük padding */
+
+        .activity-time {
+            font-size: 12px;
+            color: var(--light-gray);
+        }
+
+        .projects-container {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .projects-header {
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap; /* Mobil görünümde alt alta gelmesi için */
+            gap: 15px; /* Öğeler arası boşluk */
+        }
+
+        .projects-actions {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap; /* Mobil görünümde alt alta gelmesi için */
+            justify-content: flex-end; /* Sağ tarafa hizala */
+        }
+        .btn {
+            padding: 8px 15px;
             border-radius: 8px;
-            border: 1px solid var(--primary-light); /* İnce kenarlık */
-            background: transparent; /* Şeffaf arka plan */
-            color: var(--primary-light); /* Yazı rengi */
+            border: none;
+            background: linear-gradient(to right, var(--primary), var(--primary-light));
+            color: var(--white);
             font-weight: 500;
             cursor: pointer;
-            display: inline-flex; /* İçeriği ortalamak için */
+            display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 5px; /* İkon ile yazı arası boşluk */
+            gap: 8px;
             transition: all 0.2s;
         }
-        .notification-panel-footer button:hover {
-            background-color: rgba(9, 128, 211, 0.1); /* Hover'da hafif arka plan */
-            color: var(--primary); /* Hover'da daha koyu yazı rengi */
-            transform: none; /* Transform efektini kaldır */
-            box-shadow: none; /* Gölgeyi kaldır */
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--primary-light);
+            color: var(--primary-light);
         }
 
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(9, 128, 211, 0.3);
+        }
 
-        /* Boş bildirim durumu */
-        .no-notifications {
+        .btn i {
+            font-size: 14px;
+        }
+
+        .table-container {
+            overflow-x: auto; /* Tablo içeriği taşarsa yatay kaydırma */
+        }
+        .projects-table td {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-color); 
+        }
+        .projects-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .projects-table th {
+            text-align: left;
+            padding: 15px 20px;
+            background-color: rgba(9, 128, 211, 0.05);
+            color: var(--light-gray);
+            font-weight: 500;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .projects-table td {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-color); 
+        }
+
+        /* Adjusted status badge styles to match actual backend status values */
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .status-Aktif { 
+            background-color: rgba(46, 213, 115, 0.1);
+            color: #2ed573;
+        }
+
+        .status-Tamamlandı { 
+            background-color: rgba(9, 128, 211, 0.1);
+            color: var(--primary-light);
+        }
+
+        .status-Gecikti { 
+            background-color: rgba(255, 71, 87, 0.1);
+            color: #ff4757;
+        }
+
+        .status-Planlama-Aşamasında { 
+            background-color: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+        .status-Aktif-İş-Gecikmeli {
+            background-color: rgba(46, 213, 115, 0.1);
+            color: rgb(0, 181, 57);
+            border: 1px dashed rgb(255, 0, 0);
+        }
+
+        .status-Planlama-İş-Gecikmeli {
+            background-color: rgba(255, 193, 7, 0.15);
+            color: darkgoldenrod;
+            border: 1px dashed darkgoldenrod;
+        }
+
+        /* Filtreleme alanı için yeni stiller */
+        .filters-container {
+            display: none; /* Varsayılan olarak gizli */
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .filters-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .filter-title {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .filter-reset {
+            color: var(--primary-light);
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-label {
+            font-size: 13px;
+            margin-bottom: 5px;
+            color: var(--light-gray);
+        }
+
+        .filter-input {
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            font-size: 14px;
+            width: 100%;
+        }
+
+        /* Responsive tasarım iyileştirmeleri */
+        @media (max-width: 1200px) {
+            .filter-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 992px) {
+            .charts-activity-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                width: 260px; /* Mobil görünümde açıkken genişlik */
+                position: fixed; /* Mobil görünümde sabit */
+                transform: translateX(-100%); /* Varsayılan olarak gizli */
+                box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            }
+            .sidebar.show {
+                transform: translateX(0); /* Açıldığında görünür */
+            }
+            
+            .logo-text, .nav-text {
+                display: block; /* Mobil menü açıkken görünür */
+            }
+            
+            .logo-container {
+                justify-content: flex-start;
+                padding: 0 20px 25px 20px;
+            }
+            
+            .logo-icon {
+                margin-right: 12px;
+            }
+            
+            .nav-item {
+                justify-content: flex-start;
+                padding: 12px 25px;
+            }
+            
+            .nav-item i {
+                margin-right: 15px;
+            }
+            
+            .main-content {
+                margin-left: 0; /* Mobil görünümde boşluk yok */
+                width: 100%;
+            }
+
+            .hamburger-menu {
+                display: block;
+                order: 1;
+                margin-right: 10px; /* Takvim.html ile aynı margin */
+            }
+
+            .topbar {
+                padding: 15px; /* Takvim.html ile aynı padding */
+                flex-wrap: wrap;
+                justify-content: flex-start;
+                gap: 10px; /* Takvim.html ile aynı gap */
+            }
+            .search-container {
+                order: 2;
+                flex-grow: 1;
+                margin-right: 0; /* Takvim.html ile aynı margin */
+            }
+            .topbar-actions {
+                order: 3;
+                width: 100%;
+                justify-content: flex-end;
+                margin-top: 10px; /* Takvim.html ile aynı margin */
+                gap: 10px; /* Takvim.html ile aynı gap */
+            }
+            .user-profile {
+                flex-grow: 0;
+            }
+            .logout-btn {
+                padding: 8px 10px; /* Takvim.html ile aynı padding */
+                font-size: 14px; /* Takvim.html ile aynı font-size */
+                margin-left: 0; /* Takvim.html ile aynı margin */
+            }
+        }
+
+        @media (max-width: 768px) {
+            .filter-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-content {
+                padding: 15px;
+            }
+            
+            .projects-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .projects-actions {
+                width: 100%;
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .projects-actions .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .filter-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .page-title {
+                font-size: 22px;
+            }
+            
+            .stat-card-value {
+                font-size: 24px;
+            }
+            
+            .user-info {
+                display: none; /* Mobil görünümde kullanıcı adını gizle */
+            }
+
+            /* Proje tablosu responsive düzenlemesi */
+            .projects-table, .projects-table thead, .projects-table tbody, .projects-table th, .projects-table td, .projects-table tr {
+                display: block;
+            }
+            .projects-table thead {
+                display: none; /* Başlıkları gizle */
+            }
+            .projects-table tr {
+                margin-bottom: 15px;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+                background: var(--card-bg); /* Temaya uygun kart rengi */
+                border: 1px solid var(--border-color); /* Kart kenarlığı */
+            }
+            .projects-table td {
+                padding: 10px 15px; /* Daha uygun padding */
+                border: none; /* Hücre kenarlıklarını kaldır */
+                position: relative;
+                text-align: left;
+                display: flex; /* İçeriği yan yana hizala */
+                justify-content: space-between; /* Başlık ve değeri ayır */
+                align-items: center;
+                font-size: 14px; /* Mobil için yazı boyutu */
+            }
+            .projects-table td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                color: var(--primary); /* Başlık rengi temaya uygun */
+                display: block;
+                margin-right: 15px; /* Başlık ile değer arası boşluk */
+                min-width: 120px; /* Başlık için minimum genişlik */
+                font-size: 13px;
+                flex-shrink: 0; /* Küçülmesini engelle */
+            }
+            
+            .status-badge {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+
+            .action-btn {
+                width: 38px; /* Sabit genişlik */
+                height: 38px; /* Sabit yükseklik */
+                padding: 0; /* Padding'i sıfırla */
+                font-size: 16px;
+            }
+            .action-btn i {
+                margin: 0; /* İkonun margin'ini sıfırla */
+            }
+            .projects-table td[data-label="İşlemler"] {
+                justify-content: center; /* İşlem butonlarını ortala */
+            }
+            .projects-table td[data-label="İşlemler"]::before {
+                display: none; /* İşlemler başlığını gizle */
+            }
+
+            /* Takvim.html'deki mobil topbar düzenini buraya uygula */
+            .topbar {
+                padding: 10px; /* Takvim.html ile aynı padding */
+                flex-wrap: nowrap;
+                gap: 8px; /* Takvim.html ile aynı gap */
+                flex-direction: row; 
+                justify-content: flex-start;
+                align-items: center;
+            }
+            .hamburger-menu {
+                order: 1;
+            }
+            .search-container {
+                flex-grow: 1;
+                order: 2;
+                margin-left: 0;
+                width: auto;
+            }
+            .topbar-actions {
+                width: auto;
+                order: 3;
+                justify-content: flex-end;
+                margin-left: auto;
+                flex-wrap: nowrap;
+                gap: 5px; /* Takvim.html ile aynı gap */
+            }
+            .logout-btn .logout-text {
+                display: none;
+            }
+            .logout-btn i {
+                margin-right: 0;
+            }
+        }
+
+        /* PDF export için geçici tablo stili */
+        .pdf-export-table {
+            border: 1px solid #005c9d !important;
+            border-radius: 8px !important;
+            overflow: hidden !important;
+            background: #fff !important;
+            color: #222 !important;
+        }
+        [data-theme="dark"] .pdf-export-table {
+            background: #181c20 !important;
+            color: #f1f1f1 !important;
+        }
+        
+        /* Toast bildirimi */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--success);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 10000;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+        
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .toast.error {
+            background-color: var(--danger);
+        }
+        
+        .footer {
             text-align: center;
             padding: 20px;
             color: var(--light-gray);
             font-size: 14px;
+            border-top: 1px solid var(--border-color);
+            margin-top: 30px;
         }
 
-        /* Mobil uyumluluk için bildirim paneli */
-        @media (max-width: 576px) {
-            .notification-panel {
-                width: calc(100% - 40px); /* Ekran genişliğine göre ayarla */
-                right: 20px;
-                left: 20px;
-                top: 70px; /* Topbar'ın altına gelmesi için */
-            }
+        /* --- PROJELER.HTML İLE AYNI ACTION-BTN TASARIMI --- */
+    .action-btn {
+        width: auto;
+        min-width: 38px;
+        height: 38px;
+        padding: 0 10px;
+        border-radius: 10px;
+        font-size: 16px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease-in-out;
+        background-color: var(--input-bg);
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        cursor: pointer;
+    }
+    .action-btn:hover {
+        background-color: var(--primary-light);
+        color: var(--white);
+        box-shadow: 0 4px 12px rgba(9, 128, 211, 0.2);
+        transform: translateY(-1px) scale(1.02);
+        border-color: var(--primary-light);
+    }
+    [data-theme="dark"] .card-title,
+    [data-theme="dark"] .card-header,
+    [data-theme="dark"] .charts-activity-container .card-header {
+        color: #fff !important;
+    }
+    [data-theme="dark"] .activity-title {
+        color: #fff !important;
+    }
+
+    /* Modal için ek stiller (Bootstrap modalını özelleştirmek için) */
+    .modal-content {
+        background-color: var(--card-bg);
+        color: var(--text-color);
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+    }
+
+    .modal-header {
+        border-bottom-color: var(--border-color);
+    }
+
+    .modal-title {
+        color: var(--primary);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .modal-body p {
+        margin-bottom: 8px;
+    }
+
+    .modal-body strong {
+        color: var(--dark-gray);
+    }
+
+    .modal-body hr {
+        border-top: 1px solid var(--border-color);
+        margin: 20px 0;
+    }
+
+    .modal-body h6 {
+        color: var(--primary-light);
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+
+    .input-group .form-control {
+        background-color: var(--input-bg);
+        color: var(--text-color);
+        border-color: var(--border-color);
+    }
+
+    .input-group .btn-primary {
+        background-color: var(--primary);
+        border-color: var(--primary);
+    }
+
+    .input-group .btn-primary:hover {
+        background-color: var(--primary-light);
+        border-color: var(--primary-light);
+    }
+
+    .modal-footer {
+        border-top-color: var(--border-color);
+    }
+
+    .modal-footer .btn-secondary {
+        background-color: var(--light-gray);
+        border-color: var(--light-gray);
+        color: white;
+    }
+
+    /* Pagination */
+    .pagination {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 20px;
+        border-top: 1px solid var(--border-color);
+        flex-wrap: wrap; /* Küçük ekranlarda sarmalamak için */
+        gap: 10px; /* Elemanlar arası boşluk */
+    }
+
+    .pagination-info {
+        font-size: 14px;
+        color: var(--light-gray);
+    }
+
+    .pagination-controls {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    #pageNumbers {
+        display: flex;
+        gap: 5px;
+    }
+
+    .page-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--input-bg);
+        color: var(--text-color);
+        cursor: pointer;
+        border: none;
+        flex-shrink: 0;
+    }
+
+    .page-btn.active {
+        background: linear-gradient(to right, var(--primary), var(--primary-light));
+        color: var(--white);
+    }
+
+    .page-btn:hover:not(.active) {
+        background-color: rgba(9, 128, 211, 0.1);
+        color: var(--primary-light);
+    }
+
+    /* Responsive pagination */
+    @media (max-width: 576px) {
+        .pagination {
+            flex-direction: column; /* Sayfalandırma bilgilerini ve kontrollerini dikey sırala */
+            align-items: center;
         }
 
-        </style>
-    </head>
-    <body data-theme="light">
-        <!-- Edit Modal (Bootstrap'tan bağımsız) -->
-        <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="editModalLabel">Proje Düzenle</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        .pagination-controls {
+            margin-top: 10px;
+        }
+    }
+
+    /* Bildirim Paneli Stilleri */
+    .notification-panel {
+        position: fixed; /* Düzeltme: absolute yerine fixed */
+        top: 60px; /* Topbar yüksekliğine göre ayarlanabilir */
+        right: 20px;
+        width: 350px;
+        max-height: 450px;
+        background-color: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        border: 1px solid var(--border-color);
+        z-index: 1000;
+        display: none; /* Varsayılan olarak gizli */
+        flex-direction: column;
+        overflow: hidden;
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .notification-panel.show {
+        display: flex;
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .notification-panel-header {
+        padding: 15px 20px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+
+    .notification-panel-header .close-btn {
+        background: none;
+        border: none;
+        font-size: 20px;
+        color: var(--light-gray);
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .notification-panel-header .close-btn:hover {
+        color: var(--primary);
+    }
+
+    .notification-list {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 10px 0;
+    }
+
+    .notification-item {
+        display: flex;
+        align-items: flex-start;
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--border-color);
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .notification-item:last-child {
+        border-bottom: none;
+    }
+
+    .notification-item:hover {
+        background-color: rgba(9, 128, 211, 0.05);
+    }
+
+    /* Okunmamış bildirimler için arkaplan rengi ve sol kenarlık */
+    .notification-item.unread {
+        background-color: var(--primary-light-bg); /* Hafif birincil renk arka planı */
+        border-left: 4px solid var(--primary); /* Sol tarafta renkli bir çizgi */
+    }
+    .notification-item.unread:hover {
+        background-color: rgba(9, 128, 211, 0.2); /* Hover'da biraz daha koyu */
+    }
+
+    .notification-item-icon {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(9, 128, 211, 0.1);
+        color: var(--primary-light);
+        font-size: 16px;
+        margin-right: 12px;
+        flex-shrink: 0;
+    }
+    /* Okunmamış bildirim ikonunun arka planı ve rengi */
+    .notification-item.unread .notification-item-icon {
+        background-color: var(--primary-light);
+        color: var(--white);
+    }
+
+    .notification-item-content {
+        flex-grow: 1;
+    }
+
+    .notification-item-title {
+        font-weight: 600;
+        font-size: 15px;
+        margin-bottom: 4px;
+        color: var(--text-color);
+    }
+
+    .notification-item-description {
+        font-size: 13px;
+        color: var(--light-gray);
+        line-height: 1.4;
+    }
+
+    .notification-item-time {
+        font-size: 11px;
+        color: var(--light-gray);
+        margin-top: 5px;
+        text-align: right;
+    }
+
+    .notification-panel-footer {
+        padding: 10px 20px;
+        border-top: 1px solid var(--border-color);
+        text-align: center;
+        font-size: 14px;
+        color: var(--light-gray);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    /* "Tümünü Okundu Olarak İşaretle" butonu için minimalist stil */
+    .notification-panel-footer button {
+        width: auto; /* Genişliği içeriğe göre ayarla */
+        padding: 5px 10px; /* Daha küçük padding */
+        border-radius: 8px;
+        border: 1px solid var(--primary-light); /* İnce kenarlık */
+        background: transparent; /* Şeffaf arka plan */
+        color: var(--primary-light); /* Yazı rengi */
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex; /* İçeriği ortalamak için */
+        align-items: center;
+        justify-content: center;
+        gap: 5px; /* İkon ile yazı arası boşluk */
+        transition: all 0.2s;
+    }
+    .notification-panel-footer button:hover {
+        background-color: rgba(9, 128, 211, 0.1); /* Hover'da hafif arka plan */
+        color: var(--primary); /* Hover'da daha koyu yazı rengi */
+        transform: none; /* Transform efektini kaldır */
+        box-shadow: none; /* Gölgeyi kaldır */
+    }
+
+
+    /* Boş bildirim durumu */
+    .no-notifications {
+        text-align: center;
+        padding: 20px;
+        color: var(--light-gray);
+        font-size: 14px;
+    }
+
+    /* Mobil uyumluluk için bildirim paneli */
+    @media (max-width: 576px) {
+        .notification-panel {
+            width: calc(100% - 40px); /* Ekran genişliğine göre ayarla */
+            right: 20px;
+            left: 20px;
+            top: 70px; /* Topbar'ın altına gelmesi için */
+        }
+    }
+
+    </style>
+</head>
+<body data-theme="light">
+    <!-- Edit Modal (Bootstrap'tan bağımsız) -->
+    <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">Proje Düzenle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editProjectName" class="form-label">Proje Adı</label>
+                        <input type="text" class="form-control" id="editProjectName">
                     </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="editProjectName" class="form-label">Proje Adı</label>
-                            <input type="text" class="form-control" id="editProjectName">
-                        </div>
-                        <div class="mb-3">
-                            <label for="editRefNo" class="form-label">Referans No</label>
-                            <input type="text" class="form-control" id="editRefNo">
-                        </div>
-                        <div class="mb-3">
-                            <label for="editCustomer" class="form-label">Müşteri</label>
-                            <input type="text" class="form-control" id="editCustomer" readonly>
-                        </div>
-                        <div class="mb-3">
-                            <label for="editStatus" class="form-label">Durum</label>
-                            <select class="form-select" id="editStatus">
-                                <option value="Aktif">Aktif</option>
-                                <option value="Tamamlandı">Tamamlandı</option>
-                                <option value="Gecikti">Gecikti</option>
-                                <option value="Planlama Aşamasında">Planlama Aşamasında</option>
-                                <option value="Aktif (İş Gecikmeli)">Aktif (İş Gecikmeli)</option>
-                                <option value="Planlama (İş Gecikmeli)">Planlama (İş Gecikmeli)</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="editStartDate" class="form-label">Başlangıç Tarihi</label>
-                            <input type="date" class="form-control" id="editStartDate">
-                        </div>
-                        <div class="mb-3">
-                            <label for="editEndDate" class="form-label">Bitiş Tarihi</label>
-                            <input type="date" class="form-control" id="editEndDate">
-                        </div>
-                        <div class="mb-3">
-                            <label for="editManager" class="form-label">Proje Yöneticisi</label>
-                            <input type="text" class="form-control" id="editManager" readonly>
-                        </div>
+                    <div class="mb-3">
+                        <label for="editRefNo" class="form-label">Referans No</label>
+                        <input type="text" class="form-control" id="editRefNo">
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="cancelEdit">İptal</button>
-                        <button type="button" class="btn btn-primary" id="saveProjectEdit">Kaydet</button>
+                    <div class="mb-3">
+                        <label for="editCustomer" class="form-label">Müşteri</label>
+                        <input type="text" class="form-control" id="editCustomer" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editStatus" class="form-label">Durum</label>
+                        <select class="form-select" id="editStatus">
+                            <option value="Aktif">Aktif</option>
+                            <option value="Tamamlandı">Tamamlandı</option>
+                            <option value="Gecikti">Gecikti</option>
+                            <option value="Planlama Aşamasında">Planlama Aşamasında</option>
+                            <option value="Aktif (İş Gecikmeli)">Aktif (İş Gecikmeli)</option>
+                            <option value="Planlama (İş Gecikmeli)">Planlama (İş Gecikmeli)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editStartDate" class="form-label">Başlangıç Tarihi</label>
+                        <input type="date" class="form-control" id="editStartDate">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editEndDate" class="form-label">Bitiş Tarihi</label>
+                        <input type="date" class="form-control" id="editEndDate">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editManager" class="form-label">Proje Yöneticisi</label>
+                        <input type="text" class="form-control" id="editManager" readonly>
                     </div>
                 </div>
-            </div>
-        </div>
-
-
-        <div class="sidebar" id="sidebar">
-            <a href="index.html" style="text-decoration: none;">
-                <div class="logo-container" style="cursor: pointer;">
-                <img src="{{ url_for('static', filename='serlogo.png') }}" alt="Ser Elektrik Otomasyon" style="width: 180px; height: auto; padding-left: 10px;">
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="cancelEdit">İptal</button>
+                    <button type="button" class="btn btn-primary" id="saveProjectEdit">Kaydet</button>
                 </div>
-            </a>
-            
-
-            <a href="index.html" class="nav-item active">
-                <i class="fas fa-home"></i>
-                <span class="nav-text">Dashboard</span>
-            </a>
-            <a href="projeler.html" class="nav-item">
-                <i class="fas fa-project-diagram"></i>
-                <span class="nav-text">Projeler</span>
-            </a>
-            <a href="proje_ekle.html" class="nav-item">
-                <i class="fas fa-plus-circle"></i>
-                <span class="nav-text">Yeni Proje</span>
-            </a>
-            <a href="raporlar.html" class="nav-item">
-                <i class="fas fa-chart-line"></i>
-                <span class="nav-text">Raporlar</span>
-            </a>
-            <a href="musteriler.html" class="nav-item">
-                <i class="fas fa-users"></i>
-                <span class="nav-text">Müşteriler</span>
-            </a>
-            <a href="takvim.html" class="nav-item">
-                <i class="fas fa-calendar-alt"></i>
-                <span class="nav-text">Takvim</span>
-            </a>
-            <a href="ayarlar.html" class="nav-item">
-                <i class="fas fa-cog"></i>
-                <span class="nav-text">Ayarlar</span>
-            </a>
-        </div>
-
-        <div class="main-content" id="mainContent">
-            <!-- Topbar -->
-            <div class="topbar">
-                <!-- Hamburger Menü Butonu -->
-                <button class="hamburger-menu" id="hamburgerMenu">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <div class="search-container">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="searchInput" placeholder="Görev, müşteri veya proje ara...">
-                </div>
-                
-                <div class="topbar-actions">
-                    <div class="theme-toggle" id="theme-toggle">
-                        <i class="fas fa-moon"></i>
-                    </div>
-                    
-                    <div class="notification-btn" id="notificationButton" data-count="0">
-                        <i class="fas fa-bell"></i>
-                    </div>
-                    
-                    <div class="user-profile">
-                        <div class="user-avatar" id="userAvatar"></div>
-                        <div class="user-info">
-                            <div class="user-name" id="userName"></div>
-                            <div class="user-role" id="userRole"></div>
-                        </div>
-                    </div>
-                    <button class="btn btn-outline logout-btn" id="logoutButton">
-                        <i class="fas fa-sign-out-alt"></i> <span class="logout-text">Çıkış Yap</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Bildirim Paneli -->
-            <div class="notification-panel" id="notificationPanel">
-                <div class="notification-panel-header">
-                    <span>Bildirimler</span>
-                    <button class="close-btn" id="closeNotificationPanel"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="notification-list" id="notificationList">
-                    <!-- Bildirimler buraya dinamik olarak yüklenecek -->
-                    <div class="no-notifications">Bildirimler yükleniyor...</div>
-                </div>
-                <div class="notification-panel-footer">
-                    <button id="markAllReadBtn">
-                        <i class="fas fa-check-double"></i> Tümünü Okundu Olarak İşaretle
-                    </button>
-                </div>
-            </div>
-
-            <div class="dashboard-content">
-                <h1 class="page-title">
-                    <i class="fas fa-home"></i>
-                    Dashboard
-                </h1>
-                
-                <div class="stat-card" style="margin-bottom: 25px; background: linear-gradient(135deg, var(--primary), #003f6d); color: white;">
-                    <div class="stat-card-header">
-                        <div class="stat-card-title" style="color: rgba(255,255,255,0.8);">Veritabanı Bağlantısı</div>
-                        <div class="stat-card-icon" style="background-color: rgba(255,255,255,0.2); color: white;">
-                            <i class="fas fa-plug"></i>
-                        </div>
-                    </div>
-                    <div class="stat-card-value" id="dbStatus">Bağlantı Kontrol Ediliyor...</div>
-                    <div class="stat-card-change">
-                        <i class="fas fa-sync-alt"></i>
-                        Veritabanı aktifliği izleniyor.
-                    </div>
-                </div>
-
-                <div class="stats-container" id="statsContainer">
-                    <div class="stat-card">
-                        <div class="stat-card-header">
-                            <div class="stat-card-title">Aktif Projeler</div>
-                            <div class="stat-card-icon">
-                                <i class="fas fa-sync-alt"></i>
-                            </div>
-                        </div>
-                        <div class="stat-card-value" id="activeProjects">Yükleniyor...</div>
-                        <div class="stat-card-change">
-                            <i class="fas fa-database"></i>
-                            Veritabanından çekildi
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-card-header">
-                            <div class="stat-card-title">Tamamlanan Projeler</div>
-                            <div class="stat-card-icon">
-                                <i class="fas fa-check-circle"></i>
-                            </div>
-                        </div>
-                        <div class="stat-card-value" id="completedProjects">Yükleniyor...</div>
-                        <div class="stat-card-change">
-                            <i class="fas fa-database"></i>
-                            Veritabanından çekildi
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-card-header">
-                            <div class="stat-card-title">Geciken Projeler</div>
-                            <div class="stat-card-icon">
-                                <i class="fas fa-exclamation-triangle"></i>
-                            </div>
-                        </div>
-                        <div class="stat-card-value" id="delayedProjects">Yükleniyor...</div>
-                        <div class="stat-card-change down">
-                            <i class="fas fa-database"></i>
-                            Veritabanından çekildi
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-card-header">
-                            <div class="stat-card-title">Toplam Proje</div>
-                            <div class="stat-card-icon">
-                                <i class="fas fa-project-diagram"></i>
-                            </div>
-                        </div>
-                        <div class="stat-card-value" id="totalProjects">Yükleniyor...</div>
-                        <div class="stat-card-change">
-                            <i class="fas fa-database"></i>
-                            Veritabanından çekildi
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="filters-container" id="filtersContainer">
-                    <div class="filters-header">
-                        <div class="filter-title">Proje Filtreleri</div>
-                        <div class="filter-reset" id="resetFilters">Tümünü Sıfırla</div>
-                    </div>
-                    <div class="filter-row">
-                        <div class="filter-group">
-                            <label class="filter-label">Proje Adı</label>
-                            <input type="text" class="filter-input" id="filterProjectName" placeholder="Proje adı girin">
-                        </div>
-                        <div class="filter-group">
-                            <label class="filter-label">Referans No</label>
-                            <input type="text" class="filter-input" id="filterRefNo" placeholder="Referans no girin">
-                        </div>
-                        <div class="filter-group">
-                            <label class="filter-label">Müşteri</label>
-                            <input type="text" class="filter-input" id="filterCustomer" placeholder="Müşteri adı">
-                        </div>
-                        <div class="filter-group">
-                            <label class="filter-label">Durum</label>
-                            <select class="filter-input" id="filterStatus">
-                                <option value="">Tümü</option>
-                                <option value="Aktif">Aktif</option>
-                                <option value="Tamamlandı">Tamamlandı</option>
-                                <option value="Gecikti">Gecikti</option>
-                                <option value="Planlama Aşamasında">Planlama Aşamasında</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="projects-container">
-                    <div class="projects-header">
-                        <div class="card-title">Proje Listesi</div>
-                        <div class="projects-actions">
-                            <button class="btn btn-outline" id="filterBtn">
-                                <i class="fas fa-filter"></i> Filtrele
-                            </button>
-                            <button class="btn" id="exportPdf">
-                                <i class="fas fa-file-pdf"></i> PDF Oluştur
-                            </button>
-                            <button class="btn" id="refreshData">
-                                <i class="fas fa-sync-alt"></i> Verileri Yenile
-                            </button>
-                        </div>
-                    </div>
-                    <div class="table-container">
-                        <table class="projects-table" id="projectsTable">
-                            <thead>
-                                <tr>
-                                    <th>Proje Adı</th>
-                                    <th>Referans No</th>
-                                    <th>Müşteri</th>
-                                    <th>Durum</th>
-                                    <th>Başlangıç</th>
-                                    <th>Bitiş</th>
-                                    <th>Yönetici</th>
-                                </tr>
-                            </thead>
-                            <tbody id="projectsTableBody">
-                                <tr><td colspan="8" style="text-align: center;">Projeler yükleniyor...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <!-- Pagination -->
-                    <div class="pagination">
-                        <div class="pagination-info">Toplam <span id="totalProjectsCount">0</span> proje, sayfa <span id="currentPage">1</span>/<span id="totalPages">1</span></div>
-                        <div class="pagination-controls">
-                            <button class="page-btn" id="prevPage"><i class="fas fa-chevron-left"></i></button>
-                            <div id="pageNumbers">
-                                <button class="page-btn active">1</button>
-                            </div>
-                            <button class="page-btn" id="nextPage"><i class="fas fa-chevron-right"></i></button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="charts-activity-container">
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="card-title">Proje Durum Dağılımı</div>
-                        </div>
-                        <div class="card-body">
-                            <div class="chart-container">
-                                <canvas id="projectChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="card-title">Son Aktiviteler</div>
-                        </div>
-                        <div class="card-body" id="recentActivitiesList"> <!-- BU SATIRI KONTROL EDİN -->
-        <!-- Aktiviteler buraya JavaScript ile dinamik olarak yüklenecek -->
-        <div class="activity-item">
-            <div class="activity-icon">
-                <i class="fas fa-spinner fa-spin"></i>
-            </div>
-            <div class="activity-content">
-                <div class="activity-title">Aktiviteler Yükleniyor</div>
-                <div class="activity-desc">Sunucudan son aktiviteler alınıyor...</div>
-                <div class="activity-time">Az önce</div>
             </div>
         </div>
     </div>
-                            </div>
+
+
+    <div class="sidebar" id="sidebar">
+        <a href="index.html" style="text-decoration: none;">
+            <div class="logo-container" style="cursor: pointer;">
+            <img src="{{ url_for('static', filename='serlogo.png') }}" alt="Ser Elektrik Otomasyon" style="width: 180px; height: auto; padding-left: 10px;">
+            </div>
+        </a>
+        
+
+        <a href="index.html" class="nav-item active">
+            <i class="fas fa-home"></i>
+            <span class="nav-text">Dashboard</span>
+        </a>
+        <a href="projeler.html" class="nav-item">
+            <i class="fas fa-project-diagram"></i>
+            <span class="nav-text">Projeler</span>
+        </a>
+        <a href="proje_ekle.html" class="nav-item">
+            <i class="fas fa-plus-circle"></i>
+            <span class="nav-text">Yeni Proje</span>
+        </a>
+        <a href="raporlar.html" class="nav-item">
+            <i class="fas fa-chart-line"></i>
+            <span class="nav-text">Raporlar</span>
+        </a>
+        <a href="musteriler.html" class="nav-item">
+            <i class="fas fa-users"></i>
+            <span class="nav-text">Müşteriler</span>
+        </a>
+        <a href="takvim.html" class="nav-item">
+            <i class="fas fa-calendar-alt"></i>
+            <span class="nav-text">Takvim</span>
+        </a>
+        <a href="ayarlar.html" class="nav-item">
+            <i class="fas fa-cog"></i>
+            <span class="nav-text">Ayarlar</span>
+        </a>
+    </div>
+
+    <div class="main-content" id="mainContent">
+        <!-- Topbar -->
+        <div class="topbar">
+            <!-- Hamburger Menü Butonu -->
+            <button class="hamburger-menu" id="hamburgerMenu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="search-container">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Görev, müşteri veya proje ara...">
+            </div>
+            
+            <div class="topbar-actions">
+                <div class="theme-toggle" id="theme-toggle">
+                    <i class="fas fa-moon"></i>
+                </div>
+                
+                <div class="notification-btn" id="notificationButton" data-count="0">
+                    <i class="fas fa-bell"></i>
+                </div>
+                
+                <div class="user-profile">
+                    <div class="user-avatar" id="userAvatar"></div>
+                    <div class="user-info">
+                        <div class="user-name" id="userName"></div>
+                        <div class="user-role" id="userRole"></div>
                     </div>
+                </div>
+                <button class="btn btn-outline logout-btn" id="logoutButton">
+                    <i class="fas fa-sign-out-alt"></i> <span class="logout-text">Çıkış Yap</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Bildirim Paneli -->
+        <div class="notification-panel" id="notificationPanel">
+            <div class="notification-panel-header">
+                <span>Bildirimler</span>
+                <button class="close-btn" id="closeNotificationPanel"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="notification-list" id="notificationList">
+                <!-- Bildirimler buraya dinamik olarak yüklenecek -->
+                <div class="no-notifications">Bildirimler yükleniyor...</div>
+            </div>
+            <div class="notification-panel-footer">
+                <button id="markAllReadBtn">
+                    <i class="fas fa-check-double"></i> Tümünü Okundu Olarak İşaretle
+                </button>
+            </div>
+        </div>
+
+        <div class="dashboard-content">
+            <h1 class="page-title">
+                <i class="fas fa-home"></i>
+                Dashboard
+            </h1>
+            
+            <div class="stat-card" style="margin-bottom: 25px; background: linear-gradient(135deg, var(--primary), #003f6d); color: white;">
+                <div class="stat-card-header">
+                    <div class="stat-card-title" style="color: rgba(255,255,255,0.8);">Veritabanı Bağlantısı</div>
+                    <div class="stat-card-icon" style="background-color: rgba(255,255,255,0.2); color: white;">
+                        <i class="fas fa-plug"></i>
+                    </div>
+                </div>
+                <div class="stat-card-value" id="dbStatus">Bağlantı Kontrol Ediliyor...</div>
+                <div class="stat-card-change">
+                    <i class="fas fa-sync-alt"></i>
+                    Veritabanı aktifliği izleniyor.
+                </div>
+            </div>
+
+            <div class="stats-container" id="statsContainer">
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">Aktif Projeler</div>
+                        <div class="stat-card-icon">
+                            <i class="fas fa-sync-alt"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" id="activeProjects">Yükleniyor...</div>
+                    <div class="stat-card-change">
+                        <i class="fas fa-database"></i>
+                        Veritabanından çekildi
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">Tamamlanan Projeler</div>
+                        <div class="stat-card-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" id="completedProjects">Yükleniyor...</div>
+                    <div class="stat-card-change">
+                        <i class="fas fa-database"></i>
+                        Veritabanından çekildi
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">Geciken Projeler</div>
+                        <div class="stat-card-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" id="delayedProjects">Yükleniyor...</div>
+                    <div class="stat-card-change down">
+                        <i class="fas fa-database"></i>
+                        Veritabanından çekildi
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">Toplam Proje</div>
+                        <div class="stat-card-icon">
+                            <i class="fas fa-project-diagram"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" id="totalProjects">Yükleniyor...</div>
+                    <div class="stat-card-change">
+                        <i class="fas fa-database"></i>
+                        Veritabanından çekildi
+                    </div>
+                </div>
+            </div>
+            
+            <div class="filters-container" id="filtersContainer">
+                <div class="filters-header">
+                    <div class="filter-title">Proje Filtreleri</div>
+                    <div class="filter-reset" id="resetFilters">Tümünü Sıfırla</div>
+                </div>
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label class="filter-label">Proje Adı</label>
+                        <input type="text" class="filter-input" id="filterProjectName" placeholder="Proje adı girin">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Referans No</label>
+                        <input type="text" class="filter-input" id="filterRefNo" placeholder="Referans no girin">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Müşteri</label>
+                        <input type="text" class="filter-input" id="filterCustomer" placeholder="Müşteri adı">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Durum</label>
+                        <select class="filter-input" id="filterStatus">
+                            <option value="">Tümü</option>
+                            <option value="Aktif">Aktif</option>
+                            <option value="Tamamlandı">Tamamlandı</option>
+                            <option value="Gecikti">Gecikti</option>
+                            <option value="Planlama Aşamasında">Planlama Aşamasında</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="projects-container">
+                <div class="projects-header">
+                    <div class="card-title">Proje Listesi</div>
+                    <div class="projects-actions">
+                        <button class="btn btn-outline" id="filterBtn">
+                            <i class="fas fa-filter"></i> Filtrele
+                        </button>
+                        <button class="btn" id="exportPdf">
+                            <i class="fas fa-file-pdf"></i> PDF Oluştur
+                        </button>
+                        <button class="btn" id="refreshData">
+                            <i class="fas fa-sync-alt"></i> Verileri Yenile
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="projects-table" id="projectsTable">
+                        <thead>
+                            <tr>
+                                <th>Proje Adı</th>
+                                <th>Referans No</th>
+                                <th>Müşteri</th>
+                                <th>Durum</th>
+                                <th>Başlangıç</th>
+                                <th>Bitiş</th>
+                                <th>Yönetici</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projectsTableBody">
+                            <tr><td colspan="8" style="text-align: center;">Projeler yükleniyor...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                <div class="pagination">
+                    <div class="pagination-info">Toplam <span id="totalProjectsCount">0</span> proje, sayfa <span id="currentPage">1</span>/<span id="totalPages">1</span></div>
+                    <div class="pagination-controls">
+                        <button class="page-btn" id="prevPage"><i class="fas fa-chevron-left"></i></button>
+                        <div id="pageNumbers">
+                            <button class="page-btn active">1</button>
+                        </div>
+                        <button class="page-btn" id="nextPage"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="charts-activity-container">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Proje Durum Dağılımı</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="projectChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Son Aktiviteler</div>
+                    </div>
+                    <div class="card-body" id="recentActivitiesList"> <!-- BU SATIRI KONTROL EDİN -->
+    <!-- Aktiviteler buraya JavaScript ile dinamik olarak yüklenecek -->
+    <div class="activity-item">
+        <div class="activity-icon">
+            <i class="fas fa-spinner fa-spin"></i>
+        </div>
+        <div class="activity-content">
+            <div class="activity-title">Aktiviteler Yükleniyor</div>
+            <div class="activity-desc">Sunucudan son aktiviteler alınıyor...</div>
+            <div class="activity-time">Az önce</div>
+        </div>
+    </div>
+</div>
+                        </div>
                 </div>
     <div
     class="modal fade"
@@ -1926,86 +1925,86 @@
 
 
         // Son Aktiviteleri Backend'den Çekme (Şimdi activities tablosundan çekecek)
-   // index.html dosyanızdaki veya bağlı JS dosyanızdaki <script> etiketine ekleyin/güncelleyin
+        async function fetchRecentActivities() {
+            const activityListContainer = document.getElementById('recentActivitiesList'); // Bu ID'nin HTML'de olduğundan emin olun
+            if (!activityListContainer) return;
 
-document.addEventListener('DOMContentLoaded', () => {
-    fetchRecentActivities(); // Sayfa yüklendiğinde aktiviteleri çek
-});
+            activityListContainer.innerHTML = '<p style="text-align: center; color: var(--light-gray);">Aktiviteler yükleniyor...</p>'; // Yükleniyor mesajı
 
-async function fetchRecentActivities() {
-    const activityListContainer = document.getElementById('recentActivitiesList'); // Bu ID'nin HTML'de olduğundan emin olun
-    if (!activityListContainer) return;
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/recent_activities`); 
+                if (!response.ok) {
+                    const errorText = await response.text(); // Hata mesajını çekmeye çalışın
+                    throw new Error(`HTTP hatası! Durum: ${response.status} - ${errorText}`);
+                }
+                const activities = await response.json();
 
-    activityListContainer.innerHTML = '<p style="text-align: center; color: var(--light-gray);">Aktiviteler yükleniyor...</p>'; // Yükleniyor mesajı
+                activityListContainer.innerHTML = ''; // Yükleniyor mesajını temizle
 
-    try {
-         const response = await fetch('https://ser-proje.onrender.com/api/recent_activities'); 
-        if (!response.ok) {
-            throw new Error(`HTTP hatası! Durum: ${response.status}`);
-        }
-        const activities = await response.json();
+                if (activities.length === 0) {
+                    activityListContainer.innerHTML = '<p style="text-align: center; color: var(--light-gray);">Hiç aktivite bulunamadı.</p>';
+                    return;
+                }
 
-        activityListContainer.innerHTML = ''; // Yükleniyor mesajını temizle
+                activities.forEach(activity => {
+                    const activityItem = document.createElement('div');
+                    activityItem.classList.add('activity-item');
 
-        if (activities.length === 0) {
-            activityListContainer.innerHTML = '<p style="text-align: center; color: var(--light-gray);">Hiç aktivite bulunamadı.</p>';
-            return;
-        }
+                    // 'icon' sütunundan gelen ikon sınıfını kullan
+                    let iconClass = activity.icon || 'fas fa-info'; // Varsayılan bir ikon belirleyin
+                    let iconBgColor = 'rgba(9, 128, 211, 0.1)'; // Varsayılan arka plan rengi
+                    let iconColor = 'var(--primary-light)'; // Varsayılan ikon rengi
 
-        activities.forEach(activity => {
-            const activityItem = document.createElement('div');
-            activityItem.classList.add('activity-item');
+                    // Belirli aktivite başlıklarına göre ikon ve renkleri ayarlayın (isteğe bağlı)
+                    // Eğer 'icon' sütunu sadece Font Awesome sınıfını içeriyorsa ve renklendirme dinamikse
+                    if (activity.title === 'Proje Gecikti') {
+                        iconBgColor = 'rgba(255, 71, 87, 0.1)';
+                        iconColor = '#ff4757';
+                    } else if (activity.title === 'Görev Tamamlandı') {
+                        iconBgColor = 'rgba(46, 213, 115, 0.1)';
+                        iconColor = '#2ed573';
+                    }
+                    // Diğer aktivite başlıkları için benzer mantık ekleyebilirsiniz.
 
-            // 'icon' sütunundan gelen ikon sınıfını kullan
-            let iconClass = activity.icon || 'fas fa-info'; // Varsayılan bir ikon belirleyin
-            let iconBgColor = 'rgba(9, 128, 211, 0.1)'; // Varsayılan arka plan rengi
-            let iconColor = 'var(--primary-light)'; // Varsayılan ikon rengi
+                    // Zamanı biçimlendirme (daha gelişmiş kütüphaneler kullanılabilir)
+                    const activityDate = new Date(activity.created_at); // 'created_at' sütununu kullan
+                    const now = new Date();
+                    const seconds = Math.floor((now - activityDate) / 1000);
 
-            // Belirli aktivite başlıklarına göre ikon ve renkleri ayarlayın (isteğe bağlı)
-            // Eğer 'icon' sütunu sadece Font Awesome sınıfını içeriyorsa ve renklendirme dinamikse
-            if (activity.title === 'Proje Gecikti') {
-                iconBgColor = 'rgba(255, 71, 87, 0.1)';
-                iconColor = '#ff4757';
-            } else if (activity.title === 'Görev Tamamlandı') {
-                iconBgColor = 'rgba(46, 213, 115, 0.1)';
-                iconColor = '#2ed573';
+                    let timeAgo = '';
+                    if (seconds < 60) {
+                        timeAgo = `${seconds} saniye önce`;
+                    } else if (seconds < 3600) {
+                        timeAgo = `${Math.floor(seconds / 60)} dakika önce`;
+                    } else if (seconds < 86400) {
+                        timeAgo = `${Math.floor(seconds / 3600)} saat önce`;
+                    } else if (seconds < 2592000) { // 30 gün
+                        timeAgo = `${Math.floor(seconds / 86400)} gün önce`;
+                    } else if (seconds < 31536000) { // 365 gün
+                        timeAgo = `${Math.floor(seconds / 2592000)} ay önce`;
+                    } else {
+                        timeAgo = `${Math.floor(seconds / 31536000)} yıl önce`;
+                    }
+
+                    activityItem.innerHTML = `
+                        <div class="activity-icon" style="background-color: ${iconBgColor}; color: ${iconColor};">
+                            <i class="${iconClass}"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">${activity.title}</div>
+                            <div class="activity-desc">${activity.description}</div>
+                            <div class="activity-time">${timeAgo}</div>
+                        </div>
+                    `;
+                    activityListContainer.appendChild(activityItem);
+                });
+
+            } catch (error) {
+                console.error('Son aktiviteler çekilirken hata oluştu:', error);
+                activityListContainer.innerHTML = `<p style="text-align: center; color: var(--danger);">Aktiviteler yüklenirken hata oluştu: ${error.message}</p>`;
+                // showToast('Aktiviteler yüklenirken hata oluştu.', true); // Eğer showToast fonksiyonunuz varsa kullanın
             }
-            // Diğer aktivite başlıkları için benzer mantık ekleyebilirsiniz.
-
-            // Zamanı biçimlendirme (daha gelişmiş kütüphaneler kullanılabilir)
-            const activityDate = new Date(activity.created_at); // 'created_at' sütununu kullan
-            const now = new Date();
-            const diffHours = Math.abs(now - activityDate) / (1000 * 60 * 60);
-            let timeAgo = '';
-            if (diffHours < 1) {
-                timeAgo = `${Math.round(diffHours * 60)} dakika önce`;
-            } else if (diffHours < 24) {
-                timeAgo = `${Math.round(diffHours)} saat önce`;
-            } else if (diffHours < 24 * 7) {
-                timeAgo = `${Math.round(diffHours / 24)} gün önce`;
-            } else {
-                timeAgo = activityDate.toLocaleDateString('tr-TR', { year: 'numeric', month: 'short', day: 'numeric' });
-            }
-
-            activityItem.innerHTML = `
-                <div class="activity-icon" style="background-color: ${iconBgColor}; color: ${iconColor};">
-                    <i class="${iconClass}"></i>
-                </div>
-                <div class="activity-content">
-                    <div class="activity-title">${activity.title}</div>
-                    <div class="activity-desc">${activity.description}</div>
-                    <div class="activity-time">${timeAgo}</div>
-                </div>
-            `;
-            activityListContainer.appendChild(activityItem);
-        });
-
-    } catch (error) {
-        console.error('Son aktiviteler çekilirken hata oluştu:', error);
-        activityListContainer.innerHTML = '<p style="text-align: center; color: var(--danger);">Aktiviteler yüklenirken hata oluştu.</p>';
-        // showToast('Aktiviteler yüklenirken hata oluştu.', true); // Eğer showToast fonksiyonunuz varsa kullanın
-    }
-}
+        }
 
         // Aktivite ekleme fonksiyonu (Frontend'den çağrılabilir)
         async function addActivity(title, description, user_id, icon = "fas fa-info-circle") {
@@ -2148,9 +2147,6 @@ async function fetchRecentActivities() {
                 };
             });
         }
-
-        // Aktiviteleri Render Etme (Artık tıklanamaz)
-    
 
         // Sadece okunmamış bildirim sayısını çeken fonksiyon
         async function fetchUnreadNotificationCount() {
@@ -3091,5 +3087,5 @@ async function fetchRecentActivities() {
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    </body>
-    </html>
+</body>
+</html>
