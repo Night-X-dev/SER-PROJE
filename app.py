@@ -1091,7 +1091,77 @@ def get_dashboard_stats():
         if connection:
             connection.close()
 
+# app.py dosyanıza eklenecek/güncellenecek kısım
 
+# ... (Mevcut Flask importları, CORS ayarları, veritabanı bağlantı fonksiyonları) ...
+
+@app.route('/api/recent_activities', methods=['GET'])
+def get_recent_activities():
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            # activity_id, user_id, title, description, icon, created_at, is_read sütunlarını çek
+            sql = """
+            SELECT
+                activity_id,
+                user_id,
+                title,
+                description,
+                icon,
+                created_at,
+                is_read
+            FROM
+                activity     -- Tablo adınızın 'activity' olduğundan emin olun
+            ORDER BY
+                created_at DESC
+            LIMIT 5;         -- Dashboard için son 5 aktiviteyi çekiyoruz
+            """
+            cursor.execute(sql)
+            activities = cursor.fetchall()
+            return jsonify(activities)
+    except pymysql.Error as e:
+        print(f"Veritabanı hatası (recent_activities): {e}")
+        return jsonify({"error": "Veritabanı hatası oluştu."}), 500
+    finally:
+        connection.close()
+
+# Yeni bir aktivite kaydetmek için yardımcı fonksiyon
+# Bu fonksiyonu, projenizde bir olay (örn: proje ekleme, görev tamamlama, kullanıcı girişi) gerçekleştiğinde çağırın.
+def log_activity(user_id, title, description, icon, is_read=0):
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            sql = """
+            INSERT INTO activity (user_id, title, description, icon, created_at, is_read)
+            VALUES (%s, %s, %s, %s, NOW(), %s)
+            """
+            cursor.execute(sql, (user_id, title, description, icon, is_read))
+        connection.commit() # Değişiklikleri veritabanına kaydet
+        print(f"Aktivite kaydedildi: Başlık: '{title}', Açıklama: '{description}'")
+    except pymysql.Error as e:
+        print(f"Aktivite kaydı sırasında hata: {e}")
+    finally:
+        connection.close()
+
+# Örnek kullanım: Diyelim ki yeni bir proje ekliyorsunuz
+# @app.route('/api/add_project', methods=['POST'])
+# def add_project():
+#     data = request.json
+#     project_name = data.get('projectName')
+#     current_user_id = 1 # Bu değeri oturumdan veya kimlik doğrulama sisteminizden alın
+#     
+#     # ... Proje ekleme mantığı ...
+#     
+#     if proje_basariyla_eklendi:
+#         log_activity(
+#             user_id=current_user_id,
+#             title='Yeni Proje Eklendi',
+#             description=f'"{project_name}" adlı yeni proje başlatıldı.',
+#             icon='fas fa-plus', # Font Awesome ikonu
+#             is_read=0
+#         )
+#         return jsonify({"message": "Proje başarıyla eklendi"}), 201
+#     # ...
 # Son Aktivite Ekle API (Yeni)
 @app.route('/api/activities', methods=['POST'])
 def add_activity_log():
