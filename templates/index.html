@@ -1658,7 +1658,6 @@
         <i class="fas fa-check-circle"></i>
         <span id="toastMessage">İşlem başarıyla tamamlandı</span>
     </div>
-
     <script>
     const API_BASE_URL = "https://ser-proje.onrender.com"; // Bu URL'i Render'daki uygulamanızın gerçek URL'i ile değiştirin
     let currentUser = null; 
@@ -1938,44 +1937,46 @@
             renderActivities(activities);
         } catch (error) {
             console.error('Aktiviteler çekilemedi:', error);
-            showToast(`Aktiviteler yüklenirken hata oluştu: ${error.message}`, true);
-            document.getElementById('activityList').innerHTML = '<div style="text-align: center; color: var(--danger);">Aktiviteler yüklenemedi.</div>';
+            // Hata mesajını daha anlaşılır hale getirelim
+            let errorMessage = 'Aktiviteler yüklenirken bir sorun oluştu.';
+            if (error.message.includes('500')) {
+                errorMessage = 'Sunucu tarafında bir hata oluştu. Lütfen konsolu kontrol edin.';
+            } else if (error.message.includes('Sunucudan yanıt alınamadı')) {
+                errorMessage = 'Sunucuya ulaşılamıyor. Ağ bağlantınızı kontrol edin.';
+            }
+            showToast(errorMessage, true);
+            document.getElementById('activityList').innerHTML = `<div style="text-align: center; color: var(--danger);">${errorMessage}</div>`;
         }
     }
 
     // Aktivite ekleme fonksiyonu (Frontend'den çağrılabilir)
-    // Bu fonksiyon artık doğrudan 'notifications' tablosuna değil, 'activities' tablosuna ekleyecek.
-    // Ancak, app.py'de /api/activities POST endpoint'i yok.
-    // Bu fonksiyonun şimdilik sadece bildirimler için kullanıldığını varsayarak, notifications endpoint'ini kullanmaya devam edecek.
-    // Eğer activities tablosuna ekleme yapılacaksa, app.py'ye yeni bir endpoint eklenmelidir.
-    async function addActivity(title, message, user_id, icon = "fas fa-info-circle") {
+    async function addActivity(title, description, user_id, icon = "fas fa-info-circle") {
         if (!user_id) {
-            console.warn("Kullanıcı ID'si bulunamadı, bildirim kaydedilemedi.");
+            console.warn("Kullanıcı ID'si bulunamadı, aktivite kaydedilemedi.");
             return;
         }
 
-        const notificationData = {
+        const activityData = {
             user_id: user_id,
             title: title,
-            message: message, 
-            // icon ve action_type artık notifications tablosunda yok, backend'de yönetiliyor
+            description: description, 
+            icon: icon
         };
 
         try {
-            // Bu kısım hala notifications endpoint'ini kullanıyor çünkü app.py'de activities için POST yok.
-            const response = await fetch(`${API_BASE_URL}/api/notifications`, {
+            // activities endpoint'ini kullan
+            const response = await fetch(`${API_BASE_URL}/api/activities`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(notificationData)
+                body: JSON.stringify(activityData)
             });
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.message || 'Bildirim eklenirken bilinmeyen bir hata oluştu.');
+                throw new Error(errorData.message || 'Aktivite eklenirken bilinmeyen bir hata oluştu.');
             }
-            fetchRecentActivities(); // Bildirim eklendikten sonra listeyi yenile
-            fetchUnreadNotificationCount(); // Yeni bildirim eklendiğinde okunmamış sayısını da yenile
+            fetchRecentActivities(); // Yeni aktivite eklendikten sonra listeyi yenile
         } catch (error) {
-            console.error('Bildirim ekleme hatası:', error);
+            console.error('Aktivite ekleme hatası:', error);
         }
     }
 
@@ -2372,9 +2373,9 @@
                 // Proje adını bulmak için allProjectsData'yı kullan
                 const project = allProjectsData.find(p => String(p.project_id) === String(id));
                 const projectNameForActivity = project ? project.project_name : `ID: ${id}`;
-                // addActivity'ye sadece user_id, title ve message gönderiyoruz
+                // addActivity'ye sadece user_id, title ve description gönderiyoruz
                 if (currentUser && currentUser.id) {
-                    addActivity('Proje Silindi', `"${projectNameForActivity}" projesi silindi.`, currentUser.id);
+                    addActivity('Proje Silindi', `"${projectNameForActivity}" projesi silindi.`, currentUser.id, 'fas fa-trash-alt');
                 }
             } else {
                 throw new Error(result.message || 'Proje silinirken bir hata oluştu.');
@@ -2486,9 +2487,9 @@
                 const editModal = bootstrap.Modal.getInstance(editModalElement);
                 if (editModal) editModal.hide();
                 fetchProjects(); 
-                // addActivity'ye sadece user_id, title ve message gönderiyoruz
+                // addActivity'ye sadece user_id, title ve description gönderiyoruz
                 if (currentUser && currentUser.id) {
-                    addActivity('Proje Güncellendi', `"${name}" projesi güncellendi.`, currentUser.id);
+                    addActivity('Proje Güncellendi', `"${name}" projesi güncellendi.`, currentUser.id, 'fas fa-edit');
                 }
             } else {
                 throw new Error(result.message || 'Proje güncellenirken bir hata oluştu.');
@@ -2686,9 +2687,9 @@
                 if (styleElem) styleElem.remove();
 
                 showToast('PDF raporu başarıyla oluşturuldu');
-                // addActivity'ye sadece user_id, title ve message gönderiyoruz
+                // addActivity'ye sadece user_id, title ve description gönderiyoruz
                 if (currentUser && currentUser.id) {
-                    addActivity('PDF Oluşturuldu', 'Proje listesinin PDF raporu oluşturuldu.', currentUser.id);
+                    addActivity('PDF Oluşturuldu', 'Proje listesinin PDF raporu oluşturuldu.', currentUser.id, 'fas fa-file-pdf');
                 }
             });
         }, 500);
