@@ -286,8 +286,9 @@ def add_activity():
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # 'activity' yerine 'activities' olarak düzeltildi
             sql = """
-            INSERT INTO activity (user_id, title, description, icon, created_at)
+            INSERT INTO activities (user_id, title, description, icon, created_at)
             VALUES (%s, %s, %s, %s, NOW())
             """
             cursor.execute(sql, (user_id, title, description, icon))
@@ -1252,7 +1253,7 @@ def get_recent_activities():
                 created_at,
                 is_read
             FROM
-                activity  -- 'activities' yerine 'activity' olarak düzeltildi
+                activities  -- 'activity' yerine 'activities' olarak düzeltildi
             ORDER BY
                 created_at DESC
             LIMIT 5;
@@ -1276,8 +1277,9 @@ def log_activity(user_id, title, description, icon, is_read=0):
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
+            # 'activity' yerine 'activities' olarak düzeltildi
             sql = """
-            INSERT INTO activity (user_id, title, description, icon, created_at, is_read)
+            INSERT INTO activities (user_id, title, description, icon, created_at, is_read)
             VALUES (%s, %s, %s, %s, NOW(), %s)
             """
             cursor.execute(sql, (user_id, title, description, icon, is_read))
