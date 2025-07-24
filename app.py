@@ -230,7 +230,8 @@ def get_notifications():
                         row['is_read'] = 0
             return jsonify(result)
     finally:
-        connection.close()
+        if connection:
+            connection.close()
 
 # Yeni Bildirim Ekle API (notifications tablosu için)
 @app.route('/api/notifications', methods=['POST'])
@@ -286,7 +287,7 @@ def add_activity():
         connection = get_db_connection()
         with connection.cursor() as cursor:
             sql = """
-            INSERT INTO activities (user_id, title, description, icon, created_at)
+            INSERT INTO activity (user_id, title, description, icon, created_at)
             VALUES (%s, %s, %s, %s, NOW())
             """
             cursor.execute(sql, (user_id, title, description, icon))
@@ -1236,12 +1237,6 @@ def get_dashboard_stats():
 
 
 # Dashboard Son Aktivite API (activities tablosundan çeker)
-# Dashboard Son Aktivite API (activities tablosundan çeker)
-@app.route('/api/dashboard/activity', methods=['GET'])
-# app.py dosyanıza eklenecek/güncellenecek kısım
-
-# ... (Mevcut Flask importları, CORS ayarları, veritabanı bağlantı fonksiyonları) ...
-
 @app.route('/api/recent_activities', methods=['GET'])
 def get_recent_activities():
     connection = get_db_connection()
@@ -1257,29 +1252,26 @@ def get_recent_activities():
                 created_at,
                 is_read
             FROM
-                activities
+                activity  -- 'activities' yerine 'activity' olarak düzeltildi
             ORDER BY
                 created_at DESC
             LIMIT 5;
             """
             cursor.execute(sql)
             activities = cursor.fetchall()
-            # Debugging için buraya print ekleyebilirsiniz
-            # print("Çekilen aktiviteler:", activities)
             return jsonify(activities)
     except pymysql.Error as e:
         print(f"Veritabanı hatası (recent_activities): {e}")
-        # Bu hata tarayıcıya 500 kodu döndürür. Loglarda görünmeli.
         return jsonify({"error": "Veritabanı hatası oluştu."}), 500
-    except Exception as e: # Genel hataları yakalamak için eklendi
+    except Exception as e:
         print(f"Bilinmeyen hata (recent_activities): {e}")
         return jsonify({"error": "Bilinmeyen bir sunucu hatası oluştu."}), 500
     finally:
-        connection.close()
-        connection.close()
+        if connection: # Sadece bir tane connection.close() çağrısı bırakıldı
+            connection.close()
+
 
 # Yeni bir aktivite kaydetmek için yardımcı fonksiyon
-# Bu fonksiyonu, projenizde bir olay (örn: proje ekleme, görev tamamlama, kullanıcı girişi) gerçekleştiğinde çağırın.
 def log_activity(user_id, title, description, icon, is_read=0):
     connection = get_db_connection()
     try:
@@ -1294,7 +1286,8 @@ def log_activity(user_id, title, description, icon, is_read=0):
     except pymysql.Error as e:
         print(f"Aktivite kaydı sırasında hata: {e}")
     finally:
-        connection.close()
+        if connection:
+            connection.close()
 
 # Örnek kullanım: Diyelim ki yeni bir proje ekliyorsunuz
 # @app.route('/api/add_project', methods=['POST'])
@@ -1701,7 +1694,7 @@ def manager_stats():
             sql = """
             SELECT 
                 p.project_manager_id,
-f time_diff.total_seconds() < 3600:                u.fullname as manager_name,
+                u.fullname as manager_name,
                 COUNT(DISTINCT p.project_id) AS total_projects,
                 SUM(CASE 
                         WHEN p.status = 'Bitti' AND (
@@ -1740,7 +1733,8 @@ f time_diff.total_seconds() < 3600:                u.fullname as manager_name,
             result = cursor.fetchall()
             return jsonify(result)
     finally:
-        connection.close()
+        if connection:
+            connection.close()
 
 @app.route('/api/worker-performance')
 def worker_performance():
@@ -1773,8 +1767,8 @@ def worker_performance():
             result = cursor.fetchall()
             return jsonify(result)
     finally:
-        connection.close()
+        if connection:
+            connection.close()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=3001, debug=True)
-
