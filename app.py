@@ -1271,7 +1271,11 @@ def get_recent_activities():
         print(f"Veritabanı hatası (recent_activities): {e}")
         # Bu hata tarayıcıya 500 kodu döndürür. Loglarda görünmeli.
         return jsonify({"error": "Veritabanı hatası oluştu."}), 500
+    except Exception as e: # Genel hataları yakalamak için eklendi
+        print(f"Bilinmeyen hata (recent_activities): {e}")
+        return jsonify({"error": "Bilinmeyen bir sunucu hatası oluştu."}), 500
     finally:
+        connection.close()
         connection.close()
 
 # Yeni bir aktivite kaydetmek için yardımcı fonksiyon
