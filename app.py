@@ -1238,64 +1238,77 @@ def get_dashboard_stats():
 # Dashboard Son Aktivite API (activities tablosundan çeker)
 # Dashboard Son Aktivite API (activities tablosundan çeker)
 @app.route('/api/dashboard/activity', methods=['GET'])
+# app.py dosyanıza eklenecek/güncellenecek kısım
+
+# ... (Mevcut Flask importları, CORS ayarları, veritabanı bağlantı fonksiyonları) ...
+
+@app.route('/api/recent_activities', methods=['GET'])
 def get_recent_activities():
-    connection = None
+    connection = get_db_connection()
     try:
-        connection = get_db_connection()
         with connection.cursor() as cursor:
+            # activity_id, user_id, title, description, icon, created_at, is_read sütunlarını çek
             sql = """
-                SELECT id, title, description, icon, created_at
-                FROM activities
-                ORDER BY created_at DESC
-                LIMIT 4
+            SELECT
+                activity_id,
+                user_id,
+                title,
+                description,
+                icon,
+                created_at,
+                is_read
+            FROM
+                activity     -- Tablo adınızın 'activity' olduğundan emin olun
+            ORDER BY
+                created_at DESC
+            LIMIT 5;         -- Dashboard için son 5 aktiviteyi çekiyoruz
             """
             cursor.execute(sql)
-            rows = cursor.fetchall()
-
-        activities = []
-        now = datetime.datetime.now()
-
-        for item in rows:
-            created_at = item.get('created_at')
-            if isinstance(created_at, datetime.datetime):
-                created_iso = created_at.isoformat()
-                diff = now - created_at
-            elif isinstance(created_at, datetime.date):
-                dt = datetime.datetime.combine(created_at, datetime.time())
-                created_iso = dt.isoformat()
-                diff = now - dt
-            else:
-                created_iso = str(created_at) if created_at is not None else None
-                diff = None
-
-            time_ago = "Bilinmeyen zaman"
-            if diff is not None:
-                sec = int(diff.total_seconds())
-                if sec < 60:
-                    time_ago = f"{sec} saniye önce"
-                elif sec < 3600:
-                    time_ago = f"{sec // 60} dakika önce"
-                elif sec < 86400:
-                    time_ago = f"{sec // 3600} saat önce"
-                else:
-                    time_ago = f"{sec // 86400} gün önce"
-
-            activities.append({
-                "id": item.get('id'),
-                "icon": (item.get('icon') or "fas fa-info-circle"),
-                "title": item.get('title'),
-                "description": item.get('description'),
-                "created_at": created_iso,
-                "time": time_ago
-            })
-
-        return jsonify(activities), 200
-    except Exception as e:
-        print(f"Genel aktivite çekme hatası: {e}")
-        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.', 'detail': str(e)}), 500
+            activities = cursor.fetchall()
+            return jsonify(activities)
+    except pymysql.Error as e:
+        print(f"Veritabanı hatası (recent_activities): {e}")
+        return jsonify({"error": "Veritabanı hatası oluştu."}), 500
     finally:
-        if connection:
-            connection.close()
+        connection.close()
+
+# Yeni bir aktivite kaydetmek için yardımcı fonksiyon
+# Bu fonksiyonu, projenizde bir olay (örn: proje ekleme, görev tamamlama, kullanıcı girişi) gerçekleştiğinde çağırın.
+def log_activity(user_id, title, description, icon, is_read=0):
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            sql = """
+            INSERT INTO activity (user_id, title, description, icon, created_at, is_read)
+            VALUES (%s, %s, %s, %s, NOW(), %s)
+            """
+            cursor.execute(sql, (user_id, title, description, icon, is_read))
+        connection.commit() # Değişiklikleri veritabanına kaydet
+        print(f"Aktivite kaydedildi: Başlık: '{title}', Açıklama: '{description}'")
+    except pymysql.Error as e:
+        print(f"Aktivite kaydı sırasında hata: {e}")
+    finally:
+        connection.close()
+
+# Örnek kullanım: Diyelim ki yeni bir proje ekliyorsunuz
+# @app.route('/api/add_project', methods=['POST'])
+# def add_project():
+#     data = request.json
+#     project_name = data.get('projectName')
+#     current_user_id = 1 # Bu değeri oturumdan veya kimlik doğrulama sisteminizden alın
+#     
+#     # ... Proje ekleme mantığı ...
+#     
+#     if proje_basariyla_eklendi:
+#         log_activity(
+#             user_id=current_user_id,
+#             title='Yeni Proje Eklendi',
+#             description=f'"{project_name}" adlı yeni proje başlatıldı.',
+#             icon='fas fa-plus', # Font Awesome ikonu
+#             is_read=0
+#         )
+#         return jsonify({"message": "Proje başarıyla eklendi"}), 201
+#     # ...
 
 # Projenin İş Gidişatı Adımlarını Çekme API'si
 @app.route('/api/projects/<int:project_id>/progress', methods=['GET'])
