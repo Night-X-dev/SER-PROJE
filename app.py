@@ -1237,7 +1237,7 @@ def get_dashboard_stats():
 
 # Dashboard Son Aktivite API (activities tablosundan çeker)
 @app.route('/api/dashboard/activity', methods=['GET'])
-def get_dashboard_activity():
+def get_recent_activities():
     connection = None
     try:
         connection = get_db_connection()
@@ -1285,7 +1285,6 @@ def get_dashboard_activity():
     finally:
         if connection:
             connection.close()
-
 # Projenin İş Gidişatı Adımlarını Çekme API'si
 @app.route('/api/projects/<int:project_id>/progress', methods=['GET'])
 def get_project_progress_steps(project_id):
@@ -1663,12 +1662,6 @@ def delete_task(task_id):
     finally:
         if connection:
             connection.close()
-@app.route('/api/dashboard/activity', methods=['GET'])
-def get_recent_activities():
-    conn = get_db_connection()
-    activities = conn.execute('SELECT * FROM activities ORDER BY created_at DESC LIMIT 10').fetchall()
-    conn.close()
-    return jsonify([dict(row) for row in activities])
 @app.route('/api/manager-stats')
 def manager_stats():
     connection = get_db_connection()
@@ -1677,7 +1670,7 @@ def manager_stats():
             sql = """
             SELECT 
                 p.project_manager_id,
-                u.fullname as manager_name,
+f time_diff.total_seconds() < 3600:                u.fullname as manager_name,
                 COUNT(DISTINCT p.project_id) AS total_projects,
                 SUM(CASE 
                         WHEN p.status = 'Bitti' AND (
