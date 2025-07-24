@@ -492,13 +492,19 @@ def delete_user(user_id):
         with connection.cursor() as cursor:
             # Check if user exists
             cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
-            if not cursor.fetchone():
+            user_info = cursor.fetchone()
+            if not user_info:
                 return jsonify({'message': 'Kullanıcı bulunamadı.'}), 404
 
-            # Delete the user
+            # Kullanıcıya atanmış görevleri sil
+            cursor.execute("DELETE FROM tasks WHERE assigned_user_id = %s", (user_id,))
+            print(f"DEBUG: Deleted {cursor.rowcount} tasks for user {user_id}")
+
+            # Kullanıcıyı sil
             sql = "DELETE FROM users WHERE id = %s"
             cursor.execute(sql, (user_id,))
             connection.commit()
+            print(f"DEBUG: Deleted user {user_id}")
 
         return jsonify({'message': 'Kullanıcı başarıyla silindi!'}), 200
 
