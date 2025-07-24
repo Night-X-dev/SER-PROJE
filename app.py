@@ -1421,19 +1421,24 @@ def add_project():
 
 # PDF Raporu Oluşturma Aktivitesini Loglama API'si (Frontend'den çağrılacak)
 @app.route('/api/log_pdf_report', methods=['POST'])
-def log_pdf_report():
+def log_pdf_report_api():
     data = request.get_json()
     user_id = data.get('user_id')
     report_type = data.get('report_type', 'Genel Rapor') # Varsayılan rapor tipi
+    project_name = data.get('project_name') # Tek proje için proje adı
 
     if not user_id:
         return jsonify({'message': 'Kullanıcı ID eksik.'}), 400
+
+    description_text = f'"{report_type}" raporunun PDF dosyası oluşturuldu.'
+    if project_name:
+        description_text = f'"{project_name}" projesi için PDF raporu oluşturuldu.'
 
     try:
         log_activity(
             user_id=user_id,
             title='PDF Raporu Oluşturuldu',
-            description=f'"{report_type}" raporunun PDF dosyası oluşturuldu.',
+            description=description_text,
             icon='fas fa-file-pdf'
         )
         return jsonify({'message': 'PDF raporu aktivitesi başarıyla kaydedildi.'}), 200
