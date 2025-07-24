@@ -1266,7 +1266,7 @@
   <body data-theme="light">
     <!-- Confirmation Modal -->
     <div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-sm">
+        <div class="modal-dialog modal-sm modal-dialog-centered"> <!-- modal-dialog-centered eklendi -->
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="confirmationModalLabel">Onay Gerekli</h5>
@@ -1740,9 +1740,9 @@
           user_id: currentUser.id,
           project_id: project_id, // null olabilir
           title: title,
-          raw_description: rawDescription,
+          description: rawDescription, // 'raw_description' yerine 'description' kullanıldı
           icon: icon,
-          action_type: actionType
+          action_type: actionType // Bu alan backend'de kullanılmıyor, kaldırılabilir veya bildirim için kullanılabilir
         };
 
         console.log(activityData); // Hata ayıklama için
@@ -2007,7 +2007,8 @@
         const project = allProjectsData.find(p => String(p.project_id) === String(id));
         const projectName = project ? project.project_name : `ID: ${id}`;
         try {
-          const response = await fetch(`${API_BASE_URL}/api/projects/${id}`, {
+          // user_id'yi query parametresi olarak ekle
+          const response = await fetch(`${API_BASE_URL}/api/projects/${id}?user_id=${currentUser.id}`, {
             method: "DELETE",
           });
           const data = await response.json();
@@ -2274,6 +2275,7 @@ async function renderEditModal(project) {
           end_date: endDate,
           project_manager_name: projectManagerName,
           description: description,
+          user_id: currentUser.id // Kullanıcı ID'si eklendi
         };
 
         try {
