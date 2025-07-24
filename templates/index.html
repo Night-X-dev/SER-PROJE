@@ -1925,11 +1925,11 @@
         });
     }
 
-    // Son Aktiviteleri Backend'den Çekme (Şimdi kullanıcıya özel aktivite ekleme)
+    // Son Aktiviteleri Backend'den Çekme (Şimdi activities tablosundan çekecek)
     async function fetchRecentActivities() {
         try {
-            // notifications tablosundan çekiyoruz
-            const response = await fetch(`${API_BASE_URL}/api/notifications`);
+            // app.py'deki /api/dashboard/activity endpoint'ini kullan
+            const response = await fetch(`${API_BASE_URL}/api/dashboard/activity`);
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ message: 'Sunucudan yanıt alınamadı.' }));
                 throw new Error(errorData.message || `HTTP hatası! Durum: ${response.status}`);
@@ -1944,7 +1944,10 @@
     }
 
     // Aktivite ekleme fonksiyonu (Frontend'den çağrılabilir)
-    // Bu fonksiyon artık doğrudan 'activities' tablosuna değil, 'notifications' tablosuna ekleyecek.
+    // Bu fonksiyon artık doğrudan 'notifications' tablosuna değil, 'activities' tablosuna ekleyecek.
+    // Ancak, app.py'de /api/activities POST endpoint'i yok.
+    // Bu fonksiyonun şimdilik sadece bildirimler için kullanıldığını varsayarak, notifications endpoint'ini kullanmaya devam edecek.
+    // Eğer activities tablosuna ekleme yapılacaksa, app.py'ye yeni bir endpoint eklenmelidir.
     async function addActivity(title, message, user_id, icon = "fas fa-info-circle") {
         if (!user_id) {
             console.warn("Kullanıcı ID'si bulunamadı, bildirim kaydedilemedi.");
@@ -1959,6 +1962,7 @@
         };
 
         try {
+            // Bu kısım hala notifications endpoint'ini kullanıyor çünkü app.py'de activities için POST yok.
             const response = await fetch(`${API_BASE_URL}/api/notifications`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2097,9 +2101,7 @@
         }
 
         activities.forEach(activity => {
-            // Arka uçtan gelen 'message' artık son ve doğru formatta olmalı.
-            const message = activity.message; 
-
+            // app.py'deki /api/dashboard/activity endpoint'inden gelen yapıyı kullanıyoruz
             const item = document.createElement('div');
             item.className = 'activity-item';
             item.innerHTML = `
@@ -2108,7 +2110,7 @@
                 </div>
                 <div class="activity-content">
                     <div class="activity-title">${activity.title}</div>
-                    <div class="activity-desc">${message}</div>
+                    <div class="activity-desc">${activity.description}</div>
                     <div class="activity-time">${formatTimeAgo(activity.created_at)}</div>
                 </div>
             `;
@@ -2838,7 +2840,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         fetchProjects();
         fetchDashboardStats();
-        fetchRecentActivities();
+        fetchRecentActivities(); // Son Aktiviteler için doğru endpoint'i kullanacak
         // fetchNotifications(); // Bu zaten yukarıdaki DOMContentLoaded içinde çağrılıyor
 
         document.getElementById('filterBtn').addEventListener('click', function() {
