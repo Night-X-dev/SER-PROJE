@@ -8,7 +8,7 @@ import json
 import datetime
 import dotenv
 from dotenv import load_dotenv
-import urllib.parse # <-- Bu satırı ekledik
+import urllib.parse 
 
 load_dotenv()
 
@@ -69,6 +69,11 @@ def serve_yeni_musteri_page():
     """/yeni_musteri.html URL'ye gelen istekleri yeni_musteri.html sayfasına yönlendirir."""
     return render_template('yeni_musteri.html')
 
+@app.route('/bildirim.html')
+def serve_bildirim_page():
+    """/bildirim.html URL'ye gelen istekleri bildirim.html sayfasına yönlendirir."""
+    return render_template('bildirim.html')
+
 # CORS (Cross-Origin Resource Sharing) ayarları
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
@@ -117,7 +122,7 @@ def get_db_connection():
             user=user,
             password=password,
             database=database,
-            port=port, # <-- ÖNEMLİ DÜZELTME: Port parametresini ekledik
+            port=port, 
             cursorclass=pymysql.cursors.DictCursor # Sorgu sonuçlarını sözlük olarak almak için
         )
         print("MySQL veritabanına başarıyla bağlandı!")
@@ -128,14 +133,14 @@ def get_db_connection():
             connection.close()
         raise # Hatayı yukarı fırlat, Flask bunu yakalayacaktır
 
-#Bildirimleri (Activities) Tümü Okundu API
-@app.route('/api/activities/mark_all_read', methods=['PUT'])
-def mark_all_activities_as_read():
+# Bildirimleri Tümü Okundu API (notifications tablosu için)
+@app.route('/api/notifications/mark_all_read', methods=['PUT'])
+def mark_all_notifications_as_read():
     """Tüm bildirimleri veritabanında okunmuş olarak işaretler."""
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
-            sql = "UPDATE activities SET is_read = 1 WHERE is_read = 0" # Sadece okunmamışları güncelle
+            sql = "UPDATE notifications SET is_read = 1 WHERE is_read = 0" # Sadece okunmamışları güncelle
             cursor.execute(sql)
             connection.commit()
             rows_affected = cursor.rowcount # Kaç satırın etkilendiğini al
@@ -150,14 +155,14 @@ def mark_all_activities_as_read():
         if connection:
             connection.close()
 
-# Okunmamış Bildirim Sayısı API
-@app.route('/api/activities/unread-count', methods=['GET'])
-def get_unread_activities_count():
+# Okunmamış Bildirim Sayısı API (notifications tablosu için)
+@app.route('/api/notifications/unread-count', methods=['GET'])
+def get_unread_notifications_count():
     """Veritabanındaki okunmamış bildirimlerin sayısını döndürür."""
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
-            sql = "SELECT COUNT(activity_id) as unread_count FROM activities WHERE is_read = 0"
+            sql = "SELECT COUNT(id) as unread_count FROM notifications WHERE is_read = 0"
             cursor.execute(sql)
             result = cursor.fetchone()
             return jsonify(result), 200
@@ -172,22 +177,21 @@ def get_unread_activities_count():
             connection.close()
 
 
-#Bildirimleri (Activities) Okundu API
-
-@app.route('/api/activities/<int:activity_id>/read', methods=['PUT'])
-def mark_activity_as_read(activity_id):
-    """Belirli bir bildirimi (activity) veritabanında okunmuş olarak işaretler."""
+# Bildirimi Okundu API (notifications tablosu için)
+@app.route('/api/notifications/<int:notification_id>/read', methods=['PUT'])
+def mark_notification_as_read(notification_id):
+    """Belirli bir bildirimi veritabanında okunmuş olarak işaretler."""
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
             # Bildirimin varlığını kontrol et
-            cursor.execute("SELECT activity_id FROM activities WHERE activity_id = %s", (activity_id,))
+            cursor.execute("SELECT id FROM notifications WHERE id = %s", (notification_id,))
             if not cursor.fetchone():
                 return jsonify({'message': 'Bildirim bulunamadı.'}), 404
 
             # is_read sütununu 1 olarak güncelle
-            sql = "UPDATE activities SET is_read = 1 WHERE activity_id = %s"
-            cursor.execute(sql, (activity_id,))
+            sql = "UPDATE notifications SET is_read = 1 WHERE id = %s"
+            cursor.execute(sql, (notification_id,))
             connection.commit()
 
         return jsonify({'message': 'Bildirim başarıyla okunmuş olarak işaretlendi.'}), 200
@@ -201,15 +205,16 @@ def mark_activity_as_read(activity_id):
         if connection:
             connection.close()
 
-#Bildirimleri (Activities) Çekme API
-@app.route('/api/activities', methods=['GET'])
-def get_activities():
-    """Veritabanından tüm bildirimleri (activities) çeker."""
+# Bildirimleri Çekme API (notifications tablosu için)
+@app.route('/api/notifications', methods=['GET'])
+def get_notifications():
+    """Veritabanından tüm bildirimleri çeker."""
     connection = get_db_connection()
     try:
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            # MySQL 'activities' tablosundan tüm verileri çekmek için SQL sorgusu
-            sql = "SELECT * FROM activities ORDER BY created_at DESC"
+            # 'notifications' tablosundan tüm verileri çekmek için SQL sorgusu
+            # icon ve project_id olmadığı için sorgudan çıkarıldı
+            sql = "SELECT id, user_id, title, message, is_read, created_at FROM notifications ORDER BY created_at DESC"
             cursor.execute(sql)
             result = cursor.fetchall()
             # is_read alanını int olarak döndür (garanti)
@@ -222,6 +227,41 @@ def get_activities():
             return jsonify(result)
     finally:
         connection.close()
+
+# Yeni Bildirim Ekle API (notifications tablosu için)
+@app.route('/api/notifications', methods=['POST'])
+def add_notification():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    title = data.get('title')
+    message = data.get('message') # 'raw_description' yerine 'message' kullanıldı
+
+    # Zorunlu alan kontrolü
+    if not all([user_id, title, message]):
+        return jsonify({'message': 'Kullanıcı ID, başlık ve mesaj zorunludur.'}), 400
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Bildirim tablosuna ekleme
+            sql = """
+            INSERT INTO notifications (user_id, title, message, created_at)
+            VALUES (%s, %s, %s, NOW())
+            """
+            cursor.execute(sql, (user_id, title, message))
+            connection.commit()
+        return jsonify({'message': 'Bildirim başarıyla kaydedildi!'}), 201
+    except pymysql.Error as e:
+        print(f"Veritabanı bildirim kaydetme hatası: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
+    except Exception as e:
+        print(f"Genel bildirim kaydetme hatası: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+    finally:
+        if connection:
+            connection.close()
+
 @app.route('/api/update_user_profile', methods=['POST'])
 def update_user_profile():
     data = request.get_json()
@@ -1075,7 +1115,6 @@ def delete_project_api(project_id):
             #         user_ids_to_notify.append(uid)
 
            
-
         return jsonify({'message': 'Proje başarıyla silindi!'}), 200
 
     except pymysql.Error as e:
@@ -1156,129 +1195,27 @@ def get_dashboard_stats():
             connection.close()
 
 
-# Son Aktivite Ekle API (Yeni)
-@app.route('/api/activities', methods=['POST'])
-def add_activity_log():
-    data = request.get_json()
-    user_id = data.get('user_id')
-    project_id = data.get('project_id')  # Proje ID'si (null olabilir)
-    title = data.get('title')  # <-- Eksikse ekle!
-    action_type = data.get('action_type') # Yeni alan: 'project_update', 'task_update', 'project_delete', 'pdf_export'
-    raw_description = data.get('raw_description') # Yeni alan: Ham açıklama (örn: "iş adımı güncellendi", "projesi silindi")
-    icon = data.get('icon', 'fas fa-info-circle')
-
-    # Zorunlu alan kontrolü
-    if not all([user_id, title, action_type, raw_description]):
-        return jsonify({'message': 'Kullanıcı, başlık, eylem türü ve ham açıklama zorunludur.'}), 400
-
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # Kullanıcı adını çek
-            cursor.execute("SELECT fullname FROM users WHERE id = %s", (user_id,))
-            user = cursor.fetchone()
-
-            if not user:
-                return jsonify({'message': 'Kullanıcı bulunamadı.'}), 404
-
-            user_fullname = user['fullname']
-            final_description = "" # Son açıklama burada oluşturulacak
-
-            # Proje bilgilerini çek (eğer project_id varsa)
-            project_name = None
-            if project_id:
-                cursor.execute("SELECT project_name FROM projects WHERE project_id = %s", (project_id,))
-                project_result = cursor.fetchone()
-                if project_result:
-                    project_name = project_result['project_name']
-
-            # Eylem türüne göre açıklama formatını belirle
-            if action_type == 'project_create':
-                if project_name:
-                    final_description = f'{user_fullname} tarafından: "{project_name}" adlı yeni proje eklendi.'
-                elif raw_description:
-                    final_description = f'{user_fullname} tarafından: {raw_description}'
-                else:
-                    final_description = f'{user_fullname} tarafından: Yeni proje eklendi.'
-
-            elif action_type == 'project_update':
-                if project_name:
-                    final_description = f'{user_fullname} tarafından: "{project_name}" adlı proje güncellendi.'
-                elif raw_description:
-                    final_description = f'{user_fullname} tarafından: {raw_description}'
-                else:
-                    final_description = f'{user_fullname} tarafından: Proje güncellendi.'
-
-            elif action_type == 'project_delete':
-                if project_name:
-                    final_description = f'{user_fullname} tarafından: "{project_name}" adlı proje silindi.'
-                elif raw_description:
-                    final_description = f'{user_fullname} tarafından: {raw_description}'
-                else:
-                    final_description = f'{user_fullname} tarafından: Proje silindi.'
-
-            elif action_type == 'task_update':
-                if project_name and raw_description:
-                    final_description = f'{user_fullname} tarafından: "{project_name}" projesinde "{raw_description}" iş adımı güncellendi.'
-                elif raw_description:
-                    final_description = f'{user_fullname} tarafından: {raw_description} iş adımı güncellendi.'
-                else:
-                    final_description = f'{user_fullname} tarafından: Bir iş adımı güncellendi.'
-
-            elif action_type == 'task_create':
-                if project_name and raw_description:
-                    final_description = f'{user_fullname} tarafından: "{project_name}" projesine "{raw_description}" iş adımı eklendi.'
-                elif raw_description:
-                    final_description = f'{user_fullname} tarafından: {raw_description} iş adımı eklendi.'
-                else:
-                    final_description = f'{user_fullname} tarafından: Bir iş adımı eklendi.'
-
-            elif action_type == 'task_delete':
-                if project_name and raw_description:
-                    final_description = f'{user_fullname} tarafından: "{project_name}" projesinden "{raw_description}" iş adımı silindi.'
-                elif raw_description:
-                    final_description = f'{user_fullname} tarafından: {raw_description} iş adımı silindi.'
-                else:
-                    final_description = f'{user_fullname} tarafından: Bir iş adımı silindi.'
-            elif action_type == 'pdf_export':
-                final_description = f'{user_fullname} tarafından: {raw_description}' # raw_description: "Proje listesinin PDF raporu oluşturuldu."
-            else:
-                final_description = f'{user_fullname} tarafından: {raw_description}' # Varsayılan veya diğer tipler
-
-            sql = """
-            INSERT INTO activities (user_id, title, description, icon, created_at)
-            VALUES (%s, %s, %s, %s, NOW())
-            """
-            cursor.execute(sql, (user_id, title, final_description, icon))
-            connection.commit()
-        return jsonify({'message': 'Aktivite başarıyla kaydedildi!'}), 201
-    except pymysql.Error as e:
-        print(f"Veritabanı aktivite kaydetme hatası: {e}")
-        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
-    except Exception as e:
-        print(f"Genel aktivite kaydetme hatası: {e}")
-        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
-    finally:
-        if connection:
-            connection.close()
-# Dashboard Son Aktivite API (Aktiviteler tablosundan çeker)
+# Dashboard Son Aktivite API (notifications tablosundan çeker)
 @app.route('/api/dashboard/activity', methods=['GET'])
 def get_dashboard_activity():
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT a.title, a.description, a.created_at, a.icon
-                FROM activities a
-                ORDER BY a.created_at DESC
+            # notifications tablosundan çekiyoruz
+            # icon alanı olmadığı için, varsayılan bir ikon kullanacağız veya frontend'de belirlenecek
+            sql = """
+                SELECT n.id, n.title, n.message, n.created_at, u.fullname AS user_fullname
+                FROM notifications n
+                JOIN users u ON n.user_id = u.id
+                ORDER BY n.created_at DESC
                 LIMIT 4
-            """)
-            activities_from_db = cursor.fetchall()
+            """
+            cursor.execute(sql)
+            notifications_from_db = cursor.fetchall()
 
             activities_for_frontend = []
-            for item in activities_from_db:
+            for item in notifications_from_db:
                 created_at_dt = item['created_at']
 
                 time_ago = "Bilinmeyen zaman"
@@ -1292,12 +1229,16 @@ def get_dashboard_activity():
                         time_ago = f"{int(time_diff.total_seconds() / 3600)} saat önce"
                     else:
                         time_ago = f"{int(time_diff.total_seconds() / 86400)} gün önce"
-
+                
+                # Kullanıcı adını başlığa veya mesaja ekleyebiliriz
+                # Burada sadece mesajı gösteriyoruz, başlık zaten yeterli
                 activities_for_frontend.append({
-                    "icon": item['icon'],
+                    "id": item['id'], # Yeni notification id
+                    "icon": "fas fa-info-circle", # Varsayılan ikon
                     "title": item['title'],
-                    "description": item['description'],  # Artık doğrudan düzgün açıklama!
-                    "time": time_ago,
+                    "description": item['message'],  # 'message' olarak değişti
+                    "created_at": created_at_dt.isoformat(), # Frontend'de formatTimeAgo kullanmak için
+                    "time": time_ago, # Bu alan frontend'de formatTimeAgo ile oluşturulacak
                 })
 
         return jsonify(activities_for_frontend), 200
@@ -1307,6 +1248,7 @@ def get_dashboard_activity():
     finally:
         if connection:
             connection.close()
+
 # Projenin İş Gidişatı Adımlarını Çekme API'si
 @app.route('/api/projects/<int:project_id>/progress', methods=['GET'])
 def get_project_progress_steps(project_id):
