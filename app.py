@@ -9,6 +9,7 @@ import datetime
 import dotenv
 from dotenv import load_dotenv
 import urllib.parse 
+import re # Yeni eklendi: Düzenli ifadeler için
 
 load_dotenv()
 
@@ -1341,8 +1342,12 @@ def log_activity(user_id, title, description, icon, is_read=0):
                 if user:
                     user_fullname = user['fullname']
 
+            # Remove (ID: X) pattern from description if it exists
+            # Açıklama metninden '(ID: rakamlar)' desenini temizle
+            cleaned_description = re.sub(r' \(ID: \d+\)', '', description)
+
             # Kullanıcı adını açıklamaya dahil et
-            full_description = f"{user_fullname} tarafından: {description}"
+            full_description = f"{user_fullname} tarafından: {cleaned_description}"
 
             # 'activity' yerine 'activities' olarak düzeltildi
             sql = """
