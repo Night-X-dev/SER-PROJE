@@ -698,9 +698,10 @@ def add_customer():
     postal_code = data.get('postalCode')
     address = data.get('address')
     notes = data.get('notes')
+    user_id = data.get('user_id') # Kullanıcı ID'si eklendi
 
-    if not all([customer_name, contact_person, phone]):
-        return jsonify({'message': 'Firma Adı, İlgili Kişi ve Telefon zorunlu alanlardır.'}), 400
+    if not all([customer_name, contact_person, phone, user_id]): # user_id zorunlu hale getirildi
+        return jsonify({'message': 'Firma Adı, İlgili Kişi, Telefon ve Kullanıcı ID zorunlu alanlardır.'}), 400
 
     connection = None
     try:
@@ -723,6 +724,14 @@ def add_customer():
             ))
             connection.commit()
             new_customer_id = cursor.lastrowid
+
+            # Aktivite loglama
+            log_activity(
+                user_id=user_id,
+                title='Yeni Müşteri Eklendi',
+                description=f'"{customer_name}" adlı yeni müşteri eklendi.',
+                icon='fas fa-user-plus'
+            )
 
         return jsonify({'message': 'Müşteri başarıyla eklendi!', 'customerId': new_customer_id}), 201
 
@@ -812,7 +821,10 @@ def update_customer(customer_id):
     postal_code = data.get('postalCode')
     address = data.get('address')
     notes = data.get('notes')
+    user_id = data.get('user_id') # Kullanıcı ID'si eklendi
 
+    if not user_id: # user_id zorunlu hale getirildi
+        return jsonify({'message': 'Kullanıcı ID eksik.'}), 400
     if not any([customer_name, status, contact_person, contact_title, phone, email, country, city, district, postal_code, address, notes]):
         return jsonify({'message': 'Güncellenecek veri bulunamadı.'}), 400
 
@@ -820,9 +832,13 @@ def update_customer(customer_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            cursor.execute("SELECT customer_id FROM customers WHERE customer_id = %s", (customer_id,))
-            if not cursor.fetchone():
+            # Güncellenecek müşterinin mevcut adını al (loglama için)
+            cursor.execute("SELECT customer_name FROM customers WHERE customer_id = %s", (customer_id,))
+            existing_customer_info = cursor.fetchone()
+            if not existing_customer_info:
                 return jsonify({'message': 'Müşteri bulunamadı.'}), 404
+            old_customer_name = existing_customer_info['customer_name']
+
 
             updates = []
             params = []
@@ -875,6 +891,14 @@ def update_customer(customer_id):
             if cursor.rowcount == 0:
                 return jsonify({'message': 'Müşteri verileri zaten güncel veya bir değişiklik yapılmadı.'}), 200
 
+            # Aktivite loglama
+            log_activity(
+                user_id=user_id,
+                title='Müşteri Güncellendi',
+                description=f'"{old_customer_name}" (ID: {customer_id}) adlı müşteri bilgileri güncellendi.',
+                icon='fas fa-user-edit'
+            )
+
         return jsonify({'message': 'Müşteri başarıyla güncellendi!'}), 200
 
     except pymysql.Error as e:
@@ -891,13 +915,21 @@ def update_customer(customer_id):
 
 @app.route('/api/customers/<int:customer_id>', methods=['DELETE'])
 def delete_customer(customer_id):
+    user_id = request.args.get('user_id') # user_id query parametresinden alınır
+    if not user_id:
+        return jsonify({'message': 'Kullanıcı ID eksik.'}), 400
+
+    customer_name = "Bilinmeyen Müşteri" # Loglama için varsayılan
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            cursor.execute("SELECT customer_id FROM customers WHERE customer_id = %s", (customer_id,))
-            if not cursor.fetchone():
+            # Müşteri adını silmeden önce al
+            cursor.execute("SELECT customer_name FROM customers WHERE customer_id = %s", (customer_id,))
+            customer_info = cursor.fetchone()
+            if not customer_info:
                 return jsonify({'message': 'Müşteri bulunamadı.'}), 404
+            customer_name = customer_info['customer_name']
 
             sql = "DELETE FROM customers WHERE customer_id = %s"
             cursor.execute(sql, (customer_id,))
@@ -905,6 +937,14 @@ def delete_customer(customer_id):
 
             if cursor.rowcount == 0:
                 return jsonify({'message': 'Müşteri silinemedi veya zaten mevcut değil.'}), 404
+            
+            # Aktivite loglama
+            log_activity(
+                user_id=user_id,
+                title='Müşteri Silindi',
+                description=f'"{customer_name}" (ID: {customer_id}) adlı müşteri silindi.',
+                icon='fas fa-user-minus'
+            )
 
         return jsonify({'message': 'Müşteri başarıyla silindi!'}), 200
 
@@ -1054,14 +1094,21 @@ def update_project(project_id):
     end_date = data.get('end_date')
     project_location = data.get('project_location')
     status = data.get('status')
+    user_id = data.get('user_id') # Kullanıcı ID'si eklendi
+
+    if not user_id: # user_id zorunlu hale getirildi
+        return jsonify({'message': 'Kullanıcı ID eksik.'}), 400
 
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            cursor.execute("SELECT project_id FROM projects WHERE project_id = %s", (project_id,))
-            if not cursor.fetchone():
+            # Güncellenecek projenin mevcut adını al (loglama için)
+            cursor.execute("SELECT project_name FROM projects WHERE project_id = %s", (project_id,))
+            existing_project_info = cursor.fetchone()
+            if not existing_project_info:
                 return jsonify({'message': 'Proje bulunamadı.'}), 404
+            old_project_name = existing_project_info['project_name']
 
             updates = []
             params = []
@@ -1105,6 +1152,14 @@ def update_project(project_id):
             if cursor.rowcount == 0:
                 return jsonify({'message': 'Proje verileri zaten güncel veya bir değişiklik yapılmadı.'}), 200
 
+            # Aktivite loglama
+            log_activity(
+                user_id=user_id,
+                title='Proje Güncellendi',
+                description=f'"{old_project_name}" (ID: {project_id}) adlı proje bilgileri güncellendi.',
+                icon='fas fa-edit'
+            )
+
         return jsonify({'message': 'Proje başarıyla güncellendi!'}), 200
 
     except pymysql.Error as e:
@@ -1120,11 +1175,16 @@ def update_project(project_id):
 # Proje Silme API (DELETE)
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
 def delete_project_api(project_id):
+    user_id = request.args.get('user_id') # user_id query parametresinden alınır
+    if not user_id:
+        return jsonify({'message': 'Kullanıcı ID eksik.'}), 400
+
+    project_name = "Bilinmeyen Proje" # Loglama için varsayılan
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Silinecek projenin bilgilerini (özellikle yöneticisini) alın
+            # Silinecek projenin bilgilerini (özellikle adını) alın
             cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (project_id,))
             project_info = cursor.fetchone()
 
@@ -1145,17 +1205,13 @@ def delete_project_api(project_id):
             if cursor.rowcount == 0:
                 return jsonify({'message': 'Proje silinemedi veya bulunamadı.'}), 404
 
-            # Projede yer alan diğer kullanıcıları bul (örnek: bir proje_users tablosu varsa)
-            # Eğer sadece proje yöneticisine bildirim gidecekse aşağıdaki satır yeterli:
-            user_ids_to_notify = [project_manager_id]
-
-            # Eğer projede başka kullanıcılar da varsa, onları da ekle:
-            # cursor.execute("SELECT user_id FROM project_users WHERE project_id = %s", (project_id,))
-            # other_users = [row['user_id'] for row in cursor.fetchall()]
-            # for uid in other_users:
-            #     if uid not in user_ids_to_notify:
-            #         user_ids_to_notify.append(uid)
-
+            # Aktivite loglama
+            log_activity(
+                user_id=user_id,
+                title='Proje Silindi',
+                description=f'"{project_name}" (ID: {project_id}) adlı proje silindi.',
+                icon='fas fa-trash'
+            )
            
         return jsonify({'message': 'Proje başarıyla silindi!'}), 200
 
@@ -1277,39 +1333,109 @@ def log_activity(user_id, title, description, icon, is_read=0):
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
+            user_fullname = "Bilinmeyen Kullanıcı"
+            if user_id:
+                # Kullanıcının tam adını çek
+                cursor.execute("SELECT fullname FROM users WHERE id = %s", (user_id,))
+                user = cursor.fetchone()
+                if user:
+                    user_fullname = user['fullname']
+
+            # Kullanıcı adını açıklamaya dahil et
+            full_description = f"{user_fullname} tarafından: {description}"
+
             # 'activity' yerine 'activities' olarak düzeltildi
             sql = """
             INSERT INTO activities (user_id, title, description, icon, created_at, is_read)
             VALUES (%s, %s, %s, %s, NOW(), %s)
             """
-            cursor.execute(sql, (user_id, title, description, icon, is_read))
+            cursor.execute(sql, (user_id, title, full_description, icon, is_read))
         connection.commit() # Değişiklikleri veritabanına kaydet
-        print(f"Aktivite kaydedildi: Başlık: '{title}', Açıklama: '{description}'")
+        print(f"Aktivite kaydedildi: Başlık: '{title}', Açıklama: '{full_description}'")
     except pymysql.Error as e:
         print(f"Aktivite kaydı sırasında hata: {e}")
+    except Exception as e:
+        print(f"Genel aktivite kaydı sırasında hata: {e}")
     finally:
         if connection:
             connection.close()
 
-# Örnek kullanım: Diyelim ki yeni bir proje ekliyorsunuz
-# @app.route('/api/add_project', methods=['POST'])
-# def add_project():
-#     data = request.json
-#     project_name = data.get('projectName')
-#     current_user_id = 1 # Bu değeri oturumdan veya kimlik doğrulama sisteminizden alın
-#     
-#     # ... Proje ekleme mantığı ...
-#     
-#     if proje_basariyla_eklendi:
-#         log_activity(
-#             user_id=current_user_id,
-#             title='Yeni Proje Eklendi',
-#             description=f'"{project_name}" adlı yeni proje başlatıldı.',
-#             icon='fas fa-plus', # Font Awesome ikonu
-#             is_read=0
-#         )
-#         return jsonify({"message": "Proje başarıyla eklendi"}), 201
-#     # ...
+# Yeni Proje Ekle API (önceki yorum satırından çıkarıldı ve tamamlandı)
+@app.route('/api/add_project', methods=['POST'])
+def add_project():
+    data = request.json
+    project_name = data.get('project_name')
+    customer_id = data.get('customer_id')
+    project_manager_id = data.get('project_manager_id')
+    reference_no = data.get('reference_no')
+    description = data.get('description')
+    contract_date = data.get('contract_date')
+    meeting_date = data.get('meeting_date')
+    start_date = data.get('start_date')
+    end_date = data.get('end_date')
+    project_location = data.get('project_location')
+    status = data.get('status', 'Planlama Aşamasında') # Default status
+
+    user_id = data.get('user_id') # İşlemi yapan kullanıcı ID'si
+
+    if not all([project_name, customer_id, project_manager_id, user_id]):
+        return jsonify({'message': 'Proje adı, müşteri, proje yöneticisi ve kullanıcı ID zorunludur.'}), 400
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            sql = """
+            INSERT INTO projects (project_name, customer_id, project_manager_id, reference_no, description,
+                                  contract_date, meeting_date, start_date, end_date, project_location, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(sql, (
+                project_name, customer_id, project_manager_id, reference_no, description,
+                contract_date, meeting_date, start_date, end_date, project_location, status
+            ))
+            connection.commit()
+            new_project_id = cursor.lastrowid
+
+        log_activity(
+            user_id=user_id,
+            title='Yeni Proje Eklendi',
+            description=f'"{project_name}" adlı yeni proje (ID: {new_project_id}) oluşturuldu.',
+            icon='fas fa-plus'
+        )
+        return jsonify({"message": "Proje başarıyla eklendi", "project_id": new_project_id}), 201
+    except pymysql.Error as e:
+        print(f"Veritabanı proje ekleme hatası: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
+    except Exception as e:
+        print(f"Genel proje ekleme hatası: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+    finally:
+        if connection:
+            connection.close()
+
+# PDF Raporu Oluşturma Aktivitesini Loglama API'si (Frontend'den çağrılacak)
+@app.route('/api/log_pdf_report', methods=['POST'])
+def log_pdf_report():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    report_type = data.get('report_type', 'Genel Rapor') # Varsayılan rapor tipi
+
+    if not user_id:
+        return jsonify({'message': 'Kullanıcı ID eksik.'}), 400
+
+    try:
+        log_activity(
+            user_id=user_id,
+            title='PDF Raporu Oluşturuldu',
+            description=f'"{report_type}" raporunun PDF dosyası oluşturuldu.',
+            icon='fas fa-file-pdf'
+        )
+        return jsonify({'message': 'PDF raporu aktivitesi başarıyla kaydedildi.'}), 200
+    except Exception as e:
+        print(f"PDF raporu aktivitesi kaydetme hatası: {e}")
+        return jsonify({'message': 'PDF raporu aktivitesi kaydedilirken hata oluştu.'}), 500
+
 
 # Projenin İş Gidişatı Adımlarını Çekme API'si
 @app.route('/api/projects/<int:project_id>/progress', methods=['GET'])

@@ -2394,6 +2394,9 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/api/projects/${id}`, {
                     method: 'DELETE',
+                    // user_id'yi query parametresi olarak gönder
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: currentUser.id })
                 });
                 const result = await response.json();
                 if (response.ok) {
@@ -2499,7 +2502,8 @@
                 reference_no: ref || null,
                 status: status,
                 start_date: start,
-                end_date: end
+                end_date: end,
+                user_id: currentUser.id // user_id eklendi
             };
 
             try {
