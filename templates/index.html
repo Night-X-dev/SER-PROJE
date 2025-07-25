@@ -1722,6 +1722,26 @@
         // --- API Çağrıları ve Veri İşleme ---
         const dbStatusElement = document.getElementById('dbStatus');
         let projectChartInstance; 
+        
+        // Projeleri filtreleme ve tabloyu yeniden render etme fonksiyonu
+        function applyFiltersAndRenderTable() {
+            const filterProjectName = document.getElementById('filterProjectName').value.toLowerCase();
+            const filterRefNo = document.getElementById('filterRefNo').value.toLowerCase();
+            const filterCustomer = document.getElementById('filterCustomer').value.toLowerCase();
+            const filterStatus = document.getElementById('filterStatus').value.toLowerCase();
+
+            filteredProjects = allProjectsData.filter(project => {
+                const projectNameMatch = project.project_name.toLowerCase().includes(filterProjectName);
+                const refNoMatch = (project.reference_no || '').toLowerCase().includes(filterRefNo);
+                const customerMatch = project.customer_name.toLowerCase().includes(filterCustomer);
+                const statusMatch = filterStatus === '' || project.status.toLowerCase() === filterStatus;
+
+                return projectNameMatch && refNoMatch && customerMatch && statusMatch;
+            });
+
+            currentPage = 1; // Filtreler değiştiğinde sayfayı sıfırla
+            renderProjectsTable(filteredProjects);
+        }
 
         // Projeleri Backend'den Çekme
         async function fetchProjects() {
@@ -1735,6 +1755,7 @@
             '<tr><td colspan="8" style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Projeler yükleniyor...</td></tr>';
 
             try {
+                // API_BASE_URL common_notifications.js'ten global olarak erişilebilir olmalı
                 const response = await fetch(`${API_BASE_URL}/api/projects`);
                 if (!response.ok) {
                     throw new Error(`HTTP hatası! Durum: ${response.status}`);
@@ -1748,6 +1769,7 @@
                 console.error('Projeler çekilemedi:', error);
                 dbStatusElement.textContent = 'Bağlantı Hatası!';
                 dbStatusElement.style.color = 'var(--danger)';
+                // showToast common_notifications.js'ten global olarak erişilebilir olmalı
                 showToast(`Projeler yüklenirken hata oluştu: ${error.message}`, true);
                 if (tbody) {
                     tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--danger);">Projeler yüklenemedi. Lütfen sunucu bağlantısını kontrol edin.</td></tr>';
@@ -1758,6 +1780,7 @@
         // Dashboard İstatistiklerini Backend'den Çekme
         async function fetchDashboardStats() {
             try {
+                // API_BASE_URL common_notifications.js'ten global olarak erişilebilir olmalı
                 const response = await fetch(`${API_BASE_URL}/api/dashboard/stats`);
                 if (!response.ok) {
                     throw new Error(`HTTP hatası! Durum: ${response.status}`);
@@ -1778,6 +1801,7 @@
                 });
             } catch (error) {
                 console.error('İstatistikler çekilemedi:', error);
+                // showToast common_notifications.js'ten global olarak erişilebilir olmalı
                 showToast(`İstatistikler yüklenirken hata oluştu: ${error.message}`, true);
             }
         }
@@ -1813,6 +1837,7 @@
             activityListContainer.innerHTML = '<p style="text-align: center; color: var(--light-gray);">Aktiviteler yükleniyor...</p>'; // Yükleniyor mesajı
 
             try {
+                // API_BASE_URL common_notifications.js'ten global olarak erişilebilir olmalı
                 const response = await fetch(`${API_BASE_URL}/api/recent_activities`); 
                 if (!response.ok) {
                     const errorText = await response.text(); // Hata mesajını çekmeye çalışın
@@ -1867,6 +1892,7 @@
             } catch (error) {
                 console.error('Son aktiviteler çekilirken hata oluştu:', error);
                 activityListContainer.innerHTML = `<p style="text-align: center; color: var(--danger);">Aktiviteler yüklenirken hata oluştu: ${error.message}</p>`;
+                // showToast common_notifications.js'ten global olarak erişilebilir olmalı
                 showToast('Aktiviteler yüklenirken hata oluştu.', true); 
             }
         }
@@ -1887,6 +1913,7 @@
 
             try {
                 // activities endpoint'ini kullan
+                // API_BASE_URL common_notifications.js'ten global olarak erişilebilir olmalı
                 const response = await fetch(`${API_BASE_URL}/api/activities`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2006,6 +2033,7 @@
                 btn.onclick = function() { 
                     const id = this.getAttribute('data-id');
                     // Modalı kullanarak onay al
+                    // showConfirmModal common_notifications.js'ten global olarak erişilebilir olmalı
                     showConfirmModal('Projeyi Sil', 'Bu projeyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.', () => {
                         deleteProject(id);
                     });
@@ -2173,9 +2201,143 @@
                 fetchDashboardStats();
                 fetchRecentActivities();
                 // fetchNotifications(); // common_notifications.js'teki setupCommonListeners içinde çağrılıyor artık
+                // showToast common_notifications.js'ten global olarak erişilebilir olmalı
                 showToast('Veriler başarıyla yenilendi');
             });
+
+            // Bildirim panelini açma/kapatma
+            const notificationButton = document.getElementById('notificationButton');
+            const notificationPanel = document.getElementById('notificationPanel');
+            const closeNotificationPanelBtn = document.getElementById('closeNotificationPanel');
+            const markAllReadBtn = document.getElementById('markAllReadBtn'); // Bildirim panelindeki "Tümünü Okundu İşaretle" butonu
+
+            if (notificationButton && notificationPanel && closeNotificationPanelBtn && markAllReadBtn) {
+                notificationButton.addEventListener('click', (event) => {
+                    event.stopPropagation(); // Olayın body'ye yayılmasını engelle
+                    notificationPanel.classList.toggle('show');
+                    if (notificationPanel.classList.contains('show')) {
+                        // Paneli açtığımızda bildirimleri yükle
+                        const user = JSON.parse(localStorage.getItem('user')) || JSON.parse(localStorage.getItem('currentUser'));
+                        if (user && user.id) {
+                            fetchNotificationsForPanel(user.id);
+                        }
+                    }
+                });
+
+                closeNotificationPanelBtn.addEventListener('click', () => {
+                    notificationPanel.classList.remove('show');
+                });
+
+                // Bildirim paneli dışına tıklayınca kapat
+                document.body.addEventListener('click', (event) => {
+                    if (notificationPanel.classList.contains('show') &&
+                        !notificationPanel.contains(event.target) &&
+                        !notificationButton.contains(event.target)) {
+                        notificationPanel.classList.remove('show');
+                    }
+                });
+
+                markAllReadBtn.addEventListener('click', async () => {
+                    const user = JSON.parse(localStorage.getItem('user')) || JSON.parse(localStorage.getItem('currentUser'));
+                    if (user && user.id) {
+                        await markAllNotificationsAsReadForPanel(user.id);
+                    }
+                });
+            }
         });
+
+        // Bildirim panelindeki bildirimleri yükleme fonksiyonu
+        async function fetchNotificationsForPanel(userId) {
+            const notificationList = document.getElementById('notificationList');
+            if (!notificationList) return;
+
+            notificationList.innerHTML = '<div class="no-notifications"><i class="fas fa-spinner fa-spin"></i> Bildirimler yükleniyor...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/notifications?user_id=${userId}`);
+                const notifications = await response.json();
+
+                notificationList.innerHTML = ''; // Yükleniyor mesajını temizle
+
+                if (notifications.length === 0) {
+                    notificationList.innerHTML = '<div class="no-notifications"><i class="fas fa-bell-slash"></i> Henüz bildirim yok.</div>';
+                } else {
+                    notifications.forEach(notification => {
+                        const item = document.createElement('div');
+                        item.classList.add('notification-item');
+                        if (notification.is_read === 0) {
+                            item.classList.add('unread');
+                        }
+                        item.setAttribute('data-notification-id', notification.id);
+                        item.innerHTML = `
+                            <div class="notification-item-icon">
+                                <i class="${notification.icon || 'fas fa-info-circle'}"></i>
+                            </div>
+                            <div class="notification-item-content">
+                                <div class="notification-item-title">${notification.title}</div>
+                                <div class="notification-item-description">${notification.message}</div>
+                                <div class="notification-item-time">${formatTimeAgo(notification.created_at)}</div>
+                            </div>
+                        `;
+                        notificationList.appendChild(item);
+
+                        item.addEventListener('click', async () => {
+                            // Bildirime tıklandığında okunmuş olarak işaretle
+                            await markNotificationAsReadForPanel(notification.id, userId);
+                            // İsteğe bağlı: Bildirime tıklandığında ilgili sayfaya yönlendir
+                            // if (notification.link) { window.location.href = notification.link; }
+                        });
+                    });
+                }
+            } catch (error) {
+                console.error('Bildirimler panel için çekilirken hata oluştu:', error);
+                notificationList.innerHTML = '<div class="no-notifications" style="color: var(--danger);">Bildirimler yüklenemedi.</div>';
+            }
+        }
+
+        // Bildirim panelindeki tek bir bildirimi okundu olarak işaretleme
+        async function markNotificationAsReadForPanel(notificationId, userId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showToast(data.message || 'Bildirim okundu olarak işaretlendi.');
+                    fetchNotificationsForPanel(userId); // Paneli yenile
+                    fetchUnreadNotificationsCount(userId); // Zil sayacını güncelle
+                } else {
+                    showToast(data.message || 'Bildirim okundu olarak işaretlenemedi.', true);
+                }
+            } catch (error) {
+                console.error('Bildirim okundu olarak işaretlenirken hata:', error);
+                showToast('Bildirim okundu olarak işaretlenirken bir hata oluştu.', true);
+            }
+        }
+
+        // Bildirim panelindeki tüm bildirimleri okundu olarak işaretleme
+        async function markAllNotificationsAsReadForPanel(userId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/notifications/mark_all_read`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showToast(data.message || 'Tüm bildirimler başarıyla okundu olarak işaretlendi!');
+                    fetchNotificationsForPanel(userId); // Paneli yenile
+                    fetchUnreadNotificationsCount(userId); // Zil sayacını güncelle
+                } else {
+                    showToast(data.message || 'Tüm bildirimler okundu olarak işaretlenemedi.', true);
+                }
+            } catch (error) {
+                console.error('Tüm bildirimleri okundu olarak işaretlerken hata:', error);
+                showToast('Tüm bildirimleri okundu olarak işaretlerken bir hata oluştu.', true);
+            }
+        }
 
         function showProjectDetails(id) {
             const project = allProjectsData.find(p => p.project_id == id);
@@ -2187,7 +2349,7 @@
             document.getElementById('projectName').textContent = project.project_name;
             document.getElementById('projectRefNo').textContent = project.reference_no || '-';
             document.getElementById('projectCustomer').textContent = project.customer_name;
-            document.getElementById('projectLocation').textContent = project.location || '-';
+            document.getElementById('projectLocation').textContent = project.project_location || '-'; // Düzeltme: project_location kullanıldı
             document.getElementById('projectStatus').textContent = project.status;
             document.getElementById('projectStartDate').textContent = project.start_date;
             document.getElementById('projectEndDate').textContent = project.end_date;
@@ -2214,7 +2376,7 @@
                 return;
             }
             try {
-                // DÜZELTME: API_BASE_URL kullanıldı
+                // API_BASE_URL common_notifications.js'ten global olarak erişilebilir olmalı
                 const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(role)}`);
                 if (!response.ok) throw new Error('Yetki bilgisi alınamadı');
                 const perms = await response.json();
@@ -2224,24 +2386,39 @@
                 attachTableEventListeners(); // Yetki geldikten sonra eventleri ata
             } catch (error) {
                 userPermissions = null;
+                // showToast common_notifications.js'ten global olarak erişilebilir olmalı
                 showToast('Yetki bilgisi alınamadı. Lütfen tekrar giriş yapın.', true);
             }
         }
 
         // currentUser'ın tanımlı olduğundan emin olun
+        // Bu kısım artık setupCommonListeners içinde çağrılacak
+        /*
         if (typeof currentUser !== 'undefined' && currentUser && currentUser.role) {
             fetchUserPermissions(currentUser.role);
         } else {
-            // Eğer currentUser henüz tanımlanmamışsa, DOMContentLoaded'den sonra tekrar kontrol edin.
-            // Bu durum, sayfa yüklendiğinde currentUser'ın hemen mevcut olmaması durumunda önemlidir.
             document.addEventListener('DOMContentLoaded', () => {
                 const userFromStorage = JSON.parse(localStorage.getItem('currentUser'));
                 if (userFromStorage && userFromStorage.role) {
-                    currentUser = userFromStorage; // currentUser'ı global olarak ayarla
+                    currentUser = userFromStorage;
                     fetchUserPermissions(currentUser.role);
                 }
             });
         }
+        */
+        // setupCommonListeners içinde çağrıldığı için bu blok kaldırıldı.
+        // Ancak, bu sayfaya özgü yetki çekme işlemi için, DOMContentLoaded içinde
+        // currentUser yüklendikten sonra fetchUserPermissions çağrılmalıdır.
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // common_notifications.js'teki setupCommonListeners çağrılır ve kullanıcı bilgileri yüklenir.
+            // Bu noktada currentUser global olarak ayarlanmış olmalı.
+            const userFromStorage = JSON.parse(localStorage.getItem('currentUser'));
+            if (userFromStorage && userFromStorage.role) {
+                currentUser = userFromStorage; // currentUser'ı global olarak ayarla
+                fetchUserPermissions(currentUser.role);
+            }
+        });
 
 
         function updateButtonPermissions() {
@@ -2265,22 +2442,25 @@
                 }
             }
             if (!role) {
+                // showToast common_notifications.js'ten global olarak erişilebilir olmalı
                 showToast('Kullanıcı rolü bulunamadı. Lütfen tekrar giriş yapın.', true);
                 return;
             }
             try {
-                // DÜZELTME: API_BASE_URL kullanıldı
+                // API_BASE_URL common_notifications.js'ten global olarak erişilebilir olmalı
                 const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(role)}`);
                 if (!response.ok) throw new Error('Yetki sorgusu başarısız');
                 const perms = await response.json();
                 const permission = Array.isArray(perms) ? perms[0] : perms;
                 if (permission.musteri_duzenleme != 1) {
+                    // showToast common_notifications.js'ten global olarak erişilebilir olmalı
                     showToast('Müşteri düzenleme yetkiniz yok!', true);
                     return;
                 }
                 // Yetkisi varsa yönlendir
                 window.location.href = `projeler.html?editCustomer=${customerId}`;
             } catch (error) {
+                // showToast common_notifications.js'ten global olarak erişilebilir olmalı
                 showToast('Yetki sorgusu sırasında hata oluştu.', true);
             }
         }
@@ -2300,27 +2480,32 @@
                 }
             }
             if (!role) {
+                // showToast common_notifications.js'ten global olarak erişilebilir olmalı
                 showToast('Kullanıcı rolü bulunamadı. Lütfen tekrar giriş yapın.', true);
                 return;
             }
             try {
-                // DÜZELTME: API_BASE_URL kullanıldı
+                // API_BASE_URL common_notifications.js'ten global olarak erişilebilir olmalı
                 const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(role)}`);
                 if (!response.ok) throw new Error('Yetki sorgusu başarısız');
                 const perms = await response.json();
                 const permission = Array.isArray(perms) ? perms[0] : perms;
                 if (permission.proje_duzenle != 1) {
+                    // showToast common_notifications.js'ten global olarak erişilebilir olmalı
                     showToast('Proje düzenleme yetkiniz yok!', true);
                     return;
                 }
                 // Yetkisi varsa yönlendir
                 window.location.href = `projeler.html?editProject=${projectId}`;
             } catch (error) {
+                // showToast common_notifications.js'ten global olarak erişilebilir olmalı
                 showToast('Yetki sorgusu sırasında hata oluştu.', true);
             }
         }
 
         // Custom Confirm Modal (alert yerine kullanılacak)
+        // showConfirmModal common_notifications.js'ten global olarak erişilebilir olmalı
+        /*
         function showConfirmModal(title, message, onConfirm) {
             const modalHtml = `
                 <div class="modal fade" id="customConfirmModal" tabindex="-1" aria-labelledby="customConfirmModalLabel" aria-hidden="true">
@@ -2362,6 +2547,7 @@
                 confirmModalElement.remove(); // Modal kapandığında DOM'dan kaldır
             });
         }
+        */
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <!-- common_notifications.js dosyasını buraya ekleyin -->
