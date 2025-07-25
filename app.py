@@ -70,6 +70,11 @@ def serve_yeni_musteri_page():
     """/yeni_musteri.html URL'ye gelen istekleri yeni_musteri.html sayfasına yönlendirir."""
     return render_template('yeni_musteri.html')
 
+@app.route('/bildirim.html')
+def serve_bildirim_page():
+    """/bildirim.html URL'ye gelen istekleri bildirim.html sayfasına yönlendirir."""
+    return render_template('bildirim.html')
+
 # CORS (Cross-Origin Resource Sharing) ayarları
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
@@ -206,36 +211,28 @@ def mark_notification_as_read(notification_id):
             connection.close()
 
 # Bildirimleri Çekme API (notifications tablosu için)
-@app.route('/bildirim.html')
-def serve_bildirim_page():
-    return render_template('bildirim.html')
-
-# API'yi kullanıcıya göre filtrelemek için güncelle (user_id kontrolü ekleyerek)
 @app.route('/api/notifications', methods=['GET'])
 def get_notifications():
-    user_id = request.args.get('user_id')
-    if not user_id:
-        return jsonify({'message': 'Kullanıcı ID gerekli'}), 400
-
+    """Veritabanından tüm bildirimleri çeker."""
     connection = get_db_connection()
     try:
-        with connection.cursor() as cursor:
-            sql = """
-                SELECT id, user_id, title, message, is_read, created_at
-                FROM notifications
-                WHERE user_id = %s
-                ORDER BY created_at DESC
-            """
-            cursor.execute(sql, (user_id,))
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            # 'notifications' tablosundan tüm verileri çekmek için SQL sorgusu
+            # Yeni tablo yapısına göre 'id' ve 'message' kullanıldı, 'icon' ve 'project_id' kaldırıldı.
+            sql = "SELECT id, user_id, title, message, is_read, created_at FROM notifications ORDER BY created_at DESC"
+            cursor.execute(sql)
             result = cursor.fetchall()
-
+            # is_read alanını int olarak döndür (garanti)
             for row in result:
-                row['is_read'] = int(row['is_read']) if 'is_read' in row else 0
-
-            return jsonify(result), 200
+                if 'is_read' in row:
+                    try:
+                        row['is_read'] = int(row['is_read'])
+                    except Exception:
+                        row['is_read'] = 0
+            return jsonify(result)
     finally:
-        connection.close()
-
+        if connection:
+            connection.close()
 
 # Yeni Bildirim Ekle API (notifications tablosu için)
 @app.route('/api/notifications', methods=['POST'])
