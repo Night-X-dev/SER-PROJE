@@ -1,0 +1,60 @@
+<!-- templates/partials/notification-panel.html -->
+<div class="notification-card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fas fa-bell"></i> Bildirimler
+        </div>
+        <div class="card-actions">
+            <button id="clearAllBtn" class="btn btn-outline">
+                <i class="fas fa-trash-alt"></i> Tümünü Temizle
+            </button>
+        </div>
+    </div>
+    <ul id="notificationList" class="notification-list">
+        <!-- JS ile dinamik olarak doldurulacak -->
+    </ul>
+</div>
+
+<script>
+    const userId = localStorage.getItem("userId"); // Kullanıcıya özel
+
+    function fetchNotifications() {
+        fetch(`/api/notifications?user_id=${userId}`)
+            .then(res => res.json())
+            .then(data => {
+                const list = document.getElementById("notificationList");
+                list.innerHTML = "";
+                if (!data || data.length === 0) {
+                    list.innerHTML = "<li class='text-muted'>Henüz bildiriminiz yok.</li>";
+                    return;
+                }
+
+                data.forEach(n => {
+                    const li = document.createElement("li");
+                    li.className = `notification-item ${n.is_read === 0 ? "unread" : ""}`;
+                    li.innerHTML = `
+                        <div class="flex-grow-1">
+                            <strong>${n.title}</strong><br/>
+                            <span>${n.message}</span><br/>
+                            <small class="text-muted">${new Date(n.created_at).toLocaleString()}</small>
+                        </div>
+                        ${n.is_read === 0 ? `<button onclick="markAsRead(${n.id})" class="btn btn-sm btn-outline ms-3">Okundu</button>` : ""}
+                    `;
+                    list.appendChild(li);
+                });
+            });
+    }
+
+    function markAsRead(id) {
+        fetch(`/api/notifications/${id}/read`, { method: 'PUT' })
+            .then(() => fetchNotifications());
+    }
+
+    document.getElementById("clearAllBtn").addEventListener("click", () => {
+        fetch(`/api/notifications/mark_all_read`, { method: "PUT" })
+            .then(() => fetchNotifications());
+    });
+
+    // Sayfa yüklendiğinde bildirimi getir
+    document.addEventListener("DOMContentLoaded", fetchNotifications);
+</script>
