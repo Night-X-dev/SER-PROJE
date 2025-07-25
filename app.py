@@ -9,13 +9,12 @@ import datetime
 import dotenv
 from dotenv import load_dotenv
 import urllib.parse
-import re
+import re # Yeni eklendi: Düzenli ifadeler için
 
 load_dotenv()
 
 app = Flask(__name__)
 
-# Route definitions for serving HTML files
 @app.route('/')
 def serve_login_page():
     """Kök URL'ye (/) gelen istekleri login.html sayfasına yönlendirir."""
@@ -76,11 +75,10 @@ def serve_bildirim_page():
     """/bildirim.html URL'ye gelen istekleri bildirim.html sayfasına yönlendirir."""
     return render_template('bildirim.html')
 
-# CORS (Cross-Origin Resource Sharing) settings
+# CORS (Cross-Origin Resource Sharing) ayarları
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 def get_db_connection():
-    """Veritabanı bağlantısını döndürür."""
     connection = None
     try:
         host = None
@@ -134,60 +132,7 @@ def get_db_connection():
             connection.close()
         raise
 
-# Helper function to log notifications
-def log_notification(user_id, title, message, icon):
-    """Veritabanına yeni bir bildirim kaydeder."""
-    connection = get_db_connection()
-    try:
-        with connection.cursor() as cursor:
-            sql = """
-            INSERT INTO notifications (user_id, title, message, icon, created_at, is_read)
-            VALUES (%s, %s, %s, %s, NOW(), 0)
-            """
-            cursor.execute(sql, (user_id, title, message, icon))
-        connection.commit()
-        print(f"Bildirim kaydedildi: Kullanıcı ID: {user_id}, Başlık: '{title}', Mesaj: '{message}'")
-    except pymysql.Error as e:
-        print(f"Bildirim kaydı sırasında hata: {e}")
-    except Exception as e:
-        print(f"Genel bildirim kaydı sırasında hata: {e}")
-    finally:
-        if connection:
-            connection.close()
-
-# Helper function to log activities
-def log_activity(user_id, title, description, icon, is_read=0):
-    """Veritabanına yeni bir aktivite kaydeder."""
-    connection = get_db_connection()
-    try:
-        with connection.cursor() as cursor:
-            user_fullname = "Bilinmeyen Kullanıcı"
-            if user_id:
-                cursor.execute("SELECT fullname FROM users WHERE id = %s", (user_id,))
-                user = cursor.fetchone()
-                if user:
-                    user_fullname = user['fullname']
-
-            cleaned_description = re.sub(r' \(ID: \d+\)', '', description)
-
-            full_description = f"{user_fullname} tarafından: {cleaned_description}"
-
-            sql = """
-            INSERT INTO activities (user_id, title, description, icon, created_at, is_read)
-            VALUES (%s, %s, %s, %s, NOW(), %s)
-            """
-            cursor.execute(sql, (user_id, title, full_description, icon, is_read))
-        connection.commit()
-        print(f"Aktivite kaydedildi: Başlık: '{title}', Açıklama: '{full_description}'")
-    except pymysql.Error as e:
-        print(f"Aktivite kaydı sırasında hata: {e}")
-    except Exception as e:
-        print(f"Genel aktivite kaydı sırasında hata: {e}")
-    finally:
-        if connection:
-            connection.close()
-
-# Notification API: Mark all notifications as read
+# Bildirimleri Tümü Okundu API (notifications tablosu için)
 @app.route('/api/notifications/mark_all_read', methods=['PUT'])
 def mark_all_notifications_as_read():
     """Belirli bir kullanıcıya ait tüm bildirimleri veritabanında okunmuş olarak işaretler."""
@@ -215,7 +160,7 @@ def mark_all_notifications_as_read():
         if connection:
             connection.close()
 
-# Notification API: Get unread notification count
+# Okunmamış Bildirim Sayısı API (notifications tablosu için)
 @app.route('/api/notifications/unread-count', methods=['GET'])
 def get_unread_notifications_count():
     """Belirli bir kullanıcıya ait okunmamış bildirimlerin sayısını döndürür."""
@@ -240,7 +185,8 @@ def get_unread_notifications_count():
         if connection:
             connection.close()
 
-# Notification API: Mark a single notification as read
+
+# Bildirimi Okundu API (notifications tablosu için)
 @app.route('/api/notifications/<int:notification_id>/read', methods=['PUT'])
 def mark_notification_as_read(notification_id):
     """Belirli bir bildirimi veritabanında okunmuş olarak işaretler."""
@@ -272,7 +218,7 @@ def mark_notification_as_read(notification_id):
         if connection:
             connection.close()
 
-# Notification API: Get all notifications for a user (or all if no user_id)
+# Bildirimleri Çekme API (notifications tablosu için)
 @app.route('/api/notifications', methods=['GET'])
 def get_notifications():
     """Veritabanından tüm bildirimleri çeker (admin için) veya belirli bir kullanıcıya ait bildirimleri çeker."""
@@ -283,11 +229,11 @@ def get_notifications():
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
             if user_id:
                 # Belirli bir kullanıcıya ait bildirimleri çek
-                sql = "SELECT id, user_id, title, message, is_read, created_at, icon FROM notifications WHERE user_id = %s ORDER BY created_at DESC"
+                sql = "SELECT id, user_id, title, message, is_read, created_at FROM notifications WHERE user_id = %s ORDER BY created_at DESC"
                 cursor.execute(sql, (user_id,))
             else:
                 # Tüm bildirimleri çek (Admin yetkisi için kullanılabilir)
-                sql = "SELECT id, user_id, title, message, is_read, created_at, icon FROM notifications ORDER BY created_at DESC"
+                sql = "SELECT id, user_id, title, message, is_read, created_at FROM notifications ORDER BY created_at DESC"
                 cursor.execute(sql)
             result = cursor.fetchall()
 
@@ -302,9 +248,9 @@ def get_notifications():
         if connection:
             connection.close()
 
-# Notification API: Add new notification
+# Yeni Bildirim Ekle API (notifications tablosu için)
 @app.route('/api/notifications', methods=['POST'])
-def add_notification_api(): # Renamed to avoid conflict with helper function
+def add_notification():
     data = request.get_json()
     user_id = data.get('user_id')
     title = data.get('title')
@@ -335,9 +281,9 @@ def add_notification_api(): # Renamed to avoid conflict with helper function
         if connection:
             connection.close()
 
-# Activity API: Add new activity
+# Yeni Aktivite Ekle API (activities tablosu için)
 @app.route('/api/activities', methods=['POST'])
-def add_activity_api(): # Renamed to avoid conflict with helper function
+def add_activity():
     data = request.get_json()
     user_id = data.get('user_id')
     title = data.get('title')
@@ -1109,7 +1055,6 @@ def update_project(project_id):
     project_location = data.get('project_location')
     status = data.get('status')
     user_id = data.get('user_id') # Güncellemeyi yapan kullanıcı ID'si
-    new_project_manager_id = data.get('project_manager_id') # Yeni proje yöneticisi ID'si
 
     if not user_id:
         return jsonify({'message': 'Kullanıcı ID eksik.'}), 400
@@ -1155,7 +1100,8 @@ def update_project(project_id):
                 updates.append("status = %s")
                 params.append(status)
 
-            # Proje yöneticisi değiştiyse güncelle ve bildirim gönder
+            # Proje yöneticisi değiştiyse, projeyi güncelleyen kullanıcıya bildirim gönder
+            new_project_manager_id = data.get('project_manager_id')
             if new_project_manager_id is not None and new_project_manager_id != old_project_manager_id:
                 updates.append("project_manager_id = %s")
                 params.append(new_project_manager_id)
@@ -1166,14 +1112,7 @@ def update_project(project_id):
                     message=f'"{project_name}" projesi size atandı.',
                     icon='fas fa-clipboard-list'
                 )
-                # Eski proje yöneticisine (eğer varsa) bildirim gönder (isteğe bağlı)
-                if old_project_manager_id:
-                    log_notification(
-                        user_id=old_project_manager_id,
-                        title='Proje Ataması Değişikliği',
-                        message=f'"{project_name}" projesi sizden alındı.',
-                        icon='fas fa-user-times'
-                    )
+
 
             if not updates:
                 return jsonify({'message': 'Güncellenecek bir alan belirtilmedi.'}), 400
@@ -1347,6 +1286,57 @@ def get_recent_activities():
     except Exception as e:
         print(f"Bilinmeyen hata (recent_activities): {e}")
         return jsonify({"error": "Bilinmeyen bir sunucu hatası oluştu."}), 500
+    finally:
+        if connection:
+            connection.close()
+
+
+def log_activity(user_id, title, description, icon, is_read=0):
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            user_fullname = "Bilinmeyen Kullanıcı"
+            if user_id:
+                cursor.execute("SELECT fullname FROM users WHERE id = %s", (user_id,))
+                user = cursor.fetchone()
+                if user:
+                    user_fullname = user['fullname']
+
+            cleaned_description = re.sub(r' \(ID: \d+\)', '', description)
+
+            full_description = f"{user_fullname} tarafından: {cleaned_description}"
+
+            sql = """
+            INSERT INTO activities (user_id, title, description, icon, created_at, is_read)
+            VALUES (%s, %s, %s, %s, NOW(), %s)
+            """
+            cursor.execute(sql, (user_id, title, full_description, icon, is_read))
+        connection.commit()
+        print(f"Aktivite kaydedildi: Başlık: '{title}', Açıklama: '{full_description}'")
+    except pymysql.Error as e:
+        print(f"Aktivite kaydı sırasında hata: {e}")
+    except Exception as e:
+        print(f"Genel aktivite kaydı sırasında hata: {e}")
+    finally:
+        if connection:
+            connection.close()
+
+# Yeni bir bildirim kaydetmek için yardımcı fonksiyon
+def log_notification(user_id, title, message, icon):
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            sql = """
+            INSERT INTO notifications (user_id, title, message, icon, created_at, is_read)
+            VALUES (%s, %s, %s, %s, NOW(), 0)
+            """
+            cursor.execute(sql, (user_id, title, message, icon))
+        connection.commit()
+        print(f"Bildirim kaydedildi: Kullanıcı ID: {user_id}, Başlık: '{title}', Mesaj: '{message}'")
+    except pymysql.Error as e:
+        print(f"Bildirim kaydı sırasında hata: {e}")
+    except Exception as e:
+        print(f"Genel bildirim kaydı sırasında hata: {e}")
     finally:
         if connection:
             connection.close()
@@ -1837,16 +1827,16 @@ def update_task(task_id):
                 if assigned_user_id != old_assigned_user_id and old_assigned_user_id is not None:
                     log_notification(
                         user_id=old_assigned_user_id,
-                        title='Görev Ataması Değişti',
+                        title='Görev İptali/Değişikliği',
                         message=f'"{old_title}" görevi artık size atanmamış veya güncellendi.',
-                        icon='fas fa-user-times' # İkon güncellendi
+                        icon='fas fa-times-circle'
                     )
                 # Yeni atanana veya başlık değiştiyse atanana bildirim
                 log_notification(
                     user_id=assigned_user_id,
                     title='Görev Güncellendi',
                     message=f'"{title}" görevi güncellendi.',
-                    icon='fas fa-edit' # İkon güncellendi
+                    icon='fas fa-edit'
                 )
 
         return jsonify({'message': 'Görev başarıyla güncellendi!'}), 200
@@ -1863,23 +1853,8 @@ def delete_task(task_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Get task details before deleting for notification
-            cursor.execute("SELECT title, assigned_user_id FROM tasks WHERE id = %s", (task_id,))
-            task_info = cursor.fetchone()
-
-            sql = "DELETE FROM tasks WHERE id = %s"
-            cursor.execute(sql, (task_id,))
+            cursor.execute("DELETE FROM tasks WHERE id = %s", (task_id,))
             connection.commit()
-
-            if cursor.rowcount > 0 and task_info:
-                # Notify the assigned user that their task was deleted
-                log_notification(
-                    user_id=task_info['assigned_user_id'],
-                    title='Görev Silindi',
-                    message=f'"{task_info["title"]}" görevi silindi.',
-                    icon='fas fa-trash-alt' # İkon güncellendi
-                )
-
         return jsonify({'message': 'Görev başarıyla silindi!'}), 200
     except Exception as e:
         print(f"Görev silme hatası: {e}")
