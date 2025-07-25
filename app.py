@@ -491,16 +491,56 @@ def delete_user(user_id):
         connection = get_db_connection()
         with connection.cursor() as cursor:
             # Check if user exists
-            cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+            cursor.execute("SELECT id, fullname FROM users WHERE id = %s", (user_id,))
             user_info = cursor.fetchone()
             if not user_info:
                 return jsonify({'message': 'Kullanıcı bulunamadı.'}), 404
 
-            # Kullanıcıya atanmış görevleri sil
+            # Prevent deletion of the 'Admin' user or any critical user (e.g., ID 1)
+            # You might want to adjust this logic based on your specific admin user ID or role
+            if user_info['id'] == 1: # Assuming ID 1 is a critical admin/system user
+                 return jsonify({'message': 'Bu kullanıcı silinemez.'}), 403 # Forbidden
+
+            # Find a default project manager to reassign projects to
+            # This assumes you have a user with a specific ID (e.g., 1) or a role like 'Admin'
+            # You might need to adjust this query to find a suitable default user.
+            # For demonstration, let's try to find an 'Admin' user or just pick the first available user that is not the one being deleted.
+            default_manager_id = None
+            cursor.execute("SELECT id FROM users WHERE role = 'Admin' AND id != %s LIMIT 1", (user_id,))
+            admin_user = cursor.fetchone()
+            if admin_user:
+                default_manager_id = admin_user['id']
+            else:
+                # If no other admin, try to find any other user that is not the one being deleted
+                cursor.execute("SELECT id FROM users WHERE id != %s LIMIT 1", (user_id,))
+                other_user = cursor.fetchone()
+                if other_user:
+                    default_manager_id = other_user['id']
+
+            if default_manager_id:
+                # Reassign projects managed by the user being deleted
+                cursor.execute(
+                    "UPDATE projects SET project_manager_id = %s WHERE project_manager_id = %s",
+                    (default_manager_id, user_id)
+                )
+                print(f"DEBUG: Reassigned {cursor.rowcount} projects from user {user_id} to {default_manager_id}")
+            else:
+                # If no other user to reassign to, you must delete associated projects
+                # This is a less desirable option if project data is important.
+                # You might want to add a confirmation prompt on the frontend for this case.
+                cursor.execute("DELETE FROM projects WHERE project_manager_id = %s", (user_id,))
+                print(f"DEBUG: Deleted {cursor.rowcount} projects for user {user_id} (no manager to reassign to)")
+                # Also delete project progress entries for these projects if not handled by CASCADE DELETE
+                # (Assuming project_progress has a foreign key to projects with ON DELETE CASCADE)
+                # If not, you'd need to delete from project_progress first:
+                # cursor.execute("DELETE FROM project_progress WHERE project_id IN (SELECT project_id FROM projects WHERE project_manager_id = %s)", (user_id,))
+
+
+            # Delete tasks assigned to the user
             cursor.execute("DELETE FROM tasks WHERE assigned_user_id = %s", (user_id,))
             print(f"DEBUG: Deleted {cursor.rowcount} tasks for user {user_id}")
 
-            # Kullanıcıyı sil
+            # Finally, delete the user
             sql = "DELETE FROM users WHERE id = %s"
             cursor.execute(sql, (user_id,))
             connection.commit()
@@ -510,6 +550,7 @@ def delete_user(user_id):
 
     except pymysql.Error as e:
         print(f"Veritabanı kullanıcı silme hatası: {e}")
+        # Check for specific error code if needed, but general message is often sufficient
         return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
         print(f"Genel kullanıcı silme hatası: {e}")
