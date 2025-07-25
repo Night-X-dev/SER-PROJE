@@ -70,11 +70,6 @@ def serve_yeni_musteri_page():
     """/yeni_musteri.html URL'ye gelen istekleri yeni_musteri.html sayfasına yönlendirir."""
     return render_template('yeni_musteri.html')
 
-@app.route('/bildirim.html')
-def serve_bildirim_page():
-    """/bildirim.html URL'ye gelen istekleri bildirim.html sayfasına yönlendirir."""
-    return render_template('bildirim.html')
-
 # CORS (Cross-Origin Resource Sharing) ayarları
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
