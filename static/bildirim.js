@@ -1,22 +1,29 @@
 // bildirim.js
 
-// API Base URL'i global bir değişkenden veya konfigürasyon dosyasından almak daha iyidir.
-// Şimdilik ana script'teki `API_BASE_URL` değişkenini kullanacağını varsayıyoruz.
-// Eğer bu script tek başına çalışacaksa, bu değişkenin burada tanımlanması gerekir.
-// const API_BASE_URL = "https://ser-proje.onrender.com"; 
+// API Base URL'i: Eğer ana script'te (index.html) tanımlı değilse, burada tanımlanır.
+// Bu, bildirim.js'in bağımsız çalışabilmesini sağlar.
+const API_BASE_URL = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : "https://ser-proje.onrender.com"; 
 
 document.addEventListener('DOMContentLoaded', function() {
     // Bildirim panelini placeholder bir div'e yükle
-    fetch('bildirim.html')
-        .then(response => response.text())
+    // fetch yolu, bildirim.html'in static klasöründe olduğunu varsayar.
+    fetch('static/bildirim.html') // Düzeltme: static klasöründen yükle
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`bildirim.html yüklenirken HTTP hatası! Durum: ${response.status}`);
+            }
+            return response.text();
+        })
         .then(data => {
             const placeholder = document.getElementById('notification-panel-placeholder');
             if (placeholder) {
                 placeholder.innerHTML = data;
+                // HTML yüklendikten sonra event listener'ları ve diğer fonksiyonları etkinleştir
+                initializeNotificationPanel();
+                fetchUnreadNotificationCount();
+            } else {
+                console.error('HATA: "notification-panel-placeholder" elementi bulunamadı.');
             }
-            // HTML yüklendikten sonra event listener'ları ve diğer fonksiyonları etkinleştir
-            initializeNotificationPanel();
-            fetchUnreadNotificationCount();
         })
         .catch(error => console.error('Bildirim paneli yüklenirken hata oluştu:', error));
 });
@@ -29,38 +36,61 @@ function initializeNotificationPanel() {
     const markAllReadBtn = document.getElementById('markAllReadBtn');
     const deleteAllNotificationsBtn = document.getElementById('deleteAllNotificationsBtn');
 
-    if (!notificationButton || !notificationPanel || !closeNotificationPanel || !markAllReadBtn || !deleteAllNotificationsBtn) {
-        console.error("Bildirim paneli bileşenlerinden bazıları eksik. ID'leri kontrol edin.");
-        return;
+    // Elementlerin gerçekten var olup olmadığını kontrol edin
+    if (!notificationButton) {
+        console.error("HATA: 'notificationButton' elementi bulunamadı. Bildirim butonu çalışmayacak.");
+        return; // Fonksiyonu burada sonlandır
+    }
+    if (!notificationPanel || !closeNotificationPanel || !markAllReadBtn || !deleteAllNotificationsBtn) {
+        console.error("HATA: Bildirim paneli bileşenlerinden bazıları (panel, kapatma, okundu, silme butonları) eksik. ID'leri kontrol edin.");
+        // Bu durumda yine de notificationButton'a tıklama olayını ekleyebiliriz,
+        // ancak panelin kendisi düzgün çalışmayabilir.
     }
 
     notificationButton.addEventListener('click', (event) => {
-        event.stopPropagation();
-        notificationPanel.classList.toggle('show');
-        if (notificationPanel.classList.contains('show')) {
-            fetchNotifications();
+        event.stopPropagation(); // Olayın body'ye yayılmasını engelle
+        if (notificationPanel) { // Panel elementinin var olduğunu kontrol et
+            notificationPanel.classList.toggle('show');
+            if (notificationPanel.classList.contains('show')) {
+                fetchNotifications();
+            }
         }
     });
 
-    closeNotificationPanel.addEventListener('click', () => {
-        notificationPanel.classList.remove('show');
-    });
+    if (closeNotificationPanel) {
+        closeNotificationPanel.addEventListener('click', () => {
+            if (notificationPanel) {
+                notificationPanel.classList.remove('show');
+            }
+        });
+    }
 
+    // Panel dışına tıklayınca kapatma
     document.addEventListener('click', (event) => {
-        if (notificationPanel.classList.contains('show') &&
+        if (notificationPanel && notificationButton && notificationPanel.classList.contains('show') &&
             !notificationPanel.contains(event.target) &&
             !notificationButton.contains(event.target)) {
             notificationPanel.classList.remove('show');
         }
     });
 
-    markAllReadBtn.addEventListener('click', markAllNotificationsAsRead);
-    deleteAllNotificationsBtn.addEventListener('click', () => {
-         // Silme işlemi için onay al
-        showConfirmModal('Tüm Bildirimleri Sil', 'Tüm bildirimleri kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.', () => {
-            deleteAllNotifications();
+    if (markAllReadBtn) {
+        markAllReadBtn.addEventListener('click', markAllNotificationsAsRead);
+    }
+    
+    if (deleteAllNotificationsBtn) {
+        deleteAllNotificationsBtn.addEventListener('click', () => {
+            // Silme işlemi için onay al (showConfirmModal'ın global olarak tanımlı olduğunu varsayar)
+            if (typeof showConfirmModal === 'function') {
+                showConfirmModal('Tüm Bildirimleri Sil', 'Tüm bildirimleri kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.', () => {
+                    deleteAllNotifications();
+                });
+            } else {
+                console.warn("showConfirmModal fonksiyonu bulunamadı. Onay almadan silme işlemi yapılacak.");
+                deleteAllNotifications();
+            }
         });
-    });
+    }
 }
 
 // Sadece okunmamış bildirim sayısını çeken fonksiyon
@@ -76,22 +106,23 @@ async function fetchUnreadNotificationCount() {
         const data = await response.json();
         const unreadCount = data.unread_count || 0;
 
-        notificationButton.setAttribute('data-count', unreadCount);
-        if (unreadCount > 0) {
-            notificationButton.classList.add('has-notifications');
-        } else {
-            notificationButton.classList.remove('has-notifications');
-        }
+        updateNotificationCount(unreadCount); // Merkezi fonksiyonu kullan
     } catch (error) {
         console.error('Okunmamış bildirim sayısı çekilemedi:', error);
+        // Hata durumunda bile sayacı bir uyarı ile göster
         notificationButton.setAttribute('data-count', '!');
         notificationButton.classList.add('has-notifications');
+        // showToast(`Okunmamış bildirim sayısı yüklenirken hata oluştu: ${error.message}`, true); // Eğer toast göstermek isterseniz
     }
 }
 
 // Bildirimleri çekme ve panele render etme
 async function fetchNotifications() {
     const notificationListDiv = document.getElementById('notificationList');
+    if (!notificationListDiv) {
+        console.error("HATA: 'notificationList' elementi bulunamadı.");
+        return;
+    }
     notificationListDiv.innerHTML = '<div class="no-notifications"><i class="fas fa-spinner fa-spin"></i> Bildirimler yükleniyor...</div>';
 
     try {
@@ -106,18 +137,22 @@ async function fetchNotifications() {
     } catch (error) {
         console.error('Bildirimler çekilemedi:', error);
         notificationListDiv.innerHTML = '<div class="no-notifications" style="color: var(--danger);">Bildirimler yüklenemedi.</div>';
-        showToast(`Bildirimler yüklenirken hata oluştu: ${error.message}`, true);
+        if (typeof showToast === 'function') {
+            showToast(`Bildirimler yüklenirken hata oluştu: ${error.message}`, true);
+        }
     }
 }
 
 // Bildirimleri panele render etme
 function renderNotifications(notifications) {
     const notificationListDiv = document.getElementById('notificationList');
+    if (!notificationListDiv) return;
+
     notificationListDiv.innerHTML = '';
 
     if (notifications.length === 0) {
         notificationListDiv.innerHTML = '<div class="no-notifications">Henüz yeni bildiriminiz yok.</div>';
-        updateNotificationCount(0);
+        updateNotificationCount(0); // Hiç bildirim yoksa sayacı sıfırla
         return;
     }
 
@@ -157,7 +192,7 @@ function renderNotifications(notifications) {
         notificationListDiv.appendChild(item);
     });
 
-    updateNotificationCount(unreadCount);
+    updateNotificationCount(unreadCount); // Render sonrası sayacı güncelle
 }
 
 // Bildirim sayacını ve ikon durumunu güncelleyen merkezi fonksiyon
@@ -176,7 +211,7 @@ function updateNotificationCount(count) {
 
 // Tek bir bildirimi okunmuş olarak işaretle
 async function markNotificationAsRead(notificationId, itemElement) {
-    if (!itemElement.classList.contains('unread')) return;
+    if (!itemElement || !itemElement.classList.contains('unread')) return;
 
     try {
         const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
@@ -187,12 +222,17 @@ async function markNotificationAsRead(notificationId, itemElement) {
             const notificationButton = document.getElementById('notificationButton');
             let currentCount = parseInt(notificationButton.getAttribute('data-count') || '0');
             updateNotificationCount(currentCount - 1);
+            if (typeof showToast === 'function') {
+                showToast('Bildirim okundu olarak işaretlendi.');
+            }
         } else {
             const errorData = await response.json();
             throw new Error(errorData.message || 'İşlem Başarısız');
         }
     } catch (error) {
-        showToast(`Hata: ${error.message}`, true);
+        if (typeof showToast === 'function') {
+            showToast(`Hata: ${error.message}`, true);
+        }
         console.error('Bildirim okundu olarak işaretlenirken hata:', error);
     }
 }
@@ -205,7 +245,9 @@ async function markAllNotificationsAsRead() {
         });
         const result = await response.json();
         if (response.ok) {
-            showToast(result.message || 'Tüm bildirimler okundu.');
+            if (typeof showToast === 'function') {
+                showToast(result.message || 'Tüm bildirimler okundu.');
+            }
             document.querySelectorAll('.notification-item.unread').forEach(item => {
                 item.classList.remove('unread');
             });
@@ -214,7 +256,9 @@ async function markAllNotificationsAsRead() {
             throw new Error(result.message || 'İşlem başarısız');
         }
     } catch (error) {
-        showToast(`Hata: ${error.message}`, true);
+        if (typeof showToast === 'function') {
+            showToast(`Hata: ${error.message}`, true);
+        }
         console.error('Tüm bildirimler okunurken hata:', error);
     }
 }
@@ -227,7 +271,9 @@ async function deleteNotification(notificationId, itemElement) {
         });
         const result = await response.json();
         if (response.ok) {
-            showToast(result.message || 'Bildirim silindi.');
+            if (typeof showToast === 'function') {
+                showToast(result.message || 'Bildirim silindi.');
+            }
             // Eğer bildirim okunmamışsa sayacı güncelle
             if (itemElement.classList.contains('unread')) {
                 const notificationButton = document.getElementById('notificationButton');
@@ -237,14 +283,16 @@ async function deleteNotification(notificationId, itemElement) {
             itemElement.remove(); // Elementi DOM'dan kaldır
             // Eğer hiç bildirim kalmadıysa "yok" mesajı göster
             const notificationListDiv = document.getElementById('notificationList');
-            if (notificationListDiv.children.length === 0) {
+            if (notificationListDiv && notificationListDiv.children.length === 0) {
                  notificationListDiv.innerHTML = '<div class="no-notifications">Henüz yeni bildiriminiz yok.</div>';
             }
         } else {
             throw new Error(result.message || 'Silme işlemi başarısız');
         }
     } catch (error) {
-        showToast(`Hata: ${error.message}`, true);
+        if (typeof showToast === 'function') {
+            showToast(`Hata: ${error.message}`, true);
+        }
         console.error('Bildirim silinirken hata:', error);
     }
 }
@@ -257,16 +305,25 @@ async function deleteAllNotifications() {
         });
         const result = await response.json();
         if (response.ok) {
-            showToast(result.message || 'Tüm bildirimler silindi.');
+            if (typeof showToast === 'function') {
+                showToast(result.message || 'Tüm bildirimler silindi.');
+            }
             const notificationListDiv = document.getElementById('notificationList');
-            notificationListDiv.innerHTML = '<div class="no-notifications">Henüz yeni bildiriminiz yok.</div>';
+            if (notificationListDiv) {
+                notificationListDiv.innerHTML = '<div class="no-notifications">Henüz yeni bildiriminiz yok.</div>';
+            }
             updateNotificationCount(0);
-            document.getElementById('notificationPanel').classList.remove('show');
+            const notificationPanel = document.getElementById('notificationPanel');
+            if (notificationPanel) {
+                notificationPanel.classList.remove('show');
+            }
         } else {
             throw new Error(result.message || 'Silme işlemi başarısız');
         }
     } catch (error) {
-        showToast(`Hata: ${error.message}`, true);
+        if (typeof showToast === 'function') {
+            showToast(`Hata: ${error.message}`, true);
+        }
         console.error('Tüm bildirimler silinirken hata:', error);
     }
 }
