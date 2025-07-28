@@ -1754,6 +1754,9 @@
       function showConfirmationModal(message, actionCallback) {
           document.getElementById('confirmationMessage').innerHTML = message;
           currentConfirmAction = actionCallback;
+          // Ensure the modal is on top
+          const confirmationModalElement = document.getElementById('confirmationModal');
+          confirmationModalElement.style.zIndex = '2001'; // Higher than projectModal
           confirmationModal.show();
       }
 
@@ -1763,6 +1766,8 @@
               currentConfirmAction();
           }
           confirmationModal.hide();
+          const confirmationModalElement = document.getElementById('confirmationModal');
+          confirmationModalElement.style.zIndex = ''; // Reset z-index
       });
 
       // Tarih formatlama (DD.MM.YYYY)
@@ -2285,6 +2290,18 @@ async function renderViewModal(project) {
 
 // Düzenleme modalı fonksiyonu
 async function renderEditModal(project) {
+  // Müşterileri ve Proje Yöneticilerini çek
+  const customers = await fetchCustomersForSelect();
+  const projectManagers = await fetchProjectManagersForSelect();
+
+  let customerOptions = customers.map(c => 
+    `<option value="${c.customer_id}" ${c.customer_id === project.customer_id ? 'selected' : ''}>${c.customer_name}</option>`
+  ).join('');
+
+  let managerOptions = projectManagers.map(pm => 
+    `<option value="${pm.id}" ${pm.id === project.project_manager_user_id ? 'selected' : ''}>${pm.fullname}</option>`
+  ).join('');
+
   modalBody.innerHTML = `
     <input type="hidden" id="editProjectId" value="${project.project_id}">
     <div class="form-group">
@@ -2296,8 +2313,10 @@ async function renderEditModal(project) {
         <input type="text" id="editReferenceNo" class="form-input" value="${project.reference_no || ""}">
     </div>
     <div class="form-group">
-        <label for="editCustomerName" class="form-label">Müşteri Adı</label>
-        <input type="text" id="editCustomerName" class="form-input" value="${project.customer_name || ""}">
+        <label for="editCustomerId" class="form-label">Müşteri</label>
+        <select id="editCustomerId" class="form-input">
+            ${customerOptions}
+        </select>
     </div>
     <div class="form-group">
         <label for="editLocation" class="form-label">Konum</label>
@@ -2323,8 +2342,10 @@ async function renderEditModal(project) {
         <input type="date" id="editEndDate" class="form-input" value="${formatDateForInput(project.end_date || "")}">
     </div>
     <div class="form-group">
-        <label for="editProjectManager" class="form-label">Proje Yöneticisi</label>
-        <input type="text" id="editProjectManager" class="form-input" value="${project.project_manager_name || ""}">
+        <label for="editProjectManagerId" class="form-label">Proje Yöneticisi</label>
+        <select id="editProjectManagerId" class="form-input">
+            ${managerOptions}
+        </select>
     </div>
     <div class="form-group">
         <label for="editDescription" class="form-label">Açıklama</label>
@@ -2341,29 +2362,62 @@ async function renderEditModal(project) {
   await fetchProgressSteps(project.project_id, true);
 }
 
+// Müşterileri API'den çeken fonksiyon
+async function fetchCustomersForSelect() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/customers`);
+        if (!response.ok) {
+            throw new Error('Müşteriler çekilemedi.');
+        }
+        const customers = await response.json();
+        return customers;
+    } catch (error) {
+        console.error("Müşteriler çekilirken hata:", error);
+        showToast("Müşteriler yüklenirken bir sorun oluştu.", true);
+        return [];
+    }
+}
+
+// Proje Yöneticilerini API'den çeken fonksiyon
+async function fetchProjectManagersForSelect() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/project_managers`);
+        if (!response.ok) {
+            throw new Error('Proje yöneticileri çekilemedi.');
+        }
+        const managers = await response.json();
+        return managers;
+    } catch (error) {
+        console.error("Proje yöneticileri çekilirken hata:", error);
+        showToast("Proje yöneticileri yüklenirken bir sorun oluştu.", true);
+        return [];
+    }
+}
+
+
       async function saveProjectChanges() {
         const hasPermission = await checkPermission('proje_duzenle');
         if (!hasPermission) return;
         const projectId = document.getElementById("editProjectId").value;
         const projectName = document.getElementById("editProjectName").value;
         const referenceNo = document.getElementById("editReferenceNo").value;
-        const customerName = document.getElementById("editCustomerName").value;
+        const customerId = document.getElementById("editCustomerId").value; // Müşteri ID'si
         const location = document.getElementById("editLocation").value;
         const status = document.getElementById("editStatus").value;
         const startDate = document.getElementById("editStartDate").value;
         const endDate = document.getElementById("editEndDate").value;
-        const projectManagerName = document.getElementById("editProjectManager").value;
+        const projectManagerId = document.getElementById("editProjectManagerId").value; // Proje Yöneticisi ID'si
         const description = document.getElementById("editDescription").value;
 
         const updatedProject = {
           project_name: projectName,
           reference_no: referenceNo,
-          customer_name: customerName,
+          customer_id: customerId, // Müşteri ID'si eklendi
           project_location: location,
           status: status,
           start_date: startDate,
           end_date: endDate,
-          project_manager_name: projectManagerName,
+          project_manager_id: projectManagerId, // Proje Yöneticisi ID'si eklendi
           description: description,
           user_id: currentUser.id // Kullanıcı ID'si eklendi
         };
