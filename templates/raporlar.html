@@ -1242,6 +1242,34 @@
         
         // Sayfa yüklendiğinde çalışacak fonksiyonlar
         document.addEventListener('DOMContentLoaded', function() {
+            async function checkPermission(permissionKey) {
+            const role = getCurrentUserRole();
+            if (!role) {
+                showToast('Kullanıcı rolü bulunamadı. Lütfen tekrar giriş yapın.', true);
+                return false;
+            }
+            // Admin rolü için tüm yetkileri varsay
+            if (role === 'Admin') {
+                return true;
+            }
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(role)}`);
+                if (!response.ok) throw new Error('Yetki sorgusu başarısız');
+                const perms = await response.json();
+                const permission = Array.isArray(perms) ? perms[0] : perms;
+                // 'musteri_duzenleme' ve 'proje_sil' gibi anahtarları kontrol et
+                if (permission[permissionKey] != 1) {
+                    let msg = 'Bu işlem için yetkiniz yok!';
+                    if (permissionKey === 'raporlar') msg = 'Raporlar görüntüleme yetkiniz yok!';
+                    showToast(msg, true);
+                    return false;
+                }
+                return true;
+            } catch (error) {
+                showToast('Yetki sorgusu sırasında hata oluştu.', true);
+                return false;
+            }
+        }
             // Kullanıcı bilgilerini yükle
             loadUserInfo();
             
