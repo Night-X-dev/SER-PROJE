@@ -614,6 +614,7 @@ def update_role_permissions():
     proje_sil = data.get('proje_sil', 0)
     pdf_olusturma = data.get('pdf_olusturma', 0)
     musteri_duzenleme = data.get('musteri_duzenleme', 0)
+    raporlar = data.get('raporlar', 0) # Yeni eklenen raporlar yetkisi
 
     connection = None
     try:
@@ -621,10 +622,10 @@ def update_role_permissions():
         with connection.cursor() as cursor:
             sql = """
                 UPDATE yetki
-                SET proje_ekle=%s, proje_duzenle=%s, proje_sil=%s, pdf_olusturma=%s, musteri_duzenleme=%s
+                SET proje_ekle=%s, proje_duzenle=%s, proje_sil=%s, pdf_olusturma=%s, musteri_duzenleme=%s, raporlar=%s
                 WHERE LOWER(role_name)=%s
             """
-            cursor.execute(sql, (proje_ekle, proje_duzenle, proje_sil, pdf_olusturma, musteri_duzenleme, role.lower()))
+            cursor.execute(sql, (proje_ekle, proje_duzenle, proje_sil, pdf_olusturma, musteri_duzenleme, raporlar, role.lower()))
             connection.commit()
         return jsonify({'message': 'İzinler başarıyla güncellendi.'})
     except Exception as e:
