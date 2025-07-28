@@ -356,15 +356,12 @@ function formatTimeAgo(timestamp) {
 // Gerekli olabilecek yardımcı fonksiyonlar (showToast, showConfirmModal vb.)
 // Bu fonksiyonların ana script dosyanızda (index.html içindeki) global olarak tanımlandığını varsayıyoruz.
 // Eğer tanımlı değilse, buraya da eklenmeleri gerekir.
+
 // bildirim.js
 
-// API Base URL'i: Eğer ana script'te (index.html) tanımlı değilse, burada tanımlanır.
-// Bu, bildirim.js'in bağımsız çalışabilmesini sağlar.
-// 'var' kullanarak veya global window objesine atayarak çakışmayı önleyebiliriz.
-// En güvenli yol, global kapsamda zaten tanımlı olup olmadığını kontrol etmektir.
-if (typeof API_BASE_URL === 'undefined') {
-    var API_BASE_URL = "https://ser-proje.onrender.com"; 
-}
+// API Base URL'i: index.html dosyasında zaten tanımlanmış olduğu varsayılıyor.
+// Bu dosya içinde tekrar tanımlanmasına gerek yoktur.
+// Eğer index.html'de tanımlı değilse, bu script hata verecektir.
 
 document.addEventListener('DOMContentLoaded', function() {
     // Bildirim panelini placeholder bir div'e yükle
