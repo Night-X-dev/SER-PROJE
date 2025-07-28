@@ -2,7 +2,7 @@
 
 // API Base URL'i: Eğer ana script'te (index.html) tanımlı değilse, burada tanımlanır.
 // Bu, bildirim.js'in bağımsız çalışabilmesini sağlar.
-const API_BASE_URL = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : "https://ser-proje.onrender.com"; 
+const API_BASE_URL = "https://ser-proje.onrender.com";
 
 document.addEventListener('DOMContentLoaded', function() {
     // Bildirim panelini placeholder bir div'e yükle
