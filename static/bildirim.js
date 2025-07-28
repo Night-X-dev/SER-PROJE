@@ -5,6 +5,26 @@
 // Eğer index.html'de tanımlı değilse, bu script hata verecektir.
 
 document.addEventListener('DOMContentLoaded', function() {
+    // notificationButton'ı doğrudan DOMContentLoaded içinde başlat
+    const notificationButton = document.getElementById('notificationButton');
+    if (notificationButton) {
+        notificationButton.addEventListener('click', (event) => {
+            event.stopPropagation(); // Olayın body'ye yayılmasını engelle
+            const notificationPanel = document.getElementById('notificationPanel');
+            if (notificationPanel) { // Panel elementinin var olduğunu kontrol et
+                notificationPanel.classList.toggle('show');
+                if (notificationPanel.classList.contains('show')) {
+                    fetchNotifications();
+                }
+            }
+        });
+        // Sayfa yüklendiğinde okunmamış bildirim sayısını hemen çek
+        fetchUnreadNotificationCount();
+    } else {
+        console.error("HATA: 'notificationButton' elementi bulunamadı. Bildirim butonu çalışmayacak.");
+    }
+
+    // Bildirim panelinin HTML içeriğini yükle
     fetch('/bildirim.html') // Doğru yol: Flask "render_template" ile sunuyor
         .then(response => {
             if (!response.ok) {
@@ -16,43 +36,39 @@ document.addEventListener('DOMContentLoaded', function() {
             const placeholder = document.getElementById('notification-panel-placeholder');
             if (placeholder) {
                 placeholder.innerHTML = data;
-                initializeNotificationPanel();
-                fetchUnreadNotificationCount();
+                // Dinamik olarak yüklenen panelin bileşenlerini başlat
+                initializeNotificationPanelElements();
             } else {
                 console.error('HATA: "notification-panel-placeholder" elementi bulunamadı.');
             }
         })
         .catch(error => console.error('Bildirim paneli yüklenirken hata oluştu:', error));
+
+    // Panel dışına tıklayınca kapatma (bu listener her zaman aktif olmalı)
+    document.addEventListener('click', (event) => {
+        const notificationPanel = document.getElementById('notificationPanel');
+        const notificationButton = document.getElementById('notificationButton');
+        if (notificationPanel && notificationButton && notificationPanel.classList.contains('show') &&
+            !notificationPanel.contains(event.target) &&
+            !notificationButton.contains(event.target)) {
+            notificationPanel.classList.remove('show');
+        }
+    });
 });
 
 
-function initializeNotificationPanel() {
-    const notificationButton = document.getElementById('notificationButton');
+// Sadece dinamik olarak yüklenen bildirim paneli elementlerini başlatan fonksiyon
+function initializeNotificationPanelElements() {
     const notificationPanel = document.getElementById('notificationPanel');
     const closeNotificationPanel = document.getElementById('closeNotificationPanel');
     const markAllReadBtn = document.getElementById('markAllReadBtn');
     const deleteAllNotificationsBtn = document.getElementById('deleteAllNotificationsBtn');
 
     // Elementlerin gerçekten var olup olmadığını kontrol edin
-    if (!notificationButton) {
-        console.error("HATA: 'notificationButton' elementi bulunamadı. Bildirim butonu çalışmayacak.");
-        return; // Fonksiyonu burada sonlandır
-    }
     if (!notificationPanel || !closeNotificationPanel || !markAllReadBtn || !deleteAllNotificationsBtn) {
         console.error("HATA: Bildirim paneli bileşenlerinden bazıları (panel, kapatma, okundu, silme butonları) eksik. ID'leri kontrol edin.");
-        // Bu durumda yine de notificationButton'a tıklama olayını ekleyebiliriz,
-        // ancak panelin kendisi düzgün çalışmayabilir.
+        return; // Fonksiyonu burada sonlandır
     }
-
-    notificationButton.addEventListener('click', (event) => {
-        event.stopPropagation(); // Olayın body'ye yayılmasını engelle
-        if (notificationPanel) { // Panel elementinin var olduğunu kontrol et
-            notificationPanel.classList.toggle('show');
-            if (notificationPanel.classList.contains('show')) {
-                fetchNotifications();
-            }
-        }
-    });
 
     if (closeNotificationPanel) {
         closeNotificationPanel.addEventListener('click', () => {
@@ -61,15 +77,6 @@ function initializeNotificationPanel() {
             }
         });
     }
-
-    // Panel dışına tıklayınca kapatma
-    document.addEventListener('click', (event) => {
-        if (notificationPanel && notificationButton && notificationPanel.classList.contains('show') &&
-            !notificationPanel.contains(event.target) &&
-            !notificationButton.contains(event.target)) {
-            notificationPanel.classList.remove('show');
-        }
-    });
 
     if (markAllReadBtn) {
         markAllReadBtn.addEventListener('click', markAllNotificationsAsRead);
