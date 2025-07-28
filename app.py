@@ -1951,7 +1951,7 @@ def worker_performance():
             cursor.execute(sql)
             result = cursor.fetchall()
             return jsonify(result)
-    finally:
+    finally:    
         if connection:
             connection.close()
 
