@@ -212,27 +212,22 @@ def mark_notification_as_read(notification_id):
 
 # Bildirimleri Çekme API (notifications tablosu için)
 @app.route('/api/notifications', methods=['GET'])
-def get_notifications():
-    """Veritabanından tüm bildirimleri çeker."""
+def get_user_notifications():
+    if 'user_id' not in session:
+        return jsonify({'message': 'Giriş yapılmalıdır.'}), 401
+
+    user_id = session['user_id']
     connection = get_db_connection()
     try:
-        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            # 'notifications' tablosundan tüm verileri çekmek için SQL sorgusu
-            # Yeni tablo yapısına göre 'id' ve 'message' kullanıldı, 'icon' ve 'project_id' kaldırıldı.
-            sql = "SELECT id, user_id, title, message, is_read, created_at FROM notifications ORDER BY created_at DESC"
-            cursor.execute(sql)
-            result = cursor.fetchall()
-            # is_read alanını int olarak döndür (garanti)
-            for row in result:
-                if 'is_read' in row:
-                    try:
-                        row['is_read'] = int(row['is_read'])
-                    except Exception:
-                        row['is_read'] = 0
-            return jsonify(result)
+        with connection.cursor(dictionary=True) as cursor:
+            cursor.execute("SELECT * FROM notifications WHERE user_id = %s ORDER BY created_at DESC", (user_id,))
+            notifications = cursor.fetchall()
+            return jsonify(notifications)
+    except Exception as e:
+        return jsonify({'message': f'Hata: {str(e)}'}), 500
     finally:
-        if connection:
-            connection.close()
+        connection.close()
+
 @app.route('/api/notifications/<int:notification_id>', methods=['DELETE'])
 def delete_notification(notification_id):
     connection = get_db_connection()
