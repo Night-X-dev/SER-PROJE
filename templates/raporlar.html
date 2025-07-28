@@ -942,8 +942,10 @@
             font-size: 14px;
             color: var(--light-gray);
             display: flex;
-            justify-content: center;
+            justify-content: space-between; /* Butonları ayırmak için */
             align-items: center;
+            flex-wrap: wrap; /* Küçük ekranlarda sarmalamak için */
+            gap: 10px; /* Butonlar arası boşluk */
         }
         /* "Tümünü Okundu Olarak İşaretle" butonu için minimalist stil */
         .notification-panel-footer button {
@@ -968,6 +970,46 @@
             box-shadow: none; /* Gölgeyi kaldır */
         }
 
+        /* Tekil bildirim silme butonu */
+        .notification-item-actions {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            margin-left: auto; /* Sağ tarafa yasla */
+            flex-shrink: 0;
+        }
+        .notification-delete-btn {
+            background: none;
+            border: none;
+            color: var(--light-gray);
+            font-size: 14px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 5px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .notification-delete-btn:hover {
+            background-color: rgba(255, 71, 87, 0.1);
+            color: var(--danger);
+        }
+        /* "Tümünü Sil" butonu için stil */
+        .notification-panel-footer .delete-all-btn {
+            background: none;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .notification-panel-footer .delete-all-btn:hover {
+            background-color: var(--danger);
+            color: var(--white);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 71, 87, 0.3);
+        }
+
 
         /* Boş bildirim durumu */
         .no-notifications {
@@ -984,6 +1026,13 @@
                 right: 20px;
                 left: 20px;
                 top: 70px; /* Topbar'ın altına gelmesi için */
+            }
+            .notification-panel-footer {
+                flex-direction: column;
+            }
+            .notification-panel-footer button {
+                width: 100%;
+                margin-bottom: 5px;
             }
         }
     </style>
@@ -1072,6 +1121,9 @@
             <div class="notification-panel-footer">
                 <button id="markAllReadBtn">
                     <i class="fas fa-check-double"></i> Tümünü Okundu Olarak İşaretle
+                </button>
+                <button id="deleteAllNotificationsBtn" class="delete-all-btn">
+                    <i class="fas fa-trash-alt"></i> Tümünü Sil
                 </button>
             </div>
         </div>
@@ -1309,6 +1361,7 @@
             const notificationPanel = document.getElementById('notificationPanel');
             const closeNotificationPanel = document.getElementById('closeNotificationPanel');
             const markAllReadBtn = document.getElementById('markAllReadBtn');
+            const deleteAllNotificationsBtn = document.getElementById('deleteAllNotificationsBtn'); // Yeni buton
 
             notificationButton.addEventListener('click', (event) => {
                 event.stopPropagation(); // Butona tıklayınca panelin kapanmasını engelle
@@ -1333,6 +1386,9 @@
 
             // "Tümünü Okundu Olarak İşaretle" butonu tıklama olayı
             markAllReadBtn.addEventListener('click', markAllNotificationsAsRead);
+            // "Tümünü Sil" butonu tıklama olayı
+            deleteAllNotificationsBtn.addEventListener('click', deleteAllNotifications);
+
             fetchUnreadNotificationCount(); // Sayfa yüklendiğinde SADECE okunmamış sayısını çek
         });
         
@@ -1593,6 +1649,48 @@
             }, 3000);
         }
 
+        // Custom Confirm Modal (alert yerine kullanılacak)
+        function showConfirmModal(title, message, onConfirm) {
+            const modalHtml = `
+                <div class="modal fade" id="customConfirmModal" tabindex="-1" aria-labelledby="customConfirmModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="customConfirmModalLabel">${title}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>${message}</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                                <button type="button" class="btn btn-danger" id="confirmActionBtn">Onayla</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const existingModal = document.getElementById('customConfirmModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const confirmModalElement = document.getElementById('customConfirmModal');
+            const confirmModal = new bootstrap.Modal(confirmModalElement);
+            confirmModal.show();
+
+            document.getElementById('confirmActionBtn').onclick = () => {
+                onConfirm();
+                confirmModal.hide();
+            };
+
+            confirmModalElement.addEventListener('hidden.bs.modal', () => {
+                confirmModalElement.remove();
+            });
+        }
+
         // Proje yöneticisi istatistik tablosunu dolduran fonksiyon
         function fillManagerStatsTable() {
             // API_BASE_URL kullanılarak güncellendi
@@ -1766,8 +1864,28 @@
                         <div class="notification-item-description">${notification.message}</div>
                         <div class="notification-item-time">${timeAgo}</div>
                     </div>
+                    <div class="notification-item-actions">
+                        <button class="notification-delete-btn" data-id="${notification.id}" title="Bildirimi Sil"><i class="fas fa-times"></i></button>
+                    </div>
                 `;
-                notificationItem.addEventListener('click', () => markNotificationAsRead(notification.id));
+                notificationItem.addEventListener('click', (e) => {
+                    // Sadece bildirim öğesine tıklanınca okundu olarak işaretle, silme butonuna tıklanınca değil
+                    if (!e.target.closest('.notification-delete-btn')) {
+                        markNotificationAsRead(notification.id);
+                    }
+                });
+
+                // Delete button event listener
+                const deleteBtn = notificationItem.querySelector('.notification-delete-btn');
+                if (deleteBtn) {
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation(); // Olayın üst öğelere yayılmasını engelle (okundu olarak işaretlemeyi engeller)
+                        showConfirmModal('Bildirimi Sil', 'Bu bildirimi silmek istediğinizden emin misiniz?', () => {
+                            deleteNotification(notification.id);
+                        });
+                    });
+                }
+
                 notificationListDiv.appendChild(notificationItem);
             });
 
@@ -1827,6 +1945,50 @@
                 console.error('Tüm bildirimleri okundu olarak işaretlerken ağ hatası:', error);
                 showToast('Tüm bildirimleri okundu olarak işaretlerken ağ hatası oluştu.', true);
             }
+        }
+
+        // Tek bir bildirimi silme fonksiyonu
+        async function deleteNotification(notificationId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    showToast(result.message || 'Bildirim başarıyla silindi.', false);
+                    fetchNotifications(); // Listeyi yenile
+                    fetchUnreadNotificationCount(); // Sayacı güncelle
+                    addActivity("Bildirim Silindi", `ID ${notificationId} olan bildirim silindi.`, null, "fas fa-trash", "notification_delete");
+                } else {
+                    showToast('Bildirim silinirken hata: ' + (result.message || 'Bilinmeyen hata.'), true);
+                }
+            } catch (error) {
+                console.error('Bildirim silme hatası:', error);
+                showToast('Bildirim silinirken ağ hatası oluştu.', true);
+            }
+        }
+
+        // Tüm bildirimleri silme fonksiyonu
+        async function deleteAllNotifications() {
+            showConfirmModal('Tüm Bildirimleri Sil', 'Tüm bildirimleri silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.', async () => {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/notifications/all`, {
+                        method: 'DELETE'
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        showToast(result.message || 'Tüm bildirimler başarıyla silindi.', false);
+                        fetchNotifications(); // Listeyi yenile
+                        fetchUnreadNotificationCount(); // Sayacı güncelle
+                        addActivity("Tüm Bildirimler Silindi", "Tüm bildirimler temizlendi.", null, "fas fa-trash-alt", "notifications_clear_all");
+                    } else {
+                        showToast('Tüm bildirimler silinirken hata: ' + (result.message || 'Bilinmeyen hata.'), true);
+                    }
+                } catch (error) {
+                    console.error('Tüm bildirimleri silme hatası:', error);
+                    showToast('Tüm bildirimler silinirken ağ hatası oluştu.', true);
+                }
+            });
         }
     </script>
 </body>
