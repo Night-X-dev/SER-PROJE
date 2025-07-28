@@ -27,6 +27,7 @@
             --topbar-bg: #ffffff;
             --success: #2ed573; /* Toast için eklendi */
             --danger: #ff4757;  /* Toast için eklendi */
+            --primary-light-bg: rgba(9, 128, 211, 0.1); /* Yeni: Hafif birincil renk arka planı */
         }
 
         [data-theme="dark"] {
@@ -217,7 +218,7 @@
         }
 
         .notification-btn::after {
-            content: "3";
+            content: attr(data-count); /* JS ile dinamik olarak güncellenecek */
             position: absolute;
             top: 5px;
             right: 5px;
@@ -230,6 +231,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            opacity: 0; /* Başlangıçta gizli */
+            transform: scale(0);
+            transition: all 0.2s ease-out;
+        }
+        .notification-btn.has-notifications::after {
+            opacity: 1;
+            transform: scale(1);
         }
 
         .user-profile {
@@ -509,6 +517,78 @@
             background-color: var(--danger);
         }
 
+        /* Confirmation Modal Styles */
+        #confirmationModal {
+            display: none; /* Ensure it's hidden by default */
+            z-index: 1050; /* Bootstrap modal default z-index */
+        }
+        #confirmationModal.show {
+            display: block; /* Bootstrap will add this when showing */
+        }
+        .modal-content {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-header {
+            border-bottom-color: var(--border-color);
+        }
+
+        .modal-title {
+            color: var(--primary);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-body p {
+            margin-bottom: 8px;
+        }
+
+        .modal-body strong {
+            color: var(--dark-gray);
+        }
+
+        .modal-body hr {
+            border-top: 1px solid var(--border-color);
+            margin: 20px 0;
+        }
+
+        .modal-body h6 {
+            color: var(--primary-light);
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .input-group .form-control {
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            border-color: var(--border-color);
+        }
+
+        .input-group .btn-primary {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .input-group .btn-primary:hover {
+            background-color: var(--primary-light);
+            border-color: var(--primary-light);
+        }
+
+        .modal-footer {
+            border-top-color: var(--border-color);
+        }
+
+        .modal-footer .btn-secondary {
+            background-color: var(--light-gray);
+            border-color: var(--light-gray);
+            color: white;
+        }
+
         /* Responsive */
         @media (max-width: 1200px) {
             .form-grid {
@@ -682,6 +762,25 @@
     </style>
 </head>
 <body data-theme="light">
+    <!-- Confirmation Modal -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmationModalLabel">Onay Gerekli</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="confirmationMessage">
+                    Emin misiniz?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary" id="confirmActionBtn">Onayla</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Genel Toast Bildirim Alanı -->
     <div class="toast" id="toast">
         <i class="fas fa-check-circle"></i>
@@ -900,6 +999,50 @@
             }, 3000); // 3 saniye sonra kaybolur
         }
 
+        // Custom Confirm Modal (alert yerine kullanılacak)
+        let confirmCallback = null; // Callback function to execute on confirmation
+
+        function showConfirmModal(title, message, onConfirm) {
+            const modalHtml = `
+                <div class="modal fade" id="customConfirmModal" tabindex="-1" aria-labelledby="customConfirmModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-sm modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="customConfirmModalLabel">${title}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>${message}</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                                <button type="button" class="btn btn-primary" id="confirmActionBtn">Onayla</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const existingModal = document.getElementById('customConfirmModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const confirmModalElement = document.getElementById('customConfirmModal');
+            const confirmModal = new bootstrap.Modal(confirmModalElement);
+            confirmModal.show();
+
+            document.getElementById('confirmActionBtn').onclick = () => {
+                onConfirm();
+                confirmModal.hide();
+            };
+
+            confirmModalElement.addEventListener('hidden.bs.modal', () => {
+                confirmModalElement.remove();
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             // Element Referansları
             const themeToggle = document.getElementById('theme-toggle');
@@ -910,7 +1053,7 @@
             const hamburgerMenu = document.getElementById('hamburgerMenu');
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
-            const notificationBtn = document.querySelector('.notification-btn'); // Zil butonu
+            const notificationButton = document.getElementById('notificationButton'); // Zil butonu
 
             // Form ve butonlar
             const customerForm = document.getElementById('customerForm'); // Form elementine referans
@@ -1149,10 +1292,12 @@
 
             // İptal butonu
             cancelCustomerButton.addEventListener('click', () => {
-                // confirm yerine custom modal kullanılmalı
-                if (confirm("Değişiklikleri iptal etmek istediğinizden emin misiniz?")) {
-                    window.location.href = 'index.html'; // Panoya geri dön
-                }
+                showConfirmModal('İptal Onayı', 'Değişiklikleri iptal etmek istediğinizden emin misiniz?', () => {
+                    showToast("Müşteri ekleme iptal edildi.", false);
+                    setTimeout(() => {
+                        window.location.href = 'index.html'; // Panoya geri dön
+                    }, 1000);
+                });
             });
 
             // Çıkış Yap Butonu Olay Dinleyicisi
@@ -1187,9 +1332,39 @@
                     mainContent.classList.remove('expanded');
                 }
             });
+
+            // Sadece okunmamış bildirim sayısını çeken fonksiyon
+            async function fetchUnreadNotificationCount() {
+                const notificationButton = document.getElementById('notificationButton');
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/notifications/unread-count`);
+                    if (!response.ok) {
+                        if (response.status === 404) {
+                            console.warn('API endpoint not found: /api/notifications/unread-count. Setting notification count to 0.');
+                            notificationButton.setAttribute('data-count', '0');
+                            notificationButton.classList.remove('has-notifications');
+                            return;
+                        }
+                        const errorText = await response.text();
+                        throw new Error(`Okunmamış bildirim sayısı çekilemedi. Sunucu yanıtı: ${response.status} - ${errorText.substring(0, 100)}...`);
+                    }
+                    const data = await response.json();
+                    const unreadCount = data.unread_count;
+
+                    notificationButton.setAttribute('data-count', unreadCount);
+                    if (unreadCount > 0) {
+                        notificationButton.classList.add('has-notifications');
+                    } else {
+                        notificationButton.classList.remove('has-notifications');
+                    }
+                } catch (error) {
+                    console.error('Okunmamış bildirim sayısı çekilemedi:', error);
+                    notificationButton.setAttribute('data-count', '!');
+                    showToast(`Bildirim sayısı yüklenirken hata oluştu: ${error.message}`, true);
+                }
+            }
+            fetchUnreadNotificationCount(); // Sayfa yüklendiğinde SADECE okunmamış sayısını çek
         }); 
     </script>
-    <script src="static/bildirim.js"></script>
-
 </body>
 </html>
