@@ -2680,7 +2680,9 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
                       notificationButton.classList.remove('has-notifications');
                       return; // Hata fırlatma, sadece logla ve çık
                   }
-                  throw new Error('Okunmamış bildirim sayısı çekilemedi.');
+                  // Diğer HTTP hataları için genel hata fırlatma
+                  const errorText = await response.text(); // Yanıtı metin olarak oku
+                  throw new Error(`Okunmamış bildirim sayısı çekilemedi. Sunucu yanıtı: ${response.status} - ${errorText.substring(0, 100)}...`);
               }
               const data = await response.json();
               const unreadCount = data.count;
@@ -2694,6 +2696,7 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
           } catch (error) {
               console.error('Okunmamış bildirim sayısı çekilemedi:', error);
               notificationButton.setAttribute('data-count', '!'); // Hata durumunda ünlem göster
+              showToast(`Bildirim sayısı yüklenirken hata oluştu: ${error.message}`, true);
           }
       }
 
@@ -2711,7 +2714,8 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
                       document.getElementById('notificationButton').classList.remove('has-notifications');
                       return;
                   }
-                  throw new Error(`HTTP error! status: ${response.status}`);
+                  const errorText = await response.text(); // Yanıtı metin olarak oku
+                  throw new Error(`HTTP error! status: ${response.status} - ${errorText.substring(0, 100)}...`);
               }
               const notifications = await response.json();
               renderNotifications(notifications); // Sayacı tekrar senkronize et
@@ -2827,9 +2831,9 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
                   fetchNotifications();
                   fetchUnreadNotificationCount();
               } else {
-                  const errorData = await response.json();
-                  console.error('Bildirim okunmuş olarak işaretlenirken hata:', errorData.message, 'HTTP Durumu:', response.status);
-                  showToast('Bildirim okunmuş olarak işaretlenirken hata oluştu.', true);
+                  const errorText = await response.text(); // Yanıtı metin olarak oku
+                  console.error('Bildirim okunmuş olarak işaretlenirken hata:', errorText, 'HTTP Durumu:', response.status);
+                  showToast(`Bildirim okunmuş olarak işaretlenirken hata oluştu. Sunucu yanıtı: ${response.status} - ${errorText.substring(0, 100)}...`, true);
               }
           } catch (error) {
               console.error('Bildirim okunmuş olarak işaretlenirken ağ hatası:', error);
@@ -2854,9 +2858,9 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
                   fetchNotifications(); // Bildirim listesini yenile
                   fetchUnreadNotificationCount(); // Sayacı yenile
               } else {
-                  const errorData = await response.json();
-                  console.error('Tüm bildirimleri okundu olarak işaretlerken hata:', errorData.message, 'HTTP Durumu:', response.status);
-                  showToast('Tüm bildirimleri okundu olarak işaretlerken hata oluştu.', true);
+                  const errorText = await response.text(); // Yanıtı metin olarak oku
+                  console.error('Tüm bildirimleri okundu olarak işaretlerken hata:', errorText, 'HTTP Durumu:', response.status);
+                  showToast(`Tüm bildirimleri okundu olarak işaretlerken hata oluştu. Sunucu yanıtı: ${response.status} - ${errorText.substring(0, 100)}...`, true);
               }
           } catch (error) {
               console.error('Tüm bildirimleri okundu olarak işaretlerken ağ hatası:', error);
