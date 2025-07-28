@@ -19,6 +19,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         // Sayfa yüklendiğinde okunmamış bildirim sayısını hemen çek
+        // Bu çağrı, currentUser'ın DOMContentLoaded sırasında mevcut olduğunu varsayar.
+        // Eğer currentUser localStorage'dan async olarak yükleniyorsa, bu çağrı gecikebilir.
+        // Daha güvenli bir yaklaşım için, currentUser yüklendikten sonra çağrılmalı.
+        // Şimdilik, currentUser'ın hemen erişilebilir olduğunu varsayıyoruz.
         fetchUnreadNotificationCount();
     } else {
         console.error("HATA: 'notificationButton' elementi bulunamadı. Bildirim butonu çalışmayacak.");
@@ -54,6 +58,16 @@ document.addEventListener('DOMContentLoaded', function() {
             notificationPanel.classList.remove('show');
         }
     });
+
+    // Kullanıcı oturum açtığında veya değiştiğinde bildirim sayacını güncellemek için
+    // localStorage'daki currentUser'ı dinleyebiliriz.
+    // Ancak bu, localStorage'ın doğrudan dinlenmesi yerine,
+    // oturum açma/kapatma fonksiyonlarınızda doğrudan çağrılmalıdır.
+    // Eğer `currentUser` global bir değişkense, onun güncellendiği yerde bu fonksiyon çağrılmalı.
+    // Örneğin, login.html veya index.html'deki oturum yönetimi kodunuzda:
+    // `localStorage.setItem('currentUser', JSON.stringify(user));` satırından sonra
+    // `fetchUnreadNotificationCount();` çağrısı yapılmalı.
+    // Logout işleminde ise `updateNotificationCount(0);` çağrılmalı.
 });
 
 
@@ -102,8 +116,29 @@ async function fetchUnreadNotificationCount() {
     const notificationButton = document.getElementById('notificationButton');
     if (!notificationButton) return;
 
+    // Kullanıcı ID'sini localStorage'dan çek
+    const storedUser = localStorage.getItem('currentUser');
+    let userId = null;
+    if (storedUser) {
+        try {
+            const user = JSON.parse(storedUser);
+            userId = user.id;
+        } catch (e) {
+            console.error("Kayıtlı kullanıcı verisi bozuk:", e);
+            localStorage.removeItem('currentUser'); // Bozuk veriyi temizle
+        }
+    }
+
+    // Eğer kullanıcı ID'si yoksa, bildirimleri sıfırla ve isteği yapma
+    if (!userId) {
+        updateNotificationCount(0);
+        console.warn("Kullanıcı ID'si bulunamadı. Okunmamış bildirim sayısı çekilemedi.");
+        return;
+    }
+
     try {
-        const response = await fetch(`${API_BASE_URL}/api/notifications/unread-count`);
+        // API isteğine user_id parametresini ekle
+        const response = await fetch(`${API_BASE_URL}/api/notifications/unread-count?user_id=${userId}`);
         if (!response.ok) {
             throw new Error(`HTTP hatası! Durum: ${response.status}`);
         }
@@ -129,8 +164,30 @@ async function fetchNotifications() {
     }
     notificationListDiv.innerHTML = '<div class="no-notifications"><i class="fas fa-spinner fa-spin"></i> Bildirimler yükleniyor...</div>';
 
+    // Kullanıcı ID'sini localStorage'dan çek
+    const storedUser = localStorage.getItem('currentUser');
+    let userId = null;
+    if (storedUser) {
+        try {
+            const user = JSON.parse(storedUser);
+            userId = user.id;
+        } catch (e) {
+            console.error("Kayıtlı kullanıcı verisi bozuk:", e);
+            localStorage.removeItem('currentUser'); // Bozuk veriyi temizle
+        }
+    }
+
+    // Eğer kullanıcı ID'si yoksa, bildirimleri sıfırla ve isteği yapma
+    if (!userId) {
+        notificationListDiv.innerHTML = '<div class="no-notifications">Kullanıcı oturumu bulunamadı.</div>';
+        updateNotificationCount(0);
+        console.warn("Kullanıcı ID'si bulunamadı. Bildirimler çekilemedi.");
+        return;
+    }
+
     try {
-        const response = await fetch(`${API_BASE_URL}/api/notifications`);
+        // API isteğine user_id parametresini ekle
+        const response = await fetch(`${API_BASE_URL}/api/notifications?user_id=${userId}`);
         if (!response.ok) {
             // Sunucudan gelen yanıtın türünü kontrol et
             const contentType = response.headers.get('content-type');
@@ -226,8 +283,26 @@ function updateNotificationCount(count) {
 async function markNotificationAsRead(notificationId, itemElement) {
     if (!itemElement || !itemElement.classList.contains('unread')) return;
 
+    // Kullanıcı ID'sini localStorage'dan çek
+    const storedUser = localStorage.getItem('currentUser');
+    let userId = null;
+    if (storedUser) {
+        try {
+            const user = JSON.parse(storedUser);
+            userId = user.id;
+        } catch (e) {
+            console.error("Kayıtlı kullanıcı verisi bozuk:", e);
+            localStorage.removeItem('currentUser');
+        }
+    }
+
+    if (!userId) {
+        showToast("Kullanıcı oturumu bulunamadı. Bildirim okundu olarak işaretlenemedi.", true);
+        return;
+    }
+
     try {
-        const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
+        const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read?user_id=${userId}`, {
             method: 'PUT'
         });
         if (response.ok) {
@@ -252,8 +327,26 @@ async function markNotificationAsRead(notificationId, itemElement) {
 
 // Tüm bildirimleri okunmuş olarak işaretle
 async function markAllNotificationsAsRead() {
+    // Kullanıcı ID'sini localStorage'dan çek
+    const storedUser = localStorage.getItem('currentUser');
+    let userId = null;
+    if (storedUser) {
+        try {
+            const user = JSON.parse(storedUser);
+            userId = user.id;
+        } catch (e) {
+            console.error("Kayıtlı kullanıcı verisi bozuk:", e);
+            localStorage.removeItem('currentUser');
+        }
+    }
+
+    if (!userId) {
+        showToast("Kullanıcı oturumu bulunamadı. Tüm bildirimler okundu olarak işaretlenemedi.", true);
+        return;
+    }
+
     try {
-        const response = await fetch(`${API_BASE_URL}/api/notifications/mark_all_read`, {
+        const response = await fetch(`${API_BASE_URL}/api/notifications/mark_all_read?user_id=${userId}`, {
             method: 'PUT'
         });
         const result = await response.json();
@@ -278,8 +371,26 @@ async function markAllNotificationsAsRead() {
 
 // Tek bir bildirimi sil
 async function deleteNotification(notificationId, itemElement) {
+     // Kullanıcı ID'sini localStorage'dan çek
+    const storedUser = localStorage.getItem('currentUser');
+    let userId = null;
+    if (storedUser) {
+        try {
+            const user = JSON.parse(storedUser);
+            userId = user.id;
+        } catch (e) {
+            console.error("Kayıtlı kullanıcı verisi bozuk:", e);
+            localStorage.removeItem('currentUser');
+        }
+    }
+
+    if (!userId) {
+        showToast("Kullanıcı oturumu bulunamadı. Bildirim silinemedi.", true);
+        return;
+    }
+
      try {
-        const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}?user_id=${userId}`, {
             method: 'DELETE'
         });
         if (response.ok) {
@@ -322,8 +433,26 @@ async function deleteNotification(notificationId, itemElement) {
 
 // Tüm bildirimleri sil
 async function deleteAllNotifications() {
+    // Kullanıcı ID'sini localStorage'dan çek
+    const storedUser = localStorage.getItem('currentUser');
+    let userId = null;
+    if (storedUser) {
+        try {
+            const user = JSON.parse(storedUser);
+            userId = user.id;
+        } catch (e) {
+            console.error("Kayıtlı kullanıcı verisi bozuk:", e);
+            localStorage.removeItem('currentUser');
+        }
+    }
+
+    if (!userId) {
+        showToast("Kullanıcı oturumu bulunamadı. Tüm bildirimler silinemedi.", true);
+        return;
+    }
+
     try {
-        const response = await fetch(`${API_BASE_URL}/api/notifications/all`, {
+        const response = await fetch(`${API_BASE_URL}/api/notifications/all?user_id=${userId}`, {
             method: 'DELETE'
         });
         

@@ -659,7 +659,7 @@
             
             .sidebar {
                 width: 260px; /* Mobil görünümde açıkken genişlik */
-                position: fixed; /* Mobil görünümde sabit */
+                position: fixed;
                 transform: translateX(-100%); /* Varsayılan olarak gizli */
                 box-shadow: 0 0 20px rgba(0,0,0,0.3);
             }
@@ -807,7 +807,6 @@
                 display: block;
                 margin-right: 15px; /* Başlık ile değer arası boşluk */
                 min-width: 120px; /* Başlık için minimum genişlik */
-                font-size: 13px;
                 flex-shrink: 0; /* Küçülmesini engelle */
             }
             
@@ -1422,7 +1421,7 @@
             padding: 20px;
             display: none;
             transition: all 0.2s ease;
-            pointer-events: none;
+            pointer-events: auto; /* Kartın üzerine gelindiğinde etkileşime izin ver */
         }
 
         .user-hover-card .user-avatar-large {
@@ -1455,7 +1454,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5); /* Opaklık azaltıldı */
+            background: black !important; /* Tamamen opak siyah arka plan */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -1751,7 +1750,7 @@
         </div>
     </div>
 
-    <!-- Fotoğraf Kırpma Modalı -->
+    <!-- Fotoğraf Kırpma Modalı - Güncellendi -->
     <div class="cropper-modal" id="cropperModal">
         <div class="cropper-container">
             <div class="cropper-header">
@@ -1869,8 +1868,9 @@
             }
         ];
 
-        let cropper = null; // Cropper instance
-        let currentCroppedImage = null; // Kırpılmış resmi sakla
+        let cropper = null;
+        let currentCroppedImage = null;
+        let editProfileModalInstance = null; // Profil Düzenleme Modalı için instance
 
         // Sayfa yüklendiğinde kullanıcıları yükle
         document.addEventListener('DOMContentLoaded', function() {
@@ -1894,6 +1894,10 @@
                     const reader = new FileReader();
                     
                     reader.onload = function(event) {
+                        // Profil düzenleme modalını gizle
+                        if (editProfileModalInstance) {
+                            editProfileModalInstance.hide();
+                        }
                         // Cropper modalını aç
                         openCropperModal(event.target.result);
                     }
@@ -1908,6 +1912,10 @@
                 if (cropper) {
                     cropper.destroy();
                     cropper = null;
+                }
+                // Profil düzenleme modalını tekrar göster
+                if (editProfileModalInstance) {
+                    editProfileModalInstance.show();
                 }
             });
             
@@ -1974,11 +1982,29 @@
                     // Cropper'ı temizle
                     cropper.destroy();
                     cropper = null;
+
+                    // Profil düzenleme modalını tekrar göster
+                    if (editProfileModalInstance) {
+                        editProfileModalInstance.show();
+                    }
                 }
             });
             
             // Profil bilgilerini kaydetme
             document.getElementById('saveProfileBtn').addEventListener('click', saveProfileChanges);
+            
+            // Hamburger menü
+            document.getElementById('hamburgerMenu').addEventListener('click', function() {
+                document.getElementById('sidebar').classList.toggle('show');
+            });
+            
+            // Tema değiştirme
+            document.getElementById('theme-toggle').addEventListener('click', function() {
+                const currentTheme = document.body.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                document.body.setAttribute('data-theme', newTheme);
+                this.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+            });
         });
         
         function updateZoomValue() {
@@ -2028,14 +2054,18 @@
                 row.dataset.userId = user.id;
                 
                 // Hover olaylarını ekle
+                let hoverTimeout;
                 row.addEventListener('mouseenter', function(e) {
-                    showUserHoverCard(user, e);
+                    clearTimeout(hoverTimeout); // Önceki timeout'u temizle
+                    showUserHoverCard(user, e, hoverCard);
                 });
                 
                 row.addEventListener('mouseleave', function() {
-                    hideUserHoverCard();
+                    // Mouse tablodan ayrıldığında kartı hemen gizleme
+                    // Bunun yerine, kartın üzerine gelindiğinde gizlenmesini sağlamak için
+                    // kartın kendi mouseleave olayını kullanacağız.
                 });
-                
+
                 // Avatar sütunu
                 const avatarCell = document.createElement('td');
                 avatarCell.setAttribute('data-label', 'Avatar');
@@ -2073,6 +2103,12 @@
                 row.prepend(avatarCell);
                 tbody.appendChild(row);
             });
+
+            // Hover kartının kendisi için mouseleave olayı
+            const hoverCard = document.getElementById('userHoverCard');
+            hoverCard.addEventListener('mouseleave', function() {
+                hideUserHoverCard();
+            });
         }
         
         function getInitials(fullname) {
@@ -2091,7 +2127,7 @@
             
             // Kart içeriğini oluştur
             hoverCard.innerHTML = `
-                <div class="user-avatar-large">${getInitials(user.fullname)}</div>
+                <div class="user-avatar-large">${user.avatar ? `<img src="${user.avatar}" alt="${user.fullname}">` : getInitials(user.fullname)}</div>
                 <div class="user-name-large">${user.fullname}</div>
                 <div class="user-role-badge">${user.role}</div>
                 <div class="user-contact-info">
@@ -2105,7 +2141,7 @@
             // Kartı konumlandır
             const rect = event.target.getBoundingClientRect();
             hoverCard.style.left = (rect.left + window.scrollX + 10) + 'px';
-            hoverCard.style.top = (rect.top + window.scrollY - 180) + 'px';
+            hoverCard.style.top = (rect.top + window.scrollY - hoverCard.offsetHeight - 10) + 'px'; // Kartın yüksekliğine göre ayarla
             
             // Kartı göster
             hoverCard.style.display = 'block';
@@ -2117,8 +2153,8 @@
         
         function openEditProfileModal() {
             // Modalı aç
-            const modal = new bootstrap.Modal(document.getElementById('editProfileModal'));
-            modal.show();
+            editProfileModalInstance = new bootstrap.Modal(document.getElementById('editProfileModal'));
+            editProfileModalInstance.show();
         }
         
         function filterUsers() {
@@ -2161,8 +2197,9 @@
             document.getElementById('userAvatar').innerHTML = newAvatar || getInitials(newName);
             
             // Modalı kapat
-            const modal = bootstrap.Modal.getInstance(document.getElementById('editProfileModal'));
-            modal.hide();
+            if (editProfileModalInstance) {
+                editProfileModalInstance.hide();
+            }
             
             showToast('Profil bilgileriniz başarıyla güncellendi!');
         }
