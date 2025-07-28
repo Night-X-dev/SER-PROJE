@@ -1884,6 +1884,7 @@
                 const projects = await response.json();
                 allProjectsData = projects; 
                 applyFiltersAndRenderTable(); // Filtreleri uygula ve tabloyu render et
+                updateStatsAndChart(allProjectsData); // İstatistikleri ve grafiği güncelle
                 dbStatusElement.textContent = 'Bağlantı Başarılı';
                 dbStatusElement.style.color = 'var(--success)';
             } catch (error) {
@@ -1903,41 +1904,49 @@
             }
         }
 
-        // Dashboard İstatistiklerini Backend'den Çekme
-        async function fetchDashboardStats() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/dashboard/stats`);
-                if (!response.ok) {
-                    throw new Error(`HTTP hatası! Durum: ${response.status}`);
-                }
-                const stats = await response.json();
-                document.getElementById('activeProjects').textContent = stats.activeProjects;
-                document.getElementById('completedProjects').textContent = stats.completedProjects;
-                document.getElementById('delayedProjects').textContent = stats.delayedProjects;
-                document.getElementById('totalProjects').textContent = stats.totalProjects;
-                updateChart({
-                    active: stats.activeProjects,
-                    activeDelayed: 0, // Eğer backend'den ayrı bir gecikmeli aktif geliyorsa buraya ekle
-                    planning: 0,      // Eğer backend'den planlama geliyorsa buraya ekle
-                    planningDelayed: 0, // Eğer backend'den planlama gecikmeli geliyorsa buraya ekle
-                    completed: stats.completedProjects,
-                    delayed: stats.delayedProjects,
-                    total: stats.totalProjects
-                });
-            } catch (error) {
-                console.error('İstatistikler çekilemedi:', error);
-                showToast(`İstatistikler yüklenirken hata oluştu: ${error.message}`, true);
-            }
-        }
+        // Dashboard İstatistiklerini Backend'den Çekme (Bu fonksiyon artık doğrudan çağrılmayacak, fetchProjects tarafından dolaylı olarak çağrılacak)
+        // async function fetchDashboardStats() {
+        //     try {
+        //         const response = await fetch(`${API_BASE_URL}/api/dashboard/stats`);
+        //         if (!response.ok) {
+        //             throw new Error(`HTTP hatası! Durum: ${response.status}`);
+        //         }
+        //         const stats = await response.json();
+        //         document.getElementById('activeProjects').textContent = stats.activeProjects;
+        //         document.getElementById('completedProjects').textContent = stats.completedProjects;
+        //         document.getElementById('delayedProjects').textContent = stats.delayedProjects;
+        //         document.getElementById('totalProjects').textContent = stats.totalProjects;
+        //         updateChart({
+        //             active: stats.activeProjects,
+        //             activeDelayed: 0, // Bu kısım artık updateStatsAndChart tarafından hesaplanacak
+        //             planning: 0,      // Bu kısım artık updateStatsAndChart tarafından hesaplanacak
+        //             planningDelayed: 0, 
+        //             completed: stats.completedProjects,
+        //             delayed: stats.delayedProjects,
+        //             total: stats.totalProjects
+        //         });
+        //     } catch (error) {
+        //         console.error('İstatistikler çekilemedi:', error);
+        //         showToast(`İstatistikler yüklenirken hata oluştu: ${error.message}`, true);
+        //     }
+        // }
 
-        // Eksik olan updateStatsAndChart fonksiyonu eklendi
+        // Eksik olan updateStatsAndChart fonksiyonu eklendi ve güncellendi
         function updateStatsAndChart(projects) {
             // İstatistikleri güncelle
-            let active = 0, completed = 0, delayed = 0, total = 0;
+            let active = 0, completed = 0, delayed = 0, total = 0, activeDelayed = 0, planning = 0;
             projects.forEach(p => {
-                if (p.status === 'Aktif') active++;
-                else if (p.status === 'Tamamlandı') completed++;
-                else if (p.status === 'Gecikti') delayed++;
+                if (p.status === 'Aktif') {
+                    active++;
+                } else if (p.status === 'Tamamlandı') {
+                    completed++;
+                } else if (p.status === 'Gecikti') {
+                    delayed++;
+                } else if (p.status === 'Aktif (İş Gecikmeli)') {
+                    activeDelayed++;
+                } else if (p.status === 'Planlama Aşamasında' || p.status === 'Planlama (İş Gecikmeli)') {
+                    planning++; // Her iki planlama durumu da "Planlama" olarak sayılır
+                }
                 total++;
             });
             document.getElementById('activeProjects').textContent = active;
@@ -1945,10 +1954,11 @@
             document.getElementById('delayedProjects').textContent = delayed;
             document.getElementById('totalProjects').textContent = total;
             updateChart({
-                active,
-                completed,
-                delayed,
-                total
+                active: active,
+                activeDelayed: activeDelayed,
+                planning: planning,
+                completed: completed,
+                delayed: delayed
             });
         }
 
@@ -2707,7 +2717,7 @@
         // Sayfa yüklendiğinde tüm verileri çek
         document.addEventListener('DOMContentLoaded', function() {
             fetchProjects();
-            fetchDashboardStats();
+            // fetchDashboardStats(); // Bu satır kaldırıldı, fetchProjects içinden çağrılacak
             fetchRecentActivities();
             // fetchNotifications(); // Bu zaten bildirim.js tarafından çağrılıyor
             
@@ -2743,7 +2753,7 @@
             
             document.getElementById('refreshData').addEventListener('click', () => {
                 fetchProjects();
-                fetchDashboardStats();
+                // fetchDashboardStats(); // Bu da kaldırıldı
                 fetchRecentActivities();
                 // fetchNotifications(); // Bu da bildirim.js tarafından yönetiliyor
                 showToast('Veriler başarıyla yenilendi');
