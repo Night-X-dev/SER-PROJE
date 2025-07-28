@@ -248,7 +248,7 @@ def delete_notification(notification_id):
     finally:
         connection.close()
 @app.route('/api/notifications', methods=['DELETE'])
-def delete_all_notifications():
+def delete_user_notifications():
     if 'user_id' not in session:
         return jsonify({'message': 'Giriş yapılmalıdır.'}), 401
 
@@ -258,12 +258,14 @@ def delete_all_notifications():
         with connection.cursor() as cursor:
             cursor.execute("DELETE FROM notifications WHERE user_id = %s", (user_id,))
             connection.commit()
-            return jsonify({'message': 'Tüm bildirimler başarıyla silindi.'})
+            return jsonify({'message': 'Tüm bildirimleriniz silindi.'})
     except Exception as e:
-        connection.rollback()
+        if connection:
+            connection.rollback()
         return jsonify({'message': f'Hata: {str(e)}'}), 500
     finally:
         connection.close()
+
 
 # Yeni Bildirim Ekle API (notifications tablosu için)
 @app.route('/api/notifications', methods=['POST'])
