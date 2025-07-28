@@ -1167,6 +1167,22 @@ def get_project_details(project_id):
         if connection:
             connection.close()
 
+# Helper function to send notifications
+def send_notification(user_id, title, message):
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            sql = "INSERT INTO notifications (user_id, title, message, created_at) VALUES (%s, %s, %s, NOW())"
+            cursor.execute(sql, (user_id, title, message))
+            connection.commit()
+            print(f"Bildirim gönderildi: Kullanıcı ID: {user_id}, Başlık: '{title}', Mesaj: '{message}'")
+    except pymysql.Error as e:
+        print(f"Bildirim gönderme sırasında veritabanı hatası: {e}")
+    except Exception as e:
+        print(f"Genel bildirim gönderme hatası: {e}")
+    finally:
+        if connection:
+            connection.close()
 
 # Proje Güncelleme API (PUT) - projects tablosu için
 @app.route('/api/projects/<int:project_id>', methods=['PUT'])
@@ -1181,7 +1197,7 @@ def update_project(project_id):
     end_date = data.get('end_date')
     project_location = data.get('project_location')
     status = data.get('status')
-    user_id = data.get('user_id') 
+    user_id = data.get('user_id') # Güncelleme yapan kullanıcının ID'si
 
     if not user_id: 
         return jsonify({'message': 'Kullanıcı ID eksik.'}), 400
@@ -1190,11 +1206,13 @@ def update_project(project_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            cursor.execute("SELECT project_name FROM projects WHERE project_id = %s", (project_id,))
+            # Mevcut proje bilgilerini al
+            cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (project_id,))
             existing_project_info = cursor.fetchone()
             if not existing_project_info:
                 return jsonify({'message': 'Proje bulunamadı.'}), 404
             old_project_name = existing_project_info['project_name']
+            project_manager_id = existing_project_info['project_manager_id']
 
             updates = []
             params = []
@@ -1244,6 +1262,13 @@ def update_project(project_id):
                 description=f'"{old_project_name}" adlı proje bilgileri güncellendi.',
                 icon='fas fa-edit'
             )
+            
+            # Proje yöneticisine bildirim gönder
+            send_notification(
+                project_manager_id,
+                "Proje Güncellendi",
+                f"Yönettiğiniz '{project_name}' projesi güncellendi."
+            )
 
         return jsonify({'message': 'Proje başarıyla güncellendi!'}), 200
 
@@ -1292,6 +1317,13 @@ def delete_project_api(project_id):
                 title='Proje Silindi',
                 description=f'"{project_name}" adlı proje silindi.',
                 icon='fas fa-trash'
+            )
+
+            # Proje yöneticisine bildirim gönder
+            send_notification(
+                project_manager_id,
+                "Proje Silindi",
+                f"Yönettiğiniz '{project_name}' projesi silindi."
             )
            
         return jsonify({'message': 'Proje başarıyla silindi!'}), 200
@@ -1440,25 +1472,25 @@ def log_activity(user_id, title, description, icon, is_read=0):
             connection.close()
 
 # Yeni Proje Ekle API (önceki yorum satırından çıkarıldı ve tamamlandı)
-@app.route('/api/add_project', methods=['POST'])
+@app.route('/api/projects', methods=['POST'])
 def add_project():
     data = request.json
-    project_name = data.get('project_name')
-    customer_id = data.get('customer_id')
-    project_manager_id = data.get('project_manager_id')
-    reference_no = data.get('reference_no')
-    description = data.get('description')
-    contract_date = data.get('contract_date')
-    meeting_date = data.get('meeting_date')
-    start_date = data.get('start_date')
-    end_date = data.get('end_date')
-    project_location = data.get('project_location')
+    project_name = data.get('projectName') # Frontend'den 'projectName' olarak geliyor
+    customer_id = data.get('customerId')
+    project_manager_id = data.get('projectManagerId')
+    reference_no = data.get('projectRef') # Frontend'den 'projectRef' olarak geliyor
+    description = data.get('projectDescription') # Frontend'den 'projectDescription' olarak geliyor
+    contract_date = data.get('contractDate')
+    meeting_date = data.get('meetingDate')
+    start_date = data.get('startDate')
+    end_date = data.get('endDate')
+    project_location = data.get('projectLocation')
     status = data.get('status', 'Planlama Aşamasında') 
 
-    user_id = data.get('user_id') 
+    user_id = data.get('user_id') # Projeyi ekleyen kullanıcının ID'si (aktivite logu için)
 
-    if not all([project_name, customer_id, project_manager_id, user_id]):
-        return jsonify({'message': 'Proje adı, müşteri, proje yöneticisi ve kullanıcı ID zorunludur.'}), 400
+    if not all([project_name, customer_id, project_manager_id]): # user_id kontrolü frontend'den geliyor
+        return jsonify({'message': 'Proje adı, müşteri ve proje yöneticisi zorunludur.'}), 400
 
     connection = None
     try:
@@ -1476,13 +1508,20 @@ def add_project():
             connection.commit()
             new_project_id = cursor.lastrowid
 
+            # Proje yöneticisine bildirim gönder
+            send_notification(
+                project_manager_id,
+                "Yeni Proje Atandı",
+                f"Size yeni bir proje atandı: '{project_name}'."
+            )
+
         log_activity(
             user_id=user_id,
             title='Yeni Proje Eklendi',
             description=f'"{project_name}" adlı yeni proje oluşturuldu.',
             icon='fas fa-plus'
         )
-        return jsonify({"message": "Proje başarıyla eklendi", "project_id": new_project_id}), 201
+        return jsonify({"message": "Proje başarıyla eklendi", "projectId": new_project_id}), 201
     except pymysql.Error as e:
         print(f"Veritabanı proje ekleme hatası: {e}")
         return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
@@ -1577,6 +1616,7 @@ def add_project_progress_step_from_modal(project_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # Projenin mevcut bitiş tarihini bul (delay_days hesaplamak için)
             cursor.execute("""
                 SELECT end_date FROM project_progress
                 WHERE project_id = %s
@@ -1589,8 +1629,9 @@ def add_project_progress_step_from_modal(project_id):
             delay_days = 0
             if previous_end_date:
                 new_step_start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                # Önceki adımın bitiş tarihi ile yeni adımın başlangıç tarihi arasındaki farkı hesapla
                 time_diff = (new_step_start_date - previous_end_date).days
-                if time_diff > 1: 
+                if time_diff > 1: # Eğer 1 günden fazla boşluk varsa gecikme oluşmuştur
                     delay_days = time_diff - 1
 
             sql_insert = """
@@ -1600,6 +1641,19 @@ def add_project_progress_step_from_modal(project_id):
             cursor.execute(sql_insert, (project_id, step_name, description, start_date_str, end_date_str, delay_days))
             new_progress_id = cursor.lastrowid
             connection.commit()
+
+            # Proje yöneticisine bildirim gönder
+            cursor.execute("SELECT project_manager_id, project_name FROM projects WHERE project_id = %s", (project_id,))
+            project_info = cursor.fetchone()
+            if project_info:
+                project_manager_id = project_info['project_manager_id']
+                project_name = project_info['project_name']
+                send_notification(
+                    project_manager_id,
+                    "Proje İş Adımı Eklendi",
+                    f"'{project_name}' projesine yeni bir iş adımı ('{step_name}') eklendi."
+                )
+
         return jsonify({'message': 'İş adımı başarıyla eklendi!', 'progress_id': new_progress_id}), 201
     except pymysql.Error as e:
         print(f"Veritabanı iş adımı ekleme hatası: {e}")
@@ -1627,6 +1681,7 @@ def update_project_progress_step(progress_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # Mevcut iş adımının proje ID'sini ve bitiş tarihini al
             cursor.execute("SELECT project_id, end_date FROM project_progress WHERE progress_id = %s", (progress_id,))
             existing_step = cursor.fetchone()
             if not existing_step:
@@ -1634,6 +1689,7 @@ def update_project_progress_step(progress_id):
 
             current_project_id = existing_step['project_id']
 
+            # Önceki adımın bitiş tarihini bul (bu adım hariç)
             delay_days = 0
             cursor.execute("""
                 SELECT MAX(end_date) as last_end_date
@@ -1661,6 +1717,17 @@ def update_project_progress_step(progress_id):
             if cursor.rowcount == 0:
                 return jsonify({'message': 'İş adımı verileri zaten güncel veya bir değişiklik yapılmadı.'}), 200
 
+            # Proje yöneticisine bildirim gönder
+            cursor.execute("SELECT project_manager_id, project_name FROM projects WHERE project_id = %s", (current_project_id,))
+            project_info = cursor.fetchone()
+            if project_info:
+                project_manager_id = project_info['project_manager_id']
+                project_name = project_info['project_name']
+                send_notification(
+                    project_manager_id,
+                    "Proje İş Adımı Güncellendi",
+                    f"'{project_name}' projesindeki '{step_name}' iş adımı güncellendi."
+                )
 
         return jsonify({'message': 'İş adımı başarıyla güncellendi!'}), 200
     except pymysql.Error as e:
@@ -1680,12 +1747,33 @@ def delete_project_progress_step(progress_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # Silinecek adımın proje ID'sini al
+            cursor.execute("SELECT project_id, title FROM project_progress WHERE progress_id = %s", (progress_id,))
+            step_info = cursor.fetchone()
+            if not step_info:
+                return jsonify({'message': 'İş adımı silinemedi veya bulunamadı.'}), 404
+            
+            current_project_id = step_info['project_id']
+            step_name = step_info['title']
+
             sql = "DELETE FROM project_progress WHERE progress_id = %s"
             cursor.execute(sql, (progress_id,))
             connection.commit()
 
             if cursor.rowcount == 0:
                 return jsonify({'message': 'İş adımı silinemedi veya bulunamadı.'}), 404
+
+            # Proje yöneticisine bildirim gönder
+            cursor.execute("SELECT project_manager_id, project_name FROM projects WHERE project_id = %s", (current_project_id,))
+            project_info = cursor.fetchone()
+            if project_info:
+                project_manager_id = project_info['project_manager_id']
+                project_name = project_info['project_name']
+                send_notification(
+                    project_manager_id,
+                    "Proje İş Adımı Silindi",
+                    f"'{project_name}' projesindeki '{step_name}' iş adımı silindi."
+                )
 
         return jsonify({'message': 'İş adımı başarıyla silindi!'}), 200
     except pymysql.Error as e:

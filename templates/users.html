@@ -880,7 +880,7 @@
         }
         
         /* Toast bildirimi */
-        .toast {
+        .toast-notification {
             position: fixed;
             bottom: 20px;
             right: 20px;
@@ -898,12 +898,12 @@
             transition: all 0.3s ease;
         }
         
-        .toast.show {
+        .toast-notification.show {
             opacity: 1;
             transform: translateY(0);
         }
         
-        .toast.error {
+        .toast-notification.error {
             background-color: var(--danger);
         }
         
@@ -1403,25 +1403,112 @@
             font-weight: 600;
             color: var(--primary);
         }
-        user-avatar img {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%; /* Yuvarlak görünüm */
-            object-fit: cover;
+         /* Diğer stiller... */
+
+        /* Tablo hücrelerindeki boşluğu kaldırma */
+        .projects-table td {
+            padding: 8px 12px !important;
         }
 
-        #image-cropper-container {
-            display: none; /* Başlangıçta gizli */
-            margin-top: 15px;
+        /* Hover kartı için stiller */
+        .user-hover-card {
+            position: absolute;
+            z-index: 1000;
+            width: 300px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            padding: 20px;
+            display: none;
+            transition: all 0.2s ease;
+            pointer-events: none;
+        }
+
+        .user-hover-card .user-avatar-large {
+            width: 80px;
+            height: 80px;
+            font-size: 32px;
+            margin: 0 auto 15px;
+        }
+
+        .user-hover-card .user-name-large {
+            font-size: 20px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .user-hover-card .user-role-badge {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .user-hover-card .user-contact-info div {
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        /* Kırpma modalı için stiller */
+        .cropper-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5); /* Opaklık azaltıldı */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            display: none;
+        }
+
+        .cropper-container {
+            width: 80%;
+            max-width: 800px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+        }
+
+        .cropper-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .cropper-header h2 {
+            color: var(--text-color);
+            margin: 0;
+        }
+
+        .cropper-preview {
+            width: 100%;
+            height: 400px;
+            background: var(--input-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .cropper-preview img {
+            max-width: 100%;
+            max-height: 100%;
         }
 
         .cropper-tools {
             display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 15px;
+            justify-content: space-between;
+            margin-top: 20px;
             flex-wrap: wrap;
-            align-items: center;
+            gap: 10px;
+        }
+
+        .cropper-tools-left, .cropper-tools-right {
+            display: flex;
+            gap: 10px;
         }
 
         .cropper-tool-btn {
@@ -1435,36 +1522,39 @@
             align-items: center;
             gap: 5px;
             transition: all 0.2s;
-            flex-shrink: 0;
+        }
+
+        .cropper-tool-btn:hover {
+            background-color: var(--primary);
         }
 
         .zoom-controls {
             display: flex;
             align-items: center;
             gap: 5px;
-            flex-wrap: wrap;
-            justify-content: center;
-            width: 100%;
-            margin-top: 10px;
         }
 
-        .rotate-controls {
-            display: flex;
-            gap: 5px;
-            margin-top: 10px;
+        .zoom-slider {
+            width: 150px;
+        }
+
+        .zoom-value {
+            min-width: 40px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--primary);
         }
     </style>
 </head>
 <body data-theme="light">
-    <!-- Sidebar (index.html ile aynı) -->
+    <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <a href="index.html" style="text-decoration: none;">
             <div class="logo-container" style="cursor: pointer;">
-              <img src="{{ url_for('static', filename='serlogo.png') }}" alt="Ser Elektrik Otomasyon" style="width: 180px; height: auto; padding-left: 10px;">
+              <div class="logo-icon">SER</div>
+              <div class="logo-text">Ser Elektrik</div>
             </div>
-          </a>
-          
-
+        </a>
         <a href="index.html" class="nav-item">
             <i class="fas fa-home"></i>
             <span class="nav-text">Dashboard</span>
@@ -1496,9 +1586,8 @@
     </div>
 
     <div class="main-content" id="mainContent">
-        <!-- Topbar (index.html ile aynı) -->
+        <!-- Topbar -->
         <div class="topbar">
-            <!-- Hamburger Menü Butonu -->
             <button class="hamburger-menu" id="hamburgerMenu">
                 <i class="fas fa-bars"></i>
             </button>
@@ -1517,10 +1606,10 @@
                 </div>
                 
                  <div class="user-profile">
-                    <div class="user-avatar" id="userAvatar"></div>
+                    <div class="user-avatar" id="userAvatar">MO</div>
                     <div class="user-info">
-                        <div class="user-name" id="userName"></div>
-                        <div class="user-role" id="userRole"></div>
+                        <div class="user-name" id="userName">Mustafa Öztürk</div>
+                        <div class="user-role" id="userRole">Admin</div>
                     </div>
                 </div>
                 <button class="btn btn-outline logout-btn" id="logoutButton">
@@ -1546,16 +1635,16 @@
                 <div class="card-body">
                     <div class="user-profile-details">
                         <div class="user-avatar-large" id="currentUserAvatar">
-                            <!-- Avatar buraya gelecek -->
+                            MO
                         </div>
                         <div class="user-info-details">
-                            <div class="user-name-large" id="currentUserName"></div>
-                            <div class="user-role-badge" id="currentUserRole"></div>
+                            <div class="user-name-large" id="currentUserName">Mustafa Öztürk</div>
+                            <div class="user-role-badge" id="currentUserRole">Admin</div>
                             <div class="user-contact-info">
-                                <div><i class="fas fa-envelope"></i> <span id="currentUserEmail"></span></div>
-                                <div><i class="fas fa-phone"></i> <span id="currentUserPhone"></span></div>
-                                <div><i class="fas fa-briefcase"></i> <span id="currentUserPosition"></span></div>
-                                <div><i class="fas fa-calendar-alt"></i> Katılım Tarihi: <span id="currentUserJoinDate"></span></div>
+                                <div><i class="fas fa-envelope"></i> <span id="currentUserEmail">mustafa@ser-elektrik.com</span></div>
+                                <div><i class="fas fa-phone"></i> <span id="currentUserPhone">+90 555 123 4567</span></div>
+                                <div><i class="fas fa-briefcase"></i> <span id="currentUserPosition">Proje Yöneticisi</span></div>
+                                <div><i class="fas fa-calendar-alt"></i> Katılım Tarihi: <span id="currentUserJoinDate">15.03.2023</span></div>
                             </div>
                         </div>
                     </div>
@@ -1587,7 +1676,7 @@
                                 </tr>
                             </thead>
                             <tbody id="usersTableBody">
-                                <tr><td colspan="6" style="text-align: center;">Kullanıcılar yükleniyor...</td></tr>
+                                <!-- Kullanıcılar buraya eklenecek -->
                             </tbody>
                         </table>
                     </div>
@@ -1610,12 +1699,12 @@
                 </div>
                 <div class="modal-body">
                     <div class="row">
-                        <div class="col-md-5">
+                        <div class="col-md-4">
                             <div class="mb-3">
                                 <label class="form-label">Profil Fotoğrafı</label>
                                 <div class="avatar-upload">
                                     <div class="avatar-preview mb-3" id="avatarPreview">
-                                        <!-- Mevcut avatar önizleme -->
+                                        MO
                                     </div>
                                     <input type="file" id="avatarUpload" accept="image/*" class="d-none">
                                     <button class="btn btn-outline w-100" id="uploadAvatarBtn">
@@ -1624,58 +1713,32 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-7">
-                            <!-- Kırpma alanı -->
-                            <div class="mb-3">
-                                <label class="form-label">Fotoğrafı Düzenle</label>
-                                <div id="image-cropper-container">
-                                    <img id="image-to-crop" src="" alt="Kırpılacak resim" style="max-width: 100%;">
+                        <div class="col-md-8">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Ad Soyad</label>
+                                        <input type="text" class="form-control" id="editFullName" value="Mustafa Öztürk">
+                                    </div>
                                 </div>
-                                <div class="cropper-tools">
-                                    <button class="cropper-tool-btn" id="crop-zoom-in">
-                                        <i class="fas fa-search-plus"></i>
-                                    </button>
-                                    <input type="range" min="1" max="300" value="100" class="zoom-slider" id="crop-zoom">
-                                    <span class="zoom-value">100%</span>
-                                    <button class="cropper-tool-btn" id="crop-zoom-out">
-                                        <i class="fas fa-search-minus"></i>
-                                    </button>
-                                    <button class="cropper-tool-btn" id="crop-rotate-left">
-                                        <i class="fas fa-undo"></i>
-                                    </button>
-                                    <button class="cropper-tool-btn" id="crop-rotate-right">
-                                        <i class="fas fa-redo"></i>
-                                    </button>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">E-posta</label>
+                                        <input type="email" class="form-control" id="editEmail" value="mustafa@ser-elektrik.com">
+                                    </div>
                                 </div>
-                                <div class="text-center mt-3">
-                                    <button class="btn btn-primary w-100" id="crop-image-btn">Kırp ve Uygula</button>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Telefon</label>
+                                        <input type="tel" class="form-control" id="editPhone" value="+90 555 123 4567">
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Ad Soyad</label>
-                                <input type="text" class="form-control" id="editFullName">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">E-posta</label>
-                                <input type="email" class="form-control" id="editEmail">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Telefon</label>
-                                <input type="tel" class="form-control" id="editPhone">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Pozisyon</label>
-                                <input type="text" class="form-control" id="editPosition">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Pozisyon</label>
+                                        <input type="text" class="form-control" id="editPosition" value="Proje Yöneticisi">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1688,135 +1751,131 @@
         </div>
     </div>
 
-    <!-- Cropper.js kütüphanesi -->
+    <!-- Fotoğraf Kırpma Modalı -->
+    <div class="cropper-modal" id="cropperModal">
+        <div class="cropper-container">
+            <div class="cropper-header">
+                <h2>Fotoğrafı Düzenle</h2>
+                <button class="btn-close" id="closeCropperModal"></button>
+            </div>
+            <div class="cropper-preview" id="cropperPreview">
+                <img id="image-to-crop" src="" alt="Kırpılacak resim">
+            </div>
+            <div class="cropper-tools">
+                <div class="cropper-tools-left">
+                    <button class="cropper-tool-btn" id="crop-rotate-left">
+                        <i class="fas fa-undo"></i> Sola Döndür
+                    </button>
+                    <button class="cropper-tool-btn" id="crop-rotate-right">
+                        <i class="fas fa-redo"></i> Sağa Döndür
+                    </button>
+                </div>
+                <div class="cropper-tools-right">
+                    <div class="zoom-controls">
+                        <button class="cropper-tool-btn" id="crop-zoom-out">
+                            <i class="fas fa-search-minus"></i>
+                        </button>
+                        <input type="range" min="1" max="300" value="100" class="zoom-slider" id="crop-zoom">
+                        <span class="zoom-value">100%</span>
+                        <button class="cropper-tool-btn" id="crop-zoom-in">
+                            <i class="fas fa-search-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center mt-4">
+                <button class="btn btn-primary" id="crop-image-btn" style="padding: 10px 30px;">
+                    <i class="fas fa-check"></i> Onayla
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kullanıcı Hover Kartı -->
+    <div class="user-hover-card" id="userHoverCard"></div>
+
+    <!-- Toast Bildirimi -->
+    <div class="toast-notification" id="toastNotification">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMessage"></span>
+    </div>
+
+    <!-- Kütüphaneler -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        // API_BASE_URL'i burada tanımlayın veya global bir yerden çekin
-        const API_BASE_URL = "https://ser-proje.onrender.com"; 
-        let currentUser = null; // Mevcut kullanıcı bilgisini tutacak
+        // Demo kullanıcı verileri
+        const demoUsers = [
+            {
+                id: 1,
+                fullname: "Mustafa Öztürk",
+                role: "Admin",
+                email: "mustafa@ser-elektrik.com",
+                phone: "+90 555 123 4567",
+                position: "Proje Yöneticisi",
+                joinDate: "15.03.2023",
+                avatar: null
+            },
+            {
+                id: 2,
+                fullname: "Ayşe Demir",
+                role: "Kullanıcı",
+                email: "ayse@ser-elektrik.com",
+                phone: "+90 555 234 5678",
+                position: "Elektrik Mühendisi",
+                joinDate: "10.04.2023",
+                avatar: null
+            },
+            {
+                id: 3,
+                fullname: "Mehmet Kaya",
+                role: "Kullanıcı",
+                email: "mehmet@ser-elektrik.com",
+                phone: "+90 555 345 6789",
+                position: "Teknik Sorumlu",
+                joinDate: "05.05.2023",
+                avatar: null
+            },
+            {
+                id: 4,
+                fullname: "Zeynep Yılmaz",
+                role: "Editör",
+                email: "zeynep@ser-elektrik.com",
+                phone: "+90 555 456 7890",
+                position: "Satış Temsilcisi",
+                joinDate: "20.06.2023",
+                avatar: null
+            },
+            {
+                id: 5,
+                fullname: "Ali Can",
+                role: "Yönetici",
+                email: "ali@ser-elektrik.com",
+                phone: "+90 555 567 8901",
+                position: "Finans Müdürü",
+                joinDate: "12.01.2023",
+                avatar: null
+            },
+            {
+                id: 6,
+                fullname: "Fatma Şahin",
+                role: "Kullanıcı",
+                email: "fatma@ser-elektrik.com",
+                phone: "+90 555 678 9012",
+                position: "İK Uzmanı",
+                joinDate: "18.07.2023",
+                avatar: null
+            }
+        ];
+
         let cropper = null; // Cropper instance
         let currentCroppedImage = null; // Kırpılmış resmi sakla
 
-        // Toast mesajı gösterme fonksiyonu
-        function showToast(message, isError = false) {
-            const toast = document.createElement('div');
-            toast.id = 'toast';
-            toast.className = 'toast';
-            toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-circle' : 'fa-check-circle'}"></i> ${message}`;
-            document.body.appendChild(toast);
-            
-            toast.className = 'toast show';
-            if (isError) {
-                toast.classList.add('error');
-            }
-            
-            setTimeout(() => {
-                toast.className = 'toast';
-                setTimeout(() => {
-                    if (toast.parentNode) {
-                        toast.parentNode.removeChild(toast);
-                    }
-                }, 300);
-            }, 3000);
-        }
-
-        // Kullanıcı verilerini çekme ve görüntüleme
+        // Sayfa yüklendiğinde kullanıcıları yükle
         document.addEventListener('DOMContentLoaded', function() {
-            // Kullanıcı oturum kontrolü
-            const userNameElement = document.getElementById('userName');
-            const userRoleElement = document.getElementById('userRole');
-            const userAvatarElement = document.getElementById('userAvatar');
-            const logoutButton = document.getElementById('logoutButton');
-
-            const storedUser = localStorage.getItem('currentUser');
-            if (!storedUser) {
-                showToast("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", true);
-                setTimeout(() => {
-                    window.location.href = 'login.html';
-                }, 2000); // 2 saniye sonra yönlendir
-            } else {
-                try {
-                    currentUser = JSON.parse(storedUser); 
-                    updateUserInfo(currentUser);
-                } catch (e) {
-                    console.error("Kayıtlı kullanıcı verisi bozuk:", e);
-                    localStorage.removeItem('currentUser');
-                    showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", true);
-                    setTimeout(() => {
-                        window.location.href = 'login.html';
-                    }, 2000); // 2 saniye sonra yönlendir
-                }
-            }
-
-            function updateUserInfo(user) {
-                if (user) {
-                    userNameElement.textContent = user.fullname;
-                    userRoleElement.textContent = user.role;
-                    userAvatarElement.textContent = getInitials(user.fullname);
-                }
-            }
-
-            const themeToggle = document.getElementById('theme-toggle');
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme) {
-                document.body.setAttribute('data-theme', savedTheme);
-                themeToggle.innerHTML =
-                    savedTheme === 'dark'
-                        ? '<i class="fas fa-sun"></i>'
-                        : '<i class="fas fa-moon"></i>';
-            }
-            themeToggle.addEventListener('click', () => {
-                const currentTheme = document.body.getAttribute('data-theme');
-                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                document.body.setAttribute('data-theme', newTheme);
-                themeToggle.innerHTML =
-                    newTheme === 'dark'
-                        ? '<i class="fas fa-sun"></i>'
-                        : '<i class="fas fa-moon"></i>';
-                localStorage.setItem('theme', newTheme);
-            });
-
-            const handleLogout = () => {
-                localStorage.removeItem('currentUser');
-                window.location.href = 'login.html';
-            };
-
-            logoutButton.addEventListener('click', handleLogout);
-
-            // Hamburger menü işlevselliği
-            const hamburgerMenu = document.getElementById('hamburgerMenu');
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('mainContent');
-
-            hamburgerMenu.addEventListener('click', () => {
-                sidebar.classList.toggle('show');
-                mainContent.classList.toggle('expanded');
-            });
-
-            // Sidebar dışına tıklayınca kapatma
-            document.addEventListener('click', (event) => {
-                if (sidebar.classList.contains('show') && 
-                    !sidebar.contains(event.target) && 
-                    !hamburgerMenu.contains(event.target)) {
-                    sidebar.classList.remove('show');
-                    mainContent.classList.remove('expanded');
-                }
-            });
-
-            // Pencere boyutu değiştiğinde sidebar durumunu sıfırla
-            window.addEventListener('resize', () => {
-                if (window.innerWidth > 992) {
-                    sidebar.classList.remove('show');
-                    mainContent.classList.remove('expanded');
-                }
-            });
-
-            // Mevcut kullanıcı bilgilerini yükle
-            loadCurrentUser();
-            
-            // Tüm kullanıcıları yükle
-            loadAllUsers();
+            // Kullanıcı listesini yükle
+            renderUsersTable(demoUsers);
             
             // Profil düzenleme butonu
             document.getElementById('editProfileBtn').addEventListener('click', openEditProfileModal);
@@ -1829,44 +1888,30 @@
                 document.getElementById('avatarUpload').click();
             });
             
-            // Resim yüklendiğinde Cropper'ı başlat
+            // Resim yüklendiğinde Cropper modalını aç
             document.getElementById('avatarUpload').addEventListener('change', function(e) {
                 if(e.target.files && e.target.files[0]) {
                     const reader = new FileReader();
                     
                     reader.onload = function(event) {
-                        // Eğer önceki bir cropper varsa yok et
-                        if (cropper) {
-                            cropper.destroy();
-                            cropper = null;
-                        }
-                        
-                        // Resmi kırpma alanında göster
-                        const image = document.getElementById('image-to-crop');
-                        image.src = event.target.result;
-                        
-                        // Kırpma alanını göster
-                        document.getElementById('image-cropper-container').style.display = 'block';
-                        
-                        // Cropper'ı başlat
-                        cropper = new Cropper(image, {
-                            aspectRatio: 1,
-                            viewMode: 1,
-                            autoCropArea: 0.8,
-                            responsive: true,
-                            guides: true
-                        });
-                        
-                        // Zoom slider'ını sıfırla
-                        document.getElementById('crop-zoom').value = 100;
-                        document.querySelector('.zoom-value').textContent = '100%';
+                        // Cropper modalını aç
+                        openCropperModal(event.target.result);
                     }
                     
                     reader.readAsDataURL(e.target.files[0]);
                 }
             });
             
-            // Zoom işlevleri
+            // Cropper modalını kapatma
+            document.getElementById('closeCropperModal').addEventListener('click', function() {
+                document.getElementById('cropperModal').style.display = 'none';
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+            });
+            
+            // Cropper araçları
             document.getElementById('crop-zoom-in').addEventListener('click', function() {
                 if (cropper) {
                     cropper.zoom(0.1);
@@ -1923,14 +1968,12 @@
                     // Kırpılmış resmi sakla
                     currentCroppedImage = croppedCanvas.toDataURL('image/jpeg');
                     
-                    // Kırpma alanını gizle
-                    document.getElementById('image-cropper-container').style.display = 'none';
+                    // Cropper modalını kapat
+                    document.getElementById('cropperModal').style.display = 'none';
                     
                     // Cropper'ı temizle
                     cropper.destroy();
                     cropper = null;
-                    
-                    showToast('Profil fotoğrafı başarıyla kırpıldı');
                 }
             });
             
@@ -1946,85 +1989,34 @@
             }
         }
         
-        function loadCurrentUser() {
-            // Bu kısımda API'dan kullanıcı verileri çekilecek
-            // Şimdilik demo verilerle çalışıyoruz
-            
-            const demoUser = {
-                id: 1,
-                fullname: "Mustafa Öztürk",
-                role: "Admin",
-                email: "mustafa@ser-elektrik.com",
-                phone: "+90 555 123 4567",
-                position: "Proje Yöneticisi",
-                joinDate: "15.03.2023",
-                avatar: null
-            };
-            
-            // Bilgileri ekrana yerleştir
-            document.getElementById('currentUserName').textContent = demoUser.fullname;
-            document.getElementById('currentUserRole').textContent = demoUser.role;
-            document.getElementById('currentUserEmail').textContent = demoUser.email;
-            document.getElementById('currentUserPhone').textContent = demoUser.phone;
-            document.getElementById('currentUserPosition').textContent = demoUser.position;
-            document.getElementById('currentUserJoinDate').textContent = demoUser.joinDate;
-            
-            // Avatar oluştur
-            const avatar = document.getElementById('currentUserAvatar');
-            if(demoUser.avatar) {
-                avatar.innerHTML = `<img src="${demoUser.avatar}" alt="${demoUser.fullname}">`;
-            } else {
-                // İsim baş harflerinden avatar oluştur
-                const initials = getInitials(demoUser.fullname);
-                avatar.textContent = initials;
-                avatar.style.fontSize = "48px";
+        function openCropperModal(imageSrc) {
+            // Eğer önceki bir cropper varsa yok et
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
             }
-        }
-        
-        function loadAllUsers() {
-            // Bu kısımda API'dan tüm kullanıcılar çekilecek
-            // Şimdilik demo verilerle çalışıyoruz
             
-            const demoUsers = [
-                {
-                    id: 1,
-                    fullname: "Mustafa Öztürk",
-                    role: "Admin",
-                    email: "mustafa@ser-elektrik.com",
-                    phone: "+90 555 123 4567",
-                    position: "Proje Yöneticisi",
-                    avatar: null
-                },
-                {
-                    id: 2,
-                    fullname: "Ayşe Demir",
-                    role: "Kullanıcı",
-                    email: "ayse@ser-elektrik.com",
-                    phone: "+90 555 234 5678",
-                    position: "Elektrik Mühendisi",
-                    avatar: null
-                },
-                {
-                    id: 3,
-                    fullname: "Mehmet Kaya",
-                    role: "Kullanıcı",
-                    email: "mehmet@ser-elektrik.com",
-                    phone: "+90 555 345 6789",
-                    position: "Teknik Sorumlu",
-                    avatar: null
-                },
-                {
-                    id: 4,
-                    fullname: "Zeynep Yılmaz",
-                    role: "Editör",
-                    email: "zeynep@ser-elektrik.com",
-                    phone: "+90 555 456 7890",
-                    position: "Satış Temsilcisi",
-                    avatar: null
-                }
-            ];
+            // Resmi kırpma alanında göster
+            const image = document.getElementById('image-to-crop');
+            image.src = imageSrc;
             
-            renderUsersTable(demoUsers);
+            // Cropper modalını göster
+            document.getElementById('cropperModal').style.display = 'flex';
+            
+            // Cropper'ı başlat
+            setTimeout(() => {
+                cropper = new Cropper(image, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    autoCropArea: 0.8,
+                    responsive: true,
+                    guides: true
+                });
+                
+                // Zoom slider'ını sıfırla
+                document.getElementById('crop-zoom').value = 100;
+                document.querySelector('.zoom-value').textContent = '100%';
+            }, 100);
         }
         
         function renderUsersTable(users) {
@@ -2033,6 +2025,16 @@
             
             users.forEach(user => {
                 const row = document.createElement('tr');
+                row.dataset.userId = user.id;
+                
+                // Hover olaylarını ekle
+                row.addEventListener('mouseenter', function(e) {
+                    showUserHoverCard(user, e);
+                });
+                
+                row.addEventListener('mouseleave', function() {
+                    hideUserHoverCard();
+                });
                 
                 // Avatar sütunu
                 const avatarCell = document.createElement('td');
@@ -2051,7 +2053,7 @@
                 avatarDiv.style.fontWeight = '600';
                 
                 if(user.avatar) {
-                    avatarDiv.innerHTML = `<img src="${user.avatar}" alt="${user.fullname}" style="width:100%;height:100%;object-fit:cover;">`;
+                    avatarDiv.innerHTML = `<img src="${user.avatar}" alt="${user.fullname}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
                 } else {
                     const initials = getInitials(user.fullname);
                     avatarDiv.textContent = initials;
@@ -2060,7 +2062,7 @@
                 avatarCell.appendChild(avatarDiv);
                 
                 // Diğer sütunlar
-                row.innerHTML = `
+                row.innerHTML += `
                     <td data-label="Ad Soyad">${user.fullname}</td>
                     <td data-label="Rol"><span class="status-badge status-Aktif">${user.role}</span></td>
                     <td data-label="Telefon">${user.phone}</td>
@@ -2084,29 +2086,36 @@
             return '';
         }
         
+        function showUserHoverCard(user, event) {
+            const hoverCard = document.getElementById('userHoverCard');
+            
+            // Kart içeriğini oluştur
+            hoverCard.innerHTML = `
+                <div class="user-avatar-large">${getInitials(user.fullname)}</div>
+                <div class="user-name-large">${user.fullname}</div>
+                <div class="user-role-badge">${user.role}</div>
+                <div class="user-contact-info">
+                    <div><i class="fas fa-envelope"></i> ${user.email}</div>
+                    <div><i class="fas fa-phone"></i> ${user.phone}</div>
+                    <div><i class="fas fa-briefcase"></i> ${user.position}</div>
+                    <div><i class="fas fa-calendar-alt"></i> Katılım: ${user.joinDate}</div>
+                </div>
+            `;
+            
+            // Kartı konumlandır
+            const rect = event.target.getBoundingClientRect();
+            hoverCard.style.left = (rect.left + window.scrollX + 10) + 'px';
+            hoverCard.style.top = (rect.top + window.scrollY - 180) + 'px';
+            
+            // Kartı göster
+            hoverCard.style.display = 'block';
+        }
+        
+        function hideUserHoverCard() {
+            document.getElementById('userHoverCard').style.display = 'none';
+        }
+        
         function openEditProfileModal() {
-            // Mevcut kullanıcı bilgilerini modala yükle
-            const user = {
-                fullname: document.getElementById('currentUserName').textContent,
-                email: document.getElementById('currentUserEmail').textContent,
-                phone: document.getElementById('currentUserPhone').textContent,
-                position: document.getElementById('currentUserPosition').textContent
-            };
-            
-            document.getElementById('editFullName').value = user.fullname;
-            document.getElementById('editEmail').value = user.email;
-            document.getElementById('editPhone').value = user.phone;
-            document.getElementById('editPosition').value = user.position;
-            
-            // Avatar önizleme
-            const avatarPreview = document.getElementById('avatarPreview');
-            const currentAvatar = document.getElementById('currentUserAvatar').innerHTML;
-            avatarPreview.innerHTML = currentAvatar;
-            
-            // Kırpma alanını gizle
-            document.getElementById('image-cropper-container').style.display = 'none';
-            currentCroppedImage = null;
-            
             // Modalı aç
             const modal = new bootstrap.Modal(document.getElementById('editProfileModal'));
             modal.show();
@@ -2139,12 +2148,7 @@
             const newPosition = document.getElementById('editPosition').value;
             
             // Güncellenmiş avatar
-            let newAvatar = document.getElementById('avatarPreview').innerHTML;
-            
-            // Eğer kırpılmış bir resim varsa onu kullan
-            if (currentCroppedImage) {
-                newAvatar = `<img src="${currentCroppedImage}" alt="${newName}" style="width:100%;height:100%;object-fit:cover;">`;
-            }
+            const newAvatar = document.getElementById('avatarPreview').innerHTML;
             
             // Bilgileri güncelle
             document.getElementById('currentUserName').textContent = newName;
@@ -2160,9 +2164,29 @@
             const modal = bootstrap.Modal.getInstance(document.getElementById('editProfileModal'));
             modal.hide();
             
-            showToast('Profil bilgileriniz başarıyla güncellendi');
+            showToast('Profil bilgileriniz başarıyla güncellendi!');
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toastNotification');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastIcon = toast.querySelector('i');
+
+            toastMessage.textContent = message;
+            toast.className = 'toast-notification'; // Reset classes
+            toast.classList.add(type);
+            toast.classList.add('show');
+
+            if (type === 'success') {
+                toastIcon.className = 'fas fa-check-circle';
+            } else if (type === 'error') {
+                toastIcon.className = 'fas fa-times-circle';
+            }
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000); // 3 saniye sonra kaybolur
         }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
