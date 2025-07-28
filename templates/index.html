@@ -1078,19 +1078,19 @@
         }
     }
 
-    /* Bildirim Paneli Stilleri */
+    /* Bildirim Paneli Stilleri (bildirim.html'den alındı) */
     .notification-panel {
-        position: fixed; /* Düzeltme: absolute yerine fixed */
-        top: 60px; /* Topbar yüksekliğine göre ayarlanabilir */
+        position: fixed;
+        top: 60px;
         right: 20px;
-        width: 350px;
-        max-height: 450px;
+        width: 360px;
+        max-height: 500px;
         background-color: var(--card-bg);
         border-radius: 12px;
         box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
         border: 1px solid var(--border-color);
-        z-index: 1000;
-        display: none; /* Varsayılan olarak gizli */
+        z-index: 1001;
+        display: none;
         flex-direction: column;
         overflow: hidden;
         opacity: 0;
@@ -1130,15 +1130,15 @@
     .notification-list {
         flex-grow: 1;
         overflow-y: auto;
-        padding: 10px 0;
+        padding: 5px 0;
     }
 
     .notification-item {
         display: flex;
         align-items: flex-start;
-        padding: 12px 20px;
+        padding: 12px 15px;
         border-bottom: 1px solid var(--border-color);
-        cursor: pointer;
+        position: relative;
         transition: background-color 0.2s;
     }
 
@@ -1147,18 +1147,20 @@
     }
 
     .notification-item:hover {
-        background-color: rgba(9, 128, 211, 0.05);
+        background-color: var(--primary-light-bg);
     }
 
-    /* Okunmamış bildirimler için arkaplan rengi ve sol kenarlık */
     .notification-item.unread {
-        background-color: var(--primary-light-bg); /* Hafif birincil renk arka planı */
-        border-left: 4px solid var(--primary); /* Sol tarafta renkli bir çizgi */
-    }
-    .notification-item.unread:hover {
-        background-color: rgba(9, 128, 211, 0.2); /* Hover'da biraz daha koyu */
+        background-color: var(--primary-light-bg);
+        border-left: 3px solid var(--primary);
     }
 
+    .notification-item-content {
+        cursor: pointer;
+        flex-grow: 1;
+        padding-right: 30px; /* Silme butonu için yer aç */
+    }
+    
     .notification-item-icon {
         width: 35px;
         height: 35px;
@@ -1171,15 +1173,6 @@
         font-size: 16px;
         margin-right: 12px;
         flex-shrink: 0;
-    }
-    /* Okunmamış bildirim ikonunun arka planı ve rengi */
-    .notification-item.unread .notification-item-icon {
-        background-color: var(--primary-light);
-        color: var(--white);
-    }
-
-    .notification-item-content {
-        flex-grow: 1;
     }
 
     .notification-item-title {
@@ -1199,44 +1192,72 @@
         font-size: 11px;
         color: var(--light-gray);
         margin-top: 5px;
-        text-align: right;
+    }
+
+    .notification-item-actions {
+        position: absolute;
+        top: 50%;
+        right: 10px;
+        transform: translateY(-50%);
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .notification-item:hover .notification-item-actions {
+        opacity: 1;
+    }
+
+    .delete-notification-btn {
+        background: transparent;
+        border: none;
+        color: var(--light-gray);
+        cursor: pointer;
+        font-size: 14px;
+        padding: 5px;
+        border-radius: 50%;
+    }
+
+    .delete-notification-btn:hover {
+        background-color: rgba(255, 71, 87, 0.1);
+        color: var(--danger);
     }
 
     .notification-panel-footer {
-        padding: 10px 20px;
+        padding: 10px 15px;
         border-top: 1px solid var(--border-color);
-        text-align: center;
-        font-size: 14px;
-        color: var(--light-gray);
         display: flex;
-        justify-content: center;
+        justify-content: space-between;
         align-items: center;
+        background-color: var(--bg-color);
     }
-    /* "Tümünü Okundu Olarak İşaretle" butonu için minimalist stil */
-    .notification-panel-footer button {
-        width: auto; /* Genişliği içeriğe göre ayarla */
-        padding: 5px 10px; /* Daha küçük padding */
+
+    .notification-action-btn {
+        background: transparent;
+        border: 1px solid var(--border-color);
+        color: var(--text-color);
+        padding: 6px 12px;
         border-radius: 8px;
-        border: 1px solid var(--primary-light); /* İnce kenarlık */
-        background: transparent; /* Şeffaf arka plan */
-        color: var(--primary-light); /* Yazı rengi */
-        font-weight: 500;
         cursor: pointer;
-        display: inline-flex; /* İçeriği ortalamak için */
+        font-size: 13px;
+        font-weight: 500;
+        display: flex;
         align-items: center;
-        justify-content: center;
-        gap: 5px; /* İkon ile yazı arası boşluk */
+        gap: 6px;
         transition: all 0.2s;
     }
-    .notification-panel-footer button:hover {
-        background-color: rgba(9, 128, 211, 0.1); /* Hover'da hafif arka plan */
-        color: var(--primary); /* Hover'da daha koyu yazı rengi */
-        transform: none; /* Transform efektini kaldır */
-        box-shadow: none; /* Gölgeyi kaldır */
+
+    .notification-action-btn:hover {
+        background-color: var(--input-bg);
+        border-color: var(--primary-light);
+        color: var(--primary-light);
+    }
+    
+    .notification-action-btn.danger:hover {
+        border-color: var(--danger);
+        color: var(--danger);
+        background-color: rgba(255, 71, 87, 0.1);
     }
 
-
-    /* Boş bildirim durumu */
     .no-notifications {
         text-align: center;
         padding: 20px;
@@ -1244,16 +1265,20 @@
         font-size: 14px;
     }
 
-    /* Mobil uyumluluk için bildirim paneli */
     @media (max-width: 576px) {
         .notification-panel {
-            width: calc(100% - 40px); /* Ekran genişliğine göre ayarla */
-            right: 20px;
-            left: 20px;
-            top: 70px; /* Topbar'ın altına gelmesi için */
+            width: calc(100% - 20px);
+            left: 10px;
+            right: 10px;
+            top: 65px;
+        }
+        .notification-action-btn span {
+            display: none;
+        }
+        .notification-action-btn {
+            padding: 8px;
         }
     }
-
     </style>
 </head>
 <body data-theme="light">
@@ -1383,21 +1408,9 @@
             </div>
         </div>
 
-        <!-- Bildirim Paneli -->
-        <div class="notification-panel" id="notificationPanel">
-            <div class="notification-panel-header">
-                <span>Bildirimler</span>
-                <button class="close-btn" id="closeNotificationPanel"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="notification-list" id="notificationList">
-                <!-- Bildirimler buraya dinamik olarak yüklenecek -->
-                <div class="no-notifications">Bildirimler yükleniyor...</div>
-            </div>
-            <div class="notification-panel-footer">
-                <button id="markAllReadBtn">
-                    <i class="fas fa-check-double"></i> Tümünü Okundu Olarak İşaretle
-                </button>
-            </div>
+        <!-- Bildirim Paneli için Placeholder -->
+        <div id="notification-panel-placeholder">
+            <!-- bildirim.html içeriği buraya yüklenecek -->
         </div>
 
         <div class="dashboard-content">
@@ -1782,43 +1795,15 @@
             });
             updateRowsPerPage(); // Sayfa yüklendiğinde başlangıç değeri ayarla
 
-            // Bildirim Paneli İşlevselliği
-            const notificationButton = document.getElementById('notificationButton');
-            const notificationPanel = document.getElementById('notificationPanel');
-            const closeNotificationPanel = document.getElementById('closeNotificationPanel');
-            const markAllReadBtn = document.getElementById('markAllReadBtn'); // Yeni buton
-
-            notificationButton.addEventListener('click', (event) => {
-                event.stopPropagation(); // Butona tıklayınca panelin kapanmasını engelle
-                notificationPanel.classList.toggle('show');
-                if (notificationPanel.classList.contains('show')) {
-                    fetchNotifications(); // Panel açıldığında bildirimleri çek
-                }
-            });
-
-            closeNotificationPanel.addEventListener('click', () => {
-                notificationPanel.classList.remove('show');
-            });
-
-            // Panel dışına tıklayınca kapatma
-            document.addEventListener('click', (event) => {
-                if (notificationPanel.classList.contains('show') && 
-                    !notificationPanel.contains(event.target) && 
-                    !notificationButton.contains(event.target)) {
-                    notificationPanel.classList.remove('show');
-                }
-            });
-
-            // "Tümünü Okundu Olarak İşaretle" butonu tıklama olayı
-            markAllReadBtn.addEventListener('click', markAllNotificationsAsRead);
-            fetchUnreadNotificationCount(); // Sayfa yüklendiğinde SADECE okunmamış sayısını çek
+            // Bildirim Paneli İşlevselliği (bildirim.js'e taşındı, burada sadece placeholder'ı kaldı)
+            // Eski kodlar kaldırıldı
         });
 
         // --- API Çağrıları ve Veri İşleme ---
         const dbStatusElement = document.getElementById('dbStatus');
         let projectChartInstance; 
 
-        // Toast mesajı gösterme fonksiyonu
+        // Toast mesajı gösterme fonksiyonu (global olarak tanımlandı)
         function showToast(message, isError = false) {
             const toast = document.getElementById('toast');
             const toastMessage = document.getElementById('toastMessage');
@@ -1834,6 +1819,49 @@
             setTimeout(() => {
                 toast.className = 'toast';
             }, 3000);
+        }
+
+        // Custom Confirm Modal (alert yerine kullanılacak) (global olarak tanımlandı)
+        function showConfirmModal(title, message, onConfirm) {
+            const modalHtml = `
+                <div class="modal fade" id="customConfirmModal" tabindex="-1" aria-labelledby="customConfirmModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="customConfirmModalLabel">${title}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>${message}</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                                <button type="button" class="btn btn-danger" id="confirmActionBtn">Onayla</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Eğer modal zaten varsa kaldırma (çoklu açılmasını engeller)
+            const existingModal = document.getElementById('customConfirmModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const confirmModalElement = document.getElementById('customConfirmModal');
+            const confirmModal = new bootstrap.Modal(confirmModalElement);
+            confirmModal.show();
+
+            document.getElementById('confirmActionBtn').onclick = () => {
+                onConfirm();
+                confirmModal.hide();
+            };
+
+            confirmModalElement.addEventListener('hidden.bs.modal', () => {
+                confirmModalElement.remove(); // Modal kapandığında DOM'dan kaldır
+            });
         }
 
         // Projeleri Backend'den Çekme
@@ -1870,7 +1898,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             const editProjectId = urlParams.get('editProject');
             if (editProjectId) {
-                openProjectModal(editProjectId, "edit");
+                openEditModal(editProjectId); // openProjectModal yerine openEditModal çağrıldı
             }
         }
 
@@ -2148,214 +2176,19 @@
             });
         }
 
+        // Bu fonksiyonlar bildirim.js'e taşındı, burada sadece global olarak erişilebilir olmaları için bırakıldı
         // Sadece okunmamış bildirim sayısını çeken fonksiyon
-        async function fetchUnreadNotificationCount() {
-            const notificationButton = document.getElementById('notificationButton');
-            try {
-                // notifications endpoint'ini kullan
-                const response = await fetch(`${API_BASE_URL}/api/notifications/unread-count`);
-                if (!response.ok) {
-                    throw new Error(`HTTP hatası! Durum: ${response.status}`);
-                }
-                const data = await response.json();
-                const unreadCount = data.unread_count || 0;
-
-                if (unreadCount > 0) {
-                    notificationButton.setAttribute('data-count', unreadCount);
-                    notificationButton.classList.add('has-notifications');
-                } else {
-                    notificationButton.setAttribute('data-count', '0');
-                    notificationButton.classList.remove('has-notifications');
-                }
-            } catch (error) {
-                console.error('Okunmamış bildirim sayısı çekilemedi:', error);
-                notificationButton.setAttribute('data-count', '!');
-                notificationButton.classList.add('has-notifications');
-            }
-        }
-
+        // async function fetchUnreadNotificationCount() { ... }
         // Bildirimleri çekme ve panele render etme fonksiyonu (panel açıldığında çağrılır)
-        async function fetchNotifications() {
-            const notificationListDiv = document.getElementById('notificationList');
-            notificationListDiv.innerHTML = '<div class="no-notifications"><i class="fas fa-spinner fa-spin"></i> Bildirimler yükleniyor...</div>';
-
-            try {
-                // notifications endpoint'ini kullan
-                const response = await fetch(`${API_BASE_URL}/api/notifications`);
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ message: 'Sunucudan yanıt alınamadı.' }));
-                    throw new Error(errorData.message || `HTTP hatası! Durum: ${response.status}`);
-                }
-                const notifications = await response.json();
-                renderNotifications(notifications);
-                // Sayacı tekrar senkronize et
-                fetchUnreadNotificationCount();
-            } catch (error) {
-                console.error('Bildirimler çekilemedi:', error);
-                notificationListDiv.innerHTML = '<div class="no-notifications" style="color: var(--danger);">Bildirimler yüklenemedi.</div>';
-                showToast(`Bildirimler yüklenirken hata oluştu: ${error.message}`, true);
-            }
-        }
-
+        // async function fetchNotifications() { ... }
         // Bildirimleri panele render etme
-        function renderNotifications(notifications) {
-            const notificationListDiv = document.getElementById('notificationList');
-            const notificationButton = document.getElementById('notificationButton');
-            notificationListDiv.innerHTML = '';
-
-            if (notifications.length === 0) {
-                notificationListDiv.innerHTML = '<div class="no-notifications">Henüz yeni bildiriminiz yok.</div>';
-                notificationButton.setAttribute('data-count', '0');
-                notificationButton.classList.remove('has-notifications');
-                return;
-            }
-
-            let unreadCount = 0;
-            // Sadece ilk 10 bildirimi göster (veya istediğiniz sayıda)
-            const displayNotifications = notifications.slice(0, 10); 
-
-            displayNotifications.forEach(notification => {
-                // is_read alanı 0/1, true/false, '0'/'1' her türlü gelebilir, kesin kontrol
-                const isRead = notification.is_read === true || notification.is_read === 1 || notification.is_read === '1';
-                if (!isRead) {
-                    unreadCount++;
-                }
-
-                const item = document.createElement('div');
-                // 'isRead' durumuna göre sınıf ekle
-                item.className = isRead ? 'notification-item' : 'notification-item unread';
-                item.innerHTML = `
-                    <div class="notification-item-icon">
-                        <i class="${notification.icon || 'fas fa-info-circle'}"></i>
-                    </div>
-                    <div class="notification-item-content">
-                        <div class="notification-item-title">${notification.title}</div>
-                        <div class="notification-item-description">${notification.message}</div>
-                        <div class="notification-item-time">${formatTimeAgo(notification.created_at)}</div>
-                    </div>
-                `;
-                // Bildirime tıklayınca okunmuş olarak işaretle
-                // notifications tablosunda 'id' kullanıldığı için 'notification.id' kullanıldı
-                if (notification.id) { 
-                    item.addEventListener('click', () => markNotificationAsRead(notification.id, item));
-                } else {
-                    console.warn('Bildirim ID\'si eksik (id), tıklama olayı eklenmedi:', notification);
-                }
-                notificationListDiv.appendChild(item);
-            });
-
-            // Bildirim sayacını güncelle ve badge'i her durumda göster
-            if (unreadCount > 0) {
-                notificationButton.setAttribute('data-count', unreadCount);
-                notificationButton.classList.add('has-notifications');
-            } else {
-                notificationButton.setAttribute('data-count', '0');
-                notificationButton.classList.remove('has-notifications');
-            }
-        }
-
+        // function renderNotifications(notifications) { ... }
         // Bildirimi okunmuş olarak işaretle
-        async function markNotificationAsRead(notificationId, itemElement) {
-            console.log('markNotificationAsRead çağrıldı, notificationId:', notificationId);
-            // Güvenlik kontrolü: notificationId'nin geçerli olduğundan emin ol
-            if (!notificationId) {
-                console.error('Hata: Bildirim ID\'si eksik veya geçersiz.');
-                showToast('Bildirim ID\'si eksik veya geçersiz.', true);
-                return;
-            }
-
-            // Eğer zaten okunmuşsa tekrar işlem yapma
-            if (!itemElement.classList.contains('unread')) {
-                console.log('Bildirim zaten okunmuş olarak işaretli.');
-                showToast('Bildirim zaten okunmuş olarak işaretli.');
-                return;
-            }
-
-            try {
-                // notifications endpoint'ini kullan
-                const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                console.log('API Yanıtı:', response);
-                if (response.ok) {
-                    console.log('Bildirim başarıyla okunmuş olarak işaretlendi (frontend).');
-                    itemElement.classList.remove('unread');
-                    showToast('Bildirim okunmuş olarak işaretlendi.');
-                    // Sayacı güncelle
-                    const notificationButton = document.getElementById('notificationButton');
-                    let currentCount = parseInt(notificationButton.getAttribute('data-count') || '0');
-                    if (currentCount > 0) {
-                        currentCount--;
-                        notificationButton.setAttribute('data-count', currentCount);
-                        if (currentCount === 0) {
-                            notificationButton.classList.remove('has-notifications');
-                        }
-                    }
-                } else {
-                    const errorData = await response.json();
-                    console.error('Bildirim okunmuş olarak işaretlenemedi:', errorData.message, 'HTTP Durumu:', response.status);
-                    showToast('Bildirim okunmuş olarak işaretlenirken hata oluştu.', true);
-                }
-            } catch (error) {
-                console.error('Bildirim okunmuş olarak işaretlenirken ağ hatası:', error);
-                showToast('Bildirim okunmuş olarak işaretlenirken ağ hatası oluştu.', true);
-            }
-        }
-
+        // async function markNotificationAsRead(notificationId, itemElement) { ... }
         // Tüm Bildirimleri Okundu Olarak İşaretle fonksiyonu
-        async function markAllNotificationsAsRead() {
-            console.log('markAllNotificationsAsRead çağrıldı.');
-            try {
-                // notifications endpoint'ini kullan
-                const response = await fetch(`${API_BASE_URL}/api/notifications/mark_all_read`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                console.log('API Yanıtı (Tümünü Okundu):', response);
-                if (response.ok) {
-                    const result = await response.json();
-                    showToast(result.message || 'Tüm bildirimler okunmuş olarak işaretlendi.');
-                    // UI'ı güncelle: Tüm bildirimleri okunmuş yap ve sayacı sıfırla
-                    const notificationListDiv = document.getElementById('notificationList');
-                    notificationListDiv.querySelectorAll('.notification-item').forEach(item => {
-                        item.classList.remove('unread');
-                    });
-                    const notificationButton = document.getElementById('notificationButton');
-                    notificationButton.setAttribute('data-count', '0');
-                    notificationButton.classList.remove('has-notifications');
-                    // Paneli kapat
-                    document.getElementById('notificationPanel').classList.remove('show');
-                } else {
-                    const errorData = await response.json();
-                    console.error('Tüm bildirimler okunmuş olarak işaretlenemedi:', errorData.message, 'HTTP Durumu:', response.status);
-                    showToast('Tüm bildirimler okunmuş olarak işaretlenirken hata oluştu.', true);
-                }
-            } catch (error) {
-                console.error('Tüm bildirimler okunmuş olarak işaretlenirken ağ hatası:', error);
-                showToast('Tüm bildirimler okunmuş olarak işaretlenirken ağ hatası oluştu.', true);
-            }
-        }
-
+        // async function markAllNotificationsAsRead() { ... }
         // Zamanı "x dakika önce" formatına dönüştüren yardımcı fonksiyon
-        function formatTimeAgo(timestamp) {
-            if (!timestamp) return '';
-            const date = new Date(timestamp);
-            const now = new Date();
-            const seconds = Math.floor((now - date) / 1000);
-
-            let interval = seconds / 31536000;
-            if (interval > 1) return Math.floor(interval) + " yıl önce";
-            interval = seconds / 2592000;
-            if (interval > 1) return Math.floor(interval) + " ay önce";
-            interval = seconds / 86400;
-            if (interval > 1) return Math.floor(interval) + " gün önce";
-            interval = seconds / 3600;
-            if (interval > 1) return Math.floor(interval) + " saat önce";
-            interval = seconds / 60;
-            if (interval > 1) return Math.floor(interval) + " dakika önce";
-            return Math.floor(seconds) + " saniye önce";
-        }
+        // function formatTimeAgo(timestamp) { ... }
 
 
         async function deleteProject(id) {
@@ -2874,9 +2707,9 @@
         document.addEventListener('DOMContentLoaded', function() {
             fetchProjects();
             fetchDashboardStats();
-            fetchRecentActivities(); // Son Aktiviteler için doğru endpoint'i kullanacak
-            // fetchNotifications(); // Bu zaten yukarıdaki DOMContentLoaded içinde çağrılıyor
-
+            fetchRecentActivities();
+            // fetchNotifications(); // Bu zaten bildirim.js tarafından çağrılıyor
+            
             document.getElementById('filterBtn').addEventListener('click', function() {
                 const filtersContainer = document.getElementById('filtersContainer');
                 if (filtersContainer.style.display === 'grid') {
@@ -2911,7 +2744,7 @@
                 fetchProjects();
                 fetchDashboardStats();
                 fetchRecentActivities();
-                fetchNotifications(); // Veriler yenilendiğinde bildirimleri de yenile
+                // fetchNotifications(); // Bu da bildirim.js tarafından yönetiliyor
                 showToast('Veriler başarıyla yenilendi');
             });
         });
@@ -3046,50 +2879,9 @@
                 showToast('Yetki sorgusu sırasında hata oluştu.', true);
             }
         }
-
-        // Custom Confirm Modal (alert yerine kullanılacak)
-        function showConfirmModal(title, message, onConfirm) {
-            const modalHtml = `
-                <div class="modal fade" id="customConfirmModal" tabindex="-1" aria-labelledby="customConfirmModalLabel" aria-hidden="true">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="customConfirmModalLabel">${title}</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                <p>${message}</p>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-                                <button type="button" class="btn btn-danger" id="confirmActionBtn">Onayla</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Eğer modal zaten varsa kaldırma (çoklu açılmasını engeller)
-            const existingModal = document.getElementById('customConfirmModal');
-            if (existingModal) {
-                existingModal.remove();
-            }
-
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-            const confirmModalElement = document.getElementById('customConfirmModal');
-            const confirmModal = new bootstrap.Modal(confirmModalElement);
-            confirmModal.show();
-
-            document.getElementById('confirmActionBtn').onclick = () => {
-                onConfirm();
-                confirmModal.hide();
-            };
-
-            confirmModalElement.addEventListener('hidden.bs.modal', () => {
-                confirmModalElement.remove(); // Modal kapandığında DOM'dan kaldır
-            });
-        }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- bildirim.js dosyasını en sona ekleyin ki DOM tamamen yüklendikten sonra çalışsın -->
+    <script src="bildirim.js"></script>
 </body>
 </html>
