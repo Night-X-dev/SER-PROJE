@@ -375,6 +375,7 @@
         border: 1px solid var(--border-color);
         background-color: var(--input-bg);
         color: var(--text-color);
+        font-size: 14px;
       }
 
       .projects-container {
@@ -1438,7 +1439,7 @@
           const parts = dateStr.split(".");
           return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(
             2,
-            "0"
+            0
           )}`;
         }
         return dateStr;
@@ -2671,11 +2672,12 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
       async function fetchUnreadNotificationCount() {
           const notificationButton = document.getElementById('notificationButton');
           try {
-              const response = await fetch(`${API_BASE_URL}/api/notifications/unread/count`);
+              // API rotası düzeltildi: /api/notifications/unread/count -> /api/notifications/unread-count
+              const response = await fetch(`${API_BASE_URL}/api/notifications/unread-count`);
               if (!response.ok) {
                   // 404 durumunda özel mesaj ve sayacı sıfırla
                   if (response.status === 404) {
-                      console.warn('API endpoint not found: /api/notifications/unread/count. Setting notification count to 0.');
+                      console.warn('API endpoint not found: /api/notifications/unread-count. Setting notification count to 0.');
                       notificationButton.setAttribute('data-count', '0');
                       notificationButton.classList.remove('has-notifications');
                       return; // Hata fırlatma, sadece logla ve çık
@@ -2685,7 +2687,7 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
                   throw new Error(`Okunmamış bildirim sayısı çekilemedi. Sunucu yanıtı: ${response.status} - ${errorText.substring(0, 100)}...`);
               }
               const data = await response.json();
-              const unreadCount = data.count;
+              const unreadCount = data.unread_count; // 'count' yerine 'unread_count' kullanıldı
 
               notificationButton.setAttribute('data-count', unreadCount);
               if (unreadCount > 0) {
@@ -2706,6 +2708,7 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
           notificationListDiv.innerHTML = '<div class="no-notifications">Bildirimler yükleniyor...</div>'; // Yükleniyor mesajı
 
           try {
+              // API rotası doğru: /api/notifications
               const response = await fetch(`${API_BASE_URL}/api/notifications`);
               if (!response.ok) {
                   if (response.status === 404) {
@@ -2746,35 +2749,19 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
           displayNotifications.forEach(notification => {
               const notificationItem = document.createElement('div');
               notificationItem.classList.add('notification-item');
-              if (!notification.read) {
+              if (notification.is_read === 0) { // is_read 0 ise okunmamış
                   notificationItem.classList.add('unread');
                   unreadCount++;
               }
               notificationItem.setAttribute('data-id', notification.id); // Bildirim ID'sini sakla
 
-              // Bildirim tipine göre ikon ve renk
+              // Bildirim tipine göre ikon ve renk (bu kısım backend'den gelmiyor, varsayılan bir mantık)
+              // Backend'den `type` alanı gelmediği için, bu kısmı şimdilik sabit tutuyorum
+              // Eğer backend'den `type` alanı gelirse, burayı dinamik hale getirebilirsiniz.
               let iconClass = 'fas fa-info-circle';
               let iconBgColor = 'rgba(9, 128, 211, 0.1)';
               let iconColor = 'var(--primary-light)';
 
-              if (notification.type === 'project_update') {
-                  iconClass = 'fas fa-project-diagram';
-                  iconBgColor = 'rgba(9, 128, 211, 0.1)';
-                  iconColor = 'var(--primary-light)';
-              } else if (notification.type === 'new_task') {
-                  iconClass = 'fas fa-tasks';
-                  iconBgColor = 'rgba(46, 213, 115, 0.1)'; // Success green
-                  iconColor = 'var(--success)';
-              } else if (notification.type === 'deadline_missed') {
-                  iconClass = 'fas fa-exclamation-triangle';
-                  iconBgColor = 'rgba(255, 71, 87, 0.1)'; // Danger red
-                  iconColor = 'var(--danger)';
-              } else if (notification.type === 'system_alert') {
-                  iconClass = 'fas fa-bell';
-                  iconBgColor = 'rgba(255, 193, 7, 0.1)'; // Warning yellow
-                  iconColor = 'var(--warning)';
-              }
-              
               // Zaman farkını hesapla
               const now = new Date();
               const createdAt = new Date(notification.created_at);
@@ -2805,6 +2792,7 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
                       <div class="notification-item-time">${timeAgo}</div>
                   </div>
               `;
+              // API rotası düzeltildi: /api/notifications/{id}/mark_read -> /api/notifications/{id}/read
               notificationItem.addEventListener('click', () => markNotificationAsRead(notification.id));
               notificationListDiv.appendChild(notificationItem);
           });
@@ -2820,7 +2808,8 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
       // Tek bir bildirimi okundu olarak işaretleme fonksiyonu
       async function markNotificationAsRead(notificationId) {
           try {
-              const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/mark_read`, {
+              // API rotası düzeltildi: /api/notifications/{id}/mark_read -> /api/notifications/{id}/read
+              const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
                   method: 'PUT',
                   headers: {
                       'Content-Type': 'application/json'
@@ -2845,6 +2834,7 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
       async function markAllNotificationsAsRead() {
           console.log('markAllNotificationsAsRead çağrıldı.');
           try {
+              // API rotası doğru: /api/notifications/mark_all_read
               const response = await fetch(`${API_BASE_URL}/api/notifications/mark_all_read`, {
                   method: 'PUT',
                   headers: {
