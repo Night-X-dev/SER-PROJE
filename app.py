@@ -231,11 +231,15 @@ def mark_all_notifications_as_read():
 @app.route('/api/notifications/unread-count', methods=['GET'])
 def get_unread_notifications_count():
     """Veritabanındaki okunmamış bildirimlerin sayısını döndürür."""
+    user_id = request.args.get('user_id')
+    if not user_id:
+        return jsonify({'unread_count': 0, 'message': 'Kullanıcı ID eksik.'}), 400 # Return 0 if user_id is missing
+
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
-            sql = "SELECT COUNT(id) as unread_count FROM notifications WHERE is_read = 0"
-            cursor.execute(sql)
+            sql = "SELECT COUNT(id) as unread_count FROM notifications WHERE user_id = %s AND is_read = 0"
+            cursor.execute(sql, (user_id,))
             result = cursor.fetchone()
             return jsonify(result), 200
     except pymysql.Error as e:
@@ -278,11 +282,10 @@ def mark_notification_as_read(notification_id):
 # Bildirimleri Çekme API (notifications tablosu için)
 @app.route('/api/notifications', methods=['GET'])
 def get_notifications():
-    # Bu rotanın yetki kontrolünü burada yapın
-    if 'user_id' not in session:
-        return jsonify({'message': 'Giriş yapılmalıdır.'}), 401
+    user_id = request.args.get('user_id')
+    if not user_id:
+        return jsonify({'message': 'Kullanıcı ID eksik.'}), 400
 
-    user_id = session['user_id']
     connection = get_db_connection()
     try:
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
