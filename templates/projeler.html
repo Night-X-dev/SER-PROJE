@@ -926,6 +926,40 @@
               top: 70px; /* Topbar'ın altına gelmesi için */
           }
       }
+
+      /* Toast Bildirimi Stilleri */
+      .toast {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background-color: var(--success);
+          color: var(--white);
+          padding: 12px 20px;
+          border-radius: 8px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          opacity: 0; /* Başlangıçta gizli */
+          visibility: hidden; /* Başlangıçta gizli */
+          transform: translateY(-20px);
+          transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
+          z-index: 20001; /* Bildirim panelinden daha yüksek olsun */
+      }
+
+      .toast.show {
+          opacity: 1;
+          visibility: visible;
+          transform: translateY(0);
+      }
+
+      .toast.error {
+          background-color: var(--danger);
+      }
+
+      .toast i {
+          font-size: 18px;
+      }
     </style>
   </head>
   <body data-theme="light">
@@ -1359,15 +1393,16 @@
         const toastMessage = document.getElementById("toastMessage");
 
         toastMessage.textContent = message;
-        toast.className = "toast show";
+        toast.className = "toast show"; // Reset classes and add 'show'
         if (isError) {
           toast.classList.add("error");
         } else {
           toast.classList.remove("error");
         }
 
+        // Set a timeout to hide the toast after 3 seconds
         setTimeout(() => {
-          toast.className = "toast";
+          toast.classList.remove("show"); // Hide the toast
         }, 3000);
       }
 
@@ -2636,8 +2671,17 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
       async function fetchUnreadNotificationCount() {
           const notificationButton = document.getElementById('notificationButton');
           try {
-              const response = await fetch(`${API_BASE_URL}/api/notifications/unread-count`);
-              if (!response.ok) throw new Error('Okunmamış bildirim sayısı çekilemedi.');
+              const response = await fetch(`${API_BASE_URL}/api/notifications/unread/count`);
+              if (!response.ok) {
+                  // 404 durumunda özel mesaj ve sayacı sıfırla
+                  if (response.status === 404) {
+                      console.warn('API endpoint not found: /api/notifications/unread/count. Setting notification count to 0.');
+                      notificationButton.setAttribute('data-count', '0');
+                      notificationButton.classList.remove('has-notifications');
+                      return; // Hata fırlatma, sadece logla ve çık
+                  }
+                  throw new Error('Okunmamış bildirim sayısı çekilemedi.');
+              }
               const data = await response.json();
               const unreadCount = data.count;
 
