@@ -125,8 +125,17 @@ async function fetchNotifications() {
     try {
         const response = await fetch(`${API_BASE_URL}/api/notifications`);
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ message: 'Sunucudan yanıt alınamadı.' }));
-            throw new Error(errorData.message || `HTTP hatası! Durum: ${response.status}`);
+            // Sunucudan gelen yanıtın türünü kontrol et
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP hatası! Durum: ${response.status}`);
+            } else {
+                // JSON olmayan bir yanıt geldiğinde (örn. HTML hata sayfası)
+                const errorText = await response.text();
+                console.error("Sunucudan JSON beklenirken HTML/Metin yanıtı alındı:", errorText);
+                throw new Error(`Sunucudan geçersiz yanıt alındı. Durum: ${response.status}. Detaylar konsolda.`);
+            }
         }
         const notifications = await response.json();
         renderNotifications(notifications);
@@ -266,11 +275,7 @@ async function deleteNotification(notificationId, itemElement) {
         const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}`, {
             method: 'DELETE'
         });
-        const result = await response.json();
         if (response.ok) {
-            if (typeof showToast === 'function') {
-                showToast(result.message || 'Bildirim silindi.');
-            }
             // Eğer bildirim okunmamışsa sayacı güncelle
             if (itemElement.classList.contains('unread')) {
                 const notificationButton = document.getElementById('notificationButton');
@@ -283,8 +288,22 @@ async function deleteNotification(notificationId, itemElement) {
             if (notificationListDiv && notificationListDiv.children.length === 0) {
                  notificationListDiv.innerHTML = '<div class="no-notifications">Henüz yeni bildiriminiz yok.</div>';
             }
+            if (typeof showToast === 'function') {
+                // response.json() çağrısı yapılmadan önce kontrol edildiği için burada direkt mesajı kullanabiliriz
+                showToast('Bildirim silindi.');
+            }
         } else {
-            throw new Error(result.message || 'Silme işlemi başarısız');
+            // Sunucudan gelen yanıtın türünü kontrol et
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Silme işlemi başarısız');
+            } else {
+                // JSON olmayan bir yanıt geldiğinde (örn. HTML hata sayfası)
+                const errorText = await response.text();
+                console.error("Sunucudan JSON beklenirken HTML/Metin yanıtı alındı:", errorText);
+                throw new Error(`Sunucudan geçersiz yanıt alındı. Durum: ${response.status}. Detaylar konsolda.`);
+            }
         }
     } catch (error) {
         if (typeof showToast === 'function') {
@@ -297,11 +316,12 @@ async function deleteNotification(notificationId, itemElement) {
 // Tüm bildirimleri sil
 async function deleteAllNotifications() {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/notifications`, {
+        const response = await fetch(`${API_BASE_URL}/api/notifications/all`, {
             method: 'DELETE'
         });
-        const result = await response.json();
+        
         if (response.ok) {
+            const result = await response.json(); // Başarılı yanıtı JSON olarak ayrıştır
             if (typeof showToast === 'function') {
                 showToast(result.message || 'Tüm bildirimler silindi.');
             }
@@ -315,7 +335,17 @@ async function deleteAllNotifications() {
                 notificationPanel.classList.remove('show');
             }
         } else {
-            throw new Error(result.message || 'Silme işlemi başarısız');
+            // Sunucudan gelen yanıtın türünü kontrol et
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Silme işlemi başarısız');
+            } else {
+                // JSON olmayan bir yanıt geldiğinde (örn. HTML hata sayfası)
+                const errorText = await response.text();
+                console.error("Sunucudan JSON beklenirken HTML/Metin yanıtı alındı:", errorText);
+                throw new Error(`Sunucudan geçersiz yanıt alındı. Durum: ${response.status}. Detaylar konsolda.`);
+            }
         }
     } catch (error) {
         if (typeof showToast === 'function') {
