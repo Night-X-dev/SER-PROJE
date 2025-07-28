@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ser Elektrik Otomasyon - Ayarlar</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Bootstrap CSS (Eğer musteriler.html'den geliyorsa bu da olmalıydı) -->
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         /* CSS Kodları Buraya Gelecek */
@@ -24,8 +24,8 @@
             --topbar-bg: #ffffff;
             --success: #2ed573;
             --danger: #ff4757;
-            --warning: #ffc107;
-            --info: #0980d3;
+            --warning: #ffa502;
+            --info: #1e90ff;
         }
 
         [data-theme="dark"] {
@@ -1074,24 +1074,29 @@
                     <label class="form-label">İzinler</label>
                     <div class="permission-grid">
                         <div class="permission-item">
-                            <input type="checkbox" id="permission1" checked>
-                            <label class="permission-label" for="permission1">Proje Ekle</label>
+                            <input type="checkbox" id="proje_ekle" name="proje_ekle">
+                            <label class="permission-label" for="proje_ekle">Proje Ekle</label>
                         </div>
                         <div class="permission-item">
-                            <input type="checkbox" id="permission2" checked>
-                            <label class="permission-label" for="permission2">Proje Düzenle</label>
+                            <input type="checkbox" id="proje_duzenle" name="proje_duzenle">
+                            <label class="permission-label" for="proje_duzenle">Proje Düzenle</label>
                         </div>
                         <div class="permission-item">
-                            <input type="checkbox" id="permission3" checked>
-                            <label class="permission-label" for="permission3">Proje Sil</label>
+                            <input type="checkbox" id="proje_sil" name="proje_sil">
+                            <label class="permission-label" for="proje_sil">Proje Sil</label>
                         </div>
                         <div class="permission-item">
-                            <input type="checkbox" id="permission4" checked>
-                            <label class="permission-label" for="permission4">PDF Oluşturma</label>
+                            <input type="checkbox" id="pdf_olusturma" name="pdf_olusturma">
+                            <label class="permission-label" for="pdf_olusturma">PDF Oluşturma</label>
                         </div>
                         <div class="permission-item">
-                            <input type="checkbox" id="permission5">
-                            <label class="permission-label" for="permission5">Müşteri Düzenleme</label>
+                            <input type="checkbox" id="musteri_duzenleme" name="musteri_duzenleme">
+                            <label class="permission-label" for="musteri_duzenleme">Müşteri Düzenleme</label>
+                        </div>
+                        <!-- Yeni Raporlar Yetkisi -->
+                        <div class="permission-item">
+                            <input type="checkbox" id="raporlar" name="raporlar">
+                            <label class="permission-label" for="raporlar">Raporları Görüntüleme</label>
                         </div>
                     </div>
                 </div>
@@ -1863,33 +1868,45 @@
             roleSelector.addEventListener('change', function() {
                 const selectedRole = this.value;
                 if (!selectedRole) {
-                    document.querySelectorAll('.permission-item input[type=\"checkbox\"]').forEach(checkbox => {
-                        checkbox.checked = false;
-                    });
+                    // Tüm checkbox'ları sıfırla
+                    document.getElementById('proje_ekle').checked = false;
+                    document.getElementById('proje_duzenle').checked = false;
+                    document.getElementById('proje_sil').checked = false;
+                    document.getElementById('pdf_olusturma').checked = false;
+                    document.getElementById('musteri_duzenleme').checked = false;
+                    document.getElementById('raporlar').checked = false; // Yeni yetkiyi de sıfırla
                     return;
                 }
                 fetch(`${API_BASE_URL}/api/role-permissions?role=${selectedRole}`)
                     .then(res => res.json())
                     .then(data => {
-                        const checkboxMap = {
-                            permission1: 'proje_ekle',
-                            permission2: 'proje_duzenle',
-                            permission3: 'proje_sil',
-                            permission4: 'pdf_olusturma',
-                            permission5: 'musteri_duzenleme'
-                        };
-                        for (const checkboxId in checkboxMap) {
-                            const checkbox = document.getElementById(checkboxId);
-                            const key = checkboxMap[checkboxId];
-                            if (checkbox) {
-                                checkbox.checked = data[key] === 1;
-                            }
+                        if (data) {
+                            document.getElementById('proje_ekle').checked = data.proje_ekle === 1;
+                            document.getElementById('proje_duzenle').checked = data.proje_duzenle === 1;
+                            document.getElementById('proje_sil').checked = data.proje_sil === 1;
+                            document.getElementById('pdf_olusturma').checked = data.pdf_olusturma === 1;
+                            document.getElementById('musteri_duzenleme').checked = data.musteri_duzenleme === 1;
+                            document.getElementById('raporlar').checked = data.raporlar === 1; // Yeni yetkiyi set et
+                        } else {
+                            // Veri yoksa tümünü sıfırla
+                            document.getElementById('proje_ekle').checked = false;
+                            document.getElementById('proje_duzenle').checked = false;
+                            document.getElementById('proje_sil').checked = false;
+                            document.getElementById('pdf_olusturma').checked = false;
+                            document.getElementById('musteri_duzenleme').checked = false;
+                            document.getElementById('raporlar').checked = false; // Yeni yetkiyi de sıfırla
                         }
                     })
                     .catch(err => {
-                        document.querySelectorAll('.permission-item input[type=\"checkbox\"]').forEach(checkbox => {
-                            checkbox.checked = false;
-                        });
+                        console.error('İzinleri yüklerken hata:', err);
+                        showToast('İzinler yüklenirken bir hata oluştu.', true);
+                        // Hata durumunda tüm checkbox'ları sıfırla
+                        document.getElementById('proje_ekle').checked = false;
+                        document.getElementById('proje_duzenle').checked = false;
+                        document.getElementById('proje_sil').checked = false;
+                        document.getElementById('pdf_olusturma').checked = false;
+                        document.getElementById('musteri_duzenleme').checked = false;
+                        document.getElementById('raporlar').checked = false; // Yeni yetkiyi de sıfırla
                     });
             });
         }
@@ -1906,11 +1923,12 @@
                 }
                 // Checkbox'lardan izinleri topla
                 const permissions = {
-                    proje_ekle: document.getElementById('permission1').checked ? 1 : 0,
-                    proje_duzenle: document.getElementById('permission2').checked ? 1 : 0,
-                    proje_sil: document.getElementById('permission3').checked ? 1 : 0,
-                    pdf_olusturma: document.getElementById('permission4').checked ? 1 : 0,
-                    musteri_duzenleme: document.getElementById('permission5').checked ? 1 : 0
+                    proje_ekle: document.getElementById('proje_ekle').checked ? 1 : 0,
+                    proje_duzenle: document.getElementById('proje_duzenle').checked ? 1 : 0,
+                    proje_sil: document.getElementById('proje_sil').checked ? 1 : 0,
+                    pdf_olusturma: document.getElementById('pdf_olusturma').checked ? 1 : 0,
+                    musteri_duzenleme: document.getElementById('musteri_duzenleme').checked ? 1 : 0,
+                    raporlar: document.getElementById('raporlar').checked ? 1 : 0 // Yeni yetki
                 };
                 fetch(`${API_BASE_URL}/api/role-permissions`, {
                     method: 'POST',
@@ -1928,6 +1946,27 @@
                 .catch(() => {
                     showToast('Sunucuya bağlanılamadı.', true);
                 });
+            });
+        }
+
+        // Reset Permissions Button
+        const resetPermissionsBtn = document.getElementById('resetPermissionsBtn');
+        if (resetPermissionsBtn) {
+            resetPermissionsBtn.addEventListener('click', function() {
+                const roleSelector = document.getElementById('roleSelector');
+                const selectedRole = roleSelector.value;
+                if (selectedRole) {
+                    loadPermissionsForRole(selectedRole); // Seçili rolün mevcut izinlerini tekrar yükle
+                    showToast('İzinler sıfırlandı (mevcut duruma getirildi).');
+                } else {
+                    document.getElementById('proje_ekle').checked = false;
+                    document.getElementById('proje_duzenle').checked = false;
+                    document.getElementById('proje_sil').checked = false;
+                    document.getElementById('pdf_olusturma').checked = false;
+                    document.getElementById('musteri_duzenleme').checked = false;
+                    document.getElementById('raporlar').checked = false;
+                    showToast('Tüm izinler sıfırlandı.');
+                }
             });
         }
     });
