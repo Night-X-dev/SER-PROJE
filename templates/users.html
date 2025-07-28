@@ -7,6 +7,8 @@
     <!-- Tüm stil ve script dosyaları index.html ile aynı -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Cropper.js için ek CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
     <style>
         /* index.html'den alınan genel stil değişkenleri */
         :root {
@@ -1319,8 +1321,8 @@
         }
         
         .avatar-preview {
-            width: 100px;
-            height: 100px;
+            width: 150px;
+            height: 150px;
             border-radius: 50%;
             margin: 0 auto 15px;
             background-color: var(--input-bg);
@@ -1347,6 +1349,59 @@
             .user-contact-info div {
                 justify-content: center;
             }
+        }
+        
+        /* Kırpma düzenleyicisi için stiller */
+        #image-cropper-container {
+            width: 100%;
+            height: 300px;
+            margin-bottom: 15px;
+            display: none;
+            position: relative;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .cropper-container {
+            max-height: 300px;
+        }
+        
+        .cropper-tools {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .cropper-tool-btn {
+            background-color: var(--primary-light);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+        
+        .cropper-tool-btn:hover {
+            background-color: var(--primary);
+        }
+        
+        .zoom-slider {
+            width: 150px;
+            margin: 0 10px;
+        }
+        
+        .zoom-value {
+            min-width: 40px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--primary);
         }
     </style>
 </head>
@@ -1497,40 +1552,82 @@
 
     <!-- Profil Düzenleme Modalı -->
     <div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Profil Düzenle</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Profil Fotoğrafı</label>
-                        <div class="avatar-upload">
-                            <div class="avatar-preview" id="avatarPreview">
-                                <!-- Avatar önizleme burada -->
+                    <div class="row">
+                        <div class="col-md-5">
+                            <div class="mb-3">
+                                <label class="form-label">Profil Fotoğrafı</label>
+                                <div class="avatar-upload">
+                                    <div class="avatar-preview mb-3" id="avatarPreview">
+                                        <!-- Mevcut avatar önizleme -->
+                                    </div>
+                                    <input type="file" id="avatarUpload" accept="image/*" class="d-none">
+                                    <button class="btn btn-outline w-100" id="uploadAvatarBtn">
+                                        <i class="fas fa-upload"></i> Fotoğraf Yükle
+                                    </button>
+                                </div>
                             </div>
-                            <input type="file" id="avatarUpload" accept="image/*" class="d-none">
-                            <button class="btn btn-sm btn-outline mt-2" id="uploadAvatarBtn">
-                                <i class="fas fa-upload"></i> Fotoğraf Yükle
-                            </button>
+                        </div>
+                        <div class="col-md-7">
+                            <!-- Kırpma alanı -->
+                            <div class="mb-3">
+                                <label class="form-label">Fotoğrafı Düzenle</label>
+                                <div id="image-cropper-container">
+                                    <img id="image-to-crop" src="" alt="Kırpılacak resim" style="max-width: 100%;">
+                                </div>
+                                <div class="cropper-tools">
+                                    <button class="cropper-tool-btn" id="crop-zoom-in">
+                                        <i class="fas fa-search-plus"></i>
+                                    </button>
+                                    <input type="range" min="1" max="300" value="100" class="zoom-slider" id="crop-zoom">
+                                    <span class="zoom-value">100%</span>
+                                    <button class="cropper-tool-btn" id="crop-zoom-out">
+                                        <i class="fas fa-search-minus"></i>
+                                    </button>
+                                    <button class="cropper-tool-btn" id="crop-rotate-left">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+                                    <button class="cropper-tool-btn" id="crop-rotate-right">
+                                        <i class="fas fa-redo"></i>
+                                    </button>
+                                </div>
+                                <div class="text-center mt-3">
+                                    <button class="btn btn-primary w-100" id="crop-image-btn">Kırp ve Uygula</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Ad Soyad</label>
-                        <input type="text" class="form-control" id="editFullName">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">E-posta</label>
-                        <input type="email" class="form-control" id="editEmail">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Telefon</label>
-                        <input type="tel" class="form-control" id="editPhone">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Pozisyon</label>
-                        <input type="text" class="form-control" id="editPosition">
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Ad Soyad</label>
+                                <input type="text" class="form-control" id="editFullName">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">E-posta</label>
+                                <input type="email" class="form-control" id="editEmail">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Telefon</label>
+                                <input type="tel" class="form-control" id="editPhone">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Pozisyon</label>
+                                <input type="text" class="form-control" id="editPosition">
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -1541,40 +1638,42 @@
         </div>
     </div>
 
+    <!-- Cropper.js kütüphanesi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    
     <script>
         // API_BASE_URL'i burada tanımlayın veya global bir yerden çekin
         const API_BASE_URL = "https://ser-proje.onrender.com"; 
         let currentUser = null; // Mevcut kullanıcı bilgisini tutacak
+        let cropper = null; // Cropper instance
+        let currentCroppedImage = null; // Kırpılmış resmi sakla
 
-        // Toast mesajı gösterme fonksiyonu (index.html'den kopyalandı)
+        // Toast mesajı gösterme fonksiyonu
         function showToast(message, isError = false) {
-            const toast = document.getElementById('toast');
-            if (!toast) {
-                // Eğer toast elementi yoksa, dinamik olarak oluştur
-                const newToast = document.createElement('div');
-                newToast.id = 'toast';
-                newToast.className = 'toast';
-                newToast.innerHTML = '<i class="fas fa-check-circle"></i><span id="toastMessage"></span>';
-                document.body.appendChild(newToast);
-            }
-            const toastMessage = document.getElementById('toastMessage');
+            const toast = document.createElement('div');
+            toast.id = 'toast';
+            toast.className = 'toast';
+            toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-circle' : 'fa-check-circle'}"></i> ${message}`;
+            document.body.appendChild(toast);
             
-            toastMessage.textContent = message;
             toast.className = 'toast show';
             if (isError) {
                 toast.classList.add('error');
-            } else {
-                toast.classList.remove('error');
             }
             
             setTimeout(() => {
                 toast.className = 'toast';
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
             }, 3000);
         }
 
         // Kullanıcı verilerini çekme ve görüntüleme
         document.addEventListener('DOMContentLoaded', function() {
-            // Kullanıcı oturum kontrolü (index.html'den kopyalandı)
+            // Kullanıcı oturum kontrolü
             const userNameElement = document.getElementById('userName');
             const userRoleElement = document.getElementById('userRole');
             const userAvatarElement = document.getElementById('userAvatar');
@@ -1635,7 +1734,7 @@
 
             logoutButton.addEventListener('click', handleLogout);
 
-            // Hamburger menü işlevselliği (index.html'den kopyalandı)
+            // Hamburger menü işlevselliği
             const hamburgerMenu = document.getElementById('hamburgerMenu');
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
@@ -1645,7 +1744,7 @@
                 mainContent.classList.toggle('expanded');
             });
 
-            // Sidebar dışına tıklayınca kapatma (index.html'den kopyalandı)
+            // Sidebar dışına tıklayınca kapatma
             document.addEventListener('click', (event) => {
                 if (sidebar.classList.contains('show') && 
                     !sidebar.contains(event.target) && 
@@ -1655,7 +1754,7 @@
                 }
             });
 
-            // Pencere boyutu değiştiğinde sidebar durumunu sıfırla (masaüstü için) (index.html'den kopyalandı)
+            // Pencere boyutu değiştiğinde sidebar durumunu sıfırla
             window.addEventListener('resize', () => {
                 if (window.innerWidth > 992) {
                     sidebar.classList.remove('show');
@@ -1674,7 +1773,128 @@
             
             // Kullanıcı arama
             document.getElementById('userSearch').addEventListener('input', filterUsers);
+            
+            // Avatar yükleme işlevi
+            document.getElementById('uploadAvatarBtn').addEventListener('click', function() {
+                document.getElementById('avatarUpload').click();
+            });
+            
+            // Resim yüklendiğinde Cropper'ı başlat
+            document.getElementById('avatarUpload').addEventListener('change', function(e) {
+                if(e.target.files && e.target.files[0]) {
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(event) {
+                        // Eğer önceki bir cropper varsa yok et
+                        if (cropper) {
+                            cropper.destroy();
+                            cropper = null;
+                        }
+                        
+                        // Resmi kırpma alanında göster
+                        const image = document.getElementById('image-to-crop');
+                        image.src = event.target.result;
+                        
+                        // Kırpma alanını göster
+                        document.getElementById('image-cropper-container').style.display = 'block';
+                        
+                        // Cropper'ı başlat
+                        cropper = new Cropper(image, {
+                            aspectRatio: 1,
+                            viewMode: 1,
+                            autoCropArea: 0.8,
+                            responsive: true,
+                            guides: true
+                        });
+                        
+                        // Zoom slider'ını sıfırla
+                        document.getElementById('crop-zoom').value = 100;
+                        document.querySelector('.zoom-value').textContent = '100%';
+                    }
+                    
+                    reader.readAsDataURL(e.target.files[0]);
+                }
+            });
+            
+            // Zoom işlevleri
+            document.getElementById('crop-zoom-in').addEventListener('click', function() {
+                if (cropper) {
+                    cropper.zoom(0.1);
+                    updateZoomValue();
+                }
+            });
+            
+            document.getElementById('crop-zoom-out').addEventListener('click', function() {
+                if (cropper) {
+                    cropper.zoom(-0.1);
+                    updateZoomValue();
+                }
+            });
+            
+            document.getElementById('crop-rotate-left').addEventListener('click', function() {
+                if (cropper) {
+                    cropper.rotate(-45);
+                }
+            });
+            
+            document.getElementById('crop-rotate-right').addEventListener('click', function() {
+                if (cropper) {
+                    cropper.rotate(45);
+                }
+            });
+            
+            document.getElementById('crop-zoom').addEventListener('input', function() {
+                if (cropper) {
+                    const zoomValue = parseInt(this.value) / 100;
+                    cropper.zoomTo(zoomValue);
+                    updateZoomValue();
+                }
+            });
+            
+            // Kırpma işlemini uygula
+            document.getElementById('crop-image-btn').addEventListener('click', function() {
+                if (cropper) {
+                    // Kırpılmış resmi al (base64 formatında)
+                    const croppedCanvas = cropper.getCroppedCanvas({
+                        width: 300,
+                        height: 300
+                    });
+                    
+                    // Önizleme için avatarPreview'e ekle
+                    const avatarPreview = document.getElementById('avatarPreview');
+                    avatarPreview.innerHTML = '';
+                    const img = document.createElement('img');
+                    img.src = croppedCanvas.toDataURL('image/jpeg');
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'cover';
+                    avatarPreview.appendChild(img);
+                    
+                    // Kırpılmış resmi sakla
+                    currentCroppedImage = croppedCanvas.toDataURL('image/jpeg');
+                    
+                    // Kırpma alanını gizle
+                    document.getElementById('image-cropper-container').style.display = 'none';
+                    
+                    // Cropper'ı temizle
+                    cropper.destroy();
+                    cropper = null;
+                    
+                    showToast('Profil fotoğrafı başarıyla kırpıldı');
+                }
+            });
+            
+            // Profil bilgilerini kaydetme
+            document.getElementById('saveProfileBtn').addEventListener('click', saveProfileChanges);
         });
+        
+        function updateZoomValue() {
+            if (cropper) {
+                const zoomValue = Math.round(cropper.getImageData().ratio * 100);
+                document.getElementById('crop-zoom').value = zoomValue;
+                document.querySelector('.zoom-value').textContent = `${zoomValue}%`;
+            }
+        }
         
         function loadCurrentUser() {
             // Bu kısımda API'dan kullanıcı verileri çekilecek
@@ -1833,6 +2053,10 @@
             const currentAvatar = document.getElementById('currentUserAvatar').innerHTML;
             avatarPreview.innerHTML = currentAvatar;
             
+            // Kırpma alanını gizle
+            document.getElementById('image-cropper-container').style.display = 'none';
+            currentCroppedImage = null;
+            
             // Modalı aç
             const modal = new bootstrap.Modal(document.getElementById('editProfileModal'));
             modal.show();
@@ -1855,26 +2079,7 @@
             });
         }
         
-        // Avatar yükleme işlevi
-        document.getElementById('uploadAvatarBtn').addEventListener('click', function() {
-            document.getElementById('avatarUpload').click();
-        });
-        
-        document.getElementById('avatarUpload').addEventListener('change', function(e) {
-            if(e.target.files && e.target.files[0]) {
-                const reader = new FileReader();
-                
-                reader.onload = function(event) {
-                    document.getElementById('avatarPreview').innerHTML = 
-                        `<img src="${event.target.result}" alt="Profil fotoğrafı">`;
-                }
-                
-                reader.readAsDataURL(e.target.files[0]);
-            }
-        });
-        
-        // Profil bilgilerini kaydetme
-        document.getElementById('saveProfileBtn').addEventListener('click', function() {
+        function saveProfileChanges() {
             // Burada API çağrısı yapılacak
             // Şimdilik sadece arayüzü güncelliyoruz
             
@@ -1884,7 +2089,12 @@
             const newPosition = document.getElementById('editPosition').value;
             
             // Güncellenmiş avatar
-            const newAvatar = document.getElementById('avatarPreview').innerHTML;
+            let newAvatar = document.getElementById('avatarPreview').innerHTML;
+            
+            // Eğer kırpılmış bir resim varsa onu kullan
+            if (currentCroppedImage) {
+                newAvatar = `<img src="${currentCroppedImage}" alt="${newName}" style="width:100%;height:100%;object-fit:cover;">`;
+            }
             
             // Bilgileri güncelle
             document.getElementById('currentUserName').textContent = newName;
@@ -1893,14 +2103,16 @@
             document.getElementById('currentUserPosition').textContent = newPosition;
             document.getElementById('currentUserAvatar').innerHTML = newAvatar;
             
+            // Kullanıcı avatarını da güncelle
+            document.getElementById('userAvatar').innerHTML = newAvatar || getInitials(newName);
+            
             // Modalı kapat
             const modal = bootstrap.Modal.getInstance(document.getElementById('editProfileModal'));
             modal.hide();
             
             showToast('Profil bilgileriniz başarıyla güncellendi');
-        });
+        }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-    

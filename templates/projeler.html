@@ -258,7 +258,29 @@
         font-weight: 600;
         font-size: 16px; /* Takvim.html ile aynı font-size */
       }
-
+.notification-btn::after {
+    content: attr(data-count); /* JS ile dinamik olarak güncellenecek */
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background-color: #ff4757;
+    color: white;
+    font-size: 10px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Başlangıçta gizli, bildirim varsa gösterilecek */
+    opacity: 0;
+    transform: scale(0);
+    transition: all 0.2s ease-out;
+}
+.notification-btn.has-notifications::after {
+    opacity: 1;
+    transform: scale(1);
+}
       .user-info {
         display: flex;
         flex-direction: column;
@@ -1365,9 +1387,8 @@
             <i class="fas fa-moon"></i>
           </div>
 
-          <div class="notification-btn">
-            <i class="fas fa-bell"></i>
-          </div>
+         <div class="notification-btn" data-count="0"> <i class="fas fa-bell"></i>
+</div>
 
           <div class="user-profile">
             <div class="user-avatar" id="userAvatar">MÖ</div>
@@ -1609,7 +1630,74 @@
         };
 
         logoutButton.addEventListener("click", handleLogout);
+    document.addEventListener('DOMContentLoaded', function() {
+        const notificationBtn = document.querySelector('.notification-btn');
 
+        // Örnek: Bildirim sayısını güncelleyen bir fonksiyon
+        // Bu fonksiyonu, arka uçtan veya başka bir kaynaktan gelen gerçek bildirim sayısıyla çağıracaksınız.
+        function updateNotificationCount(count) {
+            notificationBtn.setAttribute('data-count', count);
+            if (count > 0) {
+                notificationBtn.classList.add('has-notifications');
+            } else {
+                notificationBtn.classList.remove('has-notifications');
+            }
+        }
+
+        // Sayfa yüklendiğinde veya dinamik olarak bildirim sayısını ayarla (örnek olarak 5 bildirim)
+        // Gerçek kullanımda bu değer, sunucudan veya başka bir kaynaktan alınacaktır.
+        updateNotificationCount(5); // Başlangıçta 5 bildirim olduğunu varsayalım
+
+        // Bildirim düğmesine tıklama olayı (isteğe bağlı, bir bildirim panelini açmak için kullanılabilir)
+        notificationBtn.addEventListener('click', function() {
+            console.log('Bildirim düğmesine tıklandı!');
+            // Buraya bildirim panelini açma veya bildirimleri gösterme mantığını ekleyebilirsiniz.
+            // Örneğin, bir modal veya dropdown açabilirsiniz.
+            // Tıklandıktan sonra bildirim sayısını sıfırlamak isterseniz:
+            // updateNotificationCount(0);
+        });
+
+        // Tema değiştirme ve sidebar için gerekli JavaScript (index.html'den alınmıştır)
+        const themeToggle = document.querySelector('.theme-toggle');
+        const body = document.body;
+
+        themeToggle.addEventListener('click', function() {
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+            }
+        });
+
+        // Sayfa yüklendiğinde mevcut tema ayarını kontrol et
+        if (body.getAttribute('data-theme') === 'dark') {
+            themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+        } else {
+            themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        }
+
+        const hamburgerMenu = document.querySelector('.hamburger-menu');
+        const sidebar = document.querySelector('.sidebar');
+        const mainContent = document.querySelector('.main-content');
+
+        hamburgerMenu.addEventListener('click', () => {
+            sidebar.classList.toggle('hidden');
+            mainContent.classList.toggle('expanded');
+        });
+
+        // Ekran boyutu değiştiğinde sidebar görünürlüğünü yönet (masaüstünde her zaman açık)
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 992) { // Geniş ekranlar için (992px üstü)
+                sidebar.classList.remove('hidden');
+                mainContent.classList.remove('expanded');
+            } else { // Küçük ekranlar için
+                // Mobil görünümde başlangıçta gizli tut veya son durumu koru
+                // Bu kısım, hamburger menü açıldığında yönetilecek
+            }
+        });
+    });
         // Hamburger menü işlevselliği
         const hamburgerMenu = document.getElementById('hamburgerMenu');
         const sidebar = document.getElementById('sidebar');
