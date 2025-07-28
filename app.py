@@ -286,8 +286,9 @@ def get_notifications():
     if not user_id:
         return jsonify({'message': 'Kullanıcı ID eksik.'}), 400
 
-    connection = get_db_connection()
+    connection = None
     try:
+        connection = get_db_connection()
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
             # Sadece ilgili kullanıcıya ait bildirimleri getir
             sql = "SELECT id, user_id, title, message, is_read, created_at FROM notifications WHERE user_id = %s ORDER BY created_at DESC"
@@ -1685,12 +1686,13 @@ def update_project_progress_step(progress_id):
         connection = get_db_connection()
         with connection.cursor() as cursor:
             # Mevcut iş adımının proje ID'sini ve bitiş tarihini al
-            cursor.execute("SELECT project_id, end_date FROM project_progress WHERE progress_id = %s", (progress_id,))
+            cursor.execute("SELECT project_id, title FROM project_progress WHERE progress_id = %s", (progress_id,))
             existing_step = cursor.fetchone()
             if not existing_step:
                 return jsonify({'message': 'İş adımı bulunamadı.'}), 404
 
             current_project_id = existing_step['project_id']
+            old_step_name = existing_step['title'] # Eski adım adını al
 
             # Önceki adımın bitiş tarihini bul (bu adım hariç)
             delay_days = 0
@@ -1930,8 +1932,8 @@ def get_tasks():
         if connection:
             connection.close()
 
-@app.route('/api/tasks/<int:task_id>', methods=['PUT'])
-def update_task(task_id):
+@app.route('/api/tasks', methods=['POST'])
+def add_task():
     data = request.get_json()
     title = data.get('title')
     description = data.get('description')
@@ -1949,12 +1951,71 @@ def update_task(task_id):
         connection = get_db_connection()
         with connection.cursor() as cursor:
             sql = """
+                INSERT INTO tasks (title, description, start, end, priority, assigned_user_id, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(sql, (title, description, start, end, priority, assigned_user_id, created_by))
+            connection.commit()
+
+            # Yeni görev atanan kullanıcıya bildirim gönder
+            send_notification(
+                assigned_user_id,
+                "Yeni Görev Atandı",
+                f"Size yeni bir görev atandı: '{title}'."
+            )
+
+        return jsonify({'message': 'Görev başarıyla eklendi!'}), 201
+    except Exception as e:
+        print(f"Görev ekleme hatası: {e}")
+        return jsonify({'message': 'Görev eklenirken hata oluştu.'}), 500
+    finally:
+        if connection:
+            connection.close()
+
+@app.route('/api/tasks/<int:task_id>', methods=['PUT'])
+def update_task(task_id):
+    data = request.get_json()
+    title = data.get('title')
+    description = data.get('description')
+    start = data.get('start')
+    end = data.get('end')
+    priority = data.get('priority', 'medium')
+    new_assigned_user_id = int(data.get('assigned_user_id')) if data.get('assigned_user_id') else None
+    created_by = int(data.get('created_by')) if data.get('created_by') else None
+
+    if not all([title, start, new_assigned_user_id, created_by]):
+        return jsonify({'message': 'Zorunlu alanlar eksik!'}), 400
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Mevcut görevin atanan kullanıcısını al
+            cursor.execute("SELECT assigned_user_id FROM tasks WHERE id = %s", (task_id,))
+            existing_task = cursor.fetchone()
+            old_assigned_user_id = existing_task['assigned_user_id'] if existing_task else None
+
+            sql = """
                 UPDATE tasks
                 SET title=%s, description=%s, start=%s, end=%s, priority=%s, assigned_user_id=%s, created_by=%s
                 WHERE id=%s
             """
-            cursor.execute(sql, (title, description, start, end, priority, assigned_user_id, created_by, task_id))
+            cursor.execute(sql, (title, description, start, end, priority, new_assigned_user_id, created_by, task_id))
             connection.commit()
+
+            # Eğer atanan kullanıcı değiştiyse, eski ve yeni kullanıcılara bildirim gönder
+            if old_assigned_user_id and old_assigned_user_id != new_assigned_user_id:
+                send_notification(
+                    old_assigned_user_id,
+                    "Görev Ataması Değişti",
+                    f"'{title}' görevi artık size atanmamıştır."
+                )
+            send_notification(
+                new_assigned_user_id,
+                "Görev Güncellendi",
+                f"Size atanan '{title}' görevi güncellendi."
+            )
+
         return jsonify({'message': 'Görev başarıyla güncellendi!'}), 200
     except Exception as e:
         print(f"Görev güncelleme hatası: {e}")
@@ -1969,8 +2030,20 @@ def delete_task(task_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # Silinecek görevin bilgilerini al (bildirim için)
+            cursor.execute("SELECT title, assigned_user_id FROM tasks WHERE id = %s", (task_id,))
+            task_info = cursor.fetchone()
+            
             cursor.execute("DELETE FROM tasks WHERE id = %s", (task_id,))
             connection.commit()
+
+            if task_info:
+                send_notification(
+                    task_info['assigned_user_id'],
+                    "Görev Silindi",
+                    f"Size atanan '{task_info['title']}' görevi silindi."
+                )
+
         return jsonify({'message': 'Görev başarıyla silindi!'}), 200
     except Exception as e:
         print(f"Görev silme hatası: {e}")
@@ -1978,6 +2051,7 @@ def delete_task(task_id):
     finally:
         if connection:
             connection.close()
+
 @app.route('/api/manager-stats')
 def manager_stats():
     connection = get_db_connection()

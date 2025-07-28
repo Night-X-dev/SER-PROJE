@@ -263,6 +263,13 @@
             justify-content: center;
             color: var(--white);
             font-weight: 600;
+            overflow: hidden; /* Added for circular image clipping */
+        }
+
+        .user-avatar img { /* Added for circular image clipping */
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .user-info {
@@ -1400,8 +1407,6 @@
             font-weight: 600;
             color: var(--primary);
         }
-         /* Diğer stiller... */
-
         /* Tablo hücrelerindeki boşluğu kaldırma */
         .projects-table td {
             padding: 8px 12px !important;
@@ -1417,9 +1422,16 @@
             border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
             padding: 20px;
-            display: none;
-            transition: all 0.2s ease;
+            display: none; /* JS tarafından kontrol edilecek */
+            opacity: 0; /* Başlangıçta şeffaf */
+            visibility: hidden; /* Başlangıçta gizli */
+            transition: opacity 0.3s ease, visibility 0.3s ease; /* Geçiş efekti */
             pointer-events: auto; /* Kartın üzerine gelindiğinde etkileşime izin ver */
+        }
+
+        .user-hover-card.show-card {
+            opacity: 1;
+            visibility: visible;
         }
 
         .user-hover-card .user-avatar-large {
@@ -1452,22 +1464,33 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: black !important; /* Tamamen opak siyah arka plan */
-            opacity: 1 !important; /* Opaklığı tam yap */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999 !important; /* En üstte olmasını sağla */
-            display: none; /* JS tarafından kontrol edilecek */
+            background-color: rgba(0, 0, 0, 0.9); /* Tamamen opak siyah arka plan, hafif şeffaflık ile */
+            display: flex; /* Flexbox ile içerik ortalama */
+            justify-content: center; /* Yatayda ortala */
+            align-items: center; /* Dikeyde ortala */
+            z-index: 999999; /* En üstte olmasını sağla, daha yüksek bir değer */
+            visibility: hidden; /* Varsayılan olarak gizli */
+            opacity: 0; /* Varsayılan olarak şeffaf */
+            transition: visibility 0.3s, opacity 0.3s ease-in-out; /* Geçiş efekti */
+        }
+
+        .cropper-modal.show {
+            visibility: visible; /* Görünür yap */
+            opacity: 1; /* Opak yap */
         }
 
         .cropper-container {
-            width: 80%;
-            max-width: 800px;
+            width: 90%; /* Daha geniş bir modal */
+            max-width: 900px; /* Maksimum genişlik */
             background: var(--card-bg);
             border-radius: 12px;
-            padding: 20px;
+            padding: 25px; /* Biraz daha padding */
             position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); /* Daha belirgin gölge */
+            display: flex; /* İçerik için flexbox */
+            flex-direction: column; /* Dikey sıralama */
+            max-height: 90vh; /* Ekran yüksekliğinin %90'ını geçmesin */
+            overflow: hidden; /* İçerik taşarsa gizle */
         }
 
         .cropper-header {
@@ -1475,23 +1498,29 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+            padding-bottom: 15px; /* Başlık altında boşluk */
+            border-bottom: 1px solid var(--border-color); /* Başlık altına çizgi */
         }
 
         .cropper-header h2 {
-            color: var(--text-color);
+            color: var(--primary); /* Başlık rengi */
             margin: 0;
+            font-size: 24px; /* Daha büyük başlık */
         }
 
         .cropper-preview {
+            flex-grow: 1; /* Kırpma alanının mevcut alanı doldurmasını sağla */
             width: 100%;
-            height: 400px;
+            max-height: calc(90vh - 200px); /* Modal yüksekliğine göre ayarla */
             background: var(--input-bg);
             border-radius: 8px;
             overflow: hidden;
             position: relative;
+            margin-bottom: 20px; /* Araçlar ile arasında boşluk */
         }
 
         .cropper-preview img {
+            display: block; /* Cropper.js için gerekli */
             max-width: 100%;
             max-height: 100%;
         }
@@ -1499,48 +1528,115 @@
         .cropper-tools {
             display: flex;
             justify-content: space-between;
-            margin-top: 20px;
+            align-items: center; /* Dikeyde ortala */
+            margin-top: 15px;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 15px; /* Öğeler arası boşluk */
         }
 
         .cropper-tools-left, .cropper-tools-right {
             display: flex;
             gap: 10px;
+            flex-wrap: wrap; /* Küçük ekranlarda sarmalama */
         }
 
         .cropper-tool-btn {
             background-color: var(--primary-light);
             color: white;
             border: none;
-            border-radius: 6px;
-            padding: 8px 15px;
+            border-radius: 8px; /* Daha yuvarlak butonlar */
+            padding: 10px 18px; /* Daha büyük padding */
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 8px; /* İkon ile yazı arası boşluk */
             transition: all 0.2s;
+            font-size: 15px; /* Daha büyük yazı */
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); /* Hafif gölge */
         }
 
         .cropper-tool-btn:hover {
             background-color: var(--primary);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
         .zoom-controls {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 10px;
         }
 
         .zoom-slider {
-            width: 150px;
+            flex-grow: 1; /* Kaydırıcının esnek genişlik almasını sağla */
+            min-width: 120px; /* Minimum genişlik */
+            -webkit-appearance: none; /* Varsayılan stilini kaldır */
+            width: 100%; /* Genişliği ayarla */
+            height: 8px;
+            background: var(--input-bg);
+            border-radius: 5px;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+        }
+
+        .zoom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .zoom-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
 
         .zoom-value {
-            min-width: 40px;
+            min-width: 50px; /* Değer için daha fazla alan */
             text-align: center;
             font-weight: 600;
-            color: var(--primary);
+            color: var(--text-color); /* Tema rengine uyumlu */
+            font-size: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .cropper-container {
+                width: 95%;
+                padding: 15px;
+            }
+            .cropper-header h2 {
+                font-size: 20px;
+            }
+            .cropper-tools {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .cropper-tools-left, .cropper-tools-right {
+                width: 100%;
+                justify-content: center;
+            }
+            .cropper-tool-btn {
+                flex-grow: 1;
+                text-align: center;
+                justify-content: center;
+            }
+            .zoom-controls {
+                width: 100%;
+                justify-content: center;
+            }
+            .zoom-slider {
+                width: auto;
+                flex-grow: 1;
+            }
         }
     </style>
 </head>
@@ -1749,7 +1845,7 @@
         </div>
     </div>
 
-    <!-- Fotoğraf Kırpma Modalı - Güncellendi -->
+    <!-- Fotoğraf Kırpma Modalı - Yeniden Oluşturuldu -->
     <div class="cropper-modal" id="cropperModal">
         <div class="cropper-container">
             <div class="cropper-header">
@@ -1781,7 +1877,10 @@
                     </div>
                 </div>
             </div>
-            <div class="text-center mt-4">
+            <div class="d-flex justify-content-center mt-4"> <!-- Added d-flex and justify-content-center for proper alignment -->
+                <button type="button" class="btn btn-secondary me-2" id="cancelCropBtn">
+                    <i class="fas fa-times"></i> İptal
+                </button>
                 <button class="btn btn-primary" id="crop-image-btn" style="padding: 10px 30px;">
                     <i class="fas fa-check"></i> Onayla
                 </button>
@@ -1907,9 +2006,22 @@
                 }
             });
             
-            // Cropper modalını kapatma
+            // Cropper modalını kapatma (X butonu)
             document.getElementById('closeCropperModal').addEventListener('click', function() {
-                document.getElementById('cropperModal').style.display = 'none';
+                document.getElementById('cropperModal').classList.remove('show');
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+                // Profil düzenleme modalını tekrar göster
+                if (editProfileModalInstance) {
+                    editProfileModalInstance.show();
+                }
+            });
+
+            // Cropper modalını iptal etme (İptal butonu)
+            document.getElementById('cancelCropBtn').addEventListener('click', function() {
+                document.getElementById('cropperModal').classList.remove('show');
                 if (cropper) {
                     cropper.destroy();
                     cropper = null;
@@ -1978,7 +2090,7 @@
                     currentCroppedImage = croppedCanvas.toDataURL('image/jpeg');
                     
                     // Cropper modalını kapat
-                    document.getElementById('cropperModal').style.display = 'none';
+                    document.getElementById('cropperModal').classList.remove('show');
                     
                     // Cropper'ı temizle
                     cropper.destroy();
@@ -2027,8 +2139,16 @@
             const image = document.getElementById('image-to-crop');
             image.src = imageSrc;
             
+            // Profil düzenleme modalını gizle
+            if (editProfileModalInstance) {
+                editProfileModalInstance.hide();
+                // Bootstrap'in kendi modal backdrop'ını da kaldırdığından emin ol
+                // Bu bazen gecikebilir veya kalabilir, bu yüzden manuel olarak kaldırıyoruz.
+                setTimeout(removeBootstrapBackdrops, 50); // Kısa bir gecikme ile backdrop'ı kaldır
+            }
+
             // Cropper modalını göster
-            document.getElementById('cropperModal').style.display = 'flex';
+            document.getElementById('cropperModal').classList.add('show');
             
             // Cropper'ı başlat
             setTimeout(() => {
@@ -2044,6 +2164,11 @@
                 document.getElementById('crop-zoom').value = 100;
                 document.querySelector('.zoom-value').textContent = '100%';
             }, 100);
+        }
+
+        function removeBootstrapBackdrops() {
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => backdrop.remove());
         }
         
         // Declare hoverCard outside the function to avoid redeclaration error
@@ -2061,7 +2186,7 @@
                 row.addEventListener('mouseenter', function(e) {
                     clearTimeout(currentHoverTimeout); // Önceki timeout'u temizle
                     // Sadece farklı bir kullanıcıysa veya kart görünmüyorsa göster
-                    if (currentHoverCardUser !== user.id || hoverCard.style.display === 'none') {
+                    if (currentHoverCardUser !== user.id || !hoverCard.classList.contains('show-card')) {
                         currentHoverTimeout = setTimeout(() => {
                             showUserHoverCard(user, e);
                             currentHoverCardUser = user.id;
@@ -2159,12 +2284,20 @@
             hoverCard.style.left = (rect.left + window.scrollX + 10) + 'px';
             hoverCard.style.top = (rect.top + window.scrollY - hoverCard.offsetHeight - 10) + 'px';
             
-            // Kartı göster
-            hoverCard.style.display = 'block';
+            // Kartı göster ve fade efekti uygula
+            hoverCard.style.display = 'block'; // Display'i block yap ki transition çalışsın
+            setTimeout(() => {
+                hoverCard.classList.add('show-card');
+            }, 10); // Kısa bir gecikme ile sınıfı ekle
         }
         
         function hideUserHoverCard() {
-            document.getElementById('userHoverCard').style.display = 'none';
+            const hoverCard = document.getElementById('userHoverCard');
+            hoverCard.classList.remove('show-card');
+            // Transition bittikten sonra display'i none yap
+            setTimeout(() => {
+                hoverCard.style.display = 'none';
+            }, 300); // CSS transition süresiyle eşleşmeli
         }
         
         function openEditProfileModal() {
