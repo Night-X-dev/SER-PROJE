@@ -233,6 +233,25 @@ def get_notifications():
     finally:
         if connection:
             connection.close()
+@app.route('/api/notifications/<int:notification_id>', methods=['DELETE'])
+def delete_notification(notification_id):
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            # Bildirim var mı?
+            cursor.execute("SELECT id FROM notifications WHERE id = %s", (notification_id,))
+            if not cursor.fetchone():
+                return jsonify({'message': 'Bildirim bulunamadı.'}), 404
+
+            # Sil
+            cursor.execute("DELETE FROM notifications WHERE id = %s", (notification_id,))
+            connection.commit()
+            return jsonify({'message': 'Bildirim silindi.'}), 200
+    except Exception as e:
+        print(f"Bildirim silme hatası: {e}")
+        return jsonify({'message': 'Sunucu hatası'}), 500
+    finally:
+        connection.close()
 
 # Yeni Bildirim Ekle API (notifications tablosu için)
 @app.route('/api/notifications', methods=['POST'])
