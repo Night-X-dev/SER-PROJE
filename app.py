@@ -436,11 +436,10 @@ def add_activity():
 
 @app.route('/api/update_user_profile', methods=['POST'])
 def update_user_profile():
-    """Updates a user's profile information, including role, profile picture, and visibility settings."""
+    """Updates a user's profile information, including role, profile picture, and visibility settings.
+    Password change logic has been removed."""
     data = request.get_json()
     user_id = data.get('userId')
-    current_password = data.get('currentPassword')
-    new_password = data.get('newPassword')
     fullname = data.get('fullname')
     email = data.get('email')
     phone = data.get('phone')
@@ -456,7 +455,7 @@ def update_user_profile():
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            cursor.execute("SELECT fullname, email, phone, password, role, profile_picture, hide_email, hide_phone FROM users WHERE id = %s", (user_id,))
+            cursor.execute("SELECT fullname, email, phone, role, profile_picture, hide_email, hide_phone FROM users WHERE id = %s", (user_id,))
             user = cursor.fetchone()
 
             if not user:
@@ -484,10 +483,15 @@ def update_user_profile():
                 params.append(phone)
                 message_parts.append("Phone")
 
-            if profile_picture is not None and profile_picture != user['profile_picture']:
-                updates.append("profile_picture = %s")
-                params.append(profile_picture)
-                message_parts.append("Profile Picture")
+            # Handle profile_picture: if it's explicitly null from frontend, set DB to NULL
+            if profile_picture is not None: # Only update if sent from frontend
+                if profile_picture == "null": # Frontend sends "null" string if image is deleted
+                    updates.append("profile_picture = NULL")
+                    message_parts.append("Profile Picture Removed")
+                elif profile_picture != user['profile_picture']:
+                    updates.append("profile_picture = %s")
+                    params.append(profile_picture)
+                    message_parts.append("Profile Picture")
             
             if hide_email is not None and hide_email != user['hide_email']:
                 updates.append("hide_email = %s")
@@ -505,17 +509,7 @@ def update_user_profile():
                 params.append(role)
                 message_parts.append("Role")
 
-            if current_password or new_password: 
-                if not current_password or not new_password:
-                    return jsonify({'message': 'Both current and new password fields must be filled to change password.'}), 400
-
-                if not bcrypt.checkpw(current_password.encode('utf-8'), user['password'].encode('utf-8')):
-                    return jsonify({'message': 'Incorrect current password.'}), 401
-
-                hashed_new_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-                updates.append("password = %s")
-                params.append(hashed_new_password)
-                message_parts.append("Password")
+            # Password change logic removed as per request
 
             if not updates:
                 return jsonify({'message': 'No information to update.'}), 200
@@ -2249,4 +2243,3 @@ def worker_performance():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=3001, debug=True)
-    
