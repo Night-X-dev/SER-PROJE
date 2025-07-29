@@ -1864,8 +1864,11 @@
                                         MO
                                     </div>
                                     <input type="file" id="avatarUpload" accept="image/*" class="d-none">
-                                    <button class="btn btn-outline w-100" id="uploadAvatarBtn">
+                                    <button class="btn btn-outline w-100 mb-2" id="uploadAvatarBtn">
                                         <i class="fas fa-upload"></i> Fotoğraf Yükle
+                                    </button>
+                                    <button class="btn btn-outline-danger w-100" id="deleteAvatarBtn">
+                                        <i class="fas fa-trash"></i> Fotoğrafı Sil
                                     </button>
                                 </div>
                             </div>
@@ -2043,6 +2046,26 @@
                     }
                     reader.readAsDataURL(e.target.files[0]);
                 }
+            });
+
+            // Resmi sil butonu
+            document.getElementById('deleteAvatarBtn').addEventListener('click', function() {
+                currentCroppedImage = null; // Resmi sıfırla
+                const avatarPreview = document.getElementById('avatarPreview');
+                avatarPreview.innerHTML = ''; // Önceki resmi temizle
+                const initialsDiv = document.createElement('div');
+                initialsDiv.textContent = getInitials(document.getElementById('editFullName').value);
+                initialsDiv.style.width = '100%';
+                initialsDiv.style.height = '100%';
+                initialsDiv.style.display = 'flex';
+                initialsDiv.style.alignItems = 'center';
+                initialsDiv.style.justifyContent = 'center';
+                initialsDiv.style.fontSize = '48px';
+                initialsDiv.style.fontWeight = '600';
+                initialsDiv.style.color = 'var(--white)';
+                initialsDiv.style.backgroundColor = 'var(--primary-light)';
+                avatarPreview.appendChild(initialsDiv);
+                showToast('Profil fotoğrafı silindi. Kaydetmek için "Kaydet" butonuna basın.', 'success');
             });
             
             // Cropper modalını kapatma (X butonu)
@@ -2231,7 +2254,19 @@
             if (user.profile_picture) {
                 document.getElementById('userAvatar').innerHTML = `<img src="${user.profile_picture}" alt="${user.fullname}">`;
             } else {
-                document.getElementById('userAvatar').textContent = getInitials(user.fullname);
+                document.getElementById('userAvatar').innerHTML = ''; // Önceki resmi temizle
+                const initialsDiv = document.createElement('div');
+                initialsDiv.textContent = getInitials(user.fullname);
+                initialsDiv.style.width = '100%';
+                initialsDiv.style.height = '100%';
+                initialsDiv.style.display = 'flex';
+                initialsDiv.style.alignItems = 'center';
+                initialsDiv.style.justifyContent = 'center';
+                initialsDiv.style.fontSize = '20px'; // Topbar avatar boyutu
+                initialsDiv.style.fontWeight = '600';
+                initialsDiv.style.color = 'var(--white)';
+                initialsDiv.style.backgroundColor = 'var(--primary-light)';
+                document.getElementById('userAvatar').appendChild(initialsDiv);
             }
 
             // Profilim kartındaki bilgiler
@@ -2304,7 +2339,7 @@
                 phoneElement.textContent = '•••• ••• •• ••';
                 phoneElement.style.color = 'var(--light-gray)';
             } else {
-                phoneElement.textContent = user.phone;
+                phoneElement.textContent = formatPhoneNumber(user.phone);
                 phoneElement.style.color = 'var(--text-color)';
             }
 
@@ -2315,6 +2350,20 @@
                 emailElement.textContent = user.email;
                 emailElement.style.color = 'var(--text-color)';
             }
+        }
+
+        // Telefon numarasını biçimlendiren fonksiyon
+        function formatPhoneNumber(phoneNumber) {
+            if (!phoneNumber) return '';
+            const cleaned = ('' + phoneNumber).replace(/\D/g, ''); // Sadece rakamları al
+
+            // Türkiye telefon numarası formatı için (örnek: +90 (5XX) XXX XX XX)
+            const match = cleaned.match(/^(\d{3})(\d{3})(\d{2})(\d{2})$/);
+            if (match) {
+                return `( ${match[1]} ) ${match[2]} ${match[3]} ${match[4]}`;
+            }
+            // Uluslararası veya farklı formatlar için basitçe döndür
+            return phoneNumber;
         }
 
         // Tüm kullanıcıları backend'den çekme
@@ -2401,7 +2450,7 @@
                 
                 // Gizlilik ayarlarına göre e-posta ve telefon gösterimi
                 const displayEmail = user.hide_email === 1 ? '••••@•••••.com' : user.email;
-                const displayPhone = user.hide_phone === 1 ? '•••• ••• •• ••' : user.phone;
+                const displayPhone = user.hide_phone === 1 ? '•••• ••• •• ••' : formatPhoneNumber(user.phone);
 
                 row.innerHTML += `
                     <td data-label="Ad Soyad">${user.fullname}</td>
@@ -2445,7 +2494,7 @@
             
             // Gizlilik ayarlarına göre e-posta ve telefon gösterimi
             const displayEmail = user.hide_email === 1 ? '••••@•••••.com' : user.email;
-            const displayPhone = user.hide_phone === 1 ? '•••• ••• •• ••' : user.phone;
+            const displayPhone = user.hide_phone === 1 ? '•••• ••• •• ••' : formatPhoneNumber(user.phone);
 
             let avatarHtml;
             if (user.profile_picture) {
@@ -2577,7 +2626,7 @@
                 fullname: newFullName,
                 email: newEmail,
                 phone: newPhone,
-                profile_picture: currentCroppedImage, // Base64 resim verisi
+                profile_picture: currentCroppedImage, // Base64 resim verisi (null olabilir)
                 // hide_email ve hide_phone burada gönderilmez
             };
 
