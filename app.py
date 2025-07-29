@@ -1652,30 +1652,39 @@ def get_project_progress_steps(project_id):
             connection.close()
 
 # Add New Project Progress Step API (called from projects.html)
-@app.route('/api/projects/<int:project_id>/progress', methods=['POST'])
-def add_project_progress_step_from_modal():
+import datetime # Bu satırın dosyanızın başında olduğundan emin olun
+
+@app.route('/api/projects/<int:project_id_from_url>/progress', methods=['POST']) # URL'den gelen project_id'yi yakala
+def add_project_progress_step_from_modal(project_id_from_url): # Fonksiyon parametresi olarak al
     """Adds a new progress step to a project."""
     data = request.get_json()
-    project_id = data.get('project_id') # Get project_id from data, not URL
+    # Artık project_id'yi URL'den alıyoruz, isteğin gövdesinden değil.
+    # Bu yüzden aşağıdaki satırı kaldırabilir veya yorum satırı yapabilirsiniz:
+    # project_id = data.get('project_id') 
+    project_id = project_id_from_url # URL'den gelen project_id'yi kullan
+
     step_name = data.get('step_name')
     description = data.get('description')
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
 
-    if not all([project_id, step_name, start_date_str, end_date_str]):
-        return jsonify({'message': 'Project ID, title, start and end date are required.'}), 400
+    # Gerekli alanları doğrula. Artık project_id her zaman URL'den gelecek.
+    if not all([step_name, start_date_str, end_date_str]):
+        return jsonify({'message': 'Başlık, başlangıç ve bitiş tarihi gerekli.'}), 400
 
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
             # Find the existing end date of the project (for calculating delay_days)
+            # Bu sorgu, mevcut adımların bitiş tarihlerini kontrol ederek
+            # yeni adımın gecikmesini hesaplamak için doğru bir yaklaşımdır.
             cursor.execute("""
                 SELECT end_date FROM project_progress
                 WHERE project_id = %s
                 ORDER BY end_date DESC
                 LIMIT 1
-            """, (project_id,))
+            """, (project_id,)) # URL'den gelen project_id'yi kullan
             last_step = cursor.fetchone()
             previous_end_date = last_step['end_date'] if last_step else None
 
@@ -1703,17 +1712,17 @@ def add_project_progress_step_from_modal():
                 project_name = project_info['project_name']
                 send_notification(
                     project_manager_id,
-                    "Project Progress Step Added",
-                    f"A new progress step ('{step_name}') has been added to project '{project_name}'."
+                    "Proje İlerleme Adımı Eklendi",
+                    f"'{step_name}' adlı yeni bir ilerleme adımı '{project_name}' projesine eklendi."
                 )
 
-        return jsonify({'message': 'Progress step successfully added!', 'progress_id': new_progress_id}), 201
+        return jsonify({'message': 'İlerleme adımı başarıyla eklendi!', 'progress_id': new_progress_id}), 201
     except pymysql.Error as e:
-        print(f"Database error adding progress step: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"İlerleme adımı eklenirken veritabanı hatası: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error adding progress step: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"İlerleme adımı eklenirken genel hata: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
