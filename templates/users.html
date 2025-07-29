@@ -840,7 +840,6 @@
             .topbar {
                 padding: 10px;
                 flex-wrap: nowrap;
-                gap: 8px;
                 flex-direction: row;
                 justify-content: flex-start;
                 align-items: center;
@@ -1899,22 +1898,7 @@
                                         <input type="text" class="form-control" id="editPosition" value="Proje Yöneticisi" readonly> <!-- Pozisyon alanı readonly yapıldı -->
                                     </div>
                                 </div>
-                                <div class="col-12">
-                                    <hr>
-                                    <h6>Şifre Değiştir</h6>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Mevcut Şifre</label>
-                                        <input type="password" class="form-control" id="editCurrentPassword">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Yeni Şifre</label>
-                                        <input type="password" class="form-control" id="editNewPassword">
-                                    </div>
-                                </div>
+                                <!-- Şifre Değiştir kısmı tamamen silindi -->
                             </div>
                         </div>
                     </div>
@@ -2272,7 +2256,7 @@
             // Profilim kartındaki bilgiler
             document.getElementById('currentUserName').textContent = user.fullname;
             document.getElementById('currentUserRole').textContent = user.role;
-            document.getElementById('currentUserPosition').textContent = user.position || 'Belirtilmemiş'; // Pozisyonu backend'den çek
+            document.getElementById('currentUserPosition').textContent = user.role || ''; // Pozisyonu backend'den çek, boşsa boş bırak
             document.getElementById('currentUserJoinDate').textContent = new Date(user.created_at).toLocaleDateString('tr-TR'); // Katılım tarihi
 
             // Profilim kartındaki avatar
@@ -2304,7 +2288,7 @@
             document.getElementById('editFullName').value = user.fullname;
             document.getElementById('editEmail').value = user.email;
             document.getElementById('editPhone').value = user.phone;
-            document.getElementById('editPosition').value = user.position || 'Belirtilmemiş'; // Pozisyonu düzenlenemez yap
+            document.getElementById('editPosition').value = user.role || ''; // Pozisyonu düzenlenemez yap
             
             const avatarPreview = document.getElementById('avatarPreview');
             if (user.profile_picture) {
@@ -2457,7 +2441,7 @@
                     <td data-label="Rol"><span class="status-badge status-Aktif">${user.role}</span></td>
                     <td data-label="Telefon">${displayPhone}</td>
                     <td data-label="E-posta">${displayEmail}</td>
-                    <td data-label="Pozisyon">${user.position || 'Belirtilmemiş'}</td>
+                    <td data-label="Pozisyon">${user.role || ''}</td> <!-- Pozisyonu doğrudan role'den al, boşsa boş bırak -->
                 `;
                 
                 row.prepend(avatarCell);
@@ -2513,7 +2497,7 @@
                 <div class="user-contact-info">
                     <div><i class="fas fa-envelope"></i> ${displayEmail}</div>
                     <div><i class="fas fa-phone"></i> ${displayPhone}</div>
-                    <div><i class="fas fa-briefcase"></i> ${user.position || 'Belirtilmemiş'}</div>
+                    <div><i class="fas fa-briefcase"></i> ${user.role || ''}</div> <!-- Pozisyonu doğrudan role'den al, boşsa boş bırak -->
                     <div><i class="fas fa-calendar-alt"></i> Katılım: ${new Date(user.created_at).toLocaleDateString('tr-TR')}</div>
                 </div>
             `;
@@ -2555,7 +2539,7 @@
             document.getElementById('editFullName').value = currentUser.fullname;
             document.getElementById('editEmail').value = currentUser.email;
             document.getElementById('editPhone').value = currentUser.phone;
-            document.getElementById('editPosition').value = currentUser.position || 'Belirtilmemiş'; // Pozisyonu düzenlenemez yap
+            document.getElementById('editPosition').value = currentUser.role || ''; // Pozisyonu düzenlenemez yap
             
             // Avatar önizlemesini ayarla
             const avatarPreview = document.getElementById('avatarPreview');
@@ -2590,21 +2574,18 @@
                 const nameMatch = user.fullname.toLowerCase().includes(searchTerm);
                 const emailMatch = user.email.toLowerCase().includes(searchTerm);
                 const phoneMatch = user.phone.toLowerCase().includes(searchTerm);
-                const roleMatch = user.role.toLowerCase().includes(searchTerm);
-                const positionMatch = (user.position || '').toLowerCase().includes(searchTerm);
-                return nameMatch || emailMatch || phoneMatch || roleMatch || positionMatch;
+                const roleMatch = user.role.toLowerCase().includes(searchTerm); // Role'ü de ara
+                return nameMatch || emailMatch || phoneMatch || roleMatch;
             });
             renderUsersTable(filtered);
         }
         
-        // Profil değişikliklerini kaydetme (Genel bilgiler ve şifre)
+        // Profil değişikliklerini kaydetme (Genel bilgiler)
         async function saveProfileChanges() {
             const newFullName = document.getElementById('editFullName').value.trim();
             const newEmail = document.getElementById('editEmail').value.trim();
             const newPhone = document.getElementById('editPhone').value.replace(/\D/g, ''); // Sadece rakamları al
-            const currentPassword = document.getElementById('editCurrentPassword').value;
-            const newPassword = document.getElementById('editNewPassword').value;
-            // Gizlilik ayarları burada güncellenmez, ayrı bir fonksiyonda ele alınır
+            // Şifre alanları kaldırıldığı için burada kullanılmaz
 
             if (!newFullName || !newEmail || !newPhone) {
                 showToast('Ad Soyad, E-posta ve Telefon alanları boş bırakılamaz.', 'error');
@@ -2627,18 +2608,7 @@
                 email: newEmail,
                 phone: newPhone,
                 profile_picture: currentCroppedImage, // Base64 resim verisi (null olabilir)
-                // hide_email ve hide_phone burada gönderilmez
             };
-
-            // Şifre alanları varsa ekle
-            if (currentPassword || newPassword) {
-                if (!currentPassword || !newPassword) {
-                    showToast('Şifre değiştirmek için hem mevcut hem de yeni şifre alanları doldurulmalıdır.', 'error');
-                    return;
-                }
-                updateData.currentPassword = currentPassword;
-                updateData.newPassword = newPassword;
-            }
             
             try {
                 const response = await fetch(`${API_BASE_URL}/api/update_user_profile`, {
@@ -2656,7 +2626,6 @@
                     currentUser.email = newEmail;
                     currentUser.phone = newPhone;
                     currentUser.profile_picture = currentCroppedImage;
-                    // currentUser.hide_email ve hide_phone burada güncellenmez
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
 
                     updateCurrentUserProfile(currentUser); // Arayüzü yeni bilgilerle güncelle
