@@ -23,7 +23,7 @@ def serve_login_page():
     """Kök URL'ye (/) gelen istekleri login.html sayfasına yönlendirir."""
     return render_template('login.html')
 @app.route('/login.html')
-def serve_login_page():
+def serve_out_page():
     """Kök URL'ye (/) gelen istekleri login.html sayfasına yönlendirir."""
     return render_template('login.html')
 
