@@ -1680,8 +1680,7 @@
     <div class="sidebar" id="sidebar">
         <a href="index.html" style="text-decoration: none;">
             <div class="logo-container" style="cursor: pointer;">
-              <div class="logo-icon">SER</div>
-              <div class="logo-text">Ser Elektrik</div>
+              <img src="{{ url_for('static', filename='serlogo.png') }}" alt="Ser Elektrik Otomasyon" style="width: 180px; height: auto; padding-left: 10px;">
             </div>
         </a>
         <a href="index.html" class="nav-item">
@@ -1708,7 +1707,7 @@
             <i class="fas fa-calendar-alt"></i>
             <span class="nav-text">Takvim</span>
         </a>
-        <a href="ayarlar.html" class="nav-item">
+        <a href="ayarlar.html" class="nav-item active">
             <i class="fas fa-cog"></i>
             <span class="nav-text">Ayarlar</span>
         </a>
@@ -1734,7 +1733,7 @@
                     <i class="fas fa-bell"></i>
                 </div>
                 
-                 <div class="user-profile">
+                 <div class="user-profile" id="userProfileLink">
                     <div class="user-avatar" id="userAvatar">MO</div>
                     <div class="user-info">
                         <div class="user-name" id="userName">Mustafa Öztürk</div>
@@ -1879,7 +1878,7 @@
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label class="form-label">Pozisyon</label>
-                                        <input type="text" class="form-control" id="editPosition" value="Proje Yöneticisi">
+                                        <input type="text" class="form-control" id="editPosition" value="Proje Yöneticisi" readonly> <!-- Pozisyon alanı readonly yapıldı -->
                                     </div>
                                 </div>
                             </div>
@@ -1951,81 +1950,45 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        // Demo kullanıcı verileri
-        const demoUsers = [
-            {
-                id: 1,
-                fullname: "Mustafa Öztürk",
-                role: "Admin",
-                email: "mustafa@ser-elektrik.com",
-                phone: "+90 555 123 4567",
-                position: "Proje Yöneticisi",
-                joinDate: "15.03.2023",
-                avatar: null
-            },
-            {
-                id: 2,
-                fullname: "Ayşe Demir",
-                role: "Kullanıcı",
-                email: "ayse@ser-elektrik.com",
-                phone: "+90 555 234 5678",
-                position: "Elektrik Mühendisi",
-                joinDate: "10.04.2023",
-                avatar: null
-            },
-            {
-                id: 3,
-                fullname: "Mehmet Kaya",
-                role: "Kullanıcı",
-                email: "mehmet@ser-elektrik.com",
-                phone: "+90 555 345 6789",
-                position: "Teknik Sorumlu",
-                joinDate: "05.05.2023",
-                avatar: null
-            },
-            {
-                id: 4,
-                fullname: "Zeynep Yılmaz",
-                role: "Editör",
-                email: "zeynep@ser-elektrik.com",
-                phone: "+90 555 456 7890",
-                position: "Satış Temsilcisi",
-                joinDate: "20.06.2023",
-                avatar: null
-            },
-            {
-                id: 5,
-                fullname: "Ali Can",
-                role: "Yönetici",
-                email: "ali@ser-elektrik.com",
-                phone: "+90 555 567 8901",
-                position: "Finans Müdürü",
-                joinDate: "12.01.2023",
-                avatar: null
-            },
-            {
-                id: 6,
-                fullname: "Fatma Şahin",
-                role: "Kullanıcı",
-                email: "fatma@ser-elektrik.com",
-                phone: "+90 555 678 9012",
-                position: "İK Uzmanı",
-                joinDate: "18.07.2023",
-                avatar: null
-            }
-        ];
-
+        const API_BASE_URL = "https://ser-proje.onrender.com"; // API Base URL'nizi buraya ekleyin
+        let currentUser = null; // Giriş yapan kullanıcı bilgisi
+        let allUsersData = []; // Tüm kullanıcı verileri
         let cropper = null;
-        let currentCroppedImage = null;
-        let editProfileModalInstance = null; // Profil Düzenleme Modalı için instance
-        let currentHoverTimeout = null; // Hover kartı için timeout
-        let currentHoverCardUser = null; // Hangi kullanıcının kartının gösterildiğini takip etmek için
+        let currentCroppedImage = null; // Kırpılmış resmin Base64 verisi
+        let editProfileModalInstance = null;
+        let currentHoverTimeout = null;
+        let currentHoverCardUser = null;
 
-        // Sayfa yüklendiğinde kullanıcıları yükle
+        // Sayfa yüklendiğinde çalışacak kodlar
         document.addEventListener('DOMContentLoaded', function() {
-            // Kullanıcı listesini yükle
-            renderUsersTable(demoUsers);
-            
+            // Kullanıcı oturum kontrolü
+            const storedUser = localStorage.getItem('currentUser');
+            if (!storedUser) {
+                showToast("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", 'error');
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000);
+            } else {
+                try {
+                    currentUser = JSON.parse(storedUser);
+                    updateCurrentUserProfile(currentUser); // Kendi profil bilgilerini güncelle
+                    fetchUsers(); // Tüm kullanıcıları çek
+                } catch (e) {
+                    console.error("Kayıtlı kullanıcı verisi bozuk:", e);
+                    localStorage.removeItem('currentUser');
+                    showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", 'error');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+                }
+            }
+
+            // Sol sidebar logosunu güncelle
+            const sidebarLogoContainer = document.querySelector('.sidebar .logo-container');
+            if (sidebarLogoContainer) {
+                sidebarLogoContainer.innerHTML = `<img src="{{ url_for('static', filename='serlogo.png') }}" alt="Ser Elektrik Otomasyon" style="width: 180px; height: auto; padding-left: 10px;">`;
+            }
+
             // Profil düzenleme butonu
             document.getElementById('editProfileBtn').addEventListener('click', openEditProfileModal);
             
@@ -2041,16 +2004,12 @@
             document.getElementById('avatarUpload').addEventListener('change', function(e) {
                 if(e.target.files && e.target.files[0]) {
                     const reader = new FileReader();
-                    
                     reader.onload = function(event) {
-                        // Profil düzenleme modalını gizle
                         if (editProfileModalInstance) {
                             editProfileModalInstance.hide();
                         }
-                        // Cropper modalını aç
                         openCropperModal(event.target.result);
                     }
-                    
                     reader.readAsDataURL(e.target.files[0]);
                 }
             });
@@ -2062,7 +2021,6 @@
                     cropper.destroy();
                     cropper = null;
                 }
-                // Profil düzenleme modalını tekrar göster
                 if (editProfileModalInstance) {
                     editProfileModalInstance.show();
                 }
@@ -2075,7 +2033,6 @@
                     cropper.destroy();
                     cropper = null;
                 }
-                // Profil düzenleme modalını tekrar göster
                 if (editProfileModalInstance) {
                     editProfileModalInstance.show();
                 }
@@ -2119,33 +2076,23 @@
             // Kırpma işlemini uygula
             document.getElementById('crop-image-btn').addEventListener('click', function() {
                 if (cropper) {
-                    // Kırpılmış resmi al (base64 formatında)
                     const croppedCanvas = cropper.getCroppedCanvas({
                         width: 300,
                         height: 300
                     });
                     
-                    // Önizleme için avatarPreview'e ekle
                     const avatarPreview = document.getElementById('avatarPreview');
                     avatarPreview.innerHTML = '';
                     const img = document.createElement('img');
                     img.src = croppedCanvas.toDataURL('image/jpeg');
-                    img.style.width = '100%';
-                    img.style.height = '100%';
-                    img.style.objectFit = 'cover';
                     avatarPreview.appendChild(img);
                     
-                    // Kırpılmış resmi sakla
-                    currentCroppedImage = croppedCanvas.toDataURL('image/jpeg');
+                    currentCroppedImage = croppedCanvas.toDataURL('image/jpeg'); // Base64 verisini sakla
                     
-                    // Cropper modalını kapat
                     document.getElementById('cropperModal').classList.remove('show');
-                    
-                    // Cropper'ı temizle
                     cropper.destroy();
                     cropper = null;
 
-                    // Profil düzenleme modalını tekrar göster
                     if (editProfileModalInstance) {
                         editProfileModalInstance.show();
                     }
@@ -2167,8 +2114,63 @@
                 document.body.setAttribute('data-theme', newTheme);
                 this.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
             });
+
+            // Çıkış Yap Butonu Olay Dinleyicisi
+            document.getElementById('logoutButton').addEventListener('click', () => {
+                localStorage.removeItem('currentUser'); // Kullanıcı bilgisini sil
+                showToast("Başarıyla çıkış yaptınız.", 'success');
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 1000);
+            });
+
+            // Gizleme seçenekleri olay dinleyicileri
+            const hidePhoneCheckbox = document.getElementById('hidePhoneNumber');
+            const hideEmailCheckbox = document.getElementById('hideEmail');
+
+            hidePhoneCheckbox.addEventListener('change', function() {
+                // Bu değişiklik sadece frontend'de anlık etkiyi gösterir.
+                // Kaydet butonuna basıldığında backend'e gönderilecek.
+                updateCurrentUserProfileDisplay(currentUser);
+            });
+
+            hideEmailCheckbox.addEventListener('change', function() {
+                // Bu değişiklik sadece frontend'de anlık etkiyi gösterir.
+                // Kaydet butonuna basıldığında backend'e gönderilecek.
+                updateCurrentUserProfileDisplay(currentUser);
+            });
+
+            // Sağ üstteki kullanıcı profili linki
+            document.getElementById('userProfileLink').addEventListener('click', function() {
+                window.location.href = 'users.html';
+            });
+
+            // Sidebar dışına tıklayınca kapatma
+            document.addEventListener('click', (event) => {
+                const sidebar = document.getElementById('sidebar');
+                const hamburgerMenu = document.getElementById('hamburgerMenu');
+                const mainContent = document.getElementById('mainContent');
+
+                if (sidebar.classList.contains('show') && 
+                    !sidebar.contains(event.target) && 
+                    !hamburgerMenu.contains(event.target)) {
+                    sidebar.classList.remove('show');
+                    mainContent.classList.remove('expanded');
+                }
+            });
+
+            // Pencere boyutu değiştiğinde sidebar durumunu sıfırla (masaüstü için)
+            window.addEventListener('resize', () => {
+                const sidebar = document.getElementById('sidebar');
+                const mainContent = document.getElementById('mainContent');
+                if (window.innerWidth > 992) {
+                    sidebar.classList.remove('show');
+                    mainContent.classList.remove('expanded');
+                }
+            });
         });
         
+        // Cropper zoom değerini güncelleme
         function updateZoomValue() {
             if (cropper) {
                 const zoomValue = Math.round(cropper.getImageData().ratio * 100);
@@ -2177,29 +2179,18 @@
             }
         }
         
+        // Cropper modalını açma
         function openCropperModal(imageSrc) {
-            // Eğer önceki bir cropper varsa yok et
             if (cropper) {
                 cropper.destroy();
                 cropper = null;
             }
             
-            // Resmi kırpma alanında göster
             const image = document.getElementById('image-to-crop');
             image.src = imageSrc;
             
-            // Profil düzenleme modalını gizle
-            if (editProfileModalInstance) {
-                editProfileModalInstance.hide();
-                // Bootstrap'in kendi modal backdrop'ını da kaldırdığından emin ol
-                // Bu bazen gecikebilir veya kalabilir, bu yüzden manuel olarak kaldırıyoruz.
-                setTimeout(removeBootstrapBackdrops, 50); // Kısa bir gecikme ile backdrop'ı kaldır
-            }
-
-            // Cropper modalını göster
             document.getElementById('cropperModal').classList.add('show');
             
-            // Cropper'ı başlat
             setTimeout(() => {
                 cropper = new Cropper(image, {
                     aspectRatio: 1,
@@ -2209,47 +2200,126 @@
                     guides: true
                 });
                 
-                // Zoom slider'ını sıfırla
                 document.getElementById('crop-zoom').value = 100;
                 document.querySelector('.zoom-value').textContent = '100%';
             }, 100);
         }
 
-        function removeBootstrapBackdrops() {
-            const backdrops = document.querySelectorAll('.modal-backdrop');
-            backdrops.forEach(backdrop => backdrop.remove());
-        }
-        
-        // Declare hoverCard outside the function to avoid redeclaration error
-        const hoverCard = document.getElementById('userHoverCard');
+        // Kendi profil bilgilerini güncelleyen fonksiyon
+        async function updateCurrentUserProfile(user) {
+            // Topbar'daki kullanıcı bilgileri
+            document.getElementById('userName').textContent = user.fullname;
+            document.getElementById('userRole').textContent = user.role;
+            if (user.profile_picture) {
+                document.getElementById('userAvatar').innerHTML = `<img src="${user.profile_picture}" alt="${user.fullname}">`;
+            } else {
+                document.getElementById('userAvatar').textContent = getInitials(user.fullname);
+            }
 
+            // Profilim kartındaki bilgiler
+            document.getElementById('currentUserName').textContent = user.fullname;
+            document.getElementById('currentUserRole').textContent = user.role;
+            document.getElementById('currentUserPosition').textContent = user.position || 'Belirtilmemiş'; // Pozisyonu backend'den çek
+            document.getElementById('currentUserJoinDate').textContent = new Date(user.joinDate).toLocaleDateString('tr-TR'); // Katılım tarihi
+
+            // Profilim kartındaki avatar
+            if (user.profile_picture) {
+                document.getElementById('currentUserAvatar').innerHTML = `<img src="${user.profile_picture}" alt="${user.fullname}">`;
+            } else {
+                document.getElementById('currentUserAvatar').textContent = getInitials(user.fullname);
+            }
+
+            // Gizlilik ayarlarını ve e-posta/telefon gösterimini güncelle
+            document.getElementById('hidePhoneNumber').checked = user.hide_phone === 1;
+            document.getElementById('hideEmail').checked = user.hide_email === 1;
+            updateCurrentUserProfileDisplay(user);
+
+            // Düzenleme modalındaki alanları doldur
+            document.getElementById('editFullName').value = user.fullname;
+            document.getElementById('editEmail').value = user.email;
+            document.getElementById('editPhone').value = user.phone;
+            document.getElementById('editPosition').value = user.position || 'Belirtilmemiş'; // Pozisyonu düzenlenemez yap
+            if (user.profile_picture) {
+                document.getElementById('avatarPreview').innerHTML = `<img src="${user.profile_picture}" alt="${user.fullname}">`;
+                currentCroppedImage = user.profile_picture; // Mevcut resmi kırpılmış olarak ayarla
+            } else {
+                document.getElementById('avatarPreview').textContent = getInitials(user.fullname);
+                currentCroppedImage = null;
+            }
+        }
+
+        // Kullanıcının profil bilgilerini gizlilik ayarlarına göre güncelleyen fonksiyon
+        function updateCurrentUserProfileDisplay(user) {
+            const phoneElement = document.getElementById('currentUserPhone');
+            const emailElement = document.getElementById('currentUserEmail');
+            const hidePhoneCheckbox = document.getElementById('hidePhoneNumber');
+            const hideEmailCheckbox = document.getElementById('hideEmail');
+
+            if (hidePhoneCheckbox.checked) {
+                phoneElement.textContent = '•••• ••• •• ••';
+                phoneElement.style.color = 'var(--light-gray)';
+            } else {
+                phoneElement.textContent = user.phone;
+                phoneElement.style.color = 'var(--text-color)';
+            }
+
+            if (hideEmailCheckbox.checked) {
+                emailElement.textContent = '••••@•••••.com';
+                emailElement.style.color = 'var(--light-gray)';
+            } else {
+                emailElement.textContent = user.email;
+                emailElement.style.color = 'var(--text-color)';
+            }
+        }
+
+        // Tüm kullanıcıları backend'den çekme
+        async function fetchUsers() {
+            const usersTableBody = document.getElementById('usersTableBody');
+            usersTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Kullanıcılar yükleniyor...</td></tr>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/users`);
+                if (!response.ok) throw new Error('Kullanıcılar çekilemedi.');
+                allUsersData = await response.json();
+                renderUsersTable(allUsersData); // Tüm kullanıcıları render et
+            } catch (error) {
+                console.error('Kullanıcıları çekerken hata:', error);
+                usersTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger);">Kullanıcılar yüklenemedi: ${error.message}</td></tr>`;
+                showToast('Kullanıcı listesi yüklenirken hata oluştu.', 'error');
+            }
+        }
+
+        // Kullanıcı listesini render etme
         function renderUsersTable(users) {
             const tbody = document.getElementById('usersTableBody');
             tbody.innerHTML = '';
             
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Hiç kullanıcı bulunamadı.</td></tr>';
+                return;
+            }
+
             users.forEach(user => {
                 const row = document.createElement('tr');
                 row.dataset.userId = user.id;
                 
                 // Hover olaylarını ekle
                 row.addEventListener('mouseenter', function(e) {
-                    clearTimeout(currentHoverTimeout); // Önceki timeout'u temizle
-                    // Sadece farklı bir kullanıcıysa veya kart görünmüyorsa göster
+                    clearTimeout(currentHoverTimeout);
                     if (currentHoverCardUser !== user.id || !hoverCard.classList.contains('show-card')) {
                         currentHoverTimeout = setTimeout(() => {
                             showUserHoverCard(user, e);
                             currentHoverCardUser = user.id;
-                        }, 300); // Kısa bir gecikme
+                        }, 300);
                     }
                 });
                 
                 row.addEventListener('mouseleave', function() {
-                    clearTimeout(currentHoverTimeout); // Bekleyen gösterimi iptal et
-                    // Kartın kendisi mouseleave olayını yönetecek
+                    clearTimeout(currentHoverTimeout);
                     currentHoverTimeout = setTimeout(() => {
                         hideUserHoverCard();
                         currentHoverCardUser = null;
-                    }, 200); // Karttan ayrıldıktan sonra kısa bir gecikme
+                    }, 200);
                 });
 
                 // Avatar sütunu
@@ -2264,26 +2334,29 @@
                 avatarDiv.style.display = 'flex';
                 avatarDiv.style.alignItems = 'center';
                 avatarDiv.style.justifyContent = 'center';
-                avatarDiv.style.backgroundColor = '#0980d3';
-                avatarDiv.style.color = 'white';
+                avatarDiv.style.backgroundColor = 'var(--primary-light)';
+                avatarDiv.style.color = 'var(--white)';
                 avatarDiv.style.fontWeight = '600';
-                
-                if(user.avatar) {
-                    avatarDiv.innerHTML = `<img src="${user.avatar}" alt="${user.fullname}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+                avatarDiv.style.overflow = 'hidden'; // Ensure image is clipped
+
+                if(user.profile_picture) {
+                    avatarDiv.innerHTML = `<img src="${user.profile_picture}" alt="${user.fullname}">`;
                 } else {
                     const initials = getInitials(user.fullname);
                     avatarDiv.textContent = initials;
                 }
-                
                 avatarCell.appendChild(avatarDiv);
                 
-                // Diğer sütunlar
+                // Gizlilik ayarlarına göre e-posta ve telefon gösterimi
+                const displayEmail = user.hide_email === 1 ? '••••@•••••.com' : user.email;
+                const displayPhone = user.hide_phone === 1 ? '•••• ••• •• ••' : user.phone;
+
                 row.innerHTML += `
                     <td data-label="Ad Soyad">${user.fullname}</td>
                     <td data-label="Rol"><span class="status-badge status-Aktif">${user.role}</span></td>
-                    <td data-label="Telefon">${user.phone}</td>
-                    <td data-label="E-posta">${user.email}</td>
-                    <td data-label="Pozisyon">${user.position}</td>
+                    <td data-label="Telefon">${displayPhone}</td>
+                    <td data-label="E-posta">${displayEmail}</td>
+                    <td data-label="Pozisyon">${user.position || 'Belirtilmemiş'}</td>
                 `;
                 
                 row.prepend(avatarCell);
@@ -2291,8 +2364,9 @@
             });
 
             // Hover kartının kendisi için mouseenter ve mouseleave olayları
+            const hoverCard = document.getElementById('userHoverCard');
             hoverCard.addEventListener('mouseenter', function() {
-                clearTimeout(currentHoverTimeout); // Kartın üzerindeyken gizlemeyi iptal et
+                clearTimeout(currentHoverTimeout);
             });
 
             hoverCard.addEventListener('mouseleave', function() {
@@ -2301,6 +2375,7 @@
             });
         }
         
+        // İsimden baş harfleri alma
         function getInitials(fullname) {
             if (!fullname) return '';
             const parts = fullname.split(' ');
@@ -2312,96 +2387,183 @@
             return '';
         }
         
+        // Kullanıcı hover kartını gösterme
         function showUserHoverCard(user, event) {
             const hoverCard = document.getElementById('userHoverCard');
             
-            // Kart içeriğini oluştur
+            // Gizlilik ayarlarına göre e-posta ve telefon gösterimi
+            const displayEmail = user.hide_email === 1 ? '••••@•••••.com' : user.email;
+            const displayPhone = user.hide_phone === 1 ? '•••• ••• •• ••' : user.phone;
+
             hoverCard.innerHTML = `
-                <div class="user-avatar-large">${user.avatar ? `<img src="${user.avatar}" alt="${user.fullname}">` : getInitials(user.fullname)}</div>
+                <div class="user-avatar-large">${user.profile_picture ? `<img src="${user.profile_picture}" alt="${user.fullname}">` : getInitials(user.fullname)}</div>
                 <div class="user-name-large">${user.fullname}</div>
                 <div class="user-role-badge">${user.role}</div>
                 <div class="user-contact-info">
-                    <div><i class="fas fa-envelope"></i> ${user.email}</div>
-                    <div><i class="fas fa-phone"></i> ${user.phone}</div>
-                    <div><i class="fas fa-briefcase"></i> ${user.position}</div>
-                    <div><i class="fas fa-calendar-alt"></i> Katılım: ${user.joinDate}</div>
+                    <div><i class="fas fa-envelope"></i> ${displayEmail}</div>
+                    <div><i class="fas fa-phone"></i> ${displayPhone}</div>
+                    <div><i class="fas fa-briefcase"></i> ${user.position || 'Belirtilmemiş'}</div>
+                    <div><i class="fas fa-calendar-alt"></i> Katılım: ${new Date(user.joinDate).toLocaleDateString('tr-TR')}</div>
                 </div>
             `;
             
-            // Kartı konumlandır
             const rect = event.target.getBoundingClientRect();
-            hoverCard.style.left = (rect.left + window.scrollX + 10) + 'px';
-            hoverCard.style.top = (rect.top + window.scrollY - hoverCard.offsetHeight - 10) + 'px';
+            let topPosition = rect.top + window.scrollY + rect.height + 10; // Tablonun altına
+            let leftPosition = rect.left + window.scrollX;
+
+            // Ekranın sağından taşmayı önle
+            if (leftPosition + hoverCard.offsetWidth > window.innerWidth) {
+                leftPosition = window.innerWidth - hoverCard.offsetWidth - 20; // Sağdan 20px boşluk bırak
+            }
+            // Ekranın solundan taşmayı önle
+            if (leftPosition < 0) {
+                leftPosition = 20; // Soldan 20px boşluk bırak
+            }
+
+            hoverCard.style.left = leftPosition + 'px';
+            hoverCard.style.top = topPosition + 'px';
             
-            // Kartı göster ve fade efekti uygula
-            hoverCard.style.display = 'block'; // Display'i block yap ki transition çalışsın
+            hoverCard.style.display = 'block';
             setTimeout(() => {
                 hoverCard.classList.add('show-card');
-            }, 10); // Kısa bir gecikme ile sınıfı ekle
+            }, 10);
         }
         
+        // Kullanıcı hover kartını gizleme
         function hideUserHoverCard() {
             const hoverCard = document.getElementById('userHoverCard');
             hoverCard.classList.remove('show-card');
-            // Transition bittikten sonra display'i none yap
             setTimeout(() => {
                 hoverCard.style.display = 'none';
-            }, 300); // CSS transition süresiyle eşleşmeli
+            }, 300);
         }
         
+        // Profil düzenleme modalını açma
         function openEditProfileModal() {
-            // Modalı aç
+            // Mevcut kullanıcı bilgilerini modal'a yükle
+            document.getElementById('editFullName').value = currentUser.fullname;
+            document.getElementById('editEmail').value = currentUser.email;
+            document.getElementById('editPhone').value = currentUser.phone;
+            document.getElementById('editPosition').value = currentUser.position || 'Belirtilmemiş'; // Pozisyonu düzenlenemez yap
+            
+            // Avatar önizlemesini ayarla
+            const avatarPreview = document.getElementById('avatarPreview');
+            if (currentUser.profile_picture) {
+                avatarPreview.innerHTML = `<img src="${currentUser.profile_picture}" alt="${currentUser.fullname}">`;
+                currentCroppedImage = currentUser.profile_picture;
+            } else {
+                avatarPreview.textContent = getInitials(currentUser.fullname);
+                avatarPreview.innerHTML = ''; // Önceki resmi temizle
+                const initialsDiv = document.createElement('div');
+                initialsDiv.textContent = getInitials(currentUser.fullname);
+                initialsDiv.style.width = '100%';
+                initialsDiv.style.height = '100%';
+                initialsDiv.style.display = 'flex';
+                initialsDiv.style.alignItems = 'center';
+                initialsDiv.style.justifyContent = 'center';
+                initialsDiv.style.fontSize = '48px';
+                initialsDiv.style.fontWeight = '600';
+                initialsDiv.style.color = 'var(--white)';
+                initialsDiv.style.backgroundColor = 'var(--primary-light)';
+                avatarPreview.appendChild(initialsDiv);
+                currentCroppedImage = null;
+            }
+
             editProfileModalInstance = new bootstrap.Modal(document.getElementById('editProfileModal'));
             editProfileModalInstance.show();
         }
         
+        // Kullanıcıları filtreleme
         function filterUsers() {
             const searchTerm = document.getElementById('userSearch').value.toLowerCase();
-            const rows = document.querySelectorAll('#usersTableBody tr');
-            
-            rows.forEach(row => {
-                const name = row.cells[1].textContent.toLowerCase();
-                const email = row.cells[4].textContent.toLowerCase();
-                const position = row.cells[5].textContent.toLowerCase();
-                
-                if(name.includes(searchTerm) || email.includes(searchTerm) || position.includes(searchTerm)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
+            const filtered = allUsersData.filter(user => {
+                const nameMatch = user.fullname.toLowerCase().includes(searchTerm);
+                const emailMatch = user.email.toLowerCase().includes(searchTerm);
+                const phoneMatch = user.phone.toLowerCase().includes(searchTerm);
+                const roleMatch = user.role.toLowerCase().includes(searchTerm);
+                const positionMatch = (user.position || '').toLowerCase().includes(searchTerm);
+                return nameMatch || emailMatch || phoneMatch || roleMatch || positionMatch;
             });
+            renderUsersTable(filtered);
         }
         
-        function saveProfileChanges() {
-            // Burada API çağrısı yapılacak
-            // Şimdilik sadece arayüzü güncelliyoruz
-            
-            const newName = document.getElementById('editFullName').value;
-            const newEmail = document.getElementById('editEmail').value;
-            const newPhone = document.getElementById('editPhone').value;
-            const newPosition = document.getElementById('editPosition').value;
-            
-            // Güncellenmiş avatar
-            const newAvatar = document.getElementById('avatarPreview').innerHTML;
-            
-            // Bilgileri güncelle
-            document.getElementById('currentUserName').textContent = newName;
-            document.getElementById('currentUserEmail').textContent = newEmail;
-            document.getElementById('currentUserPhone').textContent = newPhone;
-            document.getElementById('currentUserPosition').textContent = newPosition;
-            document.getElementById('currentUserAvatar').innerHTML = newAvatar;
-            
-            // Kullanıcı avatarını da güncelle
-            document.getElementById('userAvatar').innerHTML = newAvatar || getInitials(newName);
-            
-            // Modalı kapat
-            if (editProfileModalInstance) {
-                editProfileModalInstance.hide();
+        // Profil değişikliklerini kaydetme
+        async function saveProfileChanges() {
+            const newFullName = document.getElementById('editFullName').value.trim();
+            const newEmail = document.getElementById('editEmail').value.trim();
+            const newPhone = document.getElementById('editPhone').value.replace(/\D/g, ''); // Sadece rakamları al
+            const currentPassword = document.getElementById('editCurrentPassword') ? document.getElementById('editCurrentPassword').value : '';
+            const newPassword = document.getElementById('editNewPassword') ? document.getElementById('editNewPassword').value : '';
+            const hidePhone = document.getElementById('hidePhoneNumber').checked ? 1 : 0;
+            const hideEmail = document.getElementById('hideEmail').checked ? 1 : 0;
+
+            if (!newFullName || !newEmail || !newPhone) {
+                showToast('Ad Soyad, E-posta ve Telefon alanları boş bırakılamaz.', 'error');
+                return;
             }
-            
-            showToast('Profil bilgileriniz başarıyla güncellendi!');
+
+            if (newPhone.length < 10) {
+                showToast('Lütfen geçerli bir telefon numarası girin (en az 10 rakam).', 'error');
+                return;
+            }
+
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+                showToast('Lütfen geçerli bir e-posta adresi girin.', 'error');
+                return;
+            }
+
+            const updateData = {
+                userId: currentUser.id,
+                fullname: newFullName,
+                email: newEmail,
+                phone: newPhone,
+                profile_picture: currentCroppedImage, // Base64 resim verisi
+                hide_email: hideEmail,
+                hide_phone: hidePhone
+            };
+
+            // Şifre alanları varsa ekle
+            if (currentPassword && newPassword) {
+                updateData.currentPassword = currentPassword;
+                updateData.newPassword = newPassword;
+            } else if (currentPassword || newPassword) {
+                showToast('Şifre değiştirmek için hem mevcut hem de yeni şifre alanları doldurulmalıdır.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/update_user_profile`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showToast(result.message, 'success');
+                    // localStorage'daki currentUser objesini güncelle
+                    currentUser.fullname = newFullName;
+                    currentUser.email = newEmail;
+                    currentUser.phone = newPhone;
+                    currentUser.profile_picture = currentCroppedImage;
+                    currentUser.hide_email = hideEmail;
+                    currentUser.hide_phone = hidePhone;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+                    updateCurrentUserProfile(currentUser); // Arayüzü yeni bilgilerle güncelle
+                    fetchUsers(); // Tüm kullanıcılar listesini yenile
+                    editProfileModalInstance.hide(); // Modalı kapat
+                } else {
+                    showToast(result.message || 'Profil güncellenirken bir hata oluştu.', 'error');
+                }
+            } catch (error) {
+                console.error('Profil güncelleme sırasında hata:', error);
+                showToast('Sunucuya bağlanılamadı veya yanıt işlenirken bir hata oluştu.', 'error');
+            }
         }
 
+        // Toast bildirimi fonksiyonu
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toastNotification');
             const toastMessage = document.getElementById('toastMessage');
@@ -2420,33 +2582,8 @@
 
             setTimeout(() => {
                 toast.classList.remove('show');
-            }, 3000); // 3 saniye sonra kaybolur
+            }, 3000);
         }
-          // Gizleme seçenekleri
-        const hidePhoneCheckbox = document.getElementById('hidePhoneNumber');
-        const hideEmailCheckbox = document.getElementById('hideEmail');
-        
-        hidePhoneCheckbox.addEventListener('change', function() {
-            const phoneElement = document.getElementById('currentUserPhone');
-            if (this.checked) {
-                phoneElement.textContent = '•••• ••• •• ••';
-                phoneElement.style.color = '#97a1aa';
-            } else {
-                phoneElement.textContent = '+90 555 123 45 67';
-                phoneElement.style.color = '';
-            }
-        });
-          hideEmailCheckbox.addEventListener('change', function() {
-            const emailElement = document.getElementById('currentUserEmail');
-            if (this.checked) {
-                emailElement.textContent = '••••@•••••.com';
-                emailElement.style.color = '#97a1aa';
-            } else {
-                emailElement.textContent = 'john.doe@example.com';
-                emailElement.style.color = '';
-            }
-        });
-        
     </script>
 </body>
 </html>
