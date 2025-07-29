@@ -215,9 +215,9 @@
             flex-shrink: 0; /* Küçülmesini engelle */
         }
 
-        /* Bildirim butonu kaldırıldığı için ::after pseudo-elementi de kaldırıldı */
-        /* .notification-btn::after {
-            content: "3";
+        /* Bildirim sayacı için güncellenmiş CSS */
+        .notification-btn[data-count]:not([data-count="0"])::after {
+            content: attr(data-count); /* data-count özelliğindeki değeri kullan */
             position: absolute;
             top: 5px;
             right: 5px;
@@ -230,7 +230,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-        } */
+            padding-top: 1px; /* Sayıların ortalanması için küçük düzeltme */
+        }
 
         .user-profile {
             display: flex;
@@ -240,7 +241,8 @@
             flex-shrink: 0;
         }
 
-        .user-avatar {
+        /* user-avatar.js tarafından yönetilecek */
+        /* .user-avatar {
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -250,7 +252,7 @@
             justify-content: center;
             color: var(--white);
             font-weight: 600;
-        }
+        } */
 
         .user-info {
             display: flex;
@@ -1021,8 +1023,9 @@
                     <i class="fas fa-bell"></i>
                 </div>
                 
-                 <div class="user-profile">
-                    <div class="user-avatar" id="userAvatar"></div>
+                 <!-- user-avatar.js tarafından yönetilecek avatar kapsayıcısı -->
+                <div class="user-profile">
+                    <div id="userAvatarContainer" class="avatar-container"></div>
                     <div class="user-info">
                         <div class="user-name" id="userName"></div>
                         <div class="user-role" id="userRole"></div>
@@ -1152,6 +1155,7 @@
         let tasks = []; // tasks dizisini burada tanımla
         let users = []; // Kullanıcıları burada sakla
         let editingTask = null;
+        let currentUser = null; // currentUser'ı global olarak tanımla
 
         // Confirmation Modal için callback
         let confirmCallback = null;
@@ -1464,8 +1468,8 @@
                 </div>
             `;
             // Sil butonunu sadece görevi oluşturan veya atanan kullanıcıya göster
-            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-            if (currentUser && (currentUser.id == task.created_by || currentUser.id == task.assigned_user_id)) {
+            const currentUserFromStorage = JSON.parse(localStorage.getItem('currentUser')); // Yeni değişken adı
+            if (currentUserFromStorage && (currentUserFromStorage.id == task.created_by || currentUserFromStorage.id == task.assigned_user_id)) {
                 deleteBtn.style.display = '';
                 deleteBtn.onclick = function() {
                     showConfirmationModal('Bu görevi silmek istediğinize emin misiniz?', () => {
@@ -1542,57 +1546,56 @@
                 console.error("Notification panel elements not found in DOM.");
             }
         }
+
+        // Kullanıcı bilgilerini localStorage'dan yükleyen fonksiyon
+        function loadUserInfo() {
+            const storedUser = localStorage.getItem('currentUser');
+            if (!storedUser) {
+                console.log("LocalStorage'da kullanıcı verisi bulunamadı. Giriş sayfasına yönlendiriliyor...");
+                showNotification("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", "error");
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000);
+                return;
+            }
+
+            try {
+                currentUser = JSON.parse(storedUser); 
+            } catch (e) {
+                console.error("Kayıtlı kullanıcı verisi bozuk:", e);
+                localStorage.removeItem('currentUser');
+                showNotification("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", "error");
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000);
+                return;
+            }
+
+            const userNameElement = document.getElementById('userName');
+            const userRoleElement = document.getElementById('userRole');
+            // userAvatarElement kaldırıldı, userAvatarContainer kullanılacak
+
+            // Topbar kullanıcı bilgileri
+            if (userNameElement) {
+                userNameElement.textContent = currentUser.fullname || currentUser.username || 'Kullanıcı';
+            }
+            if (userRoleElement) {
+                userRoleElement.textContent = currentUser.role || 'Rol Yok';
+            }
+
+            // user-avatar.js'teki updateUserAvatar fonksiyonunu çağır
+            updateUserAvatar(currentUser); 
+        }
         
         // Sayfa yüklendiğinde
         document.addEventListener('DOMContentLoaded', () => {
-            // Kullanıcı bilgileri
-            const userNameElement = document.getElementById('userName');
-            const userRoleElement = document.getElementById('userRole');
-            const userAvatarElement = document.getElementById('userAvatar');
+            // Kullanıcı bilgilerini yükle (Topbar için)
+            loadUserInfo();
+
             const logoutButton = document.getElementById('logoutButton');
             const hamburgerMenu = document.getElementById('hamburgerMenu');
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
-
-
-            const storedUser = localStorage.getItem('currentUser');
-            if (!storedUser) {
-                showNotification("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", "error");
-                setTimeout(() => {
-                    window.location.href = 'login.html';
-                }, 2000); // 2 saniye sonra yönlendir
-            } else {
-                try {
-                    const currentUser = JSON.parse(storedUser); 
-                    updateUserInfo(currentUser);
-                } catch (e) {
-                    console.error("Kayıtlı kullanıcı verisi bozuk:", e);
-                    localStorage.removeItem('currentUser');
-                    showNotification("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", "error");
-                    setTimeout(() => {
-                        window.location.href = 'login.html';
-                    }, 2000); // 2 saniye sonra yönlendir
-                }
-            }
-
-            function updateUserInfo(user) {
-                if (user) {
-                    userNameElement.textContent = user.fullname;
-                    userRoleElement.textContent = user.role;
-                    userAvatarElement.textContent = getInitials(user.fullname);
-                }
-            }
-
-            function getInitials(fullname) {
-                if (!fullname) return '';
-                const parts = fullname.split(' ');
-                if (parts.length === 1) {
-                    return parts[0].charAt(0).toUpperCase();
-                } else if (parts.length >= 2) {
-                    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-                }
-                return '';
-            }
 
             // Tema değiştirme
             const themeToggle = document.getElementById('theme-toggle');
@@ -1860,5 +1863,7 @@
     </script>
     <!-- The bildirim.js script is now included directly below, as it was in the original file -->
     <script src="static/bildirim.js"></script>
+    <!-- user-avatar.js dosyasını buraya dahil ediyoruz -->
+    <script src="static/user-avatar.js"></script>
 </body>
 </html>
