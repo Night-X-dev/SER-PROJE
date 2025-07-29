@@ -1723,10 +1723,10 @@ def get_project_progress_steps(project_id):
 
 # Add New Project Progress Step API (called from projects.html)
 @app.route('/api/projects/<int:project_id>/progress', methods=['POST'])
-def add_project_progress_step_from_modal():
+def add_project_progress_step_from_modal(project_id): # project_id now passed from URL
     """Adds a new progress step to a project."""
     data = request.get_json()
-    project_id = data.get('project_id') # Get project_id from data, not URL
+    # project_id = data.get('project_id') # REMOVED: project_id is now from URL
     step_name = data.get('step_name')
     description = data.get('description')
     start_date_str = data.get('start_date')
