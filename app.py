@@ -1099,38 +1099,36 @@ def delete_customer(customer_id):
 
 
 # List All Projects API
-# app.py dosyasında, get_projects fonksiyonu içinde
-
 @app.route('/api/projects', methods=['GET'])
 def get_projects():
-    """Fetches a list of all projects with their associated customer and manager names."""
+    """
+    Fetches a list of all projects with their associated customer and manager names,
+    and includes the latest progress step title and its delay status.
+    """
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Proje durumlarını otomatik güncelleme KISMINI ŞİMDİLİK YORUM SATIRI YAPIN VEYA KALDIRIN
-            # Eğer manuel güncellemelerinizi engelliyorsa.
-            # Daha sonra, eğer gerçekten otomatik güncellemeye ihtiyacınız varsa,
-            # bu mantığı daha akıllıca entegre edebiliriz.
-            # cursor.execute("""
-            #     UPDATE projects
-            #     SET status = CASE
-            #         WHEN status = 'Tamamlandı' THEN 'Tamamlandı'
-            #         WHEN CURDATE() < DATE(meeting_date) THEN 'Planlama Aşamasında'
-            #         WHEN CURDATE() >= DATE(start_date) AND CURDATE() <= DATE(end_date) THEN 'Aktif'
-            #         WHEN CURDATE() > DATE(end_date) AND status != 'Tamamlandı' THEN 'Gecikti'
-            #         ELSE status
-            #     END
-            #     WHERE status != 'Tamamlandı';
-            # """)
-            # connection.commit()
-
             sql = """
-            SELECT p.project_id, p.project_name, p.reference_no, p.description, p.contract_date,
-                    p.meeting_date, p.start_date, p.end_date, p.project_location, p.status,
-                    c.customer_name, u.fullname AS project_manager_name, c.customer_id, u.id AS project_manager_user_id,
-                    (SELECT COUNT(*) FROM project_progress pp WHERE pp.project_id = p.project_id AND pp.delay_days > 0) AS has_step_delay,
-                    (SELECT IFNULL(SUM(pp.delay_days),0) FROM project_progress pp WHERE pp.project_id = p.project_id) AS delay_days
+            SELECT 
+                p.project_id, 
+                p.project_name, 
+                p.reference_no, 
+                p.description, 
+                p.contract_date,
+                p.meeting_date, 
+                p.start_date, 
+                p.end_date, 
+                p.project_location, 
+                p.status,
+                c.customer_name, 
+                u.fullname AS project_manager_name, 
+                c.customer_id, 
+                u.id AS project_manager_user_id,
+                -- En son iş gidişat başlığını ve gecikme günlerini getir
+                (SELECT title FROM project_progress WHERE project_id = p.project_id ORDER BY created_at DESC LIMIT 1) AS last_progress_title,
+                (SELECT delay_days FROM project_progress WHERE project_id = p.project_id ORDER BY created_at DESC LIMIT 1) AS last_progress_delay_days,
+                (SELECT IFNULL(SUM(pp.delay_days), 0) FROM project_progress pp WHERE pp.project_id = p.project_id) AS total_delay_days
             FROM projects p
             JOIN customers c ON p.customer_id = c.customer_id
             JOIN users u ON p.project_manager_id = u.id
@@ -1139,36 +1137,22 @@ def get_projects():
             cursor.execute(sql)
             projects_data = cursor.fetchall()
 
-            # İş adımı gecikmesine göre durumu güncelleme mantığı burada kalsın
-            # Çünkü bu, iş adımı verilerine bağlı dinamik bir durumdur.
-            projects_to_update_with_step_delay_status = []
             for project in projects_data:
-                original_status = project['status']
-                new_status = original_status
+                # Proje durumunu en son iş gidişat başlığına göre ayarla
+                # Eğer en son iş gidişatı yoksa, projenin kendi status'unu kullan
+                display_status = project['last_progress_title'] if project['last_progress_title'] else project['status']
 
-                if original_status == 'Aktif' and project['has_step_delay'] > 0:
-                    new_status = 'Aktif (İş Gecikmeli)'
-                elif original_status == 'Planlama Aşamasında' and project['has_step_delay'] > 0:
-                    new_status = 'Planlama (İş Gecikmeli)'
-
-                if new_status != original_status:
-                    projects_to_update_with_step_delay_status.append({'project_id': project['project_id'], 'status': new_status})
-
-                # Proje verisini JSON'a çevirmeden önce güncel durumu atayın
-                project['status'] = new_status # Bu satırı ekleyin veya kontrol edin
+                # Eğer en son iş adımında gecikme varsa, durumu güncelle
+                if project['last_progress_delay_days'] is not None and project['last_progress_delay_days'] > 0:
+                    display_status += ' (Gecikmeli)'
+                
+                project['display_status'] = display_status # Yeni bir alan olarak ekle
 
                 # Convert datetime.date objects to ISO format strings for JSON serialization
                 project['contract_date'] = project['contract_date'].isoformat() if isinstance(project['contract_date'], datetime.date) else None
                 project['meeting_date'] = project['meeting_date'].isoformat() if isinstance(project['meeting_date'], datetime.date) else None
                 project['start_date'] = project['start_date'].isoformat() if isinstance(project['start_date'], datetime.date) else None
                 project['end_date'] = project['end_date'].isoformat() if isinstance(project['end_date'], datetime.date) else None
-
-            # Apply status updates if any projects need it
-            if projects_to_update_with_step_delay_status:
-                update_sql = "UPDATE projects SET status = %s WHERE project_id = %s"
-                for proj_info in projects_to_update_with_step_delay_status:
-                    cursor.execute(update_sql, (proj_info['status'], proj_info['project_id']))
-                connection.commit()
 
         return jsonify(projects_data), 200
     except pymysql.Error as e:

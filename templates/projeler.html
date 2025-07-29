@@ -562,36 +562,21 @@
         display: inline-block;
       }
 
-      .status-Aktif {
-        background-color: rgba(46, 213, 115, 0.1);
+      /* Yeni durumlar için renk tanımları */
+      .status-badge.gecikmeli {
+        background-color: rgba(255, 71, 87, 0.1); /* Kırmızı tonu */
+        color: #ff4757;
+        border: 1px dashed #ff4757;
+      }
+
+      .status-badge.normal {
+        background-color: rgba(46, 213, 115, 0.1); /* Yeşil tonu */
         color: #2ed573;
       }
 
-      .status-Tamamlandı {
-        background-color: rgba(9, 128, 211, 0.1);
+      .status-badge.tamamlandı {
+        background-color: rgba(9, 128, 211, 0.1); /* Mavi tonu */
         color: var(--primary-light);
-      }
-
-      .status-Gecikti {
-        background-color: rgba(255, 71, 87, 0.1);
-        color: #ff4757;
-      }
-
-      .status-Planlama-Aşamasında {
-        background-color: rgba(255, 193, 7, 0.1);
-        color: #ffc107;
-      }
-
-      .status-Aktif-İş-Gecikmeli {
-        background-color: rgba(46, 213, 115, 0.1);
-        color: rgb(0, 181, 57);
-        border: 1px dashed rgb(255, 0, 0);
-      }
-
-      .status-Planlama-İş-Gecikmeli {
-        background-color: rgba(255, 193, 7, 0.15);
-        color: darkgoldenrod;
-        border: 1px dashed darkgoldenrod;
       }
 
       /* Modal CSS - Genel Modal Stilleri */
@@ -1409,7 +1394,7 @@
       </div>
 
       <div class="projects-content">
-        <h1 class="page-title">
+        <h1 class="page-title" id="pageTitle">
           <i class="fas fa-project-diagram"></i>
           Tüm Projeler
         </h1>
@@ -1457,6 +1442,8 @@
                 <option value="Tamamlandı">Tamamlandı</option>
                 <option value="Gecikti">Gecikti</option>
                 <option value="Planlama Aşamasında">Planlama Aşamasında</option>
+                <!-- Bu seçenekler artık backend'den gelen display_status ile eşleşmeyebilir,
+                     ancak yine de filtre olarak kalabilirler. -->
                 <option value="Aktif (İş Gecikmeli)">Aktif (İş Gecikmeli)</option>
                 <option value="Planlama (İş Gecikmeli)">
                   Planlama (İş Gecikmeli)
@@ -1472,6 +1459,9 @@
             <div class="projects-actions">
               <button class="btn btn-outline" id="filterBtn">
                 <i class="fas fa-filter"></i> Filtrele
+              </button>
+              <button class="btn btn-outline" id="toggleMyProjectsBtn">
+                <i class="fas fa-user-tie"></i> Projelerim
               </button>
               <button class="btn" id="exportAllPdf">
                 <i class="fas fa-file-pdf"></i> Tümünü PDF Yap
@@ -1544,6 +1534,7 @@
       let filteredProjects = []; // Filtrelenmiş projeleri tutacak
       let currentPage = 1;
       let rowsPerPage = 10; // Masaüstü varsayılanı
+      let isMyProjectsView = false; // "Projelerim" görünümünde miyiz?
 
       // Pagination elementleri
       const totalProjectsCountSpan = document.getElementById('totalProjectsCount');
@@ -1555,6 +1546,8 @@
       const confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
       const confirmActionBtn = document.getElementById('confirmActionBtn');
       let currentConfirmAction = null;
+      const pageTitleElement = document.getElementById('pageTitle');
+      const toggleMyProjectsBtn = document.getElementById('toggleMyProjectsBtn');
 
 
       // --- Kullanıcı Oturum Kontrolü ve Tema ---
@@ -1796,31 +1789,17 @@
 
       // Durum rozeti ve renk sınıfı HTML'i döndürür
       function getStatusBadgeHtml(status) {
-        let statusClass = "";
+        let statusClass = "normal"; // Varsayılan olarak normal (yeşil)
         let statusText = status;
-        switch (status) {
-          case "Aktif":
-            statusClass = "status-Aktif";
-            break;
-          case "Tamamlandı":
-            statusClass = "status-Tamamlandı";
-            break;
-          case "Gecikti":
-            statusClass = "status-Gecikti";
-            break;
-          case "Planlama Aşamasında":
-            statusClass = "status-Planlama-Aşamasında";
-            break;
-          case "Aktif (İş Gecikmeli)":
-            statusClass = "status-Aktif-İş-Gecikmeli";
-            break;
-          case "Planlama (İş Gecikmeli)":
-            statusClass = "status-Planlama-İş-Gecikmeli";
-            break;
-          default:
-            statusClass = "";
-            break;
+
+        if (status && status.includes('(Gecikmeli)')) {
+            statusClass = "gecikmeli";
+            statusText = status.replace(' (Gecikmeli)', ''); // Metinden "(Gecikmeli)" kısmını çıkar
+        } else if (status === "Tamamlandı") {
+            statusClass = "tamamlandı";
         }
+        // Diğer durumlar için varsayılan normal kalır
+
         return `<span class="status-badge ${statusClass}">${statusText}</span>`;
       }
 
@@ -1995,16 +1974,12 @@
 
           // Gecikme Durumu
           let delayDays = 0;
-          // Backend'den gelen delay_days'i öncelikli kullan
-          // DİKKAT: MySQL'den gelen delay_days bazen string olabilir, burada sayıya çevir!
-          if (project.delay_days !== undefined && project.delay_days !== null) {
-            delayDays = Number(project.delay_days);
+          // Backend'den gelen total_delay_days'i kullan
+          if (project.total_delay_days !== undefined && project.total_delay_days !== null) {
+            delayDays = Number(project.total_delay_days);
             if (isNaN(delayDays)) delayDays = 0;
-          } else if (Array.isArray(project.progress_steps) && project.progress_steps.length > 0) {
-            delayDays = sumDelayDays(project.progress_steps);
           }
-
-          // Bitiş tarihi geçtiyse bugüne kadar olan farkı ekle
+          
           let overdue = 0;
           if (project.end_date) {
             const endDateObj = (() => {
@@ -2018,16 +1993,17 @@
               return null;
             })();
             const todayObj = new Date();
-            if (endDateObj && todayObj > endDateObj) {
+            if (endDateObj && todayObj > endDateObj && project.status !== 'Tamamlandı') { // Sadece tamamlanmamış projeler için
               overdue = Math.ceil((todayObj - endDateObj) / (1000 * 60 * 60 * 24));
             }
           }
 
           // Gecikme günleri toplamı
           let gecikmeDurumu = "-";
-          if ((delayDays > 0 || overdue > 0)) {
-            gecikmeDurumu = (delayDays + overdue) + " gün";
-          } else if (typeof delayDays === 'number' && delayDays === 0 && overdue === 0) {
+          const combinedDelay = delayDays + overdue;
+          if (combinedDelay > 0) {
+            gecikmeDurumu = combinedDelay + " gün";
+          } else if (typeof combinedDelay === 'number' && combinedDelay === 0) {
             gecikmeDurumu = "0 gün";
           }
 
@@ -2036,7 +2012,7 @@
             <td data-label="Proje Adı">${project.project_name ? project.project_name.normalize('NFC') : "-"}</td>
             <td data-label="Referans No">${project.reference_no || "-"}</td>
             <td data-label="Müşteri">${project.customer_name || "-"}</td>
-            <td data-label="Durum">${getStatusBadgeHtml(project.status || "-")}</td>
+            <td data-label="Durum">${getStatusBadgeHtml(project.display_status || "-")}</td>
             <td data-label="Başlangıç">${formatDateForDisplay(project.start_date || "-")}</td>
             <td data-label="Bitiş">${formatDateForDisplay(project.end_date || "-")}</td>
             <td data-label="Toplam Gün">${totalDays !== '-' ? totalDays + ' gün' : '-'}</td>
@@ -2253,7 +2229,7 @@ async function renderViewModal(project) {
     </div>
     <div class="detail-item">
         <span class="detail-label">Durum:</span>
-        <span class="detail-value">${getStatusBadgeHtml(project.status || "-")}</span>
+        <span class="detail-value">${getStatusBadgeHtml(project.display_status || "-")}</span>
     </div>
     <div class="detail-item">
         <span class="detail-label">Başlangıç Tarihi:</span>
@@ -2463,7 +2439,7 @@ async function fetchProjectManagersForSelect() {
           return;
         }
         progressStepsContainer.innerHTML =
-          '<p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> İş adımları yükleniyor...</p>';
+          '<p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> İş adımları yükleniyor...</td></tr>';
 
         let timeoutId = setTimeout(() => {
           progressStepsContainer.innerHTML = `<p style='color: var(--danger);'>İş adımları yüklenemedi. Sunucuya ulaşılamıyor veya API çok yavaş.</p>`;
@@ -2750,7 +2726,7 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
             <tr><th>Referans No</th><td>${project.reference_no || '-'}</td></tr>
             <tr><th>Müşteri</th><td>${project.customer_name || '-'}</td></tr>
             <tr><th>Konum</th><td>${project.project_location || '-'}</td></tr>
-            <tr><th>Durum</th><td>${project.status || '-'}</td></tr>
+            <tr><th>Durum</th><td>${project.display_status || '-'}</td></tr>
             <tr><th>Başlangıç Tarihi</th><td>${formatDateForDisplay(project.start_date || '-')}</td></tr>
             <tr><th>Bitiş Tarihi</th><td>${formatDateForDisplay(project.end_date || '-')}</td></tr>
             <tr><th>Yönetici</th><td>${project.project_manager_name || '-'}</td></tr>
@@ -2923,13 +2899,11 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
             elapsedDays = (typeof elapsedDays === "number" && !isNaN(elapsedDays)) ? (elapsedDays >= 0 ? elapsedDays : 0) : '-';
 
             let delayDays = 0;
-            if (project.delay_days !== undefined && project.delay_days !== null) {
-                delayDays = Number(project.delay_days);
+            if (project.total_delay_days !== undefined && project.total_delay_days !== null) {
+                delayDays = Number(project.total_delay_days);
                 if (isNaN(delayDays)) delayDays = 0;
-            } else if (Array.isArray(project.progress_steps) && project.progress_steps.length > 0) {
-                delayDays = project.progress_steps.reduce((sum, step) => sum + (step.delay_days || 0), 0);
             }
-
+            
             let overdue = 0;
             if (project.end_date) {
                 const endDateObj = (() => {
@@ -2943,15 +2917,16 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
                     return null;
                 })();
                 const todayObj = new Date();
-                if (endDateObj && todayObj > endDateObj) {
+                if (endDateObj && todayObj > endDateObj && project.status !== 'Tamamlandı') {
                     overdue = Math.ceil((todayObj - endDateObj) / (1000 * 60 * 60 * 24));
                 }
             }
             
             let gecikmeDurumu = "-";
-            if ((delayDays > 0 || overdue > 0)) {
-                gecikmeDurumu = (delayDays + overdue) + " gün";
-            } else if (typeof delayDays === 'number' && delayDays === 0 && overdue === 0) {
+            const combinedDelay = delayDays + overdue;
+            if (combinedDelay > 0) {
+                gecikmeDurumu = combinedDelay + " gün";
+            } else if (typeof combinedDelay === 'number' && combinedDelay === 0) {
                 gecikmeDurumu = "0 gün";
             }
 
@@ -2963,7 +2938,7 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
                     <td style="border: 1px solid #e1e5e9; padding: 8px; text-align: left;">${project.project_name ? project.project_name.normalize('NFC') : "-"}</td>
                     <td style="border: 1px solid #e1e5e9; padding: 8px; text-align: left;">${project.reference_no || "-"}</td>
                     <td style="border: 1px solid #e1e5e9; padding: 8px; text-align: left;">${project.customer_name || "-"}</td>
-                    <td style="border: 1px solid #e1e5e9; padding: 8px; text-align: left;">${project.status || "-"}</td>
+                    <td style="border: 1px solid #e1e5e9; padding: 8px; text-align: left;">${project.display_status || "-"}</td>
                     <td style="border: 1px solid #e1e5e9; padding: 8px; text-align: left;">${formatDateForDisplay(project.start_date || "-")}</td>
                     <td style="border: 1px solid #e1e5e9; padding: 8px; text-align: left;">${formatDateForDisplay(project.end_date || "-")}</td>
                     <td style="border: 1px solid #e1e5e9; padding: 8px; text-align: left;">${totalDays !== '-' ? totalDays + ' gün' : '-'}</td>
@@ -3092,6 +3067,20 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
             exportAllProjectsToPdf();
         });
 
+        // "Projelerim" butonuna tıklama olayı
+        toggleMyProjectsBtn.addEventListener('click', () => {
+            isMyProjectsView = !isMyProjectsView; // Durumu tersine çevir
+            if (isMyProjectsView) {
+                toggleMyProjectsBtn.innerHTML = '<i class="fas fa-list"></i> Tüm Projeleri Görüntüle';
+                pageTitleElement.innerHTML = '<i class="fas fa-project-diagram"></i> Projelerim';
+            } else {
+                toggleMyProjectsBtn.innerHTML = '<i class="fas fa-user-tie"></i> Projelerim';
+                pageTitleElement.innerHTML = '<i class="fas fa-project-diagram"></i> Tüm Projeler';
+            }
+            applyFiltersAndRenderTable(); // Filtreleri yeniden uygula
+        });
+
+
         // Genel arama inputu
         document.getElementById("searchInput").addEventListener("keyup", applyFiltersAndRenderTable);
 
@@ -3128,7 +3117,16 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
         const filterCustomer = document.getElementById("filterCustomer").value.toLowerCase();
         const filterStatus = document.getElementById("filterStatus").value; // Durum direkt string
 
-        filteredProjects = allProjectsData.filter((project) => {
+        let projectsToFilter = allProjectsData;
+
+        // "Projelerim" filtresi
+        if (isMyProjectsView && currentUser && currentUser.id) {
+            projectsToFilter = projectsToFilter.filter(project => 
+                project.project_manager_user_id == currentUser.id
+            );
+        }
+
+        filteredProjects = projectsToFilter.filter((project) => {
           const matchesSearch =
             (project.project_name &&
               project.project_name.toLowerCase().includes(searchTerm)) ||
@@ -3138,6 +3136,11 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
               project.customer_name.toLowerCase().includes(searchTerm)) ||
             (project.project_location &&
               project.project_location.toLowerCase().includes(searchTerm));
+
+          // Backend'den gelen 'display_status' ile filtreleme yap
+          const matchesStatus = filterStatus === "" || 
+                                (project.display_status && project.display_status.includes(filterStatus));
+
 
           const matchesFilters =
             (filterProjectName === "" ||
@@ -3149,7 +3152,7 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
             (filterCustomer === "" ||
               (project.customer_name &&
                 project.customer_name.toLowerCase().includes(filterCustomer))) &&
-            (filterStatus === "" || project.status === filterStatus);
+            matchesStatus; // Yeni durum filtresi
 
           return matchesSearch && matchesFilters;
         });
