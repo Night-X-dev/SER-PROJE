@@ -484,11 +484,12 @@ def update_user_profile():
                 message_parts.append("Phone")
 
             # Handle profile_picture: if it's explicitly null from frontend, set DB to NULL
-            if profile_picture is not None: # Only update if sent from frontend
-                if profile_picture == "null": # Frontend sends "null" string if image is deleted
+            # If profile_picture is 'null' string, set to SQL NULL. Otherwise, update with the new value.
+            if profile_picture is not None: 
+                if profile_picture == "null": 
                     updates.append("profile_picture = NULL")
                     message_parts.append("Profile Picture Removed")
-                elif profile_picture != user['profile_picture']:
+                elif profile_picture != user['profile_picture']: # Only update if different from current DB value
                     updates.append("profile_picture = %s")
                     params.append(profile_picture)
                     message_parts.append("Profile Picture")
