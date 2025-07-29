@@ -1260,7 +1260,6 @@
         justify-content: center;
         align-items: center;
     }
-    /* "Tümünü Okundu Olarak İşaretle" butonu için minimalist stil */
     .notification-panel-footer button {
         width: auto;
         padding: 5px 10px;
@@ -1850,17 +1849,17 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Profil Düzenle</h5>
+                    <h5 class="modal-title">Profil Fotoğrafını Düzenle</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
-                        <div class="col-md-4">
+                        <div class="col-md-12">
                             <div class="mb-3">
                                 <label class="form-label">Profil Fotoğrafı</label>
                                 <div class="avatar-upload">
                                     <div class="avatar-preview mb-3" id="avatarPreview">
-                                        MO
+                                        <!-- Avatar buraya yüklenecek -->
                                     </div>
                                     <input type="file" id="avatarUpload" accept="image/*" class="d-none">
                                     <button class="btn btn-outline w-100 mb-2" id="uploadAvatarBtn">
@@ -1870,35 +1869,6 @@
                                         <i class="fas fa-trash"></i> Fotoğrafı Sil
                                     </button>
                                 </div>
-                            </div>
-                        </div>
-                        <div class="col-md-8">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Ad Soyad</label>
-                                        <input type="text" class="form-control" id="editFullName" value="Mustafa Öztürk">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">E-posta</label>
-                                        <input type="email" class="form-control" id="editEmail" value="mustafa@ser-elektrik.com">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Telefon</label>
-                                        <input type="tel" class="form-control" id="editPhone" value="+90 555 123 4567">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Pozisyon</label>
-                                        <input type="text" class="form-control" id="editPosition" value="Proje Yöneticisi" readonly> <!-- Pozisyon alanı readonly yapıldı -->
-                                    </div>
-                                </div>
-                                <!-- Şifre Değiştir kısmı tamamen silindi -->
                             </div>
                         </div>
                     </div>
@@ -1979,6 +1949,17 @@
 
         // Sayfa yüklendiğinde çalışacak kodlar
         document.addEventListener('DOMContentLoaded', function() {
+            // Tema ayarını localStorage'dan yükle
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.body.setAttribute('data-theme', savedTheme);
+                document.getElementById('theme-toggle').innerHTML = savedTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+            } else {
+                // Varsayılan tema (light)
+                document.body.setAttribute('data-theme', 'light');
+                document.getElementById('theme-toggle').innerHTML = '<i class="fas fa-moon"></i>';
+            }
+
             // Kullanıcı oturum kontrolü
             const storedUser = localStorage.getItem('currentUser');
             if (!storedUser) {
@@ -2038,7 +2019,7 @@
                 const avatarPreview = document.getElementById('avatarPreview');
                 avatarPreview.innerHTML = ''; // Önceki resmi temizle
                 const initialsDiv = document.createElement('div');
-                initialsDiv.textContent = getInitials(document.getElementById('editFullName').value);
+                initialsDiv.textContent = getInitials(currentUser.fullname); // currentUser'ın fullname'ini kullan
                 initialsDiv.style.width = '100%';
                 initialsDiv.style.height = '100%';
                 initialsDiv.style.display = 'flex';
@@ -2150,12 +2131,14 @@
                 const currentTheme = document.body.getAttribute('data-theme');
                 const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
                 document.body.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme); // Tema tercihini kaydet
                 this.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
             });
 
             // Çıkış Yap Butonu Olay Dinleyicisi
             document.getElementById('logoutButton').addEventListener('click', () => {
                 localStorage.removeItem('currentUser'); // Kullanıcı bilgisini sil
+                localStorage.removeItem('theme'); // Tema bilgisini de sil
                 showToast("Başarıyla çıkış yaptınız.", 'success');
                 setTimeout(() => {
                     window.location.href = 'login.html';
@@ -2284,12 +2267,7 @@
             document.getElementById('hideEmail').checked = user.hide_email === 1;
             updateCurrentUserProfileDisplay(user);
 
-            // Düzenleme modalındaki alanları doldur
-            document.getElementById('editFullName').value = user.fullname;
-            document.getElementById('editEmail').value = user.email;
-            document.getElementById('editPhone').value = user.phone;
-            document.getElementById('editPosition').value = currentUser.role || ''; // Pozisyonu düzenlenemez yap
-            
+            // Düzenleme modalındaki avatar önizlemesini ayarla
             const avatarPreview = document.getElementById('avatarPreview');
             if (user.profile_picture) {
                 avatarPreview.innerHTML = `<img src="${user.profile_picture}" alt="${user.fullname}">`;
@@ -2535,13 +2513,7 @@
         
         // Profil düzenleme modalını açma
         function openEditProfileModal() {
-            // Mevcut kullanıcı bilgilerini modal'a yükle
-            document.getElementById('editFullName').value = currentUser.fullname;
-            document.getElementById('editEmail').value = currentUser.email;
-            document.getElementById('editPhone').value = currentUser.phone;
-            document.getElementById('editPosition').value = currentUser.role || ''; // Pozisyonu düzenlenemez yap
-            
-            // Avatar önizlemesini ayarla
+            // Düzenleme modalındaki avatar önizlemesini ayarla
             const avatarPreview = document.getElementById('avatarPreview');
             if (currentUser.profile_picture) {
                 avatarPreview.innerHTML = `<img src="${currentUser.profile_picture}" alt="${currentUser.fullname}">`;
@@ -2571,42 +2543,16 @@
         function filterUsers() {
             const searchTerm = document.getElementById('userSearch').value.toLowerCase();
             const filtered = allUsersData.filter(user => {
-                const nameMatch = user.fullname.toLowerCase().includes(searchTerm);
-                const emailMatch = user.email.toLowerCase().includes(searchTerm);
-                const phoneMatch = user.phone.toLowerCase().includes(searchTerm);
-                const roleMatch = user.role.toLowerCase().includes(searchTerm); // Role'ü de ara
-                return nameMatch || emailMatch || phoneMatch || roleMatch;
+                // Sadece fullname'e göre arama yap
+                return user.fullname.toLowerCase().includes(searchTerm);
             });
             renderUsersTable(filtered);
         }
         
         // Profil değişikliklerini kaydetme (Genel bilgiler)
         async function saveProfileChanges() {
-            const newFullName = document.getElementById('editFullName').value.trim();
-            const newEmail = document.getElementById('editEmail').value.trim();
-            const newPhone = document.getElementById('editPhone').value.replace(/\D/g, ''); // Sadece rakamları al
-            // Şifre alanları kaldırıldığı için burada kullanılmaz
-
-            if (!newFullName || !newEmail || !newPhone) {
-                showToast('Ad Soyad, E-posta ve Telefon alanları boş bırakılamaz.', 'error');
-                return;
-            }
-
-            if (newPhone.length < 10) {
-                showToast('Lütfen geçerli bir telefon numarası girin (en az 10 rakam).', 'error');
-                return;
-            }
-
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
-                showToast('Lütfen geçerli bir e-posta adresi girin.', 'error');
-                return;
-            }
-
             const updateData = {
                 userId: currentUser.id,
-                fullname: newFullName,
-                email: newEmail,
-                phone: newPhone,
                 profile_picture: currentCroppedImage, // Base64 resim verisi (null olabilir)
             };
             
@@ -2622,9 +2568,6 @@
                 if (response.ok) {
                     showToast(result.message, 'success');
                     // localStorage'daki currentUser objesini güncelle
-                    currentUser.fullname = newFullName;
-                    currentUser.email = newEmail;
-                    currentUser.phone = newPhone;
                     currentUser.profile_picture = currentCroppedImage;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
 
