@@ -564,35 +564,21 @@
             display: inline-block;
         }
 
-        .status-Aktif { 
-            background-color: rgba(46, 213, 115, 0.1);
+        /* Yeni durumlar için renk tanımları */
+        .status-badge.gecikmeli {
+            background-color: rgba(255, 71, 87, 0.1); /* Kırmızı tonu */
+            color: #ff4757;
+            border: 1px dashed #ff4757;
+        }
+
+        .status-badge.normal {
+            background-color: rgba(46, 213, 115, 0.1); /* Yeşil tonu */
             color: #2ed573;
         }
 
-        .status-Tamamlandı { 
-            background-color: rgba(9, 128, 211, 0.1);
+        .status-badge.tamamlandı {
+            background-color: rgba(9, 128, 211, 0.1); /* Mavi tonu */
             color: var(--primary-light);
-        }
-
-        .status-Gecikti { 
-            background-color: rgba(255, 71, 87, 0.1);
-            color: #ff4757;
-        }
-
-        .status-Planlama-Aşamasında { 
-            background-color: rgba(255, 193, 7, 0.1);
-            color: #ffc107;
-        }
-        .status-Aktif-İş-Gecikmeli {
-            background-color: rgba(46, 213, 115, 0.1);
-            color: rgb(0, 181, 57);
-            border: 1px dashed rgb(255, 0, 0);
-        }
-
-        .status-Planlama-İş-Gecikmeli {
-            background-color: rgba(255, 193, 7, 0.15);
-            color: darkgoldenrod;
-            border: 1px dashed darkgoldenrod;
         }
 
         /* Filtreleme alanı için yeni stiller */
@@ -1471,7 +1457,7 @@
                             <option value="">Tümü</option>
                             <option value="Aktif">Aktif</option>
                             <option value="Tamamlandı">Tamamlandı</option>
-                            <option value="Gecikti">Gecikti</option>
+                            <option value="Gecikmeli">Gecikmeli</option>
                             <option value="Planlama Aşamasında">Planlama Aşamasında</option>
                         </select>
                     </div>
@@ -1484,6 +1470,9 @@
                     <div class="projects-actions">
                         <button class="btn btn-outline" id="filterBtn">
                             <i class="fas fa-filter"></i> Filtrele
+                        </button>
+                        <button class="btn btn-outline" id="toggleMyProjectsBtn">
+                            <i class="fas fa-user-tie"></i> Projelerim
                         </button>
                         <button class="btn" id="exportPdf">
                             <i class="fas fa-file-pdf"></i> PDF Oluştur
@@ -1573,6 +1562,7 @@
         let filteredProjects = []; // Filtrelenmiş projeleri tutacak
         let currentPage = 1;
         let rowsPerPage = 10; // Masaüstü varsayılanı
+        let isMyProjectsView = false; // "Projelerim" görünümünde miyiz?
             
         // Pagination elementleri
         const totalProjectsCountSpan = document.getElementById('totalProjectsCount');
@@ -1581,6 +1571,8 @@
         const prevPageButton = document.getElementById('prevPage');
         const nextPageButton = document.getElementById('nextPage');
         const pageNumbersContainer = document.getElementById('pageNumbers');
+        const pageTitleElement = document.getElementById('pageTitle');
+        const toggleMyProjectsBtn = document.getElementById('toggleMyProjectsBtn');
             
         // --- Kullanıcı Oturum Kontrolü ve Tema ---
         document.addEventListener('DOMContentLoaded', function() {
@@ -1821,18 +1813,17 @@
         // Eksik olan updateStatsAndChart fonksiyonu eklendi ve güncellendi
         function updateStatsAndChart(projects) {
             // İstatistikleri güncelle
-            let active = 0, completed = 0, delayed = 0, total = 0, activeDelayed = 0, planning = 0;
+            let active = 0, completed = 0, delayed = 0, total = 0, planning = 0;
             projects.forEach(p => {
+                // Backend'den gelen 'status' alanını kullanarak sayım yap
                 if (p.status === 'Aktif') {
                     active++;
                 } else if (p.status === 'Tamamlandı') {
                     completed++;
                 } else if (p.status === 'Gecikti') {
                     delayed++;
-                } else if (p.status === 'Aktif (İş Gecikmeli)') {
-                    activeDelayed++;
-                } else if (p.status === 'Planlama Aşamasında' || p.status === 'Planlama (İş Gecikmeli)') {
-                    planning++; // Her iki planlama durumu da "Planlama" olarak sayılır
+                } else if (p.status === 'Planlama Aşamasında') {
+                    planning++;
                 }
                 total++;
             });
@@ -1842,7 +1833,6 @@
             document.getElementById('totalProjects').textContent = total;
             updateChart({
                 active: active,
-                activeDelayed: activeDelayed,
                 planning: planning,
                 completed: completed,
                 delayed: delayed
@@ -1970,7 +1960,7 @@
             tbody.innerHTML = '';
 
             if (projectsToRender.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Gösterilecek proje bulunamadı.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Gösterilecek proje bulunamadı.</td></tr>';
                 updatePagination(0, 0, 0); // Sayfalandırmayı güncelle
                 return;
             }
@@ -1981,70 +1971,40 @@
             const paginatedProjects = projectsToRender.slice(startIndex, endIndex);
 
             paginatedProjects.forEach(project => {
-                let statusText = project.status;
-                let statusClass = '';
-                switch (project.status) {
-                    case 'Aktif':
-                        statusClass = 'status-Aktif';
-                        break;
-                    case 'Tamamlandı':
-                        statusClass = 'status-Tamamlandı';
-                        break;
-                    case 'Gecikti':
-                        statusClass = 'status-Gecikti'; 
-                        break;
-                    case 'Planlama Aşamasında':
-                        statusClass = 'status-Planlama-Aşamasında';
-                        break;
-                    case 'Aktif (İş Gecikmeli)':
-                        statusClass = 'status-Aktif-İş-Gecikmeli';
-                        break;
-                    case 'Planlama (İş Gecikmeli)':
-                        statusClass = 'status-Planlama-İş-Gecikmeli';
-                        break;
-                    default:
-                        statusClass = '';
-                }
+                // Durum rozeti ve renk sınıfı HTML'i döndürür
+                function getStatusBadgeHtml(status) {
+                    let statusClass = "normal"; // Varsayılan olarak normal (yeşil)
+                    let statusText = status;
 
-                // Gecikme günü hesaplama (bu kısım backend'den geliyorsa kaldırılabilir veya kontrol edilebilir)
-                function parseDate(str) {
-                    if (!str) return null;
-                    if (str.includes('-')) {
-                        const [y, m, d] = str.split('-');
-                        return new Date(Number(y), Number(m) - 1, Number(d));
-                    } else if (str.includes('.')) {
-                        const [d, m, y] = str.split('.');
-                        return new Date(Number(y), Number(m) - 1, Number(d));
+                    if (status && status.includes('(Gecikmeli)')) {
+                        statusClass = "gecikmeli";
+                        statusText = status.replace(' (Gecikmeli)', ''); // Metinden "(Gecikmeli)" kısmını çıkar
+                    } else if (status === "Tamamlandı") {
+                        statusClass = "tamamlandı";
                     }
-                    return null;
+                    // Diğer durumlar için varsayılan normal kalır
+
+                    return `<span class="status-badge ${statusClass}">${statusText}</span>`;
                 }
 
-                let delayDays = 0;
-                if (Array.isArray(project.progress_steps) && project.progress_steps.length > 0) {
-                    delayDays = project.progress_steps.reduce((sum, step) => sum + (step.delay_days || 0), 0);
-                } else if (typeof project.delay_days === 'number' && !isNaN(project.delay_days)) {
-                    delayDays = project.delay_days;
-                }
-                const endDateObj = parseDate(project.end_date);
-                const todayObj = new Date();
-                let overdue = 0;
-                if (endDateObj && todayObj > endDateObj) {
-                    const diffTime = todayObj.setHours(0,0,0,0) - endDateObj.setHours(0,0,0,0);
-                    overdue = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                }
-                let gecikmeGun = 0;
-                if ((delayDays > 0 || overdue > 0)) {
-                    gecikmeGun = delayDays + overdue;
+                // Tarih formatlama (DD.MM.YYYY)
+                function formatDateForDisplay(dateStr) {
+                    if (!dateStr) return "";
+                    const parts = dateStr.split("-");
+                    if (parts.length === 3) {
+                        return `${parts[2]}.${parts[1]}.${parts[0]}`;
+                    }
+                    return dateStr;
                 }
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td data-label="Proje Adı">${project.project_name}</td>
+                    <td data-label="Proje Adı">${project.project_name ? project.project_name.normalize('NFC') : "-"}</td>
                     <td data-label="Referans No">${project.reference_no || '-'}</td>
                     <td data-label="Müşteri">${project.customer_name}</td>
-                    <td data-label="Durum"><span class="status-badge ${statusClass}">${statusText}</span></td>
-                    <td data-label="Başlangıç">${project.start_date}</td>
-                    <td data-label="Bitiş">${project.end_date}</td>
+                    <td data-label="Durum">${getStatusBadgeHtml(project.display_status || "-")}</td>
+                    <td data-label="Başlangıç">${formatDateForDisplay(project.start_date || "-")}</td>
+                    <td data-label="Bitiş">${formatDateForDisplay(project.end_date || "-")}</td>
                     <td data-label="Yönetici">${project.project_manager_name}</td>
                 `;
                 tbody.appendChild(row);
@@ -2125,7 +2085,7 @@
                 table.style.color = '#222';
             }
 
-            // "İşlemler" sütununu ve hücrelerini gizle
+            // "İşlemler" sütununu ve hücrelerini gizle (index.html'de İşlemler sütunu yok, bu kısım gereksiz olabilir ama hata vermemesi için bırakıldı)
             const ths = table.querySelectorAll('thead th');
             let actionColIndex = -1;
             ths.forEach((th, idx) => {
@@ -2186,7 +2146,7 @@
             `;
             document.head.appendChild(style);
 
-            // Tüm action-btn'leri gizle
+            // Tüm action-btn'leri gizle (index.html'de action-btn yok, bu kısım gereksiz olabilir ama hata vermemesi için bırakıldı)
             document.querySelectorAll('.action-btn').forEach(btn => {
                 btn.style.display = 'none';
             });
@@ -2248,23 +2208,50 @@
 
         // Filtreleri uygula ve tabloyu render etme fonksiyonu
         function applyFiltersAndRenderTable() {
-            const projectNameFilter = document.getElementById('filterProjectName').value.toLowerCase();
-            const refNoFilter = document.getElementById('filterRefNo').value.toLowerCase();
-            const customerFilter = document.getElementById('filterCustomer').value.toLowerCase();
-            const statusFilter = document.getElementById('filterStatus').value;
-            
-            filteredProjects = allProjectsData.filter(project => {
-                const projectName = project.project_name.toLowerCase();
-                const refNo = (project.reference_no || '').toLowerCase();
-                const customer = project.customer_name.toLowerCase();
-                const status = project.status;
-                
-                const nameMatch = projectName.includes(projectNameFilter);
-                const refMatch = refNo.includes(refNoFilter);
-                const customerMatch = customer.includes(customerFilter);
-                const statusMatch = statusFilter === '' || status === statusFilter;
-                
-                return nameMatch && refMatch && customerMatch && statusMatch;
+            const searchTerm = document.getElementById("searchInput").value.toLowerCase();
+            const filterProjectName = document.getElementById("filterProjectName").value.toLowerCase();
+            const filterRefNo = document.getElementById("filterRefNo").value.toLowerCase();
+            const filterCustomer = document.getElementById("filterCustomer").value.toLowerCase();
+            const filterStatus = document.getElementById("filterStatus").value; // Durum direkt string
+
+            let projectsToFilter = allProjectsData;
+
+            // "Projelerim" filtresi
+            if (isMyProjectsView && currentUser && currentUser.id) {
+                projectsToFilter = projectsToFilter.filter(project => 
+                    project.project_manager_user_id == currentUser.id
+                );
+            }
+
+            filteredProjects = projectsToFilter.filter((project) => {
+                const matchesSearch =
+                    (project.project_name &&
+                    project.project_name.toLowerCase().includes(searchTerm)) ||
+                    (project.reference_no &&
+                    project.reference_no.toLowerCase().includes(searchTerm)) ||
+                    (project.customer_name &&
+                    project.customer_name.toLowerCase().includes(searchTerm)) ||
+                    (project.project_location &&
+                    project.project_location.toLowerCase().includes(searchTerm));
+
+                // Backend'den gelen 'display_status' ile filtreleme yap
+                const matchesStatus = filterStatus === "" || 
+                                    (project.display_status && project.display_status.includes(filterStatus));
+
+
+                const matchesFilters =
+                    (filterProjectName === "" ||
+                    (project.project_name &&
+                        project.project_name.toLowerCase().includes(filterProjectName))) &&
+                    (filterRefNo === "" ||
+                    (project.reference_no &&
+                        project.reference_no.toLowerCase().includes(filterRefNo))) &&
+                    (filterCustomer === "" ||
+                    (project.customer_name &&
+                        project.customer_name.toLowerCase().includes(filterCustomer))) &&
+                    matchesStatus; // Yeni durum filtresi
+
+                return matchesSearch && matchesFilters;
             });
             currentPage = 1; // Filtreler değiştiğinde ilk sayfaya dön
             renderProjectsTable(filteredProjects);
@@ -2284,20 +2271,54 @@
 
             const chartColors = [
                 '#2ed573',   // Aktif - Yeşil
-                '#ff4757',   // Aktif (Gecikmeli) - Kırmızı
+                '#ff4757',   // Gecikmeli - Kırmızı (Hem Gecikti hem de Aktif/Planlama Gecikmeli için)
                 '#ffc107',   // Planlama - Sarı
-                '#0980d3',   // Tamamlandı - Mavi
-                '#b71c1c'    // Gecikti - Koyu Kırmızı
+                '#0980d3'    // Tamamlandı - Mavi
             ];
-            // Negatif değerleri 0'a çek
+
+            // Backend'den gelen 'status' alanına göre istatistikleri ayarla
+            // 'display_status' artık frontend'de kullanılacak ancak grafik için 'status' baz alınmalı
+            let activeCount = 0;
+            let completedCount = 0;
+            let delayedCount = 0; // Hem 'Gecikti' hem de 'Aktif (İş Gecikmeli)' ve 'Planlama (İş Gecikmeli)'
+            let planningCount = 0;
+
+            allProjectsData.forEach(p => {
+                if (p.status === 'Aktif') {
+                    activeCount++;
+                } else if (p.status === 'Tamamlandı') {
+                    completedCount++;
+                } else if (p.status === 'Gecikti') {
+                    delayedCount++;
+                } else if (p.status === 'Planlama Aşamasında') {
+                    planningCount++;
+                }
+                // 'Aktif (İş Gecikmeli)' ve 'Planlama (İş Gecikmeli)' durumları da 'Gecikti' kategorisine dahil edilebilir
+                // Veya ayrı bir dilim olarak gösterilebilir. Kullanıcının isteği üzerine 'Gecikmeli' altında topluyorum.
+                if (p.last_progress_delay_days > 0 || p.total_delay_days > 0) {
+                    // Eğer projenin kendisi 'Gecikti' değilse ve iş adımı gecikmesi varsa
+                    if (p.status !== 'Gecikti') {
+                        delayedCount++; // Genel gecikmeli sayısına ekle
+                    }
+                }
+            });
+
+            // Tekrar eden sayımları önlemek için düzeltme
+            // Eğer bir proje hem "Aktif" hem de "Gecikmeli" olarak işaretleniyorsa,
+            // sadece bir kategoriye dahil edilmelidir.
+            // Burada basit bir yaklaşımla, "Gecikti" durumundaki projeler ayrı,
+            // diğer durumlardaki ama iş adımı gecikmesi olanlar "Gecikmeli" olarak sayılıyor.
+            // Grafikte netlik için, "Gecikti" ve "Gecikmeli İş Adımı Olan Aktif/Planlama" ayrı gösterilebilir.
+            // Şimdilik, "Gecikti" ve "Gecikmeli" (iş adımı kaynaklı) tek bir "Gecikmeli" diliminde toplanıyor.
+
             const dataArr = [
-                Math.max(0, stats.active),
-                Math.max(0, stats.activeDelayed),
-                Math.max(0, stats.planning),
-                Math.max(0, stats.completed),
-                Math.max(0, stats.delayed)
+                Math.max(0, activeCount),
+                Math.max(0, delayedCount),
+                Math.max(0, planningCount),
+                Math.max(0, completedCount)
             ];
-            const labels = ['Aktif', 'Aktif (Gecikmeli)', 'Planlama', 'Tamamlandı', 'Gecikti'];
+            const labels = ['Aktif', 'Gecikmeli', 'Planlama', 'Tamamlandı'];
+            
             // Eğer tümü 0 ise, en azından bir dilim 1 olsun ki grafik gözüksün
             const allZero = dataArr.every(v => v === 0);
             if (allZero) dataArr[0] = 1;
@@ -2409,7 +2430,12 @@
                 document.getElementById('filterRefNo').value = '';
                 document.getElementById('filterCustomer').value = '';
                 document.getElementById('filterStatus').value = '';
+                document.getElementById('searchInput').value = ''; // Global aramayı da sıfırla
+                isMyProjectsView = false; // "Projelerim" filtresini sıfırla
+                toggleMyProjectsBtn.innerHTML = '<i class="fas fa-user-tie"></i> Projelerim';
+                pageTitleElement.innerHTML = '<i class="fas fa-home"></i> Dashboard'; // Dashboard başlığını sıfırla
                 applyFiltersAndRenderTable(); // Burası güncellendi
+                showToast("Filtreler sıfırlandı.");
             });
             
             document.getElementById('filterProjectName').addEventListener('input', applyFiltersAndRenderTable); // Burası güncellendi
@@ -2421,6 +2447,19 @@
                 fetchProjects();
                 fetchRecentActivities();
                 showToast('Veriler başarıyla yenilendi');
+            });
+
+            // "Projelerim" butonuna tıklama olayı
+            toggleMyProjectsBtn.addEventListener('click', () => {
+                isMyProjectsView = !isMyProjectsView; // Durumu tersine çevir
+                if (isMyProjectsView) {
+                    toggleMyProjectsBtn.innerHTML = '<i class="fas fa-list"></i> Tüm Projeleri Görüntüle';
+                    pageTitleElement.innerHTML = '<i class="fas fa-project-diagram"></i> Projelerim';
+                } else {
+                    toggleMyProjectsBtn.innerHTML = '<i class="fas fa-user-tie"></i> Projelerim';
+                    pageTitleElement.innerHTML = '<i class="fas fa-home"></i> Dashboard';
+                }
+                applyFiltersAndRenderTable(); // Filtreleri yeniden uygula
             });
         });
 
