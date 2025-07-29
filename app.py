@@ -1230,6 +1230,8 @@ def send_notification(user_id, title, message):
             connection.close()
 
 # Update Project API (PUT) - for projects table
+# app.py dosyasında, update_project fonksiyonu içinde
+
 @app.route('/api/projects/<int:project_id>', methods=['PUT'])
 def update_project(project_id):
     """Updates an existing project's information."""
@@ -1243,11 +1245,13 @@ def update_project(project_id):
     end_date = data.get('end_date')
     project_location = data.get('project_location')
     status = data.get('status') 
-    project_manager_id_new = data.get('projectManagerId') # Yeni proje yöneticisi ID'si
+    # Burayı düzeltiyoruz: 'project_manager_id' olarak al
+    project_manager_id_new = data.get('project_manager_id') # Frontend'den gelen anahtar adı ile eşleşti
+
     user_id = data.get('user_id') # Güncellemeyi yapan kullanıcının ID'si
 
     if not user_id: 
-        return jsonify({'message': 'User ID missing.'}), 400
+        return jsonify({'message': 'Kullanıcı ID\'si eksik.'}), 400
 
     connection = None
     try:
@@ -1257,7 +1261,7 @@ def update_project(project_id):
             cursor.execute("SELECT project_name, project_manager_id, status FROM projects WHERE project_id = %s", (project_id,))
             existing_project_info = cursor.fetchone()
             if not existing_project_info:
-                return jsonify({'message': 'Project not found.'}), 404
+                return jsonify({'message': 'Proje bulunamadı.'}), 404
             
             old_project_name = existing_project_info['project_name']
             old_project_manager_id = existing_project_info['project_manager_id'] 
@@ -1297,12 +1301,13 @@ def update_project(project_id):
                 params.append(status)
             
             # Proje yöneticisi güncellemesi
+            # Sadece yeni ID mevcutsa ve eski ID'den farklıysa güncelle
             if project_manager_id_new is not None and project_manager_id_new != old_project_manager_id:
                 updates.append("project_manager_id = %s")
                 params.append(project_manager_id_new)
 
             if not updates:
-                return jsonify({'message': 'No information to update.'}), 200 
+                return jsonify({'message': 'Güncellenecek bilgi bulunamadı.'}), 200 
 
             sql = f"UPDATE projects SET {', '.join(updates)} WHERE project_id = %s"
             params.append(project_id)
@@ -1311,7 +1316,7 @@ def update_project(project_id):
             connection.commit()
 
             if cursor.rowcount == 0:
-                return jsonify({'message': 'Project data is already up-to-date or no changes were made.'}), 200
+                return jsonify({'message': 'Proje verisi zaten güncel veya değişiklik yapılmadı.'}), 200
 
             # --- Bildirim Mantığı Ayarlaması ---
             manager_to_notify = old_project_manager_id # Varsayılan olarak eski yönetici
@@ -1336,7 +1341,8 @@ def update_project(project_id):
                 user_id=user_id,
                 title='Proje Güncellendi',
                 description=f'"{old_project_name}" projesi bilgileri güncellendi.',
-                icon='fas fa-edit'
+                icon='fas fa-pen-to-square', # Kalem ikonu daha uygun
+                actionType='project_update' # Aktivite tipi eklendi
             )
             
             # İlgili yöneticiye genel güncelleme bildirimi gönder (değiştiyse yeni, değişmediyse mevcut)
@@ -1346,14 +1352,14 @@ def update_project(project_id):
                 f"Yönettiğiniz '{project_name}' projesi güncellendi."
             )
 
-        return jsonify({'message': 'Project successfully updated!'}), 200
+        return jsonify({'message': 'Proje başarıyla güncellendi!'}), 200
 
     except pymysql.Error as e:
-        print(f"Database error updating project: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı proje güncelleme hatası: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error updating project: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel proje güncelleme hatası: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
