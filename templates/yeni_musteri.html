@@ -1070,12 +1070,13 @@
             const districtSelect = document.getElementById('district');
 
             // --- Oturum Kontrolü ve Yönlendirme ---
+            let user = null; // user değişkenini burada tanımla
             const storedUser = localStorage.getItem('currentUser');
             if (!storedUser) {
                 window.location.href = 'login.html';
             } else {
                 try {
-                    const user = JSON.parse(storedUser);
+                    user = JSON.parse(storedUser); // user'ı burada ata
                     updateUserInfo(user);
                 } catch (e) {
                     console.error("Kayıtlı kullanıcı verisi bozuk:", e);
@@ -1254,7 +1255,8 @@
                     district: district || null,
                     postalCode: postalCode || null,
                     address: address || null,
-                    notes: notes || null
+                    notes: notes || null,
+                    user_id: user ? user.id : null // user objesi varsa id'sini ekle
                 };
 
                 try {
