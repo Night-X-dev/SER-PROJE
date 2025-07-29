@@ -919,17 +919,20 @@
             border-top: 1px solid var(--border-color);
             margin-top: 30px;
         }
- /* Gizleme seçenekleri */
+        /* Gizleme seçenekleri */
         .privacy-settings {
             background-color: rgba(9, 128, 211, 0.05);
             border-radius: 10px;
             padding: 20px;
             margin-top: 20px;
+            display: flex; /* İçeriği hizalamak için */
+            flex-direction: column; /* Dikey sıralama */
+            gap: 15px; /* Öğeler arası boşluk */
         }
 
         .privacy-settings h3 {
             font-size: 18px;
-            margin-bottom: 15px;
+            margin-bottom: 0; /* Kaldırıldı, gap ile boşluk verilecek */
             color: var(--primary);
         }
 
@@ -945,14 +948,21 @@
             gap: 10px;
         }
 
-        .privacy-option input {
+        .privacy-option input[type="checkbox"] {
             width: 20px;
             height: 20px;
+            cursor: pointer;
         }
 
         .privacy-option label {
             font-size: 15px;
             color: var(--text-color);
+            cursor: pointer;
+        }
+        .privacy-save-btn-container {
+            display: flex;
+            justify-content: flex-end; /* Butonu sağa hizala */
+            margin-top: 10px;
         }
 
         /* --- PROJELER.HTML İLE AYNI ACTION-BTN TASARIMI --- */
@@ -1787,6 +1797,11 @@
                                         <label for="hideEmail">E-posta adresimi gizle</label>
                                     </div>
                                 </div>
+                                <div class="privacy-save-btn-container">
+                                    <button class="btn btn-primary" id="savePrivacyBtn">
+                                        <i class="fas fa-save"></i> Gizlilik Ayarlarını Kaydet
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1879,6 +1894,22 @@
                                     <div class="mb-3">
                                         <label class="form-label">Pozisyon</label>
                                         <input type="text" class="form-control" id="editPosition" value="Proje Yöneticisi" readonly> <!-- Pozisyon alanı readonly yapıldı -->
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <hr>
+                                    <h6>Şifre Değiştir</h6>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Mevcut Şifre</label>
+                                        <input type="password" class="form-control" id="editCurrentPassword">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Yeni Şifre</label>
+                                        <input type="password" class="form-control" id="editNewPassword">
                                     </div>
                                 </div>
                             </div>
@@ -2124,21 +2155,8 @@
                 }, 1000);
             });
 
-            // Gizleme seçenekleri olay dinleyicileri
-            const hidePhoneCheckbox = document.getElementById('hidePhoneNumber');
-            const hideEmailCheckbox = document.getElementById('hideEmail');
-
-            hidePhoneCheckbox.addEventListener('change', function() {
-                // Bu değişiklik sadece frontend'de anlık etkiyi gösterir.
-                // Kaydet butonuna basıldığında backend'e gönderilecek.
-                updateCurrentUserProfileDisplay(currentUser);
-            });
-
-            hideEmailCheckbox.addEventListener('change', function() {
-                // Bu değişiklik sadece frontend'de anlık etkiyi gösterir.
-                // Kaydet butonuna basıldığında backend'e gönderilecek.
-                updateCurrentUserProfileDisplay(currentUser);
-            });
+            // Gizlilik ayarları kaydet butonu
+            document.getElementById('savePrivacyBtn').addEventListener('click', savePrivacySettings);
 
             // Sağ üstteki kullanıcı profili linki
             document.getElementById('userProfileLink').addEventListener('click', function() {
@@ -2220,13 +2238,26 @@
             document.getElementById('currentUserName').textContent = user.fullname;
             document.getElementById('currentUserRole').textContent = user.role;
             document.getElementById('currentUserPosition').textContent = user.position || 'Belirtilmemiş'; // Pozisyonu backend'den çek
-            document.getElementById('currentUserJoinDate').textContent = new Date(user.joinDate).toLocaleDateString('tr-TR'); // Katılım tarihi
+            document.getElementById('currentUserJoinDate').textContent = new Date(user.created_at).toLocaleDateString('tr-TR'); // Katılım tarihi
 
             // Profilim kartındaki avatar
+            const currentUserAvatarDiv = document.getElementById('currentUserAvatar');
             if (user.profile_picture) {
-                document.getElementById('currentUserAvatar').innerHTML = `<img src="${user.profile_picture}" alt="${user.fullname}">`;
+                currentUserAvatarDiv.innerHTML = `<img src="${user.profile_picture}" alt="${user.fullname}">`;
             } else {
-                document.getElementById('currentUserAvatar').textContent = getInitials(user.fullname);
+                currentUserAvatarDiv.innerHTML = ''; // Önceki resmi temizle
+                const initialsDiv = document.createElement('div');
+                initialsDiv.textContent = getInitials(user.fullname);
+                initialsDiv.style.width = '100%';
+                initialsDiv.style.height = '100%';
+                initialsDiv.style.display = 'flex';
+                initialsDiv.style.alignItems = 'center';
+                initialsDiv.style.justifyContent = 'center';
+                initialsDiv.style.fontSize = '48px';
+                initialsDiv.style.fontWeight = '600';
+                initialsDiv.style.color = 'var(--white)';
+                initialsDiv.style.backgroundColor = 'var(--primary-light)';
+                currentUserAvatarDiv.appendChild(initialsDiv);
             }
 
             // Gizlilik ayarlarını ve e-posta/telefon gösterimini güncelle
@@ -2239,11 +2270,25 @@
             document.getElementById('editEmail').value = user.email;
             document.getElementById('editPhone').value = user.phone;
             document.getElementById('editPosition').value = user.position || 'Belirtilmemiş'; // Pozisyonu düzenlenemez yap
+            
+            const avatarPreview = document.getElementById('avatarPreview');
             if (user.profile_picture) {
-                document.getElementById('avatarPreview').innerHTML = `<img src="${user.profile_picture}" alt="${user.fullname}">`;
+                avatarPreview.innerHTML = `<img src="${user.profile_picture}" alt="${user.fullname}">`;
                 currentCroppedImage = user.profile_picture; // Mevcut resmi kırpılmış olarak ayarla
             } else {
-                document.getElementById('avatarPreview').textContent = getInitials(user.fullname);
+                avatarPreview.innerHTML = ''; // Önceki resmi temizle
+                const initialsDiv = document.createElement('div');
+                initialsDiv.textContent = getInitials(user.fullname);
+                initialsDiv.style.width = '100%';
+                initialsDiv.style.height = '100%';
+                initialsDiv.style.display = 'flex';
+                initialsDiv.style.alignItems = 'center';
+                initialsDiv.style.justifyContent = 'center';
+                initialsDiv.style.fontSize = '48px';
+                initialsDiv.style.fontWeight = '600';
+                initialsDiv.style.color = 'var(--white)';
+                initialsDiv.style.backgroundColor = 'var(--primary-light)';
+                avatarPreview.appendChild(initialsDiv);
                 currentCroppedImage = null;
             }
         }
@@ -2306,7 +2351,7 @@
                 // Hover olaylarını ekle
                 row.addEventListener('mouseenter', function(e) {
                     clearTimeout(currentHoverTimeout);
-                    if (currentHoverCardUser !== user.id || !hoverCard.classList.contains('show-card')) {
+                    if (currentHoverCardUser !== user.id || !userHoverCard.classList.contains('show-card')) {
                         currentHoverTimeout = setTimeout(() => {
                             showUserHoverCard(user, e);
                             currentHoverCardUser = user.id;
@@ -2337,10 +2382,17 @@
                 avatarDiv.style.backgroundColor = 'var(--primary-light)';
                 avatarDiv.style.color = 'var(--white)';
                 avatarDiv.style.fontWeight = '600';
-                avatarDiv.style.overflow = 'hidden'; // Ensure image is clipped
+                avatarDiv.style.overflow = 'hidden'; 
+                avatarDiv.style.flexShrink = '0'; // Prevent shrinking
 
                 if(user.profile_picture) {
-                    avatarDiv.innerHTML = `<img src="${user.profile_picture}" alt="${user.fullname}">`;
+                    const img = document.createElement('img');
+                    img.src = user.profile_picture;
+                    img.alt = user.fullname;
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'cover';
+                    avatarDiv.appendChild(img);
                 } else {
                     const initials = getInitials(user.fullname);
                     avatarDiv.textContent = initials;
@@ -2364,12 +2416,12 @@
             });
 
             // Hover kartının kendisi için mouseenter ve mouseleave olayları
-            const hoverCard = document.getElementById('userHoverCard');
-            hoverCard.addEventListener('mouseenter', function() {
+            const userHoverCard = document.getElementById('userHoverCard');
+            userHoverCard.addEventListener('mouseenter', function() {
                 clearTimeout(currentHoverTimeout);
             });
 
-            hoverCard.addEventListener('mouseleave', function() {
+            userHoverCard.addEventListener('mouseleave', function() {
                 hideUserHoverCard();
                 currentHoverCardUser = null;
             });
@@ -2395,15 +2447,25 @@
             const displayEmail = user.hide_email === 1 ? '••••@•••••.com' : user.email;
             const displayPhone = user.hide_phone === 1 ? '•••• ••• •• ••' : user.phone;
 
+            let avatarHtml;
+            if (user.profile_picture) {
+                avatarHtml = `<img src="${user.profile_picture}" alt="${user.fullname}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+            } else {
+                avatarHtml = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 600; color: var(--white); background-color: var(--primary-light); border-radius: 50%;">
+                                ${getInitials(user.fullname)}
+                              </div>`;
+            }
+
+
             hoverCard.innerHTML = `
-                <div class="user-avatar-large">${user.profile_picture ? `<img src="${user.profile_picture}" alt="${user.fullname}">` : getInitials(user.fullname)}</div>
+                <div class="user-avatar-large" style="overflow: hidden;">${avatarHtml}</div>
                 <div class="user-name-large">${user.fullname}</div>
                 <div class="user-role-badge">${user.role}</div>
                 <div class="user-contact-info">
                     <div><i class="fas fa-envelope"></i> ${displayEmail}</div>
                     <div><i class="fas fa-phone"></i> ${displayPhone}</div>
                     <div><i class="fas fa-briefcase"></i> ${user.position || 'Belirtilmemiş'}</div>
-                    <div><i class="fas fa-calendar-alt"></i> Katılım: ${new Date(user.joinDate).toLocaleDateString('tr-TR')}</div>
+                    <div><i class="fas fa-calendar-alt"></i> Katılım: ${new Date(user.created_at).toLocaleDateString('tr-TR')}</div>
                 </div>
             `;
             
@@ -2452,7 +2514,6 @@
                 avatarPreview.innerHTML = `<img src="${currentUser.profile_picture}" alt="${currentUser.fullname}">`;
                 currentCroppedImage = currentUser.profile_picture;
             } else {
-                avatarPreview.textContent = getInitials(currentUser.fullname);
                 avatarPreview.innerHTML = ''; // Önceki resmi temizle
                 const initialsDiv = document.createElement('div');
                 initialsDiv.textContent = getInitials(currentUser.fullname);
@@ -2487,15 +2548,14 @@
             renderUsersTable(filtered);
         }
         
-        // Profil değişikliklerini kaydetme
+        // Profil değişikliklerini kaydetme (Genel bilgiler ve şifre)
         async function saveProfileChanges() {
             const newFullName = document.getElementById('editFullName').value.trim();
             const newEmail = document.getElementById('editEmail').value.trim();
             const newPhone = document.getElementById('editPhone').value.replace(/\D/g, ''); // Sadece rakamları al
-            const currentPassword = document.getElementById('editCurrentPassword') ? document.getElementById('editCurrentPassword').value : '';
-            const newPassword = document.getElementById('editNewPassword') ? document.getElementById('editNewPassword').value : '';
-            const hidePhone = document.getElementById('hidePhoneNumber').checked ? 1 : 0;
-            const hideEmail = document.getElementById('hideEmail').checked ? 1 : 0;
+            const currentPassword = document.getElementById('editCurrentPassword').value;
+            const newPassword = document.getElementById('editNewPassword').value;
+            // Gizlilik ayarları burada güncellenmez, ayrı bir fonksiyonda ele alınır
 
             if (!newFullName || !newEmail || !newPhone) {
                 showToast('Ad Soyad, E-posta ve Telefon alanları boş bırakılamaz.', 'error');
@@ -2518,19 +2578,19 @@
                 email: newEmail,
                 phone: newPhone,
                 profile_picture: currentCroppedImage, // Base64 resim verisi
-                hide_email: hideEmail,
-                hide_phone: hidePhone
+                // hide_email ve hide_phone burada gönderilmez
             };
 
             // Şifre alanları varsa ekle
-            if (currentPassword && newPassword) {
+            if (currentPassword || newPassword) {
+                if (!currentPassword || !newPassword) {
+                    showToast('Şifre değiştirmek için hem mevcut hem de yeni şifre alanları doldurulmalıdır.', 'error');
+                    return;
+                }
                 updateData.currentPassword = currentPassword;
                 updateData.newPassword = newPassword;
-            } else if (currentPassword || newPassword) {
-                showToast('Şifre değiştirmek için hem mevcut hem de yeni şifre alanları doldurulmalıdır.', 'error');
-                return;
             }
-
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/api/update_user_profile`, {
                     method: 'POST',
@@ -2547,8 +2607,7 @@
                     currentUser.email = newEmail;
                     currentUser.phone = newPhone;
                     currentUser.profile_picture = currentCroppedImage;
-                    currentUser.hide_email = hideEmail;
-                    currentUser.hide_phone = hidePhone;
+                    // currentUser.hide_email ve hide_phone burada güncellenmez
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
 
                     updateCurrentUserProfile(currentUser); // Arayüzü yeni bilgilerle güncelle
@@ -2559,6 +2618,44 @@
                 }
             } catch (error) {
                 console.error('Profil güncelleme sırasında hata:', error);
+                showToast('Sunucuya bağlanılamadı veya yanıt işlenirken bir hata oluştu.', 'error');
+            }
+        }
+
+        // Gizlilik ayarlarını kaydetme (Sadece gizlilik ayarları)
+        async function savePrivacySettings() {
+            const hidePhone = document.getElementById('hidePhoneNumber').checked ? 1 : 0;
+            const hideEmail = document.getElementById('hideEmail').checked ? 1 : 0;
+
+            const updateData = {
+                userId: currentUser.id,
+                hide_email: hideEmail,
+                hide_phone: hidePhone
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/update_user_profile`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showToast(result.message, 'success');
+                    // localStorage'daki currentUser objesini güncelle
+                    currentUser.hide_email = hideEmail;
+                    currentUser.hide_phone = hidePhone;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+                    updateCurrentUserProfileDisplay(currentUser); // Sadece gizlilik ayarlarını gösterimi güncelle
+                    fetchUsers(); // Tüm kullanıcılar listesini yenile (gizlilik değiştiği için)
+                } else {
+                    showToast(result.message || 'Gizlilik ayarları güncellenirken bir hata oluştu.', 'error');
+                }
+            } catch (error) {
+                console.error('Gizlilik ayarları güncelleme sırasında hata:', error);
                 showToast('Sunucuya bağlanılamadı veya yanıt işlenirken bir hata oluştu.', 'error');
             }
         }
