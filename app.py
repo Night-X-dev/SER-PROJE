@@ -2084,7 +2084,7 @@ def manager_stats():
                     THEN 1 
                     ELSE 0 
                 END) AS delayed_projects,
-                (SELECT SUM(pr.delay_days) 
+                (SELECT IFNULL(SUM(pr.delay_days), 0)
                  FROM project_progress pr 
                  WHERE pr.project_id IN (
                      SELECT project_id FROM projects WHERE project_manager_id = p.project_manager_id

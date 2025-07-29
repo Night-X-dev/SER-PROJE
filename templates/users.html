@@ -919,6 +919,41 @@
             border-top: 1px solid var(--border-color);
             margin-top: 30px;
         }
+ /* Gizleme seçenekleri */
+        .privacy-settings {
+            background-color: rgba(9, 128, 211, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .privacy-settings h3 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+
+        .privacy-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .privacy-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .privacy-option input {
+            width: 20px;
+            height: 20px;
+        }
+
+        .privacy-option label {
+            font-size: 15px;
+            color: var(--text-color);
+        }
 
         /* --- PROJELER.HTML İLE AYNI ACTION-BTN TASARIMI --- */
     .action-btn {
@@ -1740,6 +1775,20 @@
                                 <div><i class="fas fa-briefcase"></i> <span id="currentUserPosition">Proje Yöneticisi</span></div>
                                 <div><i class="fas fa-calendar-alt"></i> Katılım Tarihi: <span id="currentUserJoinDate">15.03.2023</span></div>
                             </div>
+                            <!-- Gizlilik ayarları buraya taşındı -->
+                            <div class="privacy-settings">
+                                <h3>Gizlilik Ayarları</h3>
+                                <div class="privacy-options">
+                                    <div class="privacy-option">
+                                        <input type="checkbox" id="hidePhoneNumber">
+                                        <label for="hidePhoneNumber">Telefon numaramı gizle</label>
+                                    </div>
+                                    <div class="privacy-option">
+                                        <input type="checkbox" id="hideEmail">
+                                        <label for="hideEmail">E-posta adresimi gizle</label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2373,6 +2422,31 @@
                 toast.classList.remove('show');
             }, 3000); // 3 saniye sonra kaybolur
         }
+          // Gizleme seçenekleri
+        const hidePhoneCheckbox = document.getElementById('hidePhoneNumber');
+        const hideEmailCheckbox = document.getElementById('hideEmail');
+        
+        hidePhoneCheckbox.addEventListener('change', function() {
+            const phoneElement = document.getElementById('currentUserPhone');
+            if (this.checked) {
+                phoneElement.textContent = '•••• ••• •• ••';
+                phoneElement.style.color = '#97a1aa';
+            } else {
+                phoneElement.textContent = '+90 555 123 45 67';
+                phoneElement.style.color = '';
+            }
+        });
+          hideEmailCheckbox.addEventListener('change', function() {
+            const emailElement = document.getElementById('currentUserEmail');
+            if (this.checked) {
+                emailElement.textContent = '••••@•••••.com';
+                emailElement.style.color = '#97a1aa';
+            } else {
+                emailElement.textContent = 'john.doe@example.com';
+                emailElement.style.color = '';
+            }
+        });
+        
     </script>
 </body>
 </html>
