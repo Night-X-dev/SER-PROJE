@@ -239,7 +239,8 @@
             flex-shrink: 0;
         }
 
-        .user-avatar {
+        /* user-avatar.js tarafından yönetilecek */
+        /* .user-avatar {
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -249,7 +250,7 @@
             justify-content: center;
             color: var(--white);
             font-weight: 600;
-        }
+        } */
 
         .user-info {
             display: flex;
@@ -1048,11 +1049,12 @@
                     <i class="fas fa-bell"></i>
                 </div>
 
+                <!-- user-avatar.js tarafından yönetilecek avatar kapsayıcısı -->
                 <div class="user-profile">
-                    <div class="user-avatar" id="userAvatar">MÖ</div>
+                    <div id="userAvatarContainer" class="avatar-container"></div>
                     <div class="user-info">
-                        <div class="user-name" id="userName">Mustafa Öztürk</div>
-                        <div class="user-role" id="userRole">Admin</div>
+                        <div class="user-name" id="userName"></div>
+                        <div class="user-role" id="userRole"></div>
                     </div>
                 </div>
                 <button
@@ -1344,7 +1346,7 @@
 
             const userNameElement = document.getElementById('userName');
             const userRoleElement = document.getElementById('userRole');
-            const userAvatarElement = document.getElementById('userAvatar');
+            // userAvatarElement kaldırıldı, userAvatarContainer kullanılacak
             const accountNameInput = document.getElementById("accountName");
             const accountEmailInput = document.getElementById("accountEmail");
 
@@ -1356,20 +1358,8 @@
                 userRoleElement.textContent = currentUser.role || 'Rol Yok';
             }
 
-            // Kullanıcı avatarı baş harfleri
-            if (userAvatarElement) {
-                const nameToUseForAvatar = currentUser.fullname || currentUser.username;
-                if (nameToUseForAvatar) {
-                    const names = nameToUseForAvatar.split(' ');
-                    let initials = names[0][0];
-                    if (names.length > 1) {
-                        initials += names[names.length-1][0];
-                    }
-                    userAvatarElement.textContent = initials.toUpperCase();
-                } else {
-                    userAvatarElement.textContent = 'AD'; // Varsayılan eğer ad yoksa
-                }
-            }
+            // user-avatar.js'teki updateUserAvatar fonksiyonunu çağır
+            updateUserAvatar(currentUser); 
 
             // Hesap ayarları bölümünü güncelle
             if (accountNameInput && currentUser.fullname) {
@@ -2165,5 +2155,7 @@
     </script>
     <!-- bildirim.js dosyasını en sona ekleyin ki DOM tamamen yüklendikten sonra çalışsın -->
     <script src="static/bildirim.js"></script>
+    <!-- user-avatar.js dosyasını buraya dahil ediyoruz -->
+    <script src="static/user-avatar.js"></script>
 </body>
 </html>

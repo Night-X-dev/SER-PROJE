@@ -145,3 +145,4 @@ document.addEventListener('DOMContentLoaded', () => {
 // Not: Kullanıcı oturum açtığında veya profil bilgisi güncellendiğinde
 // `updateUserAvatar(yeniCurrentUserObjesi)` fonksiyonunu tekrar çağırarak
 // avatarı dinamik olarak güncelleyebilirsiniz.
+// Örneğin:
