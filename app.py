@@ -1232,23 +1232,33 @@ def send_notification(user_id, title, message):
 # Update Project API (PUT) - for projects table
 # app.py dosyasında, update_project fonksiyonu içinde
 
+# app.py dosyasında
+
+import datetime # Bu satırın dosyanızın başında olduğundan emin olun
+
+# ... (diğer Flask rotaları ve fonksiyonlar) ...
+
+# Update Project API (PUT) - for projects table
 @app.route('/api/projects/<int:project_id>', methods=['PUT'])
 def update_project(project_id):
     """Updates an existing project's information."""
     data = request.get_json()
-    project_name = data.get('project_name')
-    reference_no = data.get('reference_no')
-    description = data.get('description')
-    contract_date = data.get('contract_date')
-    meeting_date = data.get('meeting_date')
-    start_date = data.get('start_date')
-    end_date = data.get('end_date')
-    project_location = data.get('project_location')
-    status = data.get('status') 
-    # Burayı düzeltiyoruz: 'project_manager_id' olarak al
-    project_manager_id_new = data.get('project_manager_id') # Frontend'den gelen anahtar adı ile eşleşti
 
-    user_id = data.get('user_id') # Güncellemeyi yapan kullanıcının ID'si
+    # Yardımcı fonksiyon: Boş stringleri None'a dönüştürür
+    def clean_input_value(value):
+        return value if value else None # Boş stringi None'a çevirir
+
+    project_name = clean_input_value(data.get('project_name')) # Boş stringleri None'a çevir
+    reference_no = clean_input_value(data.get('reference_no'))
+    description = clean_input_value(data.get('description'))
+    contract_date = clean_input_value(data.get('contract_date'))
+    meeting_date = clean_input_value(data.get('meeting_date'))
+    start_date = clean_input_value(data.get('start_date'))
+    end_date = clean_input_value(data.get('end_date'))
+    project_location = clean_input_value(data.get('project_location'))
+    status = clean_input_value(data.get('status'))
+    project_manager_id_new = clean_input_value(data.get('project_manager_id'))
+    user_id = clean_input_value(data.get('user_id'))
 
     if not user_id: 
         return jsonify({'message': 'Kullanıcı ID\'si eksik.'}), 400
@@ -1258,51 +1268,55 @@ def update_project(project_id):
         connection = get_db_connection()
         with connection.cursor() as cursor:
             # Mevcut proje bilgilerini al
-            cursor.execute("SELECT project_name, project_manager_id, status FROM projects WHERE project_id = %s", (project_id,))
+            cursor.execute("SELECT project_name, reference_no, description, contract_date, meeting_date, start_date, end_date, project_location, status, project_manager_id FROM projects WHERE project_id = %s", (project_id,))
             existing_project_info = cursor.fetchone()
             if not existing_project_info:
                 return jsonify({'message': 'Proje bulunamadı.'}), 404
             
+            # Mevcut değerleri karşılaştırma için uygun formata getir
             old_project_name = existing_project_info['project_name']
-            old_project_manager_id = existing_project_info['project_manager_id'] 
+            old_reference_no = existing_project_info['reference_no']
+            old_description = existing_project_info['description']
+            old_contract_date = existing_project_info['contract_date'].isoformat() if isinstance(existing_project_info['contract_date'], datetime.date) else None
+            old_meeting_date = existing_project_info['meeting_date'].isoformat() if isinstance(existing_project_info['meeting_date'], datetime.date) else None
+            old_start_date = existing_project_info['start_date'].isoformat() if isinstance(existing_project_info['start_date'], datetime.date) else None
+            old_end_date = existing_project_info['end_date'].isoformat() if isinstance(existing_project_info['end_date'], datetime.date) else None
+            old_project_location = existing_project_info['project_location']
             old_status = existing_project_info['status']
+            old_project_manager_id = existing_project_info['project_manager_id'] 
 
             updates = []
             params = []
             
-            if project_name is not None and project_name != old_project_name:
+            # Her alanı tek tek kontrol et ve değişmişse güncelleme listesine ekle
+            if project_name != old_project_name:
                 updates.append("project_name = %s")
                 params.append(project_name)
-            if reference_no is not None:
+            if reference_no != old_reference_no:
                 updates.append("reference_no = %s")
                 params.append(reference_no)
-            if description is not None:
+            if description != old_description:
                 updates.append("description = %s")
                 params.append(description)
-            if contract_date is not None:
+            if contract_date != old_contract_date:
                 updates.append("contract_date = %s")
                 params.append(contract_date)
-            if meeting_date is not None:
+            if meeting_date != old_meeting_date:
                 updates.append("meeting_date = %s")
                 params.append(meeting_date)
-            if start_date is not None:
+            if start_date != old_start_date:
                 updates.append("start_date = %s")
                 params.append(start_date)
-            if end_date is not None:
+            if end_date != old_end_date:
                 updates.append("end_date = %s")
                 params.append(end_date)
-            if project_location is not None:
+            if project_location != old_project_location:
                 updates.append("project_location = %s")
                 params.append(project_location)
-
-            # Durum güncellemesi
-            if status is not None and status != old_status:
+            if status != old_status:
                 updates.append("status = %s")
                 params.append(status)
-            
-            # Proje yöneticisi güncellemesi
-            # Sadece yeni ID mevcutsa ve eski ID'den farklıysa güncelle
-            if project_manager_id_new is not None and project_manager_id_new != old_project_manager_id:
+            if project_manager_id_new != old_project_manager_id:
                 updates.append("project_manager_id = %s")
                 params.append(project_manager_id_new)
 
@@ -1363,6 +1377,8 @@ def update_project(project_id):
     finally:
         if connection:
             connection.close()
+
+# ... (geri kalan app.py kodunuz) ...
 
 # Delete Project API (DELETE)
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
