@@ -63,7 +63,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // localStorage'daki currentUser'ı dinleyebiliriz.
     // Ancak bu, localStorage'ın doğrudan dinlenmesi yerine,
     // oturum açma/kapatma fonksiyonlarınızda doğrudan çağrılmalıdır.
-    // Eğer `currentUser` global bir değişkense, onun güncellendiği yerde bu fonksiyon çağrılmalı.
     // Örneğin, login.html veya index.html'deki oturum yönetimi kodunuzda:
     // `localStorage.setItem('currentUser', JSON.stringify(user));` satırından sonra
     // `fetchUnreadNotificationCount();` çağrısı yapılmalı.
@@ -302,8 +301,12 @@ async function markNotificationAsRead(notificationId, itemElement) {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read?user_id=${userId}`, {
-            method: 'PUT'
+        const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ user_id: userId }) // user_id'yi body'de gönder
         });
         if (response.ok) {
             itemElement.classList.remove('unread');
@@ -346,10 +349,14 @@ async function markAllNotificationsAsRead() {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/notifications/mark_all_read?user_id=${userId}`, {
-            method: 'PUT'
+        const response = await fetch(`${API_BASE_URL}/api/notifications/mark_all_read`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ user_id: userId }) // user_id'yi body'de gönder
         });
-        const result = await response.json();
+        const result = await response.json(); // Başarılı yanıtı JSON olarak ayrıştır
         if (response.ok) {
             if (typeof showToast === 'function') {
                 showToast(result.message || 'Tüm bildirimler okundu.');
@@ -390,8 +397,12 @@ async function deleteNotification(notificationId, itemElement) {
     }
 
      try {
-        const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}?user_id=${userId}`, {
-            method: 'DELETE'
+        const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ user_id: userId }) // user_id'yi body'de gönder
         });
         if (response.ok) {
             // Eğer bildirim okunmamışsa sayacı güncelle
@@ -452,8 +463,12 @@ async function deleteAllNotifications() {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/notifications/all?user_id=${userId}`, {
-            method: 'DELETE'
+        const response = await fetch(`${API_BASE_URL}/api/notifications/all`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ user_id: userId }) // user_id'yi body'de gönder
         });
         
         if (response.ok) {

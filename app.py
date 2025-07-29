@@ -217,7 +217,7 @@ def check_role_permission(role_name, permission_key):
 @app.route('/api/notifications/mark_all_read', methods=['PUT'])
 def mark_all_notifications_as_read():
     """Marks all notifications as read in the database."""
-    data = request.get_json()
+    data = request.get_json() # Use get_json() for PUT requests
     user_id = data.get('user_id') # Get user_id from the request body
     if not user_id:
         return jsonify({'message': 'User ID missing.'}), 400
@@ -270,12 +270,21 @@ def get_unread_notifications_count():
 @app.route('/api/notifications/<int:notification_id>/read', methods=['PUT'])
 def mark_notification_as_read(notification_id):
     """Marks a specific notification as read in the database."""
+    # User ID'yi body'den almak yerine, oturumdan veya URL'den alabilirsiniz.
+    # Eğer bu endpoint'e bir kullanıcı ID'si gönderilmiyorsa, oturumdan alınması daha güvenlidir.
+    # Örneğin: user_id = session.get('user_id')
+    # Şu anki hata bağlamında, bu endpoint'in doğrudan çağrıldığı varsayıldığı için user_id'yi body'den alalım.
+    data = request.get_json()
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({'message': 'User ID missing.'}), 400
+
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT id FROM notifications WHERE id = %s", (notification_id,))
+            cursor.execute("SELECT id FROM notifications WHERE id = %s AND user_id = %s", (notification_id, user_id))
             if not cursor.fetchone():
-                return jsonify({'message': 'Notification not found.'}), 404
+                return jsonify({'message': 'Notification not found or you do not have permission to modify it.'}), 404
 
             sql = "UPDATE notifications SET is_read = 1 WHERE id = %s"
             cursor.execute(sql, (notification_id,))
@@ -328,10 +337,14 @@ def get_notifications():
 @app.route('/api/notifications/<int:notification_id>', methods=['DELETE'])
 def delete_notification(notification_id):
     """Deletes a specific notification for the logged-in user."""
-    if 'user_id' not in session:
-        return jsonify({'message': 'Login required.'}), 401
+    # User ID'yi body'den almak yerine, oturumdan veya URL'den alabilirsiniz.
+    # Eğer bu endpoint'e bir kullanıcı ID'si gönderilmiyorsa, oturumdan alınması daha güvenlidir.
+    # Şu anki hata bağlamında, bu endpoint'in doğrudan çağrıldığı varsayıldığı için user_id'yi body'den alalım.
+    data = request.get_json() # DELETE request body'sinden user_id'yi al
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({'message': 'User ID missing.'}), 400
 
-    user_id = session['user_id']
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
@@ -352,10 +365,11 @@ def delete_notification(notification_id):
 @app.route('/api/notifications/all', methods=['DELETE'])
 def delete_all_notifications():
     """Deletes all notifications for the logged-in user."""
-    if 'user_id' not in session:
-        return jsonify({'message': 'Login required.'}), 401
+    data = request.get_json() # DELETE request body'sinden user_id'yi al
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({'message': 'User ID missing.'}), 400
 
-    user_id = session['user_id']
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
@@ -1054,7 +1068,10 @@ def update_customer(customer_id):
 @app.route('/api/customers/<int:customer_id>', methods=['DELETE'])
 def delete_customer(customer_id):
     """Deletes a customer from the database."""
-    user_id = request.args.get('user_id') 
+    # User ID'yi body'den almak yerine, oturumdan veya URL'den alabilirsiniz.
+    # Eğer bu endpoint'e bir kullanıcı ID'si gönderilmiyorsa, oturumdan alınması daha güvenlidir.
+    data = request.get_json() # DELETE request body'sinden user_id'yi al
+    user_id = data.get('user_id')
     if not user_id:
         return jsonify({'message': 'User ID missing.'}), 400
 
@@ -1381,7 +1398,10 @@ def update_project(project_id):
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
 def delete_project_api(project_id):
     """Deletes a project from the database."""
-    user_id = request.args.get('user_id') 
+    # User ID'yi body'den almak yerine, oturumdan veya URL'den alabilirsiniz.
+    # Eğer bu endpoint'e bir kullanıcı ID'si gönderilmiyorsa, oturumdan alınması daha güvenlidir.
+    data = request.get_json() # DELETE request body'sinden user_id'yi al
+    user_id = data.get('user_id')
     if not user_id:
         return jsonify({'message': 'User ID missing.'}), 400
 
