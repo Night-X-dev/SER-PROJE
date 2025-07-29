@@ -22,6 +22,10 @@ app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex"
 def serve_login_page():
     """Kök URL'ye (/) gelen istekleri login.html sayfasına yönlendirir."""
     return render_template('login.html')
+@app.route('/login.html')
+def serve_login_page():
+    """Kök URL'ye (/) gelen istekleri login.html sayfasına yönlendirir."""
+    return render_template('login.html')
 
 @app.route('/index.html')
 def serve_index_page():
@@ -30,17 +34,12 @@ def serve_index_page():
 
 @app.route('/ayarlar.html')
 def serve_ayarlar_page():
-    """/ayarlar.html URL'ye gelen istekleri ayarlar.html sayfasına yönlendirir."""
-    # Ayarlar sayfası için de yetki kontrolü eklenebilir
+    """/ayarlar.html URL'ye gelen istekleri ayarlar.html sayfasına yönlendirir.
+    Oturum açmış herkesin erişimine açıktır, ancak içerik rol bazında frontend'de gizlenecektir."""
     if 'user_id' not in session:
         return redirect(url_for('serve_login_page'))
-    user_role = get_user_role_from_db(session['user_id'])
-    # Admin rolü için yetki kontrolü
-    if user_role and user_role.lower() == 'admin':
-        return render_template('ayarlar.html')
-    else:
-        # Admin olmayan kullanıcıları ana sayfaya yönlendir
-        return redirect(url_for('serve_index_page'))
+    # Her oturum açmış kullanıcının ayarlar sayfasına erişmesine izin ver
+    return render_template('ayarlar.html')
 
 
 @app.route('/kayitonay.html')
