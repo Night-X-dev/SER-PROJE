@@ -6,7 +6,7 @@
  * Gerekli CSS stillerini de dinamik olarak sayfaya ekler.
  * @param {object} currentUser - Mevcut kullanıcı bilgileri objesi.
  * @param {string} currentUser.fullname - Kullanıcının tam adı (örn: "John Doe").
- * @param {string} [currentUser.profilePicture] - Kullanıcının profil resmi URL'si (isteğe bağlı).
+ * @param {string} [currentUser.profile_picture] - Kullanıcının profil resmi Base64 verisi (isteğe bağlı).
  */
 function updateUserAvatar(currentUser) {
     const avatarContainer = document.getElementById('userAvatarContainer');
@@ -40,9 +40,14 @@ function updateUserAvatar(currentUser) {
     avatarInitials.style.display = 'none';
     avatarContainer.innerHTML = ''; // İçeriği temizle
 
-    if (currentUser && currentUser.profilePicture && currentUser.profilePicture !== 'null' && currentUser.profilePicture !== '') {
-        // Eğer profil resmi URL'si varsa ve geçerliyse, resmi göster
-        avatarImg.src = currentUser.profilePicture;
+    // Düzeltme: currentUser.profilePicture yerine currentUser.profile_picture kullanıldı
+    if (currentUser && currentUser.profile_picture && currentUser.profile_picture !== 'null' && currentUser.profile_picture !== '') {
+        // Eğer profil resmi Base64 verisi varsa, resmi göster
+        // Base64 verisinin başında 'data:image/png;base64,' gibi bir prefix olduğundan emin olun.
+        // Eğer backend'den sadece Base64 string geliyorsa, ön eki eklememiz gerekebilir.
+        // Örneğin: `avatarImg.src = 'data:image/jpeg;base64,' + currentUser.profile_picture;`
+        // Şu anki varsayım, backend'in tam Base64 URL'sini döndürdüğü yönünde.
+        avatarImg.src = currentUser.profile_picture;
         avatarImg.alt = currentUser.fullname ? `${currentUser.fullname} Avatarı` : 'Kullanıcı Avatarı';
         avatarImg.style.display = 'block';
         avatarContainer.appendChild(avatarImg);
