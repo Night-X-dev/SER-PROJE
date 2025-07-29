@@ -1601,15 +1601,15 @@ def add_project():
     description = data.get('projectDescription') # Comes as 'projectDescription' from frontend
     contract_date = data.get('contractDate')
     meeting_date = data.get('meetingDate')
-    start_date = data.get('startDate')
-    end_date = data.get('endDate')
+    start_date_str = data.get('startDate') # Renamed to avoid conflict with datetime object
+    end_date_str = data.get('endDate')     # Renamed to avoid conflict with datetime object
     project_location = data.get('projectLocation')
     status = data.get('status', 'Planlama Aşamasında') 
 
     user_id = data.get('user_id') # User ID adding the project (for activity log)
 
-    if not all([project_name, customer_id, project_manager_id]): # user_id check comes from frontend
-        return jsonify({'message': 'Project name, customer, and project manager are required.'}), 400
+    if not all([project_name, customer_id, project_manager_id, start_date_str, end_date_str]): # Added date checks
+        return jsonify({'message': 'Project name, customer, project manager, start date, and end date are required.'}), 400
 
     connection = None
     try:
@@ -1622,10 +1622,43 @@ def add_project():
             """
             cursor.execute(sql, (
                 project_name, customer_id, project_manager_id, reference_no, description,
-                contract_date, meeting_date, start_date, end_date, project_location, status
+                contract_date, meeting_date, start_date_str, end_date_str, project_location, status
             ))
             connection.commit()
             new_project_id = cursor.lastrowid
+
+            # Process and insert project progress steps
+            progress_steps = data.get('progressSteps', [])
+            last_step_end_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date() # Initialize with project start date
+
+            for step in progress_steps:
+                step_title = step.get('title')
+                step_description = step.get('description')
+                step_start_date_str = step.get('startDate')
+                step_end_date_str = step.get('endDate')
+
+                if not all([step_title, step_start_date_str, step_end_date_str]):
+                    print(f"WARNING: Missing data for a progress step in project {new_project_id}. Skipping step.")
+                    continue
+
+                step_start_date = datetime.datetime.strptime(step_start_date_str, '%Y-%m-%d').date()
+                step_end_date = datetime.datetime.strptime(step_end_date_str, '%Y-%m-%d').date()
+
+                delay_days = 0
+                # Calculate delay based on the previous step's end date or project's start date
+                if last_step_end_date:
+                    time_diff = (step_start_date - last_step_end_date).days
+                    if time_diff > 1:
+                        delay_days = time_diff - 1
+                
+                sql_insert_progress = """
+                INSERT INTO project_progress (project_id, title, description, start_date, end_date, delay_days)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """
+                cursor.execute(sql_insert_progress, (new_project_id, step_title, step_description, step_start_date_str, step_end_date_str, delay_days))
+                connection.commit() # Commit each step or commit once after loop
+
+                last_step_end_date = step_end_date # Update last_step_end_date for the next iteration
 
             # Send notification to project manager
             send_notification(
