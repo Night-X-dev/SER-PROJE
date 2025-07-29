@@ -19,12 +19,9 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex") 
 
 @app.route('/')
+@app.route('/login.html') # Her iki URL de aynı fonksiyona yönlendirilecek
 def serve_login_page():
-    """Kök URL'ye (/) gelen istekleri login.html sayfasına yönlendirir."""
-    return render_template('login.html')
-@app.route('/login.html')
-def serve_out_page():
-    """Kök URL'ye (/) gelen istekleri login.html sayfasına yönlendirir."""
+    """Kök URL'ye (/) ve /login.html URL'ye gelen istekleri login.html sayfasına yönlendirir."""
     return render_template('login.html')
 
 @app.route('/index.html')
