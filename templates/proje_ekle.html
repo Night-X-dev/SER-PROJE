@@ -507,6 +507,7 @@
             border: 1px solid var(--border-color);
             background-color: var(--input-bg);
             color: var(--text-color);
+            width: 100%; /* Kendi grubunda tam genişlik */
         }
 
         .progress-description-textarea {
@@ -1519,7 +1520,7 @@
         }); // DOMContentLoaded bitişi
 
         // Aktivite loglama fonksiyonu (frontend'den backend'e istek gönderecek)
-        async function addActivity(title, message, project_id, icon = "fas fa-info-circle", actionType = "other") {
+        async function addActivity(title, description, project_id, icon = "fas fa-info-circle", actionType = "other") {
             if (!currentUser || !currentUser.id) {
                 console.warn("Kullanıcı oturumu bulunamadı, aktivite kaydedilemedi.");
                 return;
@@ -1529,7 +1530,7 @@
                 user_id: currentUser.id,
                 project_id: project_id, // null olabilir
                 title: title,
-                message: message, // raw_description yerine message kullanıldı
+                description: description, // 'message' yerine 'description' kullanıldı
                 icon: icon,
                 action_type: actionType
             };
