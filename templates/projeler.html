@@ -1584,6 +1584,47 @@
           }
         }
 
+        // Kullanıcı adı ve avatarını topbar'da güncelle
+            function updateUserProfileDisplay(user) {
+                if (user) {
+                    userNameElement.textContent = user.fullname;
+                    userRoleElement.textContent = user.role;
+                    userAvatarElement.innerHTML = ''; // Mevcut içeriği temizle
+
+                    if (user.profile_picture) {
+                        const img = document.createElement('img');
+                        img.src = user.profile_picture;
+                        img.alt = user.fullname;
+                        userAvatarElement.appendChild(img);
+                    } else {
+                        const initials = getInitials(user.fullname);
+                        const initialsDiv = document.createElement('div');
+                        initialsDiv.textContent = initials;
+                        initialsDiv.style.width = '100%';
+                        initialsDiv.style.height = '100%';
+                        initialsDiv.style.display = 'flex';
+                        initialsDiv.style.alignItems = 'center';
+                        initialsDiv.style.justifyContent = 'center';
+                        initialsDiv.style.fontSize = '20px'; // Topbar avatar boyutu
+                        initialsDiv.style.fontWeight = '600';
+                        initialsDiv.style.color = 'var(--white)';
+                        initialsDiv.style.backgroundColor = 'var(--primary-light)';
+                        userAvatarElement.appendChild(initialsDiv);
+                    }
+                }
+            }
+
+            // İsimden baş harfleri alma fonksiyonu (users.html'den kopyalandı)
+            function getInitials(fullname) {
+                if (!fullname) return '';
+                const parts = fullname.split(' ');
+                if (parts.length === 1) {
+                    return parts[0].charAt(0).toUpperCase();
+                } else if (parts.length >= 2) {
+                    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+                }
+                return '';
+            }
         function updateUserInfo(user) {
           if (user) {
             userNameElement.textContent = user.fullname;
