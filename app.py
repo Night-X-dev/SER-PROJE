@@ -436,17 +436,14 @@ def add_activity():
 
 @app.route('/api/update_user_profile', methods=['POST'])
 def update_user_profile():
-    """Updates a user's profile information, including role, profile picture, and visibility settings.
-    Password change logic has been removed."""
+    """Updates a user's profile information, including profile picture and visibility settings.
+    Personal details (fullname, email, phone, role) are no longer updated via this endpoint,
+    as the frontend modal for these fields has been removed."""
     data = request.get_json()
     user_id = data.get('userId')
-    fullname = data.get('fullname')
-    email = data.get('email')
-    phone = data.get('phone')
     profile_picture = data.get('profile_picture') 
     hide_email = data.get('hide_email') 
     hide_phone = data.get('hide_phone') 
-    role = data.get('role') # Added role for update
 
     if not user_id:
         return jsonify({'message': 'User ID missing.'}), 400
@@ -455,7 +452,7 @@ def update_user_profile():
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            cursor.execute("SELECT fullname, email, phone, role, profile_picture, hide_email, hide_phone FROM users WHERE id = %s", (user_id,))
+            cursor.execute("SELECT profile_picture, hide_email, hide_phone FROM users WHERE id = %s", (user_id,))
             user = cursor.fetchone()
 
             if not user:
@@ -464,24 +461,6 @@ def update_user_profile():
             updates = []
             params = []
             message_parts = []
-
-            if fullname is not None and fullname != user['fullname']:
-                updates.append("fullname = %s")
-                params.append(fullname)
-                message_parts.append("Full Name")
-
-            if email is not None and email != user['email']:
-                cursor.execute("SELECT id FROM users WHERE email = %s AND id != %s", (email, user_id))
-                if cursor.fetchone():
-                    return jsonify({'message': 'This email address is already used by another user.'}), 409
-                updates.append("email = %s")
-                params.append(email)
-                message_parts.append("Email")
-            
-            if phone is not None and phone != user['phone']:
-                updates.append("phone = %s")
-                params.append(phone)
-                message_parts.append("Phone")
 
             # Handle profile_picture: if it's explicitly null from frontend, set DB to NULL
             # If profile_picture is 'null' string, set to SQL NULL. Otherwise, update with the new value.
@@ -503,14 +482,6 @@ def update_user_profile():
                 updates.append("hide_phone = %s")
                 params.append(hide_phone)
                 message_parts.append("Phone Visibility")
-
-            # Update role if provided and different
-            if role is not None and role != user['role']:
-                updates.append("role = %s")
-                params.append(role)
-                message_parts.append("Role")
-
-            # Password change logic removed as per request
 
             if not updates:
                 return jsonify({'message': 'No information to update.'}), 200
