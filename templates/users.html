@@ -1356,6 +1356,12 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            /* Gece modunda metin rengi için */
+            color: var(--text-color); 
+        }
+        /* Katılım Tarihi ve Pozisyon için özel stil */
+        .user-contact-info div span {
+            color: var(--text-color);
         }
         
         .user-contact-info i {
@@ -1498,7 +1504,13 @@
         .user-hover-card .user-contact-info div {
             margin-bottom: 8px;
             font-size: 14px;
+            color: var(--text-color); /* Hover karttaki metin rengi */
         }
+        /* Hover karttaki Katılım Tarihi ve Pozisyon için özel stil */
+        .user-hover-card .user-contact-info div span {
+            color: var(--text-color);
+        }
+
 
         /* Kırpma modalı için stiller */
         .cropper-modal {
@@ -1742,10 +1754,10 @@
                 </div>
                 
                  <div class="user-profile" id="userProfileLink">
-                    <div class="user-avatar" id="userAvatar">MO</div>
+                    <div class="user-avatar" id="userAvatar"></div> <!-- İçerik JS tarafından doldurulacak -->
                     <div class="user-info">
-                        <div class="user-name" id="userName">Mustafa Öztürk</div>
-                        <div class="user-role" id="userRole">Admin</div>
+                        <div class="user-name" id="userName"></div> <!-- İçerik JS tarafından doldurulacak -->
+                        <div class="user-role" id="userRole"></div> <!-- İçerik JS tarafından doldurulacak -->
                     </div>
                 </div>
                 <button class="btn btn-outline logout-btn" id="logoutButton">
@@ -1771,16 +1783,16 @@
                 <div class="card-body">
                     <div class="user-profile-details">
                         <div class="user-avatar-large" id="currentUserAvatar">
-                            MO
+                            <!-- İçerik JS tarafından doldurulacak -->
                         </div>
                         <div class="user-info-details">
-                            <div class="user-name-large" id="currentUserName">Mustafa Öztürk</div>
-                            <div class="user-role-badge" id="currentUserRole">Admin</div>
+                            <div class="user-name-large" id="currentUserName"></div>
+                            <div class="user-role-badge" id="currentUserRole"></div>
                             <div class="user-contact-info">
-                                <div><i class="fas fa-envelope"></i> <span id="currentUserEmail">mustafa@ser-elektrik.com</span></div>
-                                <div><i class="fas fa-phone"></i> <span id="currentUserPhone">+90 555 123 4567</span></div>
-                                <div><i class="fas fa-briefcase"></i> <span id="currentUserPosition">Proje Yöneticisi</span></div>
-                                <div><i class="fas fa-calendar-alt"></i> Katılım Tarihi: <span id="currentUserJoinDate">15.03.2023</span></div>
+                                <div><i class="fas fa-envelope"></i> <span id="currentUserEmail"></span></div>
+                                <div><i class="fas fa-phone"></i> <span id="currentUserPhone"></span></div>
+                                <div><i class="fas fa-briefcase"></i> <span id="currentUserPosition"></span></div>
+                                <div><i class="fas fa-calendar-alt"></i> Katılım Tarihi: <span id="currentUserJoinDate"></span></div>
                             </div>
                             <!-- Gizlilik ayarları buraya taşındı -->
                             <div class="privacy-settings">
@@ -1843,6 +1855,9 @@
             &copy; 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır. | Mustafa Öztürk
         </div>
     </div>
+
+    <!-- Bildirim Paneli Placeholder -->
+    <div id="notification-panel-placeholder"></div>
 
     <!-- Profil Düzenleme Modalı -->
     <div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true">
@@ -2016,10 +2031,11 @@
             // Resmi sil butonu
             document.getElementById('deleteAvatarBtn').addEventListener('click', function() {
                 currentCroppedImage = "null"; // Resmi null olarak işaretle, backend'e "null" stringi olarak gidecek
+                // Avatar önizlemesini temizle ve baş harfleri göster
                 const avatarPreview = document.getElementById('avatarPreview');
-                avatarPreview.innerHTML = ''; // Önceki resmi temizle
+                avatarPreview.innerHTML = ''; 
                 const initialsDiv = document.createElement('div');
-                initialsDiv.textContent = getInitials(currentUser.fullname); // currentUser'ın fullname'ini kullan
+                initialsDiv.textContent = getInitials(currentUser.fullname);
                 initialsDiv.style.width = '100%';
                 initialsDiv.style.height = '100%';
                 initialsDiv.style.display = 'flex';
@@ -2030,6 +2046,10 @@
                 initialsDiv.style.color = 'var(--white)';
                 initialsDiv.style.backgroundColor = 'var(--primary-light)';
                 avatarPreview.appendChild(initialsDiv);
+
+                // Topbar ve kişisel karttaki avatarı da güncelle
+                updateUserAvatarDisplay(currentUser.fullname, null); // Null göndererek resmi sil
+                
                 showToast('Profil fotoğrafı silindi. Kaydetmek için "Kaydet" butonuna basın.', 'success');
             });
             
@@ -2176,6 +2196,11 @@
                     mainContent.classList.remove('expanded');
                 }
             });
+
+            // Bildirim panelini yükle
+            loadNotificationPanel();
+            // Bildirim butonuna tıklama olayı
+            document.getElementById('notificationButton').addEventListener('click', toggleNotificationPanel);
         });
         
         // Cropper zoom değerini güncelleme
@@ -2218,49 +2243,16 @@
             // Topbar'daki kullanıcı bilgileri
             document.getElementById('userName').textContent = user.fullname;
             document.getElementById('userRole').textContent = user.role;
-            if (user.profile_picture) {
-                document.getElementById('userAvatar').innerHTML = `<img src="${user.profile_picture}" alt="${user.fullname}">`;
-            } else {
-                document.getElementById('userAvatar').innerHTML = ''; // Önceki resmi temizle
-                const initialsDiv = document.createElement('div');
-                initialsDiv.textContent = getInitials(user.fullname);
-                initialsDiv.style.width = '100%';
-                initialsDiv.style.height = '100%';
-                initialsDiv.style.display = 'flex';
-                initialsDiv.style.alignItems = 'center';
-                initialsDiv.style.justifyContent = 'center';
-                initialsDiv.style.fontSize = '20px'; // Topbar avatar boyutu
-                initialsDiv.style.fontWeight = '600';
-                initialsDiv.style.color = 'var(--white)';
-                initialsDiv.style.backgroundColor = 'var(--primary-light)';
-                document.getElementById('userAvatar').appendChild(initialsDiv);
-            }
-
+            updateUserAvatarDisplay(user.fullname, user.profile_picture); // Yeni yardımcı fonksiyon
+            
             // Profilim kartındaki bilgiler
             document.getElementById('currentUserName').textContent = user.fullname;
             document.getElementById('currentUserRole').textContent = user.role;
-            document.getElementById('currentUserPosition').textContent = user.role || ''; // Pozisyonu backend'den çek, boşsa boş bırak
-            document.getElementById('currentUserJoinDate').textContent = new Date(user.created_at).toLocaleDateString('tr-TR'); // Katılım tarihi
+            document.getElementById('currentUserPosition').textContent = user.role || ''; 
+            document.getElementById('currentUserJoinDate').textContent = new Date(user.created_at).toLocaleDateString('tr-TR'); 
 
             // Profilim kartındaki avatar
-            const currentUserAvatarDiv = document.getElementById('currentUserAvatar');
-            if (user.profile_picture) {
-                currentUserAvatarDiv.innerHTML = `<img src="${user.profile_picture}" alt="${user.fullname}">`;
-            } else {
-                currentUserAvatarDiv.innerHTML = ''; // Önceki resmi temizle
-                const initialsDiv = document.createElement('div');
-                initialsDiv.textContent = getInitials(user.fullname);
-                initialsDiv.style.width = '100%';
-                initialsDiv.style.height = '100%';
-                initialsDiv.style.display = 'flex';
-                initialsDiv.style.alignItems = 'center';
-                initialsDiv.style.justifyContent = 'center';
-                initialsDiv.style.fontSize = '60px'; // Büyütüldü
-                initialsDiv.style.fontWeight = '600';
-                initialsDiv.style.color = 'var(--white)';
-                initialsDiv.style.backgroundColor = 'var(--primary-light)';
-                currentUserAvatarDiv.appendChild(initialsDiv);
-            }
+            updateUserAvatarDisplayLarge(user.fullname, user.profile_picture); // Yeni yardımcı fonksiyon
 
             // Gizlilik ayarlarını ve e-posta/telefon gösterimini güncelle
             document.getElementById('hidePhoneNumber').checked = user.hide_phone === 1;
@@ -2271,9 +2263,9 @@
             const avatarPreview = document.getElementById('avatarPreview');
             if (user.profile_picture) {
                 avatarPreview.innerHTML = `<img src="${user.profile_picture}" alt="${user.fullname}">`;
-                currentCroppedImage = user.profile_picture; // Mevcut resmi kırpılmış olarak ayarla
+                currentCroppedImage = user.profile_picture; 
             } else {
-                avatarPreview.innerHTML = ''; // Önceki resmi temizle
+                avatarPreview.innerHTML = ''; 
                 const initialsDiv = document.createElement('div');
                 initialsDiv.textContent = getInitials(user.fullname);
                 initialsDiv.style.width = '100%';
@@ -2289,6 +2281,59 @@
                 currentCroppedImage = null;
             }
         }
+
+        // Topbar ve kullanıcı kartındaki avatarı güncelleyen yardımcı fonksiyon
+        function updateUserAvatarDisplay(fullname, profilePicture) {
+            const userAvatarElement = document.getElementById('userAvatar');
+            userAvatarElement.innerHTML = ''; // Önceki içeriği temizle
+
+            if (profilePicture && profilePicture !== "null") {
+                const img = document.createElement('img');
+                img.src = profilePicture;
+                img.alt = fullname;
+                userAvatarElement.appendChild(img);
+            } else {
+                const initialsDiv = document.createElement('div');
+                initialsDiv.textContent = getInitials(fullname);
+                initialsDiv.style.width = '100%';
+                initialsDiv.style.height = '100%';
+                initialsDiv.style.display = 'flex';
+                initialsDiv.style.alignItems = 'center';
+                initialsDiv.style.justifyContent = 'center';
+                initialsDiv.style.fontSize = '20px'; 
+                initialsDiv.style.fontWeight = '600';
+                initialsDiv.style.color = 'var(--white)';
+                initialsDiv.style.backgroundColor = 'var(--primary-light)';
+                userAvatarElement.appendChild(initialsDiv);
+            }
+        }
+
+        // Büyük avatarı güncelleyen yardımcı fonksiyon (Profilim kartı için)
+        function updateUserAvatarDisplayLarge(fullname, profilePicture) {
+            const currentUserAvatarDiv = document.getElementById('currentUserAvatar');
+            currentUserAvatarDiv.innerHTML = ''; // Önceki içeriği temizle
+
+            if (profilePicture && profilePicture !== "null") {
+                const img = document.createElement('img');
+                img.src = profilePicture;
+                img.alt = fullname;
+                currentUserAvatarDiv.appendChild(img);
+            } else {
+                const initialsDiv = document.createElement('div');
+                initialsDiv.textContent = getInitials(fullname);
+                initialsDiv.style.width = '100%';
+                initialsDiv.style.height = '100%';
+                initialsDiv.style.display = 'flex';
+                initialsDiv.style.alignItems = 'center';
+                initialsDiv.style.justifyContent = 'center';
+                initialsDiv.style.fontSize = '60px'; 
+                initialsDiv.style.fontWeight = '600';
+                initialsDiv.style.color = 'var(--white)';
+                initialsDiv.style.backgroundColor = 'var(--primary-light)';
+                currentUserAvatarDiv.appendChild(initialsDiv);
+            }
+        }
+
 
         // Kullanıcının profil bilgilerini gizlilik ayarlarına göre güncelleyen fonksiyon
         function updateCurrentUserProfileDisplay(user) {
@@ -2394,9 +2439,9 @@
                 avatarDiv.style.color = 'var(--white)';
                 avatarDiv.style.fontWeight = '600';
                 avatarDiv.style.overflow = 'hidden'; 
-                avatarDiv.style.flexShrink = '0'; // Prevent shrinking
+                avatarDiv.style.flexShrink = '0'; 
 
-                if(user.profile_picture) {
+                if(user.profile_picture && user.profile_picture !== "null") {
                     const img = document.createElement('img');
                     img.src = user.profile_picture;
                     img.alt = user.fullname;
@@ -2419,7 +2464,7 @@
                     <td data-label="Rol"><span class="status-badge status-Aktif">${user.role}</span></td>
                     <td data-label="Telefon">${displayPhone}</td>
                     <td data-label="E-posta">${displayEmail}</td>
-                    <td data-label="Pozisyon">${user.role || ''}</td> <!-- Pozisyonu doğrudan role'den al, boşsa boş bırak -->
+                    <td data-label="Pozisyon">${user.role || ''}</td>
                 `;
                 
                 row.prepend(avatarCell);
@@ -2459,7 +2504,7 @@
             const displayPhone = user.hide_phone === 1 ? '•••• ••• •• ••' : formatPhoneNumber(user.phone);
 
             let avatarHtml;
-            if (user.profile_picture) {
+            if (user.profile_picture && user.profile_picture !== "null") {
                 avatarHtml = `<img src="${user.profile_picture}" alt="${user.fullname}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
             } else {
                 avatarHtml = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 600; color: var(--white); background-color: var(--primary-light); border-radius: 50%;">
@@ -2473,24 +2518,22 @@
                 <div class="user-name-large">${user.fullname}</div>
                 <div class="user-role-badge">${user.role}</div>
                 <div class="user-contact-info">
-                    <div><i class="fas fa-envelope"></i> ${displayEmail}</div>
-                    <div><i class="fas fa-phone"></i> ${displayPhone}</div>
-                    <div><i class="fas fa-briefcase"></i> ${user.role || ''}</div> <!-- Pozisyonu doğrudan role'den al, boşsa boş bırak -->
-                    <div><i class="fas fa-calendar-alt"></i> Katılım: ${new Date(user.created_at).toLocaleDateString('tr-TR')}</div>
+                    <div><i class="fas fa-envelope"></i> <span>${displayEmail}</span></div>
+                    <div><i class="fas fa-phone"></i> <span>${displayPhone}</span></div>
+                    <div><i class="fas fa-briefcase"></i> <span>${user.role || ''}</span></div>
+                    <div><i class="fas fa-calendar-alt"></i> Katılım: <span>${new Date(user.created_at).toLocaleDateString('tr-TR')}</span></div>
                 </div>
             `;
             
             const rect = event.target.getBoundingClientRect();
-            let topPosition = rect.top + window.scrollY + rect.height + 10; // Tablonun altına
+            let topPosition = rect.top + window.scrollY + rect.height + 10; 
             let leftPosition = rect.left + window.scrollX;
 
-            // Ekranın sağından taşmayı önle
             if (leftPosition + hoverCard.offsetWidth > window.innerWidth) {
-                leftPosition = window.innerWidth - hoverCard.offsetWidth - 20; // Sağdan 20px boşluk bırak
+                leftPosition = window.innerWidth - hoverCard.offsetWidth - 20; 
             }
-            // Ekranın solundan taşmayı önle
             if (leftPosition < 0) {
-                leftPosition = 20; // Soldan 20px boşluk bırak
+                leftPosition = 20; 
             }
 
             hoverCard.style.left = leftPosition + 'px';
@@ -2515,11 +2558,11 @@
         function openEditProfileModal() {
             // Düzenleme modalındaki avatar önizlemesini ayarla
             const avatarPreview = document.getElementById('avatarPreview');
-            if (currentUser.profile_picture) {
+            if (currentUser.profile_picture && currentUser.profile_picture !== "null") {
                 avatarPreview.innerHTML = `<img src="${currentUser.profile_picture}" alt="${currentUser.fullname}">`;
                 currentCroppedImage = currentUser.profile_picture;
             } else {
-                avatarPreview.innerHTML = ''; // Önceki resmi temizle
+                avatarPreview.innerHTML = ''; 
                 const initialsDiv = document.createElement('div');
                 initialsDiv.textContent = getInitials(currentUser.fullname);
                 initialsDiv.style.width = '100%';
@@ -2543,7 +2586,6 @@
         function filterUsers() {
             const searchTerm = document.getElementById('userSearch').value.toLowerCase();
             const filtered = allUsersData.filter(user => {
-                // Sadece fullname'e göre arama yap
                 return user.fullname.toLowerCase().includes(searchTerm);
             });
             renderUsersTable(filtered);
@@ -2553,7 +2595,7 @@
         async function saveProfileChanges() {
             const updateData = {
                 userId: currentUser.id,
-                profile_picture: currentCroppedImage, // Base64 resim verisi (null olabilir)
+                profile_picture: currentCroppedImage, 
             };
             
             try {
@@ -2567,13 +2609,12 @@
 
                 if (response.ok) {
                     showToast(result.message, 'success');
-                    // localStorage'daki currentUser objesini güncelle
                     currentUser.profile_picture = currentCroppedImage;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
 
-                    updateCurrentUserProfile(currentUser); // Arayüzü yeni bilgilerle güncelle
-                    fetchUsers(); // Tüm kullanıcılar listesini yenile
-                    editProfileModalInstance.hide(); // Modalı kapat
+                    updateCurrentUserProfile(currentUser); 
+                    fetchUsers(); 
+                    editProfileModalInstance.hide(); 
                 } else {
                     showToast(result.message || 'Profil güncellenirken bir hata oluştu.', 'error');
                 }
@@ -2605,13 +2646,12 @@
 
                 if (response.ok) {
                     showToast(result.message, 'success');
-                    // localStorage'daki currentUser objesini güncelle
                     currentUser.hide_email = hideEmail;
                     currentUser.hide_phone = hidePhone;
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
 
-                    updateCurrentUserProfileDisplay(currentUser); // Sadece gizlilik ayarlarını gösterimi güncelle
-                    fetchUsers(); // Tüm kullanıcılar listesini yenile (gizlilik değiştiği için)
+                    updateCurrentUserProfileDisplay(currentUser); 
+                    fetchUsers(); 
                 } else {
                     showToast(result.message || 'Gizlilik ayarları güncellenirken bir hata oluştu.', 'error');
                 }
@@ -2628,7 +2668,7 @@
             const toastIcon = toast.querySelector('i');
 
             toastMessage.textContent = message;
-            toast.className = 'toast-notification'; // Reset classes
+            toast.className = 'toast-notification'; 
             toast.classList.add(type);
             toast.classList.add('show');
 
@@ -2641,6 +2681,191 @@
             setTimeout(() => {
                 toast.classList.remove('show');
             }, 3000);
+        }
+
+        // Bildirim panelini yükleyen fonksiyon
+        async function loadNotificationPanel() {
+            try {
+                const response = await fetch('bildirim.html');
+                if (!response.ok) {
+                    throw new Error('Bildirim paneli HTML\'i yüklenemedi.');
+                }
+                const html = await response.text();
+                document.getElementById('notification-panel-placeholder').innerHTML = html;
+                initializeNotificationPanel(); // Bildirim panelini başlat
+            } catch (error) {
+                console.error('Bildirim paneli yüklenirken hata:', error);
+                showToast('Bildirim paneli yüklenirken hata oluştu.', 'error');
+            }
+        }
+
+        // Bildirim panelini başlatan fonksiyon
+        function initializeNotificationPanel() {
+            const notificationButton = document.getElementById('notificationButton');
+            const notificationPanel = document.getElementById('notificationPanel');
+            const closeNotificationPanelBtn = document.getElementById('closeNotificationPanel');
+            const markAllReadBtn = document.getElementById('markAllReadBtn');
+            const notificationList = document.getElementById('notificationList');
+
+            // Bildirim panelini aç/kapat
+            notificationButton.addEventListener('click', (event) => {
+                event.stopPropagation(); // Butona tıklayınca panelin kapanmasını engelle
+                notificationPanel.classList.toggle('show');
+                if (notificationPanel.classList.contains('show')) {
+                    fetchNotifications(); // Panel açıldığında bildirimleri çek
+                }
+            });
+
+            // Kapatma butonu
+            closeNotificationPanelBtn.addEventListener('click', () => {
+                notificationPanel.classList.remove('show');
+            });
+
+            // Herhangi bir yere tıklayınca paneli kapat
+            document.addEventListener('click', (event) => {
+                if (!notificationPanel.contains(event.target) && !notificationButton.contains(event.target)) {
+                    notificationPanel.classList.remove('show');
+                }
+            });
+
+            // Tümünü okundu olarak işaretle
+            markAllReadBtn.addEventListener('click', async () => {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/notifications/mark_all_read`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: currentUser.id }) // Kullanıcı ID'sini gönder
+                    });
+                    if (!response.ok) throw new Error('Tüm bildirimler okundu olarak işaretlenemedi.');
+                    showToast('Tüm bildirimler okundu olarak işaretlendi.', 'success');
+                    fetchNotifications(); // Listeyi yenile
+                    fetchUnreadNotificationCount(); // Sayacı güncelle
+                } catch (error) {
+                    console.error('Tüm bildirimleri okundu olarak işaretlerken hata:', error);
+                    showToast('Tüm bildirimler okundu olarak işaretlenirken hata oluştu.', 'error');
+                }
+            });
+
+            // Bildirimleri çeken fonksiyon
+            async function fetchNotifications() {
+                if (!currentUser || !currentUser.id) {
+                    notificationList.innerHTML = '<div class="no-notifications">Kullanıcı bilgisi bulunamadı.</div>';
+                    return;
+                }
+                notificationList.innerHTML = '<div class="no-notifications"><i class="fas fa-spinner fa-spin"></i> Bildirimler yükleniyor...</div>';
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/notifications?user_id=${currentUser.id}`);
+                    if (!response.ok) throw new Error('Bildirimler çekilemedi.');
+                    const notifications = await response.json();
+                    renderNotifications(notifications);
+                    fetchUnreadNotificationCount(); // Bildirimleri çektikten sonra sayacı güncelle
+                } catch (error) {
+                    console.error('Bildirimleri çekerken hata:', error);
+                    notificationList.innerHTML = `<div class="no-notifications" style="color: var(--danger);">Bildirimler yüklenemedi: ${error.message}</div>`;
+                    showToast('Bildirimler yüklenirken hata oluştu.', 'error');
+                }
+            }
+
+            // Bildirimleri render eden fonksiyon
+            function renderNotifications(notifications) {
+                notificationList.innerHTML = '';
+                if (notifications.length === 0) {
+                    notificationList.innerHTML = '<div class="no-notifications">Henüz bildiriminiz yok.</div>';
+                    return;
+                }
+
+                notifications.forEach(notification => {
+                    const notificationItem = document.createElement('div');
+                    notificationItem.className = `notification-item ${notification.is_read === 0 ? 'unread' : ''}`;
+                    notificationItem.dataset.notificationId = notification.id;
+
+                    const iconClass = getNotificationIcon(notification.title); // Başlığa göre ikon belirle
+
+                    notificationItem.innerHTML = `
+                        <div class="notification-item-icon">
+                            <i class="${iconClass}"></i>
+                        </div>
+                        <div class="notification-item-content">
+                            <div class="notification-item-title">${notification.title}</div>
+                            <div class="notification-item-description">${notification.message}</div>
+                            <div class="notification-item-time">${new Date(notification.created_at).toLocaleString('tr-TR')}</div>
+                        </div>
+                    `;
+                    notificationList.appendChild(notificationItem);
+
+                    // Okundu olarak işaretleme işlevi
+                    if (notification.is_read === 0) {
+                        notificationItem.addEventListener('click', async () => {
+                            try {
+                                const response = await fetch(`${API_BASE_URL}/api/notifications/${notification.id}/read`, {
+                                    method: 'PUT'
+                                });
+                                if (!response.ok) throw new Error('Bildirim okundu olarak işaretlenemedi.');
+                                notificationItem.classList.remove('unread');
+                                fetchUnreadNotificationCount(); // Sayacı güncelle
+                            } catch (error) {
+                                console.error('Bildirimi okundu olarak işaretlerken hata:', error);
+                                showToast('Bildirim okundu olarak işaretlenirken hata oluştu.', 'error');
+                            }
+                        });
+                    }
+                });
+            }
+
+            // Bildirim başlığına göre ikon belirleme
+            function getNotificationIcon(title) {
+                if (title.includes('Project Updated')) return 'fas fa-edit';
+                if (title.includes('New Project Assigned')) return 'fas fa-plus-circle';
+                if (title.includes('Project Deleted')) return 'fas fa-trash';
+                if (title.includes('Project Progress Step Added')) return 'fas fa-tasks';
+                if (title.includes('Project Progress Step Updated')) return 'fas fa-tasks';
+                if (title.includes('Task Assigned')) return 'fas fa-clipboard-check';
+                if (title.includes('Task Updated')) return 'fas fa-clipboard-check';
+                if (title.includes('Task Deleted')) return 'fas fa-clipboard-list';
+                if (title.includes('New Customer Added')) return 'fas fa-user-plus';
+                if (title.includes('Customer Updated')) return 'fas fa-user-edit';
+                if (title.includes('Customer Deleted')) return 'fas fa-user-minus';
+                return 'fas fa-info-circle'; // Varsayılan ikon
+            }
+
+            // Okunmamış bildirim sayısını çeken fonksiyon
+            async function fetchUnreadNotificationCount() {
+                if (!currentUser || !currentUser.id) {
+                    notificationButton.setAttribute('data-count', '0');
+                    notificationButton.classList.remove('has-notifications');
+                    return;
+                }
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/notifications/unread-count?user_id=${currentUser.id}`);
+                    if (!response.ok) {
+                        if (response.status === 404) {
+                            console.warn('API endpoint not found: /api/notifications/unread-count. Setting notification count to 0.');
+                            notificationButton.setAttribute('data-count', '0');
+                            notificationButton.classList.remove('has-notifications');
+                            return;
+                        }
+                        const errorText = await response.text();
+                        throw new Error(`Okunmamış bildirim sayısı çekilemedi. Sunucu yanıtı: ${response.status} - ${errorText.substring(0, 100)}...`);
+                    }
+                    const data = await response.json();
+                    const unreadCount = data.unread_count;
+
+                    notificationButton.setAttribute('data-count', unreadCount);
+                    if (unreadCount > 0) {
+                        notificationButton.classList.add('has-notifications');
+                    } else {
+                        notificationButton.classList.remove('has-notifications');
+                    }
+                } catch (error) {
+                    console.error('Okunmamış bildirim sayısı çekilemedi:', error);
+                    notificationButton.setAttribute('data-count', '!');
+                    showToast(`Bildirim sayısı yüklenirken hata oluştu: ${error.message}`, true);
+                }
+            }
+
+            fetchUnreadNotificationCount(); // Sayfa yüklendiğinde okunmamış sayısını çek
+            // Her X saniyede bir bildirim sayısını güncelle
+            setInterval(fetchUnreadNotificationCount, 30000); // Her 30 saniyede bir kontrol et
         }
     </script>
 </body>
