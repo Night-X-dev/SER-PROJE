@@ -1239,16 +1239,20 @@ import datetime # Bu satırın dosyanızın başında olduğundan emin olun
 # ... (diğer Flask rotaları ve fonksiyonlar) ...
 
 # Update Project API (PUT) - for projects table
+# app.py dosyasında, update_project fonksiyonu içinde
+
 @app.route('/api/projects/<int:project_id>', methods=['PUT'])
 def update_project(project_id):
-    """Updates an existing project's information."""
     data = request.get_json()
+    print(f"DEBUG: update_project'e gelen ham JSON veri: {data}") # Gelen veriyi yazdır
+    print(f"DEBUG: Güncellenmek istenen Project ID: {project_id}") # Project ID'yi yazdır
 
-    # Yardımcı fonksiyon: Boş stringleri None'a dönüştürür
     def clean_input_value(value):
-        return value if value else None # Boş stringi None'a çevirir
+        if value is None or value == '':
+            return None
+        return str(value)
 
-    project_name = clean_input_value(data.get('project_name')) # Boş stringleri None'a çevir
+    project_name = clean_input_value(data.get('project_name'))
     reference_no = clean_input_value(data.get('reference_no'))
     description = clean_input_value(data.get('description'))
     contract_date = clean_input_value(data.get('contract_date'))
@@ -1257,23 +1261,41 @@ def update_project(project_id):
     end_date = clean_input_value(data.get('end_date'))
     project_location = clean_input_value(data.get('project_location'))
     status = clean_input_value(data.get('status'))
-    project_manager_id_new = clean_input_value(data.get('project_manager_id'))
+
+    project_manager_id_new = data.get('project_manager_id')
+    try:
+        project_manager_id_new = int(project_manager_id_new) if project_manager_id_new else None
+    except ValueError:
+        project_manager_id_new = None
+
     user_id = clean_input_value(data.get('user_id'))
 
+    print(f"DEBUG: İşlenmiş değerler: "
+          f"name='{project_name}', ref='{reference_no}', desc='{description}', "
+          f"contract='{contract_date}', meeting='{meeting_date}', start='{start_date}', end='{end_date}', "
+          f"location='{project_location}', status='{status}', manager_id='{project_manager_id_new}', user_id='{user_id}'")
+
     if not user_id: 
+        print("HATA: Kullanıcı ID'si eksik.")
         return jsonify({'message': 'Kullanıcı ID\'si eksik.'}), 400
 
     connection = None
     try:
         connection = get_db_connection()
+        print("DEBUG: Veritabanı bağlantısı kuruldu.")
         with connection.cursor() as cursor:
-            # Mevcut proje bilgilerini al
-            cursor.execute("SELECT project_name, reference_no, description, contract_date, meeting_date, start_date, end_date, project_location, status, project_manager_id FROM projects WHERE project_id = %s", (project_id,))
+            cursor.execute("""
+                SELECT project_name, reference_no, description, contract_date, meeting_date,
+                       start_date, end_date, project_location, status, project_manager_id
+                FROM projects WHERE project_id = %s
+            """, (project_id,))
             existing_project_info = cursor.fetchone()
+            print(f"DEBUG: Mevcut proje bilgileri: {existing_project_info}")
+
             if not existing_project_info:
+                print("HATA: Proje bulunamadı.")
                 return jsonify({'message': 'Proje bulunamadı.'}), 404
-            
-            # Mevcut değerleri karşılaştırma için uygun formata getir
+
             old_project_name = existing_project_info['project_name']
             old_reference_no = existing_project_info['reference_no']
             old_description = existing_project_info['description']
@@ -1285,98 +1307,79 @@ def update_project(project_id):
             old_status = existing_project_info['status']
             old_project_manager_id = existing_project_info['project_manager_id'] 
 
+            print(f"DEBUG: Eski değerler: "
+                  f"name='{old_project_name}', ref='{old_reference_no}', desc='{old_description}', "
+                  f"contract='{old_contract_date}', meeting='{old_meeting_date}', start='{old_start_date}', end='{old_end_date}', "
+                  f"location='{old_project_location}', status='{old_status}', manager_id='{old_project_manager_id}'")
+
             updates = []
             params = []
-            
-            # Her alanı tek tek kontrol et ve değişmişse güncelleme listesine ekle
-            if project_name != old_project_name:
+
+            # Karşılaştırma mantığı
+            if clean_input_value(project_name) != clean_input_value(old_project_name):
                 updates.append("project_name = %s")
                 params.append(project_name)
-            if reference_no != old_reference_no:
+            if clean_input_value(reference_no) != clean_input_value(old_reference_no):
                 updates.append("reference_no = %s")
                 params.append(reference_no)
-            if description != old_description:
+            if clean_input_value(description) != clean_input_value(old_description):
                 updates.append("description = %s")
                 params.append(description)
-            if contract_date != old_contract_date:
+            if clean_input_value(contract_date) != clean_input_value(old_contract_date):
                 updates.append("contract_date = %s")
                 params.append(contract_date)
-            if meeting_date != old_meeting_date:
+            if clean_input_value(meeting_date) != clean_input_value(old_meeting_date):
                 updates.append("meeting_date = %s")
                 params.append(meeting_date)
-            if start_date != old_start_date:
+            if clean_input_value(start_date) != clean_input_value(old_start_date):
                 updates.append("start_date = %s")
                 params.append(start_date)
-            if end_date != old_end_date:
+            if clean_input_value(end_date) != clean_input_value(old_end_date):
                 updates.append("end_date = %s")
                 params.append(end_date)
-            if project_location != old_project_location:
+            if clean_input_value(project_location) != clean_input_value(old_project_location):
                 updates.append("project_location = %s")
                 params.append(project_location)
-            if status != old_status:
+
+            if clean_input_value(status) != clean_input_value(old_status):
                 updates.append("status = %s")
                 params.append(status)
+
             if project_manager_id_new != old_project_manager_id:
                 updates.append("project_manager_id = %s")
                 params.append(project_manager_id_new)
 
             if not updates:
+                print("DEBUG: Güncellenecek bilgi bulunamadı, 200 döndürülüyor.")
                 return jsonify({'message': 'Güncellenecek bilgi bulunamadı.'}), 200 
 
             sql = f"UPDATE projects SET {', '.join(updates)} WHERE project_id = %s"
             params.append(project_id)
+            print(f"DEBUG: Oluşturulan SQL: {sql}")
+            print(f"DEBUG: SQL parametreleri: {tuple(params)}")
 
             cursor.execute(sql, tuple(params))
             connection.commit()
+            print(f"DEBUG: Veritabanı güncellemesi tamamlandı. Etkilenen satır sayısı: {cursor.rowcount}")
 
             if cursor.rowcount == 0:
+                print("DEBUG: Proje verisi zaten güncel veya değişiklik yapılmadı, 200 döndürülüyor.")
                 return jsonify({'message': 'Proje verisi zaten güncel veya değişiklik yapılmadı.'}), 200
 
-            # --- Bildirim Mantığı Ayarlaması ---
-            manager_to_notify = old_project_manager_id # Varsayılan olarak eski yönetici
-
-            if project_manager_id_new is not None and project_manager_id_new != old_project_manager_id:
-                # Yönetici değiştiyse yeni yöneticiye bildirim gönder
-                send_notification(
-                    project_manager_id_new,
-                    "Yeni Proje Ataması",
-                    f"'{project_name}' projesine yeni yönetici olarak atandınız."
-                )
-                # Eski yöneticiye atama iptali bildirimi gönder (isteğe bağlı, ama iyi bir uygulama)
-                send_notification(
-                    old_project_manager_id,
-                    "Proje Ataması İptali",
-                    f"'{old_project_name}' projesinden atamanız kaldırıldı."
-                )
-                manager_to_notify = project_manager_id_new # Genel güncelleme bildirimi için yeni yöneticiyi ayarla
-            
-            # Güncellemeyi yapan kullanıcı için aktivite kaydı
-            log_activity(
-                user_id=user_id,
-                title='Proje Güncellendi',
-                description=f'"{old_project_name}" projesi bilgileri güncellendi.',
-                icon='fas fa-pen-to-square', # Kalem ikonu daha uygun
-                actionType='project_update' # Aktivite tipi eklendi
-            )
-            
-            # İlgili yöneticiye genel güncelleme bildirimi gönder (değiştiyse yeni, değişmediyse mevcut)
-            send_notification(
-                manager_to_notify,
-                "Proje Güncellendi",
-                f"Yönettiğiniz '{project_name}' projesi güncellendi."
-            )
+            # ... (Bildirim ve Aktivite Loglama Kısımları) ...
 
         return jsonify({'message': 'Proje başarıyla güncellendi!'}), 200
 
     except pymysql.Error as e:
-        print(f"Veritabanı proje güncelleme hatası: {e}")
+        print(f"VERİTABANI HATASI (update_project): {e}")
         return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"Genel proje güncelleme hatası: {e}")
+        print(f"GENEL HATA (update_project): {e}")
         return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
+            print("DEBUG: Veritabanı bağlantısı kapatıldı.")
 
 # ... (geri kalan app.py kodunuz) ...
 
