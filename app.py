@@ -217,11 +217,16 @@ def check_role_permission(role_name, permission_key):
 @app.route('/api/notifications/mark_all_read', methods=['PUT'])
 def mark_all_notifications_as_read():
     """Marks all notifications as read in the database."""
+    data = request.get_json()
+    user_id = data.get('user_id') # Get user_id from the request body
+    if not user_id:
+        return jsonify({'message': 'User ID missing.'}), 400
+
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
-            sql = "UPDATE notifications SET is_read = 1 WHERE is_read = 0" 
-            cursor.execute(sql)
+            sql = "UPDATE notifications SET is_read = 1 WHERE user_id = %s AND is_read = 0" 
+            cursor.execute(sql, (user_id,))
             connection.commit()
             rows_affected = cursor.rowcount 
         return jsonify({'message': f'{rows_affected} notifications marked as read.'}), 200
@@ -1237,8 +1242,9 @@ def update_project(project_id):
     start_date = data.get('start_date')
     end_date = data.get('end_date')
     project_location = data.get('project_location')
-    status = data.get('status')
-    user_id = data.get('user_id') # ID of the user performing the update
+    status = data.get('status') 
+    project_manager_id_new = data.get('projectManagerId') # Yeni proje yöneticisi ID'si
+    user_id = data.get('user_id') # Güncellemeyi yapan kullanıcının ID'si
 
     if not user_id: 
         return jsonify({'message': 'User ID missing.'}), 400
@@ -1247,17 +1253,20 @@ def update_project(project_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Get existing project information
-            cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (project_id,))
+            # Mevcut proje bilgilerini al
+            cursor.execute("SELECT project_name, project_manager_id, status FROM projects WHERE project_id = %s", (project_id,))
             existing_project_info = cursor.fetchone()
             if not existing_project_info:
                 return jsonify({'message': 'Project not found.'}), 404
+            
             old_project_name = existing_project_info['project_name']
-            project_manager_id = existing_project_info['project_manager_id']
+            old_project_manager_id = existing_project_info['project_manager_id'] 
+            old_status = existing_project_info['status']
 
             updates = []
             params = []
-            if project_name is not None:
+            
+            if project_name is not None and project_name != old_project_name:
                 updates.append("project_name = %s")
                 params.append(project_name)
             if reference_no is not None:
@@ -1281,12 +1290,19 @@ def update_project(project_id):
             if project_location is not None:
                 updates.append("project_location = %s")
                 params.append(project_location)
-            if status is not None:
+
+            # Durum güncellemesi
+            if status is not None and status != old_status:
                 updates.append("status = %s")
                 params.append(status)
+            
+            # Proje yöneticisi güncellemesi
+            if project_manager_id_new is not None and project_manager_id_new != old_project_manager_id:
+                updates.append("project_manager_id = %s")
+                params.append(project_manager_id_new)
 
             if not updates:
-                return jsonify({'message': 'No field specified for update.'}), 400
+                return jsonify({'message': 'No information to update.'}), 200 
 
             sql = f"UPDATE projects SET {', '.join(updates)} WHERE project_id = %s"
             params.append(project_id)
@@ -1297,18 +1313,37 @@ def update_project(project_id):
             if cursor.rowcount == 0:
                 return jsonify({'message': 'Project data is already up-to-date or no changes were made.'}), 200
 
+            # --- Bildirim Mantığı Ayarlaması ---
+            manager_to_notify = old_project_manager_id # Varsayılan olarak eski yönetici
+
+            if project_manager_id_new is not None and project_manager_id_new != old_project_manager_id:
+                # Yönetici değiştiyse yeni yöneticiye bildirim gönder
+                send_notification(
+                    project_manager_id_new,
+                    "Yeni Proje Ataması",
+                    f"'{project_name}' projesine yeni yönetici olarak atandınız."
+                )
+                # Eski yöneticiye atama iptali bildirimi gönder (isteğe bağlı, ama iyi bir uygulama)
+                send_notification(
+                    old_project_manager_id,
+                    "Proje Ataması İptali",
+                    f"'{old_project_name}' projesinden atamanız kaldırıldı."
+                )
+                manager_to_notify = project_manager_id_new # Genel güncelleme bildirimi için yeni yöneticiyi ayarla
+            
+            # Güncellemeyi yapan kullanıcı için aktivite kaydı
             log_activity(
                 user_id=user_id,
-                title='Project Updated',
-                description=f'Project "{old_project_name}" information updated.',
+                title='Proje Güncellendi',
+                description=f'"{old_project_name}" projesi bilgileri güncellendi.',
                 icon='fas fa-edit'
             )
             
-            # Send notification to project manager
+            # İlgili yöneticiye genel güncelleme bildirimi gönder (değiştiyse yeni, değişmediyse mevcut)
             send_notification(
-                project_manager_id,
-                "Project Updated",
-                f"The project '{project_name}' you are managing has been updated."
+                manager_to_notify,
+                "Proje Güncellendi",
+                f"Yönettiğiniz '{project_name}' projesi güncellendi."
             )
 
         return jsonify({'message': 'Project successfully updated!'}), 200
@@ -1652,39 +1687,30 @@ def get_project_progress_steps(project_id):
             connection.close()
 
 # Add New Project Progress Step API (called from projects.html)
-import datetime # Bu satırın dosyanızın başında olduğundan emin olun
-
-@app.route('/api/projects/<int:project_id_from_url>/progress', methods=['POST']) # URL'den gelen project_id'yi yakala
-def add_project_progress_step_from_modal(project_id_from_url): # Fonksiyon parametresi olarak al
+@app.route('/api/projects/<int:project_id>/progress', methods=['POST'])
+def add_project_progress_step_from_modal():
     """Adds a new progress step to a project."""
     data = request.get_json()
-    # Artık project_id'yi URL'den alıyoruz, isteğin gövdesinden değil.
-    # Bu yüzden aşağıdaki satırı kaldırabilir veya yorum satırı yapabilirsiniz:
-    # project_id = data.get('project_id') 
-    project_id = project_id_from_url # URL'den gelen project_id'yi kullan
-
+    project_id = data.get('project_id') # Get project_id from data, not URL
     step_name = data.get('step_name')
     description = data.get('description')
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
 
-    # Gerekli alanları doğrula. Artık project_id her zaman URL'den gelecek.
-    if not all([step_name, start_date_str, end_date_str]):
-        return jsonify({'message': 'Başlık, başlangıç ve bitiş tarihi gerekli.'}), 400
+    if not all([project_id, step_name, start_date_str, end_date_str]):
+        return jsonify({'message': 'Project ID, title, start and end date are required.'}), 400
 
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
             # Find the existing end date of the project (for calculating delay_days)
-            # Bu sorgu, mevcut adımların bitiş tarihlerini kontrol ederek
-            # yeni adımın gecikmesini hesaplamak için doğru bir yaklaşımdır.
             cursor.execute("""
                 SELECT end_date FROM project_progress
                 WHERE project_id = %s
                 ORDER BY end_date DESC
                 LIMIT 1
-            """, (project_id,)) # URL'den gelen project_id'yi kullan
+            """, (project_id,))
             last_step = cursor.fetchone()
             previous_end_date = last_step['end_date'] if last_step else None
 
@@ -1712,17 +1738,17 @@ def add_project_progress_step_from_modal(project_id_from_url): # Fonksiyon param
                 project_name = project_info['project_name']
                 send_notification(
                     project_manager_id,
-                    "Proje İlerleme Adımı Eklendi",
-                    f"'{step_name}' adlı yeni bir ilerleme adımı '{project_name}' projesine eklendi."
+                    "Project Progress Step Added",
+                    f"A new progress step ('{step_name}') has been added to project '{project_name}'."
                 )
 
-        return jsonify({'message': 'İlerleme adımı başarıyla eklendi!', 'progress_id': new_progress_id}), 201
+        return jsonify({'message': 'Progress step successfully added!', 'progress_id': new_progress_id}), 201
     except pymysql.Error as e:
-        print(f"İlerleme adımı eklenirken veritabanı hatası: {e}")
-        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
+        print(f"Database error adding progress step: {e}")
+        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"İlerleme adımı eklenirken genel hata: {e}")
-        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+        print(f"General error adding progress step: {e}")
+        return jsonify({'message': 'Server error, please try again later.'}), 500
     finally:
         if connection:
             connection.close()
