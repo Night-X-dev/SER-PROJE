@@ -61,7 +61,8 @@ def serve_projeler_page():
 
 @app.route('/raporlar.html')
 def serve_raporlar_page():
-    """Routes requests to /raporlar.html to the raporlar.html page."""
+    """Routes requests to /raporlar.html to the raporlar.html page.
+    Checks if the user is logged in and has permission to access reports."""
     # Check if user is logged in
     if 'user_id' not in session:
         return redirect(url_for('serve_login_page')) # Redirect to login page if not logged in
@@ -88,7 +89,8 @@ def serve_takvim_page():
 
 @app.route('/users.html')
 def serve_users_page():
-    """Routes requests to /users.html to the users.html page."""
+    """Routes requests to /users.html to the users.html page.
+    Requires user to be logged in."""
     if 'user_id' not in session:
         return redirect(url_for('serve_login_page'))
     return render_template('users.html')
@@ -112,6 +114,7 @@ def serve_bildirim_page():
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 def get_db_connection():
+    """Establishes and returns a database connection."""
     connection = None
     try:
         host = None
@@ -167,6 +170,7 @@ def get_db_connection():
 
 # Helper function: Gets user role from the database
 def get_user_role_from_db(user_id):
+    """Fetches the role of a user from the database."""
     connection = None
     try:
         connection = get_db_connection()
@@ -183,6 +187,7 @@ def get_user_role_from_db(user_id):
 
 # Helper function: Checks if a role has a specific permission
 def check_role_permission(role_name, permission_key):
+    """Checks if a given role has a specific permission."""
     # Admin role is always considered to have all permissions
     if role_name.lower() == 'admin':
         return True
@@ -285,6 +290,7 @@ def mark_notification_as_read(notification_id):
 # Fetch Notifications API (for notifications table)
 @app.route('/api/notifications', methods=['GET'])
 def get_notifications():
+    """Fetches notifications for a specific user."""
     user_id = request.args.get('user_id')
     if not user_id:
         return jsonify({'message': 'User ID missing.'}), 400
@@ -316,6 +322,7 @@ def get_notifications():
 
 @app.route('/api/notifications/<int:notification_id>', methods=['DELETE'])
 def delete_notification(notification_id):
+    """Deletes a specific notification for the logged-in user."""
     if 'user_id' not in session:
         return jsonify({'message': 'Login required.'}), 401
 
@@ -339,6 +346,7 @@ def delete_notification(notification_id):
 
 @app.route('/api/notifications/all', methods=['DELETE'])
 def delete_all_notifications():
+    """Deletes all notifications for the logged-in user."""
     if 'user_id' not in session:
         return jsonify({'message': 'Login required.'}), 401
 
@@ -360,6 +368,7 @@ def delete_all_notifications():
 # Add New Notification API (for notifications table)
 @app.route('/api/notifications', methods=['POST'])
 def add_notification():
+    """Adds a new notification to the database."""
     data = request.get_json()
     user_id = data.get('user_id')
     title = data.get('title')
@@ -394,6 +403,7 @@ def add_notification():
 # Add New Activity API (for activities table)
 @app.route('/api/activities', methods=['POST'])
 def add_activity():
+    """Adds a new activity to the database."""
     data = request.get_json()
     user_id = data.get('user_id')
     title = data.get('title')
@@ -426,6 +436,7 @@ def add_activity():
 
 @app.route('/api/update_user_profile', methods=['POST'])
 def update_user_profile():
+    """Updates a user's profile information, including role, profile picture, and visibility settings."""
     data = request.get_json()
     user_id = data.get('userId')
     current_password = data.get('currentPassword')
@@ -433,9 +444,10 @@ def update_user_profile():
     fullname = data.get('fullname')
     email = data.get('email')
     phone = data.get('phone')
-    profile_picture = data.get('profile_picture') # New field
-    hide_email = data.get('hide_email') # New field
-    hide_phone = data.get('hide_phone') # New field
+    profile_picture = data.get('profile_picture') 
+    hide_email = data.get('hide_email') 
+    hide_phone = data.get('hide_phone') 
+    role = data.get('role') # Added role for update
 
     if not user_id:
         return jsonify({'message': 'User ID missing.'}), 400
@@ -444,7 +456,7 @@ def update_user_profile():
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            cursor.execute("SELECT fullname, email, phone, password, profile_picture, hide_email, hide_phone FROM users WHERE id = %s", (user_id,))
+            cursor.execute("SELECT fullname, email, phone, password, role, profile_picture, hide_email, hide_phone FROM users WHERE id = %s", (user_id,))
             user = cursor.fetchone()
 
             if not user:
@@ -487,6 +499,12 @@ def update_user_profile():
                 params.append(hide_phone)
                 message_parts.append("Phone Visibility")
 
+            # Update role if provided and different
+            if role is not None and role != user['role']:
+                updates.append("role = %s")
+                params.append(role)
+                message_parts.append("Role")
+
             if current_password or new_password: 
                 if not current_password or not new_password:
                     return jsonify({'message': 'Both current and new password fields must be filled to change password.'}), 400
@@ -526,6 +544,7 @@ def update_user_profile():
 
 @app.route('/api/pending-users', methods=['GET'])
 def get_pending_users():
+    """Fetches users with 'onay' (approval) status as 0."""
     connection = None
     try:
         connection = get_db_connection()
@@ -546,6 +565,7 @@ def get_pending_users():
 
 @app.route('/api/users/approve/<int:user_id>', methods=['PATCH'])
 def approve_user(user_id):
+    """Approves a user by setting their 'onay' status to 1."""
     connection = None
     try:
         connection = get_db_connection()
@@ -576,6 +596,7 @@ def approve_user(user_id):
 
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
+    """Deletes a user and reassigns or deletes their associated projects and tasks."""
     connection = None
     try:
         connection = get_db_connection()
@@ -649,6 +670,7 @@ except Exception as e:
 
 @app.route('/api/role-permissions', methods=['GET'])
 def get_permissions_by_role():
+    """Fetches permissions for a given role."""
     role_name = request.args.get('role')
     if not role_name:
         return jsonify({'message': 'Role name required'}), 400
@@ -679,6 +701,7 @@ def get_permissions_by_role():
 
 @app.route('/api/role-permissions', methods=['POST'])
 def update_role_permissions():
+    """Updates permissions for a specific role."""
     data = request.json
     role = data.get('role')
     if not role:
@@ -725,16 +748,16 @@ def update_role_permissions():
 # User Registration API
 @app.route('/api/register', methods=['POST'])
 def register_user():
+    """Registers a new user."""
     data = request.get_json()
     fullname = data.get('fullname')
     email = data.get('email')
-    phone = data.get('phone', '') # Default to empty string
+    phone = data.get('phone', '') 
     password = data.get('password')
-    role = data.get('role')
-    profile_picture = data.get('profile_picture') # New field, can be None
-    role = data.get('role', 'Çalışan') # Default position
-    hide_email = data.get('hide_email', 0) # Default to 0 (not hidden)
-    hide_phone = data.get('hide_phone', 0) # Default to 0 (not hidden)
+    role = data.get('role', 'Çalışan') # Default position if not provided
+    profile_picture = data.get('profile_picture') 
+    hide_email = data.get('hide_email', 0) 
+    hide_phone = data.get('hide_phone', 0) 
 
     if not all([fullname, email, password, role]):
         return jsonify({'message': 'Please fill in all required fields.'}), 400
@@ -750,10 +773,10 @@ def register_user():
 
             hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             sql = """
-            INSERT INTO users (fullname, email, phone, password, role, profile_picture, role, hide_email, hide_phone)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO users (fullname, email, phone, password, role, profile_picture, hide_email, hide_phone)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """
-            cursor.execute(sql, (fullname, email, phone, hashed_password, role, profile_picture, role, hide_email, hide_phone))
+            cursor.execute(sql, (fullname, email, phone, hashed_password, role, profile_picture, hide_email, hide_phone))
             connection.commit()
         return jsonify({'message': 'Registration successful!'}), 201
     except pymysql.Error as e:
@@ -771,7 +794,7 @@ def register_user():
 
 @app.route('/api/login', methods=['POST'])
 def login_user():
-    
+    """Authenticates a user and creates a session."""
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
@@ -784,7 +807,7 @@ def login_user():
         connection = get_db_connection()
         with connection.cursor() as cursor:
             # Fetch all user details including new fields
-            cursor.execute("SELECT id, fullname, email, phone, password, role, onay, profile_picture, role, hide_email, hide_phone, created_at FROM users WHERE email = %s", (email,))
+            cursor.execute("SELECT id, fullname, email, phone, password, role, onay, profile_picture, hide_email, hide_phone, created_at FROM users WHERE email = %s", (email,))
             
             user = cursor.fetchone()
 
@@ -828,6 +851,7 @@ def login_user():
 # Add New Customer API
 @app.route('/api/customers', methods=['POST'])
 def add_customer():
+    """Adds a new customer to the database."""
     data = request.get_json()
     customer_name = data.get('companyName')
     status = data.get('status', 'active')
@@ -892,6 +916,7 @@ def add_customer():
 # List All Customers API
 @app.route('/api/customers', methods=['GET'])
 def get_customers():
+    """Fetches a list of all customers."""
     connection = None
     try:
         connection = get_db_connection()
@@ -920,6 +945,7 @@ def get_customers():
 # API to fetch details of a single customer (added for Modal)
 @app.route('/api/customers/<int:customer_id>', methods=['GET'])
 def get_customer_details(customer_id):
+    """Fetches details of a single customer."""
     connection = None
     try:
         connection = get_db_connection()
@@ -950,6 +976,7 @@ def get_customer_details(customer_id):
 # Update Customer API (PUT)
 @app.route('/api/customers/<int:customer_id>', methods=['PUT'])
 def update_customer(customer_id):
+    """Updates an existing customer's information."""
     data = request.get_json()
     customer_name = data.get('companyName')
     status = data.get('status')
@@ -1055,6 +1082,7 @@ def update_customer(customer_id):
 
 @app.route('/api/customers/<int:customer_id>', methods=['DELETE'])
 def delete_customer(customer_id):
+    """Deletes a customer from the database."""
     user_id = request.args.get('user_id') 
     if not user_id:
         return jsonify({'message': 'User ID missing.'}), 400
@@ -1102,10 +1130,12 @@ def delete_customer(customer_id):
 # List All Projects API
 @app.route('/api/projects', methods=['GET'])
 def get_projects():
+    """Fetches a list of all projects with their associated customer and manager names."""
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # First, update project statuses based on dates
             cursor.execute("""
                 UPDATE projects
                 SET status = CASE
@@ -1146,11 +1176,13 @@ def get_projects():
                 if new_status != original_status:
                     projects_to_update_with_step_delay_status.append({'project_id': project['project_id'], 'status': new_status})
 
+                # Convert datetime.date objects to ISO format strings for JSON serialization
                 project['contract_date'] = project['contract_date'].isoformat() if isinstance(project['contract_date'], datetime.date) else None
                 project['meeting_date'] = project['meeting_date'].isoformat() if isinstance(project['meeting_date'], datetime.date) else None
                 project['start_date'] = project['start_date'].isoformat() if isinstance(project['start_date'], datetime.date) else None
                 project['end_date'] = project['end_date'].isoformat() if isinstance(project['end_date'], datetime.date) else None
 
+            # Apply status updates if any projects need it
             if projects_to_update_with_step_delay_status:
                 update_sql = "UPDATE projects SET status = %s WHERE project_id = %s"
                 for proj_info in projects_to_update_with_step_delay_status:
@@ -1171,6 +1203,7 @@ def get_projects():
 # API to fetch details of a single project (for Modal)
 @app.route('/api/projects/<int:project_id>', methods=['GET'])
 def get_project_details(project_id):
+    """Fetches details of a single project."""
     connection = None
     try:
         connection = get_db_connection()
@@ -1190,6 +1223,7 @@ def get_project_details(project_id):
             if not project:
                 return jsonify({'message': 'Project not found.'}), 404
 
+            # Convert datetime.date objects to ISO format strings for JSON serialization
             project['contract_date'] = project['contract_date'].isoformat() if isinstance(project['contract_date'], datetime.date) else None
             project['meeting_date'] = project['meeting_date'].isoformat() if isinstance(project['meeting_date'], datetime.date) else None
             project['start_date'] = project['start_date'].isoformat() if isinstance(project['start_date'], datetime.date) else None
@@ -1208,6 +1242,7 @@ def get_project_details(project_id):
 
 # Helper function to send notifications
 def send_notification(user_id, title, message):
+    """Sends a notification to a specific user."""
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
@@ -1226,6 +1261,7 @@ def send_notification(user_id, title, message):
 # Update Project API (PUT) - for projects table
 @app.route('/api/projects/<int:project_id>', methods=['PUT'])
 def update_project(project_id):
+    """Updates an existing project's information."""
     data = request.get_json()
     project_name = data.get('project_name')
     reference_no = data.get('reference_no')
@@ -1324,6 +1360,7 @@ def update_project(project_id):
 # Delete Project API (DELETE)
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
 def delete_project_api(project_id):
+    """Deletes a project from the database."""
     user_id = request.args.get('user_id') 
     if not user_id:
         return jsonify({'message': 'User ID missing.'}), 400
@@ -1383,6 +1420,7 @@ def delete_project_api(project_id):
 # List Project Managers API
 @app.route('/api/project_managers', methods=['GET'])
 def get_project_managers():
+    """Fetches a list of users who can be assigned as project managers."""
     connection = None
     try:
         connection = get_db_connection()
@@ -1403,6 +1441,7 @@ def get_project_managers():
 # API endpoint to provide location data
 @app.route('/api/locations/turkey', methods=['GET'])
 def get_turkey_locations():
+    """Returns Turkey's location data (provinces and districts)."""
     if not TURKEY_LOCATIONS:
         return jsonify({'message': 'Location data could not be loaded or is empty.'}), 500
     return jsonify(TURKEY_LOCATIONS), 200
@@ -1410,6 +1449,7 @@ def get_turkey_locations():
 # Dashboard Statistics API
 @app.route('/api/dashboard/stats', methods=['GET'])
 def get_dashboard_stats():
+    """Fetches various statistics for the dashboard."""
     connection = None
     try:
         connection = get_db_connection()
@@ -1447,6 +1487,7 @@ def get_dashboard_stats():
 # Dashboard Recent Activity API (fetches from activities table)
 @app.route('/api/recent_activities', methods=['GET'])
 def get_recent_activities():
+    """Fetches the most recent activities from the activities table."""
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
@@ -1481,6 +1522,7 @@ def get_recent_activities():
 
 # Helper function to log a new activity
 def log_activity(user_id, title, description, icon, is_read=0):
+    """Logs a new activity in the activities table."""
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
@@ -1491,9 +1533,10 @@ def log_activity(user_id, title, description, icon, is_read=0):
                 if user:
                     user_fullname = user['fullname']
 
+            # Remove potential (ID: X) from description if present
             cleaned_description = re.sub(r' \(ID: \d+\)', '', description)
 
-            full_description = f"{user_fullname} by: {cleaned_description}"
+            full_description = f"{user_fullname} tarafından: {cleaned_description}" # Turkish translation for "by"
 
             sql = """
             INSERT INTO activities (user_id, title, description, icon, created_at, is_read)
@@ -1513,6 +1556,7 @@ def log_activity(user_id, title, description, icon, is_read=0):
 # Add New Project API (uncommented and completed from previous version)
 @app.route('/api/projects', methods=['POST'])
 def add_project():
+    """Adds a new project to the database."""
     data = request.json
     project_name = data.get('projectName') # Comes as 'projectName' from frontend
     customer_id = data.get('customerId')
@@ -1574,6 +1618,7 @@ def add_project():
 # API to log PDF Report Creation Activity (to be called from frontend)
 @app.route('/api/log_pdf_report', methods=['POST'])
 def log_pdf_report_api():
+    """Logs the creation of a PDF report as an activity."""
     data = request.get_json()
     user_id = data.get('user_id')
     report_type = data.get('report_type', 'General Report') 
@@ -1602,6 +1647,7 @@ def log_pdf_report_api():
 # API to fetch Project Progress Steps
 @app.route('/api/projects/<int:project_id>/progress', methods=['GET'])
 def get_project_progress_steps(project_id):
+    """Fetches all progress steps for a given project."""
     connection = None
     try:
         connection = get_db_connection()
@@ -1642,6 +1688,7 @@ def get_project_progress_steps(project_id):
 # Add New Project Progress Step API (called from projects.html)
 @app.route('/api/projects/<int:project_id>/progress', methods=['POST'])
 def add_project_progress_step_from_modal():
+    """Adds a new progress step to a project."""
     data = request.get_json()
     project_id = data.get('project_id') # Get project_id from data, not URL
     step_name = data.get('step_name')
@@ -1708,6 +1755,7 @@ def add_project_progress_step_from_modal():
 # Update Project Progress Step API
 @app.route('/api/progress/<int:progress_id>', methods=['PUT'])
 def update_project_progress_step(progress_id):
+    """Updates an existing project progress step."""
     data = request.get_json()
     step_name = data.get('step_name')
     description = data.get('description')
@@ -1784,6 +1832,7 @@ def update_project_progress_step(progress_id):
 # Delete Project Progress Step API
 @app.route('/api/progress/<int:progress_id>', methods=['DELETE'])
 def delete_project_progress_step(progress_id):
+    """Deletes a project progress step."""
     connection = None
     try:
         connection = get_db_connection()
@@ -1829,6 +1878,7 @@ def delete_project_progress_step(progress_id):
 
 @app.route('/api/user-info', methods=['GET'])
 def get_user_info():
+    """Fetches detailed information for a single user."""
     user_id = request.args.get('user_id')
     if not user_id:
         return jsonify({'message': 'User ID missing'}), 400
@@ -1838,7 +1888,7 @@ def get_user_info():
         connection = get_db_connection()
         with connection.cursor() as cursor:
             # Fetch all user fields including new ones
-            cursor.execute("SELECT id, fullname, email, phone, role, profile_picture, role, hide_email, hide_phone, created_at FROM users WHERE id = %s", (user_id,))
+            cursor.execute("SELECT id, fullname, email, phone, role, profile_picture, hide_email, hide_phone, created_at FROM users WHERE id = %s", (user_id,))
             user = cursor.fetchone()
             if not user:
                 return jsonify({'message': 'User not found'}), 404
@@ -1857,12 +1907,13 @@ def get_user_info():
 
 @app.route('/api/users', methods=['GET'])
 def get_all_users():
+    """Fetches a list of all users."""
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
             # Fetch all user fields including new ones
-            cursor.execute("SELECT id, fullname, email, phone, role, profile_picture, role, hide_email, hide_phone, created_at FROM users")
+            cursor.execute("SELECT id, fullname, email, phone, role, profile_picture, hide_email, hide_phone, created_at FROM users")
             users = cursor.fetchall()
             
             # Convert datetime objects to string for JSON serialization
@@ -1883,16 +1934,16 @@ def get_all_users():
 
 @app.route('/api/users', methods=['POST'])
 def add_user():
+    """Adds a new user to the database (typically by an admin)."""
     data = request.get_json()
     fullname = data.get('fullname')
     email = data.get('email')
     phone = data.get('phone', '')
     password = data.get('password')
-    role = data.get('role')
-    profile_picture = data.get('profile_picture') # New field, can be None
-    role = data.get('role', 'Çalışan') # Default position
-    hide_email = data.get('hide_email', 0) # Default to 0 (not hidden)
-    hide_phone = data.get('hide_phone', 0) # Default to 0 (not hidden)
+    role = data.get('role', 'Çalışan') # Default position if not provided
+    profile_picture = data.get('profile_picture') 
+    hide_email = data.get('hide_email', 0) 
+    hide_phone = data.get('hide_phone', 0) 
 
 
     if not fullname or not email or not password or not role:
@@ -1902,16 +1953,15 @@ def add_user():
     created_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     try:
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        hashed_password = hashed_password.decode('utf-8') 
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8') 
 
         connection = get_db_connection()
         with connection.cursor() as cursor:
             sql = """
-            INSERT INTO users (fullname, email, phone, password, role, created_at, onay, profile_picture, role, hide_email, hide_phone)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO users (fullname, email, phone, password, role, created_at, onay, profile_picture, hide_email, hide_phone)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
-            cursor.execute(sql, (fullname, email, phone, hashed_password, role, created_at, onay, profile_picture, role, hide_email, hide_phone))
+            cursor.execute(sql, (fullname, email, phone, hashed_password, role, created_at, onay, profile_picture, hide_email, hide_phone))
             connection.commit()
         return jsonify({'message': 'User successfully added!'}), 201
     except pymysql.Error as e:
@@ -1928,10 +1978,12 @@ def add_user():
 
 @app.route('/ayarlar')
 def ayarlar_page():
+    """Renders the settings page."""
     return render_template('ayarlar.html')
 
 @app.route('/api/roles', methods=['GET'])
 def get_distinct_roles():
+    """Fetches distinct roles from the users table (excluding 'Admin')."""
     connection = None
     try:
         connection = get_db_connection()
@@ -1950,11 +2002,11 @@ def get_distinct_roles():
     finally:
         if connection:
             connection.close()
-from flask import request, jsonify
 
 
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
+    """Fetches tasks, optionally filtered by assigned user."""
     assigned_user_id = request.args.get('assigned_user_id')
     connection = None
     try:
@@ -1988,6 +2040,7 @@ def get_tasks():
 
 @app.route('/api/tasks', methods=['POST'])
 def add_task():
+    """Adds a new task to the database."""
     data = request.get_json()
     title = data.get('title')
     description = data.get('description')
@@ -2028,6 +2081,7 @@ def add_task():
 
 @app.route('/api/tasks/<int:task_id>', methods=['PUT'])
 def update_task(task_id):
+    """Updates an existing task."""
     data = request.get_json()
     title = data.get('title')
     description = data.get('description')
@@ -2080,6 +2134,7 @@ def update_task(task_id):
 
 @app.route('/api/tasks/<int:task_id>', methods=['DELETE'])
 def delete_task(task_id):
+    """Deletes a task from the database."""
     connection = None
     try:
         connection = get_db_connection()
@@ -2108,6 +2163,7 @@ def delete_task(task_id):
 
 @app.route('/api/manager-stats')
 def manager_stats():
+    """Fetches statistics related to project managers' performance."""
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
@@ -2158,6 +2214,7 @@ def manager_stats():
 
 @app.route('/api/worker-performance')
 def worker_performance():
+    """Fetches performance metrics for workers (project managers)."""
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
