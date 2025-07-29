@@ -251,7 +251,8 @@
             flex-shrink: 0;
         }
 
-        .user-avatar {
+        /* user-avatar.js tarafından yönetilecek */
+        /* .user-avatar {
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -261,7 +262,7 @@
             justify-content: center;
             color: var(--white);
             font-weight: 600;
-        }
+        } */
 
         .user-info {
             display: flex;
@@ -879,7 +880,8 @@
                     <i class="fas fa-bell"></i>
                 </div>
                 <div class="user-profile">
-                    <div class="user-avatar" id="userAvatar">MÖ</div>
+                    <!-- user-avatar.js tarafından yönetilecek avatar kapsayıcısı -->
+                    <div id="userAvatarContainer" class="avatar-container"></div>
                     <div class="user-info">
                         <div class="user-name" id="userName">Mustafa Öztürk</div>
                         <div class="user-role" id="userRole">Veritabanı Yöneticisi</div>
@@ -1151,7 +1153,12 @@
                 currentUser = JSON.parse(storedUser);
                 document.getElementById('userName').textContent = currentUser.fullname;
                 document.getElementById('userRole').textContent = currentUser.role;
-                document.getElementById('userAvatar').textContent = getInitials(currentUser.fullname);
+                // user-avatar.js'e devredildiği için bu satır kaldırıldı
+                // document.getElementById('userAvatar').textContent = getInitials(currentUser.fullname); 
+                
+                // user-avatar.js'teki updateUserAvatar fonksiyonunu çağır
+                updateUserAvatar(currentUser);
+
             } catch (e) {
                 console.error("Kullanıcı verisi bozuk:", e);
                 localStorage.removeItem('currentUser');
@@ -1212,7 +1219,7 @@
             }
         }
 
-        // İsim baş harflerini alma
+        // İsim baş harflerini alma (bu fonksiyon artık user-avatar.js içinde yönetiliyor, burada kalması sorun değil ama kullanılmayacak)
         function getInitials(fullname) {
             if (!fullname) return '';
             const parts = fullname.split(' ');
@@ -1576,5 +1583,7 @@
         }
     </script>
     <script src="static/bildirim.js"></script>
+    <!-- user-avatar.js dosyasını buraya dahil ediyoruz -->
+    <script src="static/user-avatar.js"></script>
 </body>
 </html>
