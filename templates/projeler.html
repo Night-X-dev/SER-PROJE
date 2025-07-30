@@ -1713,43 +1713,45 @@
 
         updateRowsPerPage(); // Sayfa yüklendiğinde başlangıç değeri ayarla
       });
-       function loadUserInfo() {
-            const storedUser = localStorage.getItem('currentUser');
-            if (!storedUser) {
-                console.log("LocalStorage'da kullanıcı verisi bulunamadı. Giriş sayfasına yönlendiriliyor...");
-                showToast("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", true);
-                setTimeout(() => {
-                    window.location.href = 'login.html';
-                }, 2000);
-                return;
-            }
-
-            try {
-                currentUser = JSON.parse(storedUser); 
-            } catch (e) {
-                console.error("Kayıtlı kullanıcı verisi bozuk:", e);
-                localStorage.removeItem('currentUser');
-                showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", true);
-                setTimeout(() => {
-                    window.location.href = 'login.html';
-                }, 2000);
-                return;
-            }
-
-            const userNameElement = document.getElementById('userName');
-            const userRoleElement = document.getElementById('userRole');
-
-            if (userNameElement) {
-                userNameElement.textContent = currentUser.fullname || currentUser.username || 'Kullanıcı';
-            }
-            if (userRoleElement) {
-                userRoleElement.textContent = currentUser.role || 'Rol Yok';
-            }
-
-            // user-avatar.js'teki updateUserAvatar fonksiyonunu çağır
-            updateUserAvatar(currentUser); 
+  function loadUserInfo() {
+        const storedUser = localStorage.getItem('currentUser');
+        if (!storedUser) {
+            console.log("LocalStorage'da kullanıcı verisi bulunamadı. Giriş sayfasına yönlendiriliyor...");
+            showToast("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", true);
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 2000);
+            return; // Buradan sonra işlem yapma, direkt yönlendir
         }
-      // --- Yardımcı Fonksiyonlar ---
+
+        try {
+            currentUser = JSON.parse(storedUser); 
+        } catch (e) {
+            console.error("Kayıtlı kullanıcı verisi bozuk:", e);
+            localStorage.removeItem('currentUser'); // Bozuk veriyi temizle
+            showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", true);
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 2000);
+            return; // Buradan sonra işlem yapma, direkt yönlendir
+        }
+
+        // Kullanıcı arayüzünü güncelleme fonksiyonu (Topbar için)
+        // Bu kısım user-avatar.js'e taşındığından burada sadeleştirilebilir
+        const userNameElement = document.getElementById('userName');
+        const userRoleElement = document.getElementById('userRole');
+
+        if (userNameElement) {
+            userNameElement.textContent = currentUser.fullname || currentUser.username || 'Kullanıcı';
+        }
+        if (userRoleElement) {
+            userRoleElement.textContent = currentUser.role || 'Rol Yok';
+        }
+        // user-avatar.js'teki updateUserAvatar fonksiyonunu çağır (bu scriptten sonra yüklenecek)
+        // Eğer updateUserAvatar burada hata veriyorsa, user-avatar.js'in yüklenmesini beklemeniz gerekebilir.
+        // En iyisi, DOMContentLoaded içinde çağırmak.
+        // updateUserAvatar(currentUser); // Bu satırı şimdilik kaldırın, DOMContentLoaded içinde çağıracağız.
+    }      // --- Yardımcı Fonksiyonlar ---
       function showToast(message, isError = false) {
         const toast = document.getElementById("toast");
         const toastMessage = document.getElementById("toastMessage");
@@ -3064,11 +3066,11 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
           }
       });
 
+       loadUserInfo();
 
       // Event listeners for page load and button clicks
       document.addEventListener("DOMContentLoaded", () => {
         fetchProjects(); // Sayfa yüklendiğinde projeleri çek
-       loadUserInfo();
         const userProfileLink = document.getElementById('userProfileLink'); // Yeni eklendi
           if (userProfileLink) {
             userProfileLink.addEventListener('click', () => {
