@@ -2219,8 +2219,12 @@
                                     return;
                                 }
 
-                                const response = await fetch(`${API_BASE_URL}/api/customers/${customerId}?user_id=${userId}`, {
-                                    method: 'DELETE'
+                                const response = await fetch(`${API_BASE_URL}/api/customers/${customerId}`, { // user_id'yi URL'den kaldırdık
+                                    method: 'DELETE',
+                                    headers: {
+                                        'Content-Type': 'application/json' // Content-Type başlığını ekle
+                                    },
+                                    body: JSON.stringify({ user_id: userId }) // user_id'yi JSON gövdesine ekle
                                 });
                                 const result = await response.json();
                                 if (response.ok) {
@@ -2405,7 +2409,7 @@
             searchInput.addEventListener('input', applyFiltersAndRenderTable);
             filterCustomerNameInput.addEventListener('input', applyFiltersAndRenderTable);
             filterContactPersonInput.addEventListener('input', applyFiltersAndRenderTable);
-            filterPhoneInput.addEventListener('input', applyFiltersAndRenderTable);
+            filterPhoneInput.addEventListener('input', applyFiltersAndHenderTable);
             filterStatusSelect.addEventListener('change', applyFiltersAndRenderTable);
             resetFiltersBtn.addEventListener('click', () => {
                 filterCustomerNameInput.value = '';
