@@ -14,107 +14,107 @@ import re
 load_dotenv()
 
 app = Flask(__name__)
-# Session management secret key
-# THIS MUST BE REPLACED WITH A SECURE AND UNPREDICTABLE STRING!
+# Oturum yönetimi gizli anahtarı
+# BU, GÜVENLİ VE TAHMİN EDİLEMEYEN BİR DİZE İLE DEĞİŞTİRİLMELİDİR!
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex") 
 
 @app.route('/')
-@app.route('/login.html') # Both URLs will route to the same function
+@app.route('/login.html') # Her iki URL de aynı fonksiyona yönlendirilecektir
 def serve_login_page():
-    """Routes requests to the root URL (/) and /login.html to the login.html page."""
+    """Kök URL (/) ve /login.html isteklerini login.html sayfasına yönlendirir."""
     return render_template('login.html')
 
 @app.route('/index.html')
 def serve_index_page():
-    """Routes requests to /index.html to the index.html page."""
+    """/index.html isteklerini index.html sayfasına yönlendirir."""
     return render_template('index.html')
 
 @app.route('/ayarlar.html')
 def serve_ayarlar_page():
-    """Routes requests to /ayarlar.html to the ayarlar.html page.
-    Accessible to all logged-in users, but content will be hidden on the frontend based on role."""
+    """/ayarlar.html isteklerini ayarlar.html sayfasına yönlendirir.
+    Tüm giriş yapmış kullanıcılar erişebilir, ancak içerik role göre ön uçta gizlenecektir."""
     if 'user_id' not in session:
         return redirect(url_for('serve_login_page'))
-    # Allow all logged-in users to access the settings page
+    # Tüm giriş yapmış kullanıcıların ayarlar sayfasına erişmesine izin ver
     return render_template('ayarlar.html')
 
 
 @app.route('/kayitonay.html')
 def serve_kayitonay_page():
-    """Routes requests to /kayitonay.html to the kayitonay.html page."""
+    """/kayitonay.html isteklerini kayitonay.html sayfasına yönlendirir."""
     return render_template('kayitonay.html')
 
 @app.route('/musteriler.html')
 def serve_musteriler_page():
-    """Routes requests to /musteriler.html to the musteriler.html page."""
+    """/musteriler.html isteklerini musteriler.html sayfasına yönlendirir."""
     return render_template('musteriler.html')
 
 @app.route('/proje_ekle.html')
 def serve_proje_ekle_page():
-    """Routes requests to /proje_ekle.html to the proje_ekle.html page."""
+    """/proje_ekle.html isteklerini proje_ekle.html sayfasına yönlendirir."""
     return render_template('proje_ekle.html')
 
 @app.route('/projeler.html')
 def serve_projeler_page():
-    """Routes requests to /projeler.html to the projeler.html page."""
+    """/projeler.html isteklerini projeler.html sayfasına yönlendirir."""
     return render_template('projeler.html')
 
 @app.route('/raporlar.html')
 def serve_raporlar_page():
-    """Routes requests to /raporlar.html to the raporlar.html page.
-    Checks if the user is logged in and has permission to access reports."""
-    # Check if user is logged in
+    """/raporlar.html isteklerini raporlar.html sayfasına yönlendirir.
+    Kullanıcının giriş yapıp raporlara erişim izni olup olmadığını kontrol eder."""
+    # Kullanıcının giriş yapıp yapmadığını kontrol et
     if 'user_id' not in session:
-        return redirect(url_for('serve_login_page')) # Redirect to login page if not logged in
+        return redirect(url_for('serve_login_page')) # Giriş yapılmadıysa giriş sayfasına yönlendir
 
     user_id = session['user_id']
-    user_role = get_user_role_from_db(user_id) # Get user role from the database
+    user_role = get_user_role_from_db(user_id) # Veritabanından kullanıcı rolünü al
 
     if user_role:
-        # Check if the role has report permission
+        # Rolün rapor izni olup olmadığını kontrol et
         has_permission = check_role_permission(user_role, 'raporlar')
         if has_permission:
             return render_template('raporlar.html')
         else:
-            # Redirect to home page if no permission
+            # İzin yoksa ana sayfaya yönlendir
             return redirect(url_for('serve_index_page')) 
     else:
-        # Redirect to login page if user role not found
+        # Kullanıcı rolü bulunamazsa giriş sayfasına yönlendir
         return redirect(url_for('serve_login_page'))
 
 @app.route('/takvim.html')
 def serve_takvim_page():
-    """Routes requests to /takvim.html to the takvim.html page."""
+    """/takvim.html isteklerini takvim.html sayfasına yönlendirir."""
     return render_template('takvim.html')
 
 @app.route('/users.html')
 def serve_users_page():
-    """Routes requests to /users.html to the users.html page.
-    Requires user to be logged in."""
+    """/users.html isteklerini users.html sayfasına yönlendirir.
+    Kullanıcının giriş yapmış olmasını gerektirir."""
     if 'user_id' not in session:
         return redirect(url_for('serve_login_page'))
     return render_template('users.html')
 
 @app.route('/waiting.html')
 def serve_waiting_page():
-    """Routes requests to /waiting.html to the waiting.html page."""
+    """/waiting.html isteklerini waiting.html sayfasına yönlendirir."""
     return render_template('waiting.html')
 
 @app.route('/yeni_musteri.html')
 def serve_yeni_musteri_page():
-    """Routes requests to /yeni_musteri.html to the yeni_musteri.html page."""
+    """/yeni_musteri.html isteklerini yeni_musteri.html sayfasına yönlendirir."""
     return render_template('yeni_musteri.html')
 
 @app.route('/bildirim.html')
 def serve_bildirim_page():
-    """Routes requests to /bildirim.html to the bildirim.html page."""
+    """/bildirim.html isteklerini bildirim.html sayfasına yönlendirir."""
     return render_template('bildirim.html')
 
-# CORS (Cross-Origin Resource Sharing) settings
+# CORS (Cross-Origin Resource Sharing) ayarları
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 def get_db_connection():
-    """Establishes and returns a database connection."""
+    """Veritabanı bağlantısı kurar ve döndürür."""
     connection = None
     try:
         host = None
@@ -124,7 +124,7 @@ def get_db_connection():
         database = None
 
         public_url = os.getenv("MYSQL_PUBLIC_URL")
-        print(f"DEBUG: MYSQL_PUBLIC_URL from env: '{public_url}'") 
+        print(f"DEBUG: Ortam değişkeninden MYSQL_PUBLIC_URL: '{public_url}'") 
 
         if public_url:
             try:
@@ -134,23 +134,23 @@ def get_db_connection():
                 user = parsed_url.username
                 password = parsed_url.password
                 database = parsed_url.path.lstrip('/')
-                print(f"DEBUG: Using parsed public URL. Host={host}, Port={port}, User={user}, DB={database}")
+                print(f"DEBUG: Ayrıştırılmış genel URL kullanılıyor. Host={host}, Port={port}, User={user}, DB={database}")
             except Exception as url_parse_e:
-                print(f"ERROR: Failed to parse MYSQL_PUBLIC_URL: {url_parse_e}. Falling back to individual env vars.")
+                print(f"HATA: MYSQL_PUBLIC_URL ayrıştırılamadı: {url_parse_e}. Bireysel ortam değişkenlerine geri dönülüyor.")
                 host = os.getenv("MYSQL_HOST") or "localhost"
                 port = int(os.getenv("MYSQL_PORT") or 3306)
                 user = os.getenv("MYSQL_USER") or "root"
                 password = os.getenv("MYSQL_PASSWORD") or ""
                 database = os.getenv("MYSQL_DATABASE") or "ser"
-                print(f"DEBUG: Using individual env vars fallback: Host={host}, Port={port}, User={user}, DB={database}")
+                print(f"DEBUG: Bireysel ortam değişkenleri geri dönüşü kullanılıyor: Host={host}, Port={port}, User={user}, DB={database}")
         else:
-            print("DEBUG: MYSQL_PUBLIC_URL not found or empty. Using individual env vars.")
+            print("DEBUG: MYSQL_PUBLIC_URL bulunamadı veya boş. Bireysel ortam değişkenleri kullanılıyor.")
             host = os.getenv("MYSQL_HOST") or "localhost"
             port = int(os.getenv("MYSQL_PORT") or 3306)
             user = os.getenv("MYSQL_USER") or "root"
             password = os.getenv("MYSQL_PASSWORD") or ""
             database = os.getenv("MYSQL_DATABASE") or "ser"
-            print(f"DEBUG: Using individual env vars: Host={host}, Port={port}, User={user}, DB={database}")
+            print(f"DEBUG: Bireysel ortam değişkenleri kullanılıyor: Host={host}, Port={port}, User={user}, DB={database}")
 
         connection = pymysql.connect(
             host=host,
@@ -160,17 +160,17 @@ def get_db_connection():
             port=port, 
             cursorclass=pymysql.cursors.DictCursor 
         )
-        print("Successfully connected to MySQL database!")
+        print("MySQL veritabanına başarıyla bağlandı!")
         return connection
     except pymysql.Error as e:
-        print(f"MySQL connection error: {e}")
+        print(f"MySQL bağlantı hatası: {e}")
         if connection:
             connection.close()
         raise 
 
-# Helper function: Gets user role from the database
+# Yardımcı fonksiyon: Veritabanından kullanıcı rolünü alır
 def get_user_role_from_db(user_id):
-    """Fetches the role of a user from the database."""
+    """Veritabanından bir kullanıcının rolünü getirir."""
     connection = None
     try:
         connection = get_db_connection()
@@ -179,16 +179,16 @@ def get_user_role_from_db(user_id):
             result = cursor.fetchone()
             return result['role'] if result else None
     except Exception as e:
-        print(f"Error fetching user role: {e}")
+        print(f"Kullanıcı rolü çekilirken hata: {e}")
         return None
     finally:
         if connection:
             connection.close()
 
-# Helper function: Checks if a role has a specific permission
+# Yardımcı fonksiyon: Bir rolün belirli bir izne sahip olup olmadığını kontrol eder
 def check_role_permission(role_name, permission_key):
-    """Checks if a given role has a specific permission."""
-    # Admin role is always considered to have all permissions
+    """Belirli bir rolün belirli bir izne sahip olup olmadığını kontrol eder."""
+    # Admin rolü her zaman tüm izinlere sahip kabul edilir
     if role_name.lower() == 'admin':
         return True
 
@@ -196,24 +196,24 @@ def check_role_permission(role_name, permission_key):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Query the relevant permission column in the 'yetki' table
+            # 'yetki' tablosundaki ilgili izin sütununu sorgula
             sql = f"SELECT {permission_key} FROM yetki WHERE LOWER(role_name) = %s"
             cursor.execute(sql, (role_name.lower(),))
             result = cursor.fetchone()
             
-            # If no permission record exists for the role or permission value is 0, return False
+            # Rol için izin kaydı yoksa veya izin değeri 0 ise False döndür
             if result and result[permission_key] == 1:
                 return True
             return False
     except Exception as e:
-        print(f"Error during permission check: {e}")
+        print(f"İzin kontrolü sırasında hata: {e}")
         return False
     finally:
         if connection:
             connection.close()
 
 
-# Mark all notifications as read API (for notifications table)
+# Tüm bildirimleri okundu olarak işaretle API'si (bildirimler tablosu için)
 @app.route('/api/notifications/mark_all_read', methods=['PUT'])
 def mark_all_notifications_as_read():
     """Veritabanındaki tüm bildirimleri okundu olarak işaretler."""
@@ -240,8 +240,7 @@ def mark_all_notifications_as_read():
         if connection:
             connection.close()
 
-
-# Unread Notification Count API (for notifications table)
+# Okunmamış Bildirim Sayısı API'si (bildirimler tablosu için)
 @app.route('/api/notifications/unread-count', methods=['GET'])
 def get_unread_notifications_count():
     """Veritabanındaki okunmamış bildirim sayısını döndürür."""
@@ -267,7 +266,7 @@ def get_unread_notifications_count():
             connection.close()
 
 
-# Mark Notification as Read API (for notifications table)
+# Bildirimi Okundu Olarak İşaretle API'si (bildirimler tablosu için)
 @app.route('/api/notifications/<int:notification_id>/read', methods=['PUT'])
 def mark_notification_as_read(notification_id):
     """Belirli bir bildirimi veritabanında okundu olarak işaretler."""
@@ -297,7 +296,8 @@ def mark_notification_as_read(notification_id):
     finally:
         if connection:
             connection.close()
-# Fetch Notifications API (for notifications table)
+
+# Bildirimleri Getir API'si (bildirimler tablosu için)
 @app.route('/api/notifications', methods=['GET'])
 def get_notifications():
     """Belirli bir kullanıcı için bildirimleri getirir."""
@@ -375,17 +375,17 @@ def delete_all_notifications():
         connection.close()
 
 
-# Add New Notification API (for notifications table)
+# Yeni Bildirim Ekle API'si (bildirimler tablosu için)
 @app.route('/api/notifications', methods=['POST'])
 def add_notification():
-    """Adds a new notification to the database."""
+    """Veritabanına yeni bir bildirim ekler."""
     data = request.get_json()
     user_id = data.get('user_id')
     title = data.get('title')
     message = data.get('message') 
 
     if not all([user_id, title, message]):
-        return jsonify({'message': 'User ID, title, and message are required.'}), 400
+        return jsonify({'message': 'Kullanıcı ID\'si, başlık ve mesaj zorunludur.'}), 400
 
     connection = None
     try:
@@ -397,23 +397,23 @@ def add_notification():
             """
             cursor.execute(sql, (user_id, title, message))
             connection.commit()
-        return jsonify({'message': 'Notification successfully saved!'}), 201
+        return jsonify({'message': 'Bildirim başarıyla kaydedildi!'}), 201
     except pymysql.Error as e:
-        print(f"Database error saving notification: {e}")
+        print(f"Veritabanı hatası bildirim kaydederken: {e}")
         if e.args[0] == 1062:
-            return jsonify({'message': 'This email address is already in use.'}), 409
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+            return jsonify({'message': 'Bu e-posta adresi zaten kullanımda.'}), 409
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error saving notification: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata bildirim kaydederken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
-# Add New Activity API (for activities table)
+# Yeni Aktivite Ekle API'si (aktiviteler tablosu için)
 @app.route('/api/activities', methods=['POST'])
 def add_activity():
-    """Adds a new activity to the database."""
+    """Veritabanına yeni bir aktivite ekler."""
     data = request.get_json()
     user_id = data.get('user_id')
     title = data.get('title')
@@ -421,7 +421,7 @@ def add_activity():
     icon = data.get('icon', 'fas fa-info-circle') 
 
     if not all([user_id, title, description]):
-        return jsonify({'message': 'User ID, title, and description are required.'}), 400
+        return jsonify({'message': 'Kullanıcı ID\'si, başlık ve açıklama zorunludur.'}), 400
 
     connection = None
     try:
@@ -433,22 +433,22 @@ def add_activity():
             """
             cursor.execute(sql, (user_id, title, description, icon))
             connection.commit()
-        return jsonify({'message': 'Activity successfully saved!'}), 201
+        return jsonify({'message': 'Aktivite başarıyla kaydedildi!'}), 201
     except pymysql.Error as e:
-        print(f"Database error saving activity: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası aktivite kaydederken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error saving activity: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata aktivite kaydederken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
 @app.route('/api/update_user_profile', methods=['POST'])
 def update_user_profile():
-    """Updates a user's profile information, including profile picture and visibility settings.
-    Personal details (fullname, email, phone, role) are no longer updated via this endpoint,
-    as the frontend modal for these fields has been removed."""
+    """Kullanıcının profil bilgilerini, profil resmi ve görünürlük ayarları dahil olmak üzere günceller.
+    Kişisel detaylar (tam ad, e-posta, telefon, rol) artık bu uç nokta üzerinden güncellenmez,
+    çünkü bu alanlar için ön uç modalı kaldırılmıştır."""
     data = request.get_json()
     user_id = data.get('userId')
     profile_picture = data.get('profile_picture') 
@@ -456,7 +456,7 @@ def update_user_profile():
     hide_phone = data.get('hide_phone') 
 
     if not user_id:
-        return jsonify({'message': 'User ID missing.'}), 400
+        return jsonify({'message': 'Kullanıcı ID\'si eksik.'}), 400
 
     connection = None
     try:
@@ -466,35 +466,33 @@ def update_user_profile():
             user = cursor.fetchone()
 
             if not user:
-                return jsonify({'message': 'User not found.'}), 404
+                return jsonify({'message': 'Kullanıcı bulunamadı.'}), 404
 
             updates = []
             params = []
             message_parts = []
 
-            # Handle profile_picture: if it's explicitly null from frontend, set DB to NULL
-            # If profile_picture is 'null' string, set to SQL NULL. Otherwise, update with the new value.
             if profile_picture is not None: 
                 if profile_picture == "null": 
                     updates.append("profile_picture = NULL")
-                    message_parts.append("Profile Picture Removed")
-                elif profile_picture != user['profile_picture']: # Only update if different from current DB value
+                    message_parts.append("Profil Resmi Kaldırıldı")
+                elif profile_picture != user['profile_picture']: 
                     updates.append("profile_picture = %s")
                     params.append(profile_picture)
-                    message_parts.append("Profile Picture")
+                    message_parts.append("Profil Resmi")
             
             if hide_email is not None and hide_email != user['hide_email']:
                 updates.append("hide_email = %s")
                 params.append(hide_email)
-                message_parts.append("Email Visibility")
+                message_parts.append("E-posta Görünürlüğü")
 
             if hide_phone is not None and hide_phone != user['hide_phone']:
                 updates.append("hide_phone = %s")
                 params.append(hide_phone)
-                message_parts.append("Phone Visibility")
+                message_parts.append("Telefon Görünürlüğü")
 
             if not updates:
-                return jsonify({'message': 'No information to update.'}), 200
+                return jsonify({'message': 'Güncellenecek bilgi bulunamadı.'}), 200
 
             sql = f"UPDATE users SET {', '.join(updates)} WHERE id = %s"
             params.append(user_id)
@@ -502,25 +500,25 @@ def update_user_profile():
             cursor.execute(sql, tuple(params))
             connection.commit()
 
-            final_message = "Successfully updated: " + ", ".join(message_parts) + "."
+            final_message = "Başarıyla güncellendi: " + ", ".join(message_parts) + "."
             if not message_parts: 
-                 final_message = "No changes to update."
+                 final_message = "Güncellenecek değişiklik bulunamadı."
 
             return jsonify({'message': final_message}), 200
 
     except pymysql.Error as e:
-        print(f"Database error updating profile: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası profil güncellerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error updating profile: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata profil güncellerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
 @app.route('/api/pending-users', methods=['GET'])
 def get_pending_users():
-    """Fetches users with 'onay' (approval) status as 0."""
+    """'Onay' durumu 0 olan kullanıcıları getirir."""
     connection = None
     try:
         connection = get_db_connection()
@@ -530,18 +528,18 @@ def get_pending_users():
             pending_users = cursor.fetchall()
             return jsonify(pending_users), 200
     except pymysql.Error as e:
-        print(f"Database error fetching pending users: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası bekleyen kullanıcıları çekerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error fetching pending users: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata bekleyen kullanıcıları çekerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
 @app.route('/api/users/approve/<int:user_id>', methods=['PATCH'])
 def approve_user(user_id):
-    """Approves a user by setting their 'onay' status to 1."""
+    """Bir kullanıcının 'onay' durumunu 1 olarak ayarlayarak onaylar."""
     connection = None
     try:
         connection = get_db_connection()
@@ -550,29 +548,29 @@ def approve_user(user_id):
             user = cursor.fetchone()
     
             if not user:
-                return jsonify({'message': 'User not found.'}), 404
+                return jsonify({'message': 'Kullanıcı bulunamadı.'}), 404
             if user['onay'] == 1:
-                return jsonify({'message': 'User already approved.'}), 400 
+                return jsonify({'message': 'Kullanıcı zaten onaylanmış.'}), 400 
 
             sql = "UPDATE users SET onay = 1 WHERE id = %s"
             cursor.execute(sql, (user_id,))
             connection.commit()
 
-        return jsonify({'message': 'User successfully approved!'}), 200
+        return jsonify({'message': 'Kullanıcı başarıyla onaylandı!'}), 200
 
     except pymysql.Error as e:
-        print(f"Database error approving user: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası kullanıcıyı onaylarken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error approving user: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata kullanıcıyı onaylarken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
-    """Deletes a user and reassigns or deletes their associated projects and tasks."""
+    """Bir kullanıcıyı siler ve ilişkili projelerini ve görevlerini yeniden atar veya siler."""
     connection = None
     try:
         connection = get_db_connection()
@@ -580,10 +578,10 @@ def delete_user(user_id):
             cursor.execute("SELECT id, fullname FROM users WHERE id = %s", (user_id,))
             user_info = cursor.fetchone()
             if not user_info:
-                return jsonify({'message': 'User not found.'}), 404
+                return jsonify({'message': 'Kullanıcı bulunamadı.'}), 404
 
             if user_info['id'] == 1: 
-                 return jsonify({'message': 'This user cannot be deleted.'}), 403 
+                 return jsonify({'message': 'Bu kullanıcı silinemez.'}), 403 
 
             default_manager_id = None
             cursor.execute("SELECT id FROM users WHERE role = 'Admin' AND id != %s LIMIT 1", (user_id,))
@@ -601,27 +599,27 @@ def delete_user(user_id):
                     "UPDATE projects SET project_manager_id = %s WHERE project_manager_id = %s",
                     (default_manager_id, user_id)
                 )
-                print(f"DEBUG: Reassigned {cursor.rowcount} projects from user {user_id} to {default_manager_id}")
+                print(f"DEBUG: {cursor.rowcount} proje kullanıcı {user_id}'den {default_manager_id}'e yeniden atandı.")
             else:
                 cursor.execute("DELETE FROM projects WHERE project_manager_id = %s", (user_id,))
-                print(f"DEBUG: Deleted {cursor.rowcount} projects for user {user_id} (no manager to reassign to)")
+                print(f"DEBUG: Kullanıcı {user_id} için {cursor.rowcount} proje silindi (yeniden atanacak yönetici yok).")
 
             cursor.execute("DELETE FROM tasks WHERE assigned_user_id = %s", (user_id,))
-            print(f"DEBUG: Deleted {cursor.rowcount} tasks for user {user_id}")
+            print(f"DEBUG: Kullanıcı {user_id} için {cursor.rowcount} görev silindi.")
 
             sql = "DELETE FROM users WHERE id = %s"
             cursor.execute(sql, (user_id,))
             connection.commit()
-            print(f"DEBUG: Deleted user {user_id}")
+            print(f"DEBUG: Kullanıcı {user_id} silindi.")
 
-        return jsonify({'message': 'User successfully deleted!'}), 200
+        return jsonify({'message': 'Kullanıcı başarıyla silindi!'}), 200
 
     except pymysql.Error as e:
-        print(f"Database error deleting user: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası kullanıcı silerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error deleting user: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata kullanıcı silerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
@@ -632,24 +630,24 @@ try:
     file_path = os.path.join(script_dir, 'turkey_locations.json')
     with open(file_path, 'r', encoding='utf-8') as f:
         TURKEY_LOCATIONS = json.load(f)
-    print("Location data successfully loaded.")
+    print("Konum verileri başarıyla yüklendi.")
 except FileNotFoundError:
-    print(f"Error: 'turkey_locations.json' file not found. Please check the path '{file_path}'.")
+    print(f"Hata: 'turkey_locations.json' dosyası bulunamadı. Lütfen '{file_path}' yolunu kontrol edin.")
     TURKEY_LOCATIONS = {"Türkiye": {"iller": {"Varsayılan İl": []}}} 
 except json.JSONDecodeError:
-    print("Error: 'turkey_locations.json' file is not in JSON format or is corrupted.")
+    print("Hata: 'turkey_locations.json' dosyası JSON formatında değil veya bozuk.")
     TURKEY_LOCATIONS = {"Türkiye": {"iller": {"Varsayılan İl": []}}} 
 except Exception as e:
-    print(f"Unexpected error loading location data: {e}")
+    print(f"Konum verileri yüklenirken beklenmeyen hata: {e}")
     TURKEY_LOCATIONS = {"Türkiye": {"iller": {"Varsayılan İl": []}}} 
 
 
 @app.route('/api/role-permissions', methods=['GET'])
 def get_permissions_by_role():
-    """Fetches permissions for a given role."""
+    """Belirli bir rol için izinleri getirir."""
     role_name = request.args.get('role')
     if not role_name:
-        return jsonify({'message': 'Role name required'}), 400
+        return jsonify({'message': 'Rol adı gerekli'}), 400
 
     connection = None
     try:
@@ -659,7 +657,7 @@ def get_permissions_by_role():
             cursor.execute(sql, (role_name.lower(),))
             result = cursor.fetchone()
             if not result:
-                # If no permission record exists for the role, return all permissions as 0 by default
+                # Rol için izin kaydı yoksa, varsayılan olarak tüm izinleri 0 olarak döndür
                 return jsonify({
                     'proje_ekle': 0,
                     'proje_duzenle': 0,
@@ -677,11 +675,11 @@ def get_permissions_by_role():
 
 @app.route('/api/role-permissions', methods=['POST'])
 def update_role_permissions():
-    """Updates permissions for a specific role."""
+    """Belirli bir rol için izinleri günceller."""
     data = request.json
     role = data.get('role')
     if not role:
-        return jsonify({'message': 'Role not specified.'}), 400
+        return jsonify({'message': 'Rol belirtilmedi.'}), 400
 
     proje_ekle = data.get('proje_ekle', 0)
     proje_duzenle = data.get('proje_duzenle', 0)
@@ -712,31 +710,31 @@ def update_role_permissions():
                 cursor.execute(sql, (role, proje_ekle, proje_duzenle, proje_sil, pdf_olusturma, musteri_duzenleme, raporlar))
 
             connection.commit()
-        return jsonify({'message': 'Permissions successfully updated.'})
+        return jsonify({'message': 'Yetkiler başarıyla güncellendi.'})
     except Exception as e:
         if connection:
             connection.rollback()
-        return jsonify({'message': f'Error: {str(e)}'}), 500
+        return jsonify({'message': f'Hata: {str(e)}'}), 500
     finally:
         if connection:
             connection.close()
 
-# User Registration API
+# Kullanıcı Kayıt API'si
 @app.route('/api/register', methods=['POST'])
 def register_user():
-    """Registers a new user."""
+    """Yeni bir kullanıcı kaydeder."""
     data = request.get_json()
     fullname = data.get('fullname')
     email = data.get('email')
     phone = data.get('phone', '') 
     password = data.get('password')
-    role = data.get('role', 'Çalışan') # Default position if not provided
+    role = data.get('role', 'Çalışan') # Sağlanmazsa varsayılan pozisyon
     profile_picture = data.get('profile_picture') 
     hide_email = data.get('hide_email', 0) 
     hide_phone = data.get('hide_phone', 0) 
 
     if not all([fullname, email, password, role]):
-        return jsonify({'message': 'Please fill in all required fields.'}), 400
+        return jsonify({'message': 'Lütfen tüm gerekli alanları doldurun.'}), 400
 
     connection = None
     try:
@@ -745,7 +743,7 @@ def register_user():
             cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
             existing_user = cursor.fetchone()
             if existing_user:
-                return jsonify({'message': 'This email address is already in use.'}), 409
+                return jsonify({'message': 'Bu e-posta adresi zaten kullanımda.'}), 409
 
             hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             sql = """
@@ -754,15 +752,15 @@ def register_user():
             """
             cursor.execute(sql, (fullname, email, phone, hashed_password, role, profile_picture, hide_email, hide_phone))
             connection.commit()
-        return jsonify({'message': 'Registration successful!'}), 201
+        return jsonify({'message': 'Kayıt başarılı!'}), 201
     except pymysql.Error as e:
-        print(f"Database registration error: {e}")
+        print(f"Veritabanı kayıt hatası: {e}")
         if e.args[0] == 1062:
-            return jsonify({'message': 'This email address is already in use.'}), 409
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+            return jsonify({'message': 'Bu e-posta adresi zaten kullanımda.'}), 409
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General registration error: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel kayıt hatası: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
@@ -770,34 +768,34 @@ def register_user():
 
 @app.route('/api/login', methods=['POST'])
 def login_user():
-    """Authenticates a user and creates a session."""
+    """Bir kullanıcıyı doğrular ve oturum oluşturur."""
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
 
     if not all([email, password]):
-        return jsonify({'message': 'Please enter your email and password.'}), 400
+        return jsonify({'message': 'Lütfen e-posta adresinizi ve şifrenizi girin.'}), 400
 
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Fetch all user details including new fields
+            # Yeni alanlar dahil tüm kullanıcı detaylarını getir
             cursor.execute("SELECT id, fullname, email, phone, password, role, onay, profile_picture, hide_email, hide_phone, created_at FROM users WHERE email = %s", (email,))
             
             user = cursor.fetchone()
 
             if not user:
-                return jsonify({'message': 'Invalid email or password.'}), 401
+                return jsonify({'message': 'Geçersiz e-posta veya şifre.'}), 401
 
             is_match = bcrypt.checkpw(password.encode('utf-8'), user['password'].encode('utf-8'))
 
             if not is_match:
-                return jsonify({'message': 'Invalid email or password.'}), 401
+                return jsonify({'message': 'Geçersiz e-posta veya şifre.'}), 401
 
             if user['onay'] == 0:
                 return jsonify({
-                    'message': 'Your account has not been approved yet. Please contact your administrator.',
+                    'message': 'Hesabınız henüz onaylanmadı. Lütfen yöneticinizle iletişime geçin.',
                     'user': {
                         'email': user['email'], 
                         'onay': user['onay']
@@ -805,29 +803,29 @@ def login_user():
                     'redirect': 'waiting.html' 
                 }), 403 
 
-            # Save user ID to session
+            # Kullanıcı ID'sini oturuma kaydet
             session['user_id'] = user['id'] 
-            del user['password'] 
+            del user['password'] # Güvenlik nedeniyle şifreyi yanıttan kaldır
 
             return jsonify({
-                'message': 'Login successful!',
+                'message': 'Giriş başarılı!',
                 'user': user 
             }), 200
 
     except pymysql.Error as e:
-        print(f"Database login error: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı giriş hatası: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General login error: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel giriş hatası: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
-# Add New Customer API
+# Yeni Müşteri Ekle API'si
 @app.route('/api/customers', methods=['POST'])
 def add_customer():
-    """Adds a new customer to the database."""
+    """Veritabanına yeni bir müşteri ekler."""
     data = request.get_json()
     customer_name = data.get('companyName')
     status = data.get('status', 'active')
@@ -841,10 +839,10 @@ def add_customer():
     postal_code = data.get('postalCode')
     address = data.get('address')
     notes = data.get('notes')
-    user_id = data.get('user_id') 
+    user_id = data.get('user_id') # Aktivite kaydı için projeyi ekleyen kullanıcı ID'si
 
     if not all([customer_name, contact_person, phone, user_id]): 
-        return jsonify({'message': 'Company Name, Contact Person, Phone, and User ID are required fields.'}), 400
+        return jsonify({'message': 'Şirket Adı, İlgili Kişi, Telefon ve Kullanıcı ID\'si zorunlu alanlardır.'}), 400
 
     connection = None
     try:
@@ -853,7 +851,7 @@ def add_customer():
             cursor.execute("SELECT customer_id FROM customers WHERE customer_name = %s", (customer_name,))
             existing_customer = cursor.fetchone()
             if existing_customer:
-                return jsonify({'message': 'This company name is already registered.'}), 409
+                return jsonify({'message': 'Bu şirket adı zaten kayıtlı.'}), 409
 
             sql = """
             INSERT INTO customers
@@ -870,29 +868,29 @@ def add_customer():
 
             log_activity(
                 user_id=user_id,
-                title='New Customer Added',
-                description=f'New customer "{customer_name}" added.',
+                title='Yeni Müşteri Eklendi',
+                description=f'"{customer_name}" adlı yeni müşteri eklendi.',
                 icon='fas fa-user-plus'
             )
 
-        return jsonify({'message': 'Customer successfully added!', 'customerId': new_customer_id}), 201
+        return jsonify({'message': 'Müşteri başarıyla eklendi!', 'customerId': new_customer_id}), 201
 
     except pymysql.Error as e:
-        print(f"Database error adding customer: {e}")
-        if e.args[0] == 1062:
-            return jsonify({'message': 'This email or company name is already registered.'}), 409
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası müşteri eklerken: {e}")
+        if e.args[0] == 1062: # Duplicate entry error
+            return jsonify({'message': 'Bu e-posta veya şirket adı zaten kayıtlı.'}), 409
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error adding customer: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata müşteri eklerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
-# List All Customers API
+# Tüm Müşterileri Listele API'si
 @app.route('/api/customers', methods=['GET'])
 def get_customers():
-    """Fetches a list of all customers."""
+    """Tüm müşterilerin bir listesini getirir."""
     connection = None
     try:
         connection = get_db_connection()
@@ -909,19 +907,19 @@ def get_customers():
             customers = cursor.fetchall()
         return jsonify(customers), 200
     except pymysql.Error as e:
-        print(f"Database error fetching customers: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası müşterileri çekerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error fetching customers: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata müşterileri çekerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
-# API to fetch details of a single customer (added for Modal)
+# Tek bir müşterinin detaylarını getirme API'si (Modal için eklendi)
 @app.route('/api/customers/<int:customer_id>', methods=['GET'])
 def get_customer_details(customer_id):
-    """Fetches details of a single customer."""
+    """Tek bir müşterinin detaylarını getirir."""
     connection = None
     try:
         connection = get_db_connection()
@@ -936,23 +934,23 @@ def get_customer_details(customer_id):
             customer = cursor.fetchone()
 
             if not customer:
-                return jsonify({'message': 'Customer not found.'}), 404
+                return jsonify({'message': 'Müşteri bulunamadı.'}), 404
 
         return jsonify(customer), 200
     except pymysql.Error as e:
-        print(f"Database error fetching customer details: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası müşteri detaylarını çekerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error fetching customer details: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata müşteri detaylarını çekerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
-# Update Customer API (PUT)
+# Müşteri Güncelleme API'si (PUT)
 @app.route('/api/customers/<int:customer_id>', methods=['PUT'])
 def update_customer(customer_id):
-    """Updates an existing customer's information."""
+    """Mevcut bir müşterinin bilgilerini günceller."""
     data = request.get_json()
     customer_name = data.get('companyName')
     status = data.get('status')
@@ -966,12 +964,12 @@ def update_customer(customer_id):
     postal_code = data.get('postalCode')
     address = data.get('address')
     notes = data.get('notes')
-    user_id = data.get('user_id') 
+    user_id = data.get('user_id') # Aktivite kaydı için güncelleyen kullanıcı ID'si
 
     if not user_id: 
-        return jsonify({'message': 'User ID missing.'}), 400
+        return jsonify({'message': 'Kullanıcı ID\'si eksik.'}), 400
     if not any([customer_name, status, contact_person, contact_title, phone, email, country, city, district, postal_code, address, notes]):
-        return jsonify({'message': 'No data to update.'}), 400
+        return jsonify({'message': 'Güncellenecek veri bulunamadı.'}), 400
 
     connection = None
     try:
@@ -980,7 +978,7 @@ def update_customer(customer_id):
             cursor.execute("SELECT customer_name FROM customers WHERE customer_id = %s", (customer_id,))
             existing_customer_info = cursor.fetchone()
             if not existing_customer_info:
-                return jsonify({'message': 'Customer not found.'}), 404
+                return jsonify({'message': 'Müşteri bulunamadı.'}), 404
             old_customer_name = existing_customer_info['customer_name']
 
 
@@ -1024,7 +1022,7 @@ def update_customer(customer_id):
                 params.append(notes)
 
             if not updates:
-                return jsonify({'message': 'No field specified for update.'}), 400
+                return jsonify({'message': 'Güncelleme için belirtilen alan yok.'}), 400
 
             sql = f"UPDATE customers SET {', '.join(updates)} WHERE customer_id = %s"
             params.append(customer_id)
@@ -1033,40 +1031,38 @@ def update_customer(customer_id):
             connection.commit()
 
             if cursor.rowcount == 0:
-                return jsonify({'message': 'Customer data is already up-to-date or no changes were made.'}), 200
+                return jsonify({'message': 'Müşteri verisi zaten güncel veya değişiklik yapılmadı.'}), 200
 
             log_activity(
                 user_id=user_id,
-                title='Customer Updated',
-                description=f'Customer "{old_customer_name}" information updated.',
+                title='Müşteri Güncellendi',
+                description=f'"{old_customer_name}" adlı müşteri bilgileri güncellendi.',
                 icon='fas fa-user-edit'
             )
 
-        return jsonify({'message': 'Customer successfully updated!'}), 200
+        return jsonify({'message': 'Müşteri başarıyla güncellendi!'}), 200
 
     except pymysql.Error as e:
-        print(f"Database error updating customer: {e}")
+        print(f"Veritabanı hatası müşteri güncellerken: {e}")
         if e.args[0] == 1062:
-            return jsonify({'message': 'This email or company name is already registered.'}), 409
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+            return jsonify({'message': 'Bu e-posta veya şirket adı zaten kayıtlı.'}), 409
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error updating customer: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata müşteri güncellerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
 @app.route('/api/customers/<int:customer_id>', methods=['DELETE'])
 def delete_customer(customer_id):
-    """Deletes a customer from the database."""
-    # User ID'yi body'den almak yerine, oturumdan veya URL'den alabilirsiniz.
-    # Eğer bu endpoint'e bir kullanıcı ID'si gönderilmiyorsa, oturumdan alınması daha güvenlidir.
-    data = request.get_json() # DELETE request body'sinden user_id'yi al
+    """Veritabanından bir müşteriyi siler."""
+    data = request.get_json() # DELETE isteği gövdesinden user_id'yi al
     user_id = data.get('user_id')
     if not user_id:
-        return jsonify({'message': 'User ID missing.'}), 400
+        return jsonify({'message': 'Kullanıcı ID\'si eksik.'}), 400
 
-    customer_name = "Unknown Customer" 
+    customer_name = "Bilinmeyen Müşteri" # Loglama için varsayılan değer
     connection = None
     try:
         connection = get_db_connection()
@@ -1074,7 +1070,7 @@ def delete_customer(customer_id):
             cursor.execute("SELECT customer_name FROM customers WHERE customer_id = %s", (customer_id,))
             customer_info = cursor.fetchone()
             if not customer_info:
-                return jsonify({'message': 'Customer not found.'}), 404
+                return jsonify({'message': 'Müşteri bulunamadı.'}), 404
             customer_name = customer_info['customer_name']
 
             sql = "DELETE FROM customers WHERE customer_id = %s"
@@ -1082,36 +1078,36 @@ def delete_customer(customer_id):
             connection.commit()
 
             if cursor.rowcount == 0:
-                return jsonify({'message': 'Customer could not be deleted or does not exist.'}), 404
+                return jsonify({'message': 'Müşteri silinemedi veya mevcut değil.'}), 404
             
             log_activity(
                 user_id=user_id,
-                title='Customer Deleted',
-                description=f'Customer "{customer_name}" deleted.',
+                title='Müşteri Silindi',
+                description=f'"{customer_name}" adlı müşteri silindi.',
                 icon='fas fa-user-minus'
             )
 
-        return jsonify({'message': 'Customer successfully deleted!'}), 200
+        return jsonify({'message': 'Müşteri başarıyla silindi!'}), 200
 
     except pymysql.Error as e:
-        print(f"Database error deleting customer: {e}")
-        if e.args[0] == 1451: 
-            return jsonify({'message': 'There are projects associated with this customer. Please delete the related projects first.'}), 409
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası müşteri silerken: {e}")
+        if e.args[0] == 1451: # Foreign key constraint fails
+            return jsonify({'message': 'Bu müşteriyle ilişkili projeler var. Lütfen önce ilgili projeleri silin.'}), 409
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error deleting customer: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata müşteri silerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
 
-# List All Projects API
+# Tüm Projeleri Listele API'si
 @app.route('/api/projects', methods=['GET'])
 def get_projects():
     """
-    Fetches a list of all projects with their associated customer and manager names,
-    and includes the latest progress step title and its delay status.
+    Müşteri ve yönetici adlarıyla birlikte tüm projelerin bir listesini getirir,
+    ayrıca en son ilerleme adımının başlığını ve gecikme durumunu içerir.
     """
     connection = None
     try:
@@ -1156,7 +1152,7 @@ def get_projects():
                 
                 project['display_status'] = display_status # Yeni bir alan olarak ekle
 
-                # Convert datetime.date objects to ISO format strings for JSON serialization
+                # datetime.date nesnelerini JSON serileştirmesi için ISO formatlı dizelere dönüştür
                 project['contract_date'] = project['contract_date'].isoformat() if isinstance(project['contract_date'], datetime.date) else None
                 project['meeting_date'] = project['meeting_date'].isoformat() if isinstance(project['meeting_date'], datetime.date) else None
                 project['start_date'] = project['start_date'].isoformat() if isinstance(project['start_date'], datetime.date) else None
@@ -1164,19 +1160,19 @@ def get_projects():
 
         return jsonify(projects_data), 200
     except pymysql.Error as e:
-        print(f"Database error fetching projects: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası projeleri çekerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error fetching projects: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata projeleri çekerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
-# API to fetch details of a single project (for Modal)
+# Tek bir projenin detaylarını getirme API'si (Modal için)
 @app.route('/api/projects/<int:project_id>', methods=['GET'])
 def get_project_details(project_id):
-    """Fetches details of a single project."""
+    """Tek bir projenin detaylarını getirir."""
     connection = None
     try:
         connection = get_db_connection()
@@ -1194,9 +1190,9 @@ def get_project_details(project_id):
             project = cursor.fetchone()
 
             if not project:
-                return jsonify({'message': 'Project not found.'}), 404
+                return jsonify({'message': 'Proje bulunamadı.'}), 404
 
-            # Convert datetime.date objects to ISO format strings for JSON serialization
+            # datetime.date nesnelerini JSON serileştirmesi için ISO formatlı dizelere dönüştür
             project['contract_date'] = project['contract_date'].isoformat() if isinstance(project['contract_date'], datetime.date) else None
             project['meeting_date'] = project['meeting_date'].isoformat() if isinstance(project['meeting_date'], datetime.date) else None
             project['start_date'] = project['start_date'].isoformat() if isinstance(project['start_date'], datetime.date) else None
@@ -1204,50 +1200,39 @@ def get_project_details(project_id):
 
         return jsonify(project), 200
     except pymysql.Error as e:
-        print(f"Database error fetching project details: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası proje detaylarını çekerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error fetching project details: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata proje detaylarını çekerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
-# Helper function to send notifications
+# Bildirim gönderme yardımcı fonksiyonu
 def send_notification(user_id, title, message):
-    """Sends a notification to a specific user."""
+    """Belirli bir kullanıcıya bildirim gönderir."""
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
             sql = "INSERT INTO notifications (user_id, title, message, created_at) VALUES (%s, %s, %s, NOW())"
             cursor.execute(sql, (user_id, title, message))
             connection.commit()
-            print(f"Notification sent: User ID: {user_id}, Title: '{title}', Message: '{message}'")
+            print(f"Bildirim gönderildi: Kullanıcı ID: {user_id}, Başlık: '{title}', Mesaj: '{message}'")
     except pymysql.Error as e:
-        print(f"Database error sending notification: {e}")
+        print(f"Veritabanı hatası bildirim gönderirken: {e}")
     except Exception as e:
-        print(f"General error sending notification: {e}")
+        print(f"Genel hata bildirim gönderirken: {e}")
     finally:
         if connection:
             connection.close()
 
-# Update Project API (PUT) - for projects table
-# app.py dosyasında, update_project fonksiyonu içinde
-
-# app.py dosyasında
-
-import datetime # Bu satırın dosyanızın başında olduğundan emin olun
-
-# ... (diğer Flask rotaları ve fonksiyonlar) ...
-
-# Update Project API (PUT) - for projects table
-# app.py dosyasında, update_project fonksiyonu içinde
-
+# Proje Güncelleme API'si (PUT) - projeler tablosu için
 @app.route('/api/projects/<int:project_id>', methods=['PUT'])
 def update_project(project_id):
     data = request.get_json()
-    print(f"DEBUG: update_project'e gelen ham JSON veri: {data}") # Gelen veriyi yazdır
-    print(f"DEBUG: Güncellenmek istenen Project ID: {project_id}") # Project ID'yi yazdır
+    print(f"DEBUG: update_project'e gelen ham JSON veri: {data}")
+    print(f"DEBUG: Güncellenmek istenen Proje ID: {project_id}")
 
     def clean_input_value(value):
         if value is None or value == '':
@@ -1273,9 +1258,9 @@ def update_project(project_id):
     user_id = clean_input_value(data.get('user_id'))
 
     print(f"DEBUG: İşlenmiş değerler: "
-          f"name='{project_name}', ref='{reference_no}', desc='{description}', "
-          f"contract='{contract_date}', meeting='{meeting_date}', start='{start_date}', end='{end_date}', "
-          f"location='{project_location}', status='{status}', manager_id='{project_manager_id_new}', user_id='{user_id}'")
+          f"ad='{project_name}', ref='{reference_no}', açıklama='{description}', "
+          f"sözleşme='{contract_date}', toplantı='{meeting_date}', başlangıç='{start_date}', bitiş='{end_date}', "
+          f"konum='{project_location}', durum='{status}', yönetici_id='{project_manager_id_new}', kullanıcı_id='{user_id}'")
 
     if not user_id: 
         print("HATA: Kullanıcı ID'si eksik.")
@@ -1310,9 +1295,9 @@ def update_project(project_id):
             old_project_manager_id = existing_project_info['project_manager_id'] 
 
             print(f"DEBUG: Eski değerler: "
-                  f"name='{old_project_name}', ref='{old_reference_no}', desc='{old_description}', "
-                  f"contract='{old_contract_date}', meeting='{old_meeting_date}', start='{old_start_date}', end='{old_end_date}', "
-                  f"location='{old_project_location}', status='{old_status}', manager_id='{old_project_manager_id}'")
+                  f"ad='{old_project_name}', ref='{old_reference_no}', açıklama='{old_description}', "
+                  f"sözleşme='{old_contract_date}', toplantı='{old_meeting_date}', başlangıç='{old_start_date}', bitiş='{old_end_date}', "
+                  f"konum='{old_project_location}', durum='{old_status}', yönetici_id='{old_project_manager_id}'")
 
             updates = []
             params = []
@@ -1368,8 +1353,6 @@ def update_project(project_id):
                 print("DEBUG: Proje verisi zaten güncel veya değişiklik yapılmadı, 200 döndürülüyor.")
                 return jsonify({'message': 'Proje verisi zaten güncel veya değişiklik yapılmadı.'}), 200
 
-            # ... (Bildirim ve Aktivite Loglama Kısımları) ...
-
         return jsonify({'message': 'Proje başarıyla güncellendi!'}), 200
 
     except pymysql.Error as e:
@@ -1383,20 +1366,16 @@ def update_project(project_id):
             connection.close()
             print("DEBUG: Veritabanı bağlantısı kapatıldı.")
 
-# ... (geri kalan app.py kodunuz) ...
-
-# Delete Project API (DELETE)
+# Proje Silme API'si (DELETE)
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
 def delete_project_api(project_id):
-    """Deletes a project from the database."""
-    # User ID'yi body'den almak yerine, oturumdan veya URL'den alabilirsiniz.
-    # Eğer bu endpoint'e bir kullanıcı ID'si gönderilmiyorsa, oturumdan alınması daha güvenlidir.
-    data = request.get_json() # DELETE request body'sinden user_id'yi al
+    """Veritabanından bir projeyi siler."""
+    data = request.get_json() # DELETE isteği gövdesinden user_id'yi al
     user_id = data.get('user_id')
     if not user_id:
-        return jsonify({'message': 'User ID missing.'}), 400
+        return jsonify({'message': 'Kullanıcı ID\'si eksik.'}), 400
 
-    project_name = "Unknown Project" 
+    project_name = "Bilinmeyen Proje" # Loglama için varsayılan değer
     connection = None
     try:
         connection = get_db_connection()
@@ -1405,7 +1384,7 @@ def delete_project_api(project_id):
             project_info = cursor.fetchone()
 
             if not project_info:
-                return jsonify({'message': 'Project could not be deleted or not found.'}), 404
+                return jsonify({'message': 'Proje silinemedi veya bulunamadı.'}), 404
 
             project_name = project_info['project_name']
             project_manager_id = project_info['project_manager_id']
@@ -1417,41 +1396,41 @@ def delete_project_api(project_id):
             connection.commit()
 
             if cursor.rowcount == 0:
-                return jsonify({'message': 'Project could not be deleted or not found.'}), 404
+                return jsonify({'message': 'Proje silinemedi veya bulunamadı.'}), 404
 
             log_activity(
                 user_id=user_id,
-                title='Project Deleted',
-                description=f'Project "{project_name}" deleted.',
+                title='Proje Silindi',
+                description=f'"{project_name}" adlı proje silindi.',
                 icon='fas fa-trash'
             )
 
-            # Send notification to project manager
+            # Proje yöneticisine bildirim gönder
             send_notification(
                 project_manager_id,
-                "Project Deleted",
-                f"The project '{project_name}' you are managing has been deleted."
+                "Proje Silindi",
+                f"Yönettiğiniz '{project_name}' projesi silindi."
             )
            
-        return jsonify({'message': 'Project successfully deleted!'}), 200
+        return jsonify({'message': 'Proje başarıyla silindi!'}), 200
 
     except pymysql.Error as e:
-        print(f"Database error deleting project: {e}")
-        if e.args[0] == 1451: 
-            return jsonify({'message': 'There are projects associated with this customer. Please delete the related projects first.'}), 409
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası proje silerken: {e}")
+        if e.args[0] == 1451: # Foreign key constraint fails
+            return jsonify({'message': 'Bu müşteriyle ilişkili projeler var. Lütfen önce ilgili projeleri silin.'}), 409
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error deleting project: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata proje silerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
 
-# List Project Managers API
+# Proje Yöneticilerini Listele API'si
 @app.route('/api/project_managers', methods=['GET'])
 def get_project_managers():
-    """Fetches a list of users who can be assigned as project managers."""
+    """Proje yöneticisi olarak atanabilecek kullanıcıların bir listesini getirir."""
     connection = None
     try:
         connection = get_db_connection()
@@ -1460,27 +1439,27 @@ def get_project_managers():
             managers = cursor.fetchall()
         return jsonify(managers), 200
     except pymysql.Error as e:
-        print(f"Database error fetching managers: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası yöneticileri çekerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error fetching managers: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata yöneticileri çekerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
-# API endpoint to provide location data
+# Konum verilerini sağlama API uç noktası
 @app.route('/api/locations/turkey', methods=['GET'])
 def get_turkey_locations():
-    """Returns Turkey's location data (provinces and districts)."""
+    """Türkiye konum verilerini (iller ve ilçeler) döndürür."""
     if not TURKEY_LOCATIONS:
-        return jsonify({'message': 'Location data could not be loaded or is empty.'}), 500
+        return jsonify({'message': 'Konum verileri yüklenemedi veya boş.'}), 500
     return jsonify(TURKEY_LOCATIONS), 200
 
-# Dashboard Statistics API
+# Gösterge Paneli İstatistikleri API'si
 @app.route('/api/dashboard/stats', methods=['GET'])
 def get_dashboard_stats():
-    """Fetches various statistics for the dashboard."""
+    """Gösterge paneli için çeşitli istatistikleri getirir."""
     connection = None
     try:
         connection = get_db_connection()
@@ -1505,20 +1484,20 @@ def get_dashboard_stats():
         }
         return jsonify(stats), 200
     except pymysql.Error as e:
-        print(f"Database error fetching statistics: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası istatistikleri çekerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error fetching statistics: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata istatistikleri çekerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
 
-# Dashboard Recent Activity API (fetches from activities table)
+# Gösterge Paneli Son Aktiviteler API'si (aktiviteler tablosundan getirir)
 @app.route('/api/recent_activities', methods=['GET'])
 def get_recent_activities():
-    """Fetches the most recent activities from the activities table."""
+    """Aktiviteler tablosundan en son aktiviteleri getirir."""
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
@@ -1541,33 +1520,33 @@ def get_recent_activities():
             activities = cursor.fetchall()
             return jsonify(activities)
     except pymysql.Error as e:
-        print(f"Database error (recent_activities): {e}")
-        return jsonify({"error": "Database error occurred."}), 500
+        print(f"Veritabanı hatası (son aktiviteler): {e}")
+        return jsonify({"error": "Veritabanı hatası oluştu."}), 500
     except Exception as e:
-        print(f"Unknown error (recent_activities): {e}")
-        return jsonify({"error": "An unknown server error occurred."}), 500
+        print(f"Bilinmeyen hata (son aktiviteler): {e}")
+        return jsonify({"error": "Bilinmeyen bir sunucu hatası oluştu."}), 500
     finally:
         if connection: 
             connection.close()
 
 
-# Helper function to log a new activity
+# Yeni bir aktiviteyi kaydetmek için yardımcı fonksiyon
 def log_activity(user_id, title, description, icon, is_read=0):
-    """Logs a new activity in the activities table."""
+    """Aktiviteler tablosuna yeni bir aktivite kaydeder."""
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
-            user_fullname = "Unknown User"
+            user_fullname = "Bilinmeyen Kullanıcı"
             if user_id:
                 cursor.execute("SELECT fullname FROM users WHERE id = %s", (user_id,))
                 user = cursor.fetchone()
                 if user:
                     user_fullname = user['fullname']
 
-            # Remove potential (ID: X) from description if present
+            # Açıklamadan potansiyel (ID: X) ifadesini kaldır
             cleaned_description = re.sub(r' \(ID: \d+\)', '', description)
 
-            full_description = f"{user_fullname} tarafından: {cleaned_description}" # Turkish translation for "by"
+            full_description = f"{user_fullname} tarafından: {cleaned_description}"
 
             sql = """
             INSERT INTO activities (user_id, title, description, icon, created_at, is_read)
@@ -1575,36 +1554,36 @@ def log_activity(user_id, title, description, icon, is_read=0):
             """
             cursor.execute(sql, (user_id, title, full_description, icon, is_read))
         connection.commit() 
-        print(f"Activity logged: Title: '{title}', Description: '{full_description}'")
+        print(f"Aktivite kaydedildi: Başlık: '{title}', Açıklama: '{full_description}'")
     except pymysql.Error as e:
-        print(f"Error logging activity: {e}")
+        print(f"Aktivite kaydederken hata: {e}")
     except Exception as e:
-        print(f"General error logging activity: {e}")
+        print(f"Genel aktivite kaydetme hatası: {e}")
     finally:
         if connection:
             connection.close()
 
-# Add New Project API (uncommented and completed from previous version)
+# Yeni Proje Ekle API'si (önceki sürümden yorum satırı kaldırıldı ve tamamlandı)
 @app.route('/api/projects', methods=['POST'])
 def add_project():
-    """Adds a new project to the database."""
+    """Veritabanına yeni bir proje ekler."""
     data = request.json
-    project_name = data.get('projectName') # Comes as 'projectName' from frontend
+    project_name = data.get('projectName') # Ön uçtan 'projectName' olarak gelir
     customer_id = data.get('customerId')
     project_manager_id = data.get('projectManagerId')
-    reference_no = data.get('projectRef') # Comes as 'projectRef' from frontend
-    description = data.get('projectDescription') # Comes as 'projectDescription' from frontend
+    reference_no = data.get('projectRef') # Ön uçtan 'projectRef' olarak gelir
+    description = data.get('projectDescription') # Ön uçtan 'projectDescription' olarak gelir
     contract_date = data.get('contractDate')
     meeting_date = data.get('meetingDate')
-    start_date_str = data.get('startDate') # Renamed to avoid conflict with datetime object
-    end_date_str = data.get('endDate')     # Renamed to avoid conflict with datetime object
+    start_date_str = data.get('startDate') # datetime nesnesiyle çakışmayı önlemek için yeniden adlandırıldı
+    end_date_str = data.get('endDate')     # datetime nesnesiyle çakışmayı önlemek için yeniden adlandırıldı
     project_location = data.get('projectLocation')
-    status = data.get('status', 'Planlama Aşamasında') 
+    status = data.get('status', 'Planlama Aşamasında') # Sağlanmazsa varsayılan durum
 
-    user_id = data.get('user_id') # User ID adding the project (for activity log)
+    user_id = data.get('user_id') # Projeyi ekleyen kullanıcı ID'si (aktivite günlüğü için)
 
-    if not all([project_name, customer_id, project_manager_id, start_date_str, end_date_str]): # Added date checks
-        return jsonify({'message': 'Project name, customer, project manager, start date, and end date are required.'}), 400
+    if not all([project_name, customer_id, project_manager_id, start_date_str, end_date_str]): # Tarih kontrolleri eklendi
+        return jsonify({'message': 'Proje adı, müşteri, proje yöneticisi, başlangıç tarihi ve bitiş tarihi zorunludur.'}), 400
 
     connection = None
     try:
@@ -1622,9 +1601,9 @@ def add_project():
             connection.commit()
             new_project_id = cursor.lastrowid
 
-            # Process and insert project progress steps
+            # Proje ilerleme adımlarını işle ve ekle
             progress_steps = data.get('progressSteps', [])
-            last_step_end_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date() # Initialize with project start date
+            last_step_end_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date() # Proje başlangıç tarihiyle başlat
 
             for step in progress_steps:
                 step_title = step.get('title')
@@ -1633,17 +1612,17 @@ def add_project():
                 step_end_date_str = step.get('endDate')
 
                 if not all([step_title, step_start_date_str, step_end_date_str]):
-                    print(f"WARNING: Missing data for a progress step in project {new_project_id}. Skipping step.")
+                    print(f"UYARI: Proje {new_project_id} için bir ilerleme adımında eksik veri var. Adım atlanıyor.")
                     continue
 
                 step_start_date = datetime.datetime.strptime(step_start_date_str, '%Y-%m-%d').date()
                 step_end_date = datetime.datetime.strptime(step_end_date_str, '%Y-%m-%d').date()
 
                 delay_days = 0
-                # Calculate delay based on the previous step's end date or project's start date
+                # Önceki adımın bitiş tarihine veya projenin başlangıç tarihine göre gecikmeyi hesapla
                 if last_step_end_date:
                     time_diff = (step_start_date - last_step_end_date).days
-                    if time_diff > 1:
+                    if time_diff > 1: # 1 günden fazla bir boşluk varsa, gecikme oluşmuştur
                         delay_days = time_diff - 1
                 
                 sql_insert_progress = """
@@ -1651,67 +1630,67 @@ def add_project():
                 VALUES (%s, %s, %s, %s, %s, %s)
                 """
                 cursor.execute(sql_insert_progress, (new_project_id, step_title, step_description, step_start_date_str, step_end_date_str, delay_days))
-                connection.commit() # Commit each step or commit once after loop
+                connection.commit() # Her adımı commit et veya döngüden sonra bir kez commit et
 
-                last_step_end_date = step_end_date # Update last_step_end_date for the next iteration
+                last_step_end_date = step_end_date # Bir sonraki iterasyon için last_step_end_date'i güncelle
 
-            # Send notification to project manager
+            # Proje yöneticisine bildirim gönder
             send_notification(
                 project_manager_id,
-                "New Project Assigned",
-                f"A new project has been assigned to you: '{project_name}'."
+                "Yeni Proje Atandı",
+                f"Size yeni bir proje atandı: '{project_name}'."
             )
 
         log_activity(
             user_id=user_id,
-            title='New Project Added',
-            description=f'New project "{project_name}" created.',
+            title='Yeni Proje Eklendi',
+            description=f'"{project_name}" adlı yeni proje oluşturuldu.',
             icon='fas fa-plus'
         )
-        return jsonify({"message": "Project successfully added", "projectId": new_project_id}), 201
+        return jsonify({"message": "Proje başarıyla eklendi", "projectId": new_project_id}), 201
     except pymysql.Error as e:
-        print(f"Database error adding project: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası proje eklerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error adding project: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata proje eklerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
-# API to log PDF Report Creation Activity (to be called from frontend)
+# PDF Raporu Oluşturma Aktivitesini Kaydetme API'si (ön uçtan çağrılacak)
 @app.route('/api/log_pdf_report', methods=['POST'])
 def log_pdf_report_api():
-    """Logs the creation of a PDF report as an activity."""
+    """Bir PDF raporu oluşturma etkinliğini kaydeder."""
     data = request.get_json()
     user_id = data.get('user_id')
-    report_type = data.get('report_type', 'General Report') 
-    project_name = data.get('project_name') 
+    report_type = data.get('report_type', 'Genel Rapor') # Varsayılan değer
+    project_name = data.get('project_name') # İsteğe bağlı
 
     if not user_id:
-        return jsonify({'message': 'User ID missing.'}), 400
+        return jsonify({'message': 'Kullanıcı ID\'si eksik.'}), 400
 
-    description_text = f'PDF file of "{report_type}" report created.'
+    description_text = f'"{report_type}" raporunun PDF dosyası oluşturuldu.'
     if project_name:
-        description_text = f'PDF report created for project "{project_name}".'
+        description_text = f'"{project_name}" projesi için PDF raporu oluşturuldu.'
 
     try:
         log_activity(
             user_id=user_id,
-            title='PDF Report Created',
+            title='PDF Raporu Oluşturuldu',
             description=description_text,
             icon='fas fa-file-pdf'
         )
-        return jsonify({'message': 'PDF report activity successfully logged.'}), 200
+        return jsonify({'message': 'PDF rapor aktivitesi başarıyla kaydedildi.'}), 200
     except Exception as e:
-        print(f"Error logging PDF report activity: {e}")
-        return jsonify({'message': 'Error logging PDF report activity.'}), 500
+        print(f"PDF rapor aktivitesi kaydederken hata: {e}")
+        return jsonify({'message': 'PDF rapor aktivitesi kaydedilirken hata oluştu.'}), 500
 
 
-# API to fetch Project Progress Steps
+# Proje İlerleme Adımlarını Getir API'si
 @app.route('/api/projects/<int:project_id>/progress', methods=['GET'])
 def get_project_progress_steps(project_id):
-    """Fetches all progress steps for a given project."""
+    """Belirli bir proje için tüm ilerleme adımlarını getirir."""
     connection = None
     try:
         connection = get_db_connection()
@@ -1740,34 +1719,34 @@ def get_project_progress_steps(project_id):
 
         return jsonify(steps), 200
     except pymysql.Error as e:
-        print(f"Database error fetching progress step: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası ilerleme adımlarını çekerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error fetching progress step: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata ilerleme adımlarını çekerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
-# Add New Project Progress Step API (called from projects.html)
+# Yeni Proje İlerleme Adımı Ekle API'si (projects.html'den çağrılır)
 @app.route('/api/projects/<int:project_id>/progress', methods=['POST'])
-def add_project_progress_step_from_modal(project_id): # project_id now passed from URL
-    """Adds a new progress step to a project."""
+def add_project_progress_step_from_modal(project_id): # project_id artık URL'den geliyor
+    """Bir projeye yeni bir ilerleme adımı ekler."""
     data = request.get_json()
-    # project_id = data.get('project_id') # REMOVED: project_id is now from URL
+    # project_id = data.get('project_id') # KALDIRILDI: project_id artık URL'den geliyor
     step_name = data.get('step_name')
     description = data.get('description')
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
 
     if not all([project_id, step_name, start_date_str, end_date_str]):
-        return jsonify({'message': 'Project ID, title, start and end date are required.'}), 400
+        return jsonify({'message': 'Proje ID\'si, başlık, başlangıç ve bitiş tarihi zorunludur.'}), 400
 
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Find the existing end date of the project (for calculating delay_days)
+            # Projenin mevcut bitiş tarihini bul (gecikme günlerini hesaplamak için)
             cursor.execute("""
                 SELECT end_date FROM project_progress
                 WHERE project_id = %s
@@ -1780,9 +1759,9 @@ def add_project_progress_step_from_modal(project_id): # project_id now passed fr
             delay_days = 0
             if previous_end_date:
                 new_step_start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
-                # Calculate the difference between the end date of the previous step and the start date of the new step
+                # Önceki adımın bitiş tarihi ile yeni adımın başlangıç tarihi arasındaki farkı hesapla
                 time_diff = (new_step_start_date - previous_end_date).days
-                if time_diff > 1: # If there's a gap of more than 1 day, a delay has occurred
+                if time_diff > 1: # 1 günden fazla bir boşluk varsa, gecikme oluşmuştur
                     delay_days = time_diff - 1
 
             sql_insert = """
@@ -1793,7 +1772,7 @@ def add_project_progress_step_from_modal(project_id): # project_id now passed fr
             new_progress_id = cursor.lastrowid
             connection.commit()
 
-            # Send notification to project manager
+            # Proje yöneticisine bildirim gönder
             cursor.execute("SELECT project_manager_id, project_name FROM projects WHERE project_id = %s", (project_id,))
             project_info = cursor.fetchone()
             if project_info:
@@ -1801,25 +1780,25 @@ def add_project_progress_step_from_modal(project_id): # project_id now passed fr
                 project_name = project_info['project_name']
                 send_notification(
                     project_manager_id,
-                    "Project Progress Step Added",
-                    f"A new progress step ('{step_name}') has been added to project '{project_name}'."
+                    "Proje İlerleme Adımı Eklendi",
+                    f"'{step_name}' adlı yeni bir ilerleme adımı '{project_name}' projesine eklendi."
                 )
 
-        return jsonify({'message': 'Progress step successfully added!', 'progress_id': new_progress_id}), 201
+        return jsonify({'message': 'İlerleme adımı başarıyla eklendi!', 'progress_id': new_progress_id}), 201
     except pymysql.Error as e:
-        print(f"Database error adding progress step: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası ilerleme adımı eklerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error adding progress step: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata ilerleme adımı eklerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
-# Update Project Progress Step API
+# Proje İlerleme Adımını Güncelle API'si
 @app.route('/api/progress/<int:progress_id>', methods=['PUT'])
 def update_project_progress_step(progress_id):
-    """Updates an existing project progress step."""
+    """Mevcut bir proje ilerleme adımını günceller."""
     data = request.get_json()
     step_name = data.get('step_name')
     description = data.get('description')
@@ -1827,22 +1806,22 @@ def update_project_progress_step(progress_id):
     end_date_str = data.get('end_date')
 
     if not all([step_name, start_date_str, end_date_str]):
-        return jsonify({'message': 'Title, start and end date are required.'}), 400
+        return jsonify({'message': 'Başlık, başlangıç ve bitiş tarihi zorunludur.'}), 400
 
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Get project ID and title of the existing progress step
+            # Mevcut ilerleme adımının proje ID'sini ve başlığını al
             cursor.execute("SELECT project_id, title FROM project_progress WHERE progress_id = %s", (progress_id,))
             existing_step = cursor.fetchone()
             if not existing_step:
-                return jsonify({'message': 'Progress step not found.'}), 404
+                return jsonify({'message': 'İlerleme adımı bulunamadı.'}), 404
 
             current_project_id = existing_step['project_id']
-            old_step_name = existing_step['title'] # Get old step name
+            old_step_name = existing_step['title'] # Eski adım adını al
 
-            # Find the end date of the previous step (excluding this step)
+            # Önceki adımın bitiş tarihini bul (bu adım hariç)
             delay_days = 0
             cursor.execute("""
                 SELECT MAX(end_date) as last_end_date
@@ -1868,9 +1847,9 @@ def update_project_progress_step(progress_id):
             connection.commit()
 
             if cursor.rowcount == 0:
-                return jsonify({'message': 'Progress step data is already up-to-date or no changes were made.'}), 200
+                return jsonify({'message': 'İlerleme adımı verisi zaten güncel veya değişiklik yapılmadı.'}), 200
 
-            # Send notification to project manager
+            # Proje yöneticisine bildirim gönder
             cursor.execute("SELECT project_manager_id, project_name FROM projects WHERE project_id = %s", (current_project_id,))
             project_info = cursor.fetchone()
             if project_info:
@@ -1878,34 +1857,34 @@ def update_project_progress_step(progress_id):
                 project_name = project_info['project_name']
                 send_notification(
                     project_manager_id,
-                    "Project Progress Step Updated",
-                    f"The progress step '{step_name}' in project '{project_name}' has been updated."
+                    "Proje İlerleme Adımı Güncellendi",
+                    f"'{project_name}' projesindeki '{step_name}' ilerleme adımı güncellendi."
                 )
 
-        return jsonify({'message': 'Progress step successfully updated!'}), 200
+        return jsonify({'message': 'İlerleme adımı başarıyla güncellendi!'}), 200
     except pymysql.Error as e:
-        print(f"Database error updating progress step: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası ilerleme adımı güncellerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error updating progress step: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata ilerleme adımı güncellerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
-# Delete Project Progress Step API
+# Proje İlerleme Adımını Sil API'si
 @app.route('/api/progress/<int:progress_id>', methods=['DELETE'])
 def delete_project_progress_step(progress_id):
-    """Deletes a project progress step."""
+    """Bir proje ilerleme adımını siler."""
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Get project ID of the step to be deleted
+            # Silinecek adımın proje ID'sini al
             cursor.execute("SELECT project_id, title FROM project_progress WHERE progress_id = %s", (progress_id,))
             step_info = cursor.fetchone()
             if not step_info:
-                return jsonify({'message': 'Progress step could not be deleted or not found.'}), 404
+                return jsonify({'message': 'İlerleme adımı silinemedi veya bulunamadı.'}), 404
             
             current_project_id = step_info['project_id']
             step_name = step_info['title']
@@ -1915,9 +1894,9 @@ def delete_project_progress_step(progress_id):
             connection.commit()
 
             if cursor.rowcount == 0:
-                return jsonify({'message': 'Progress step could not be deleted or not found.'}), 404
+                return jsonify({'message': 'İlerleme adımı silinemedi veya bulunamadı.'}), 404
 
-            # Send notification to project manager
+            # Proje yöneticisine bildirim gönder
             cursor.execute("SELECT project_manager_id, project_name FROM projects WHERE project_id = %s", (current_project_id,))
             project_info = cursor.fetchone()
             if project_info:
@@ -1925,95 +1904,95 @@ def delete_project_progress_step(progress_id):
                 project_name = project_info['project_name']
                 send_notification(
                     project_manager_id,
-                    "Project Progress Step Deleted",
-                    f"The progress step '{step_name}' in project '{project_name}' has been deleted."
+                    "Proje İlerleme Adımı Silindi",
+                    f"'{project_name}' projesindeki '{step_name}' ilerleme adımı silindi."
                 )
 
-        return jsonify({'message': 'Progress step successfully deleted!'}), 200
+        return jsonify({'message': 'İlerleme adımı başarıyla silindi!'}), 200
     except pymysql.Error as e:
-        print(f"Database error deleting progress step: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası ilerleme adımı silerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error deleting progress step: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata ilerleme adımı silerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
 @app.route('/api/user-info', methods=['GET'])
 def get_user_info():
-    """Fetches detailed information for a single user."""
+    """Tek bir kullanıcı için detaylı bilgileri getirir."""
     user_id = request.args.get('user_id')
     if not user_id:
-        return jsonify({'message': 'User ID missing'}), 400
+        return jsonify({'message': 'Kullanıcı ID\'si eksik'}), 400
 
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Fetch all user fields including new ones
+            # Yeni alanlar dahil tüm kullanıcı alanlarını getir
             cursor.execute("SELECT id, fullname, email, phone, role, profile_picture, hide_email, hide_phone, created_at FROM users WHERE id = %s", (user_id,))
             user = cursor.fetchone()
             if not user:
-                return jsonify({'message': 'User not found'}), 404
+                return jsonify({'message': 'Kullanıcı bulunamadı'}), 404
             
-            # Convert datetime objects to string for JSON serialization
+            # datetime nesnelerini JSON serileştirmesi için dizeye dönüştür
             if 'created_at' in user and isinstance(user['created_at'], datetime.datetime):
                 user['created_at'] = user['created_at'].isoformat()
 
             return jsonify(user), 200
     except Exception as e:
-        print(f"General error fetching user info: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata kullanıcı bilgisi çekerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
 @app.route('/api/users', methods=['GET'])
 def get_all_users():
-    """Fetches a list of all users."""
+    """Tüm kullanıcıların bir listesini getirir."""
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Fetch all user fields including new ones
+            # Yeni alanlar dahil tüm kullanıcı alanlarını getir
             cursor.execute("SELECT id, fullname, email, phone, role, profile_picture, hide_email, hide_phone, created_at FROM users")
             users = cursor.fetchall()
             
-            # Convert datetime objects to string for JSON serialization
+            # datetime nesnelerini JSON serileştirmesi için dizeye dönüştür
             for user in users:
                 if 'created_at' in user and isinstance(user['created_at'], datetime.datetime):
                     user['created_at'] = user['created_at'].isoformat()
 
             return jsonify(users), 200
     except pymysql.Error as e:
-        print(f"Database error fetching all users: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası tüm kullanıcıları çekerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error fetching all users: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata tüm kullanıcıları çekerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
 @app.route('/api/users', methods=['POST'])
 def add_user():
-    """Adds a new user to the database (typically by an admin)."""
+    """Veritabanına yeni bir kullanıcı ekler (genellikle bir yönetici tarafından)."""
     data = request.get_json()
     fullname = data.get('fullname')
     email = data.get('email')
     phone = data.get('phone', '')
     password = data.get('password')
-    role = data.get('role', 'Çalışan') # Default position if not provided
+    role = data.get('role', 'Çalışan') # Sağlanmazsa varsayılan pozisyon
     profile_picture = data.get('profile_picture') 
     hide_email = data.get('hide_email', 0) 
     hide_phone = data.get('hide_phone', 0) 
 
 
     if not fullname or not email or not password or not role:
-        return jsonify({'message': 'All fields are required!'}), 400
+        return jsonify({'message': 'Tüm alanlar zorunludur!'}), 400
 
-    onay = 1 # Default to approved for admin added users
+    onay = 1 # Yönetici tarafından eklenen kullanıcılar için varsayılan olarak onaylandı
     created_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     try:
@@ -2027,27 +2006,27 @@ def add_user():
             """
             cursor.execute(sql, (fullname, email, phone, hashed_password, role, created_at, onay, profile_picture, hide_email, hide_phone))
             connection.commit()
-        return jsonify({'message': 'User successfully added!'}), 201
+        return jsonify({'message': 'Kullanıcı başarıyla eklendi!'}), 201
     except pymysql.Error as e:
-        print(f"Database error adding user: {e}")
+        print(f"Veritabanı kullanıcı ekleme hatası: {e}")
         if e.args[0] == 1062:
-            return jsonify({'message': 'This email address is already in use.'}), 409
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+            return jsonify({'message': 'Bu e-posta adresi zaten kullanımda.'}), 409
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error adding user: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel kullanıcı ekleme hatası: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
 @app.route('/ayarlar')
 def ayarlar_page():
-    """Renders the settings page."""
+    """Ayarlar sayfasını render eder."""
     return render_template('ayarlar.html')
 
 @app.route('/api/roles', methods=['GET'])
 def get_distinct_roles():
-    """Fetches distinct roles from the users table (excluding 'Admin')."""
+    """Kullanıcılar tablosundan farklı rolleri getirir ('Admin' hariç)."""
     connection = None
     try:
         connection = get_db_connection()
@@ -2058,11 +2037,11 @@ def get_distinct_roles():
 
         return jsonify(roles), 200
     except pymysql.Error as e:
-        print(f"Database error fetching roles: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası rolleri çekerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error fetching roles: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata rolleri çekerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
@@ -2070,7 +2049,7 @@ def get_distinct_roles():
 
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
-    """Fetches tasks, optionally filtered by assigned user."""
+    """Görevleri, isteğe bağlı olarak atanmış kullanıcıya göre filtrelenmiş olarak getirir."""
     assigned_user_id = request.args.get('assigned_user_id')
     connection = None
     try:
@@ -2096,15 +2075,15 @@ def get_tasks():
             tasks = cursor.fetchall()
         return jsonify(tasks), 200
     except Exception as e:
-        print(f"Error fetching tasks: {e}")
-        return jsonify({'message': 'Tasks could not be fetched.'}), 500
+        print(f"Görevler çekilirken hata: {e}")
+        return jsonify({'message': 'Görevler çekilemedi.'}), 500
     finally:
         if connection:
             connection.close()
 
 @app.route('/api/tasks', methods=['POST'])
 def add_task():
-    """Adds a new task to the database."""
+    """Veritabanına yeni bir görev ekler."""
     data = request.get_json()
     title = data.get('title')
     description = data.get('description')
@@ -2115,7 +2094,7 @@ def add_task():
     created_by = int(data.get('created_by')) if data.get('created_by') else None
 
     if not all([title, start, assigned_user_id, created_by]):
-        return jsonify({'message': 'Required fields are missing!'}), 400
+        return jsonify({'message': 'Gerekli alanlar eksik!'}), 400
 
     connection = None
     try:
@@ -2128,24 +2107,24 @@ def add_task():
             cursor.execute(sql, (title, description, start, end, priority, assigned_user_id, created_by))
             connection.commit()
 
-            # Send notification to the newly assigned user
+            # Yeni atanan kullanıcıya bildirim gönder
             send_notification(
                 assigned_user_id,
-                "New Task Assigned",
-                f"A new task has been assigned to you: '{title}'."
+                "Yeni Görev Atandı",
+                f"Size yeni bir görev atandı: '{title}'."
             )
 
-        return jsonify({'message': 'Task successfully added!'}), 201
+        return jsonify({'message': 'Görev başarıyla eklendi!'}), 201
     except Exception as e:
-        print(f"Error adding task: {e}")
-        return jsonify({'message': 'Error occurred while adding task.'}), 500
+        print(f"Görev eklerken hata: {e}")
+        return jsonify({'message': 'Görev eklenirken hata oluştu.'}), 500
     finally:
         if connection:
             connection.close()
 
 @app.route('/api/tasks/<int:task_id>', methods=['PUT'])
 def update_task(task_id):
-    """Updates an existing task."""
+    """Mevcut bir görevi günceller."""
     data = request.get_json()
     title = data.get('title')
     description = data.get('description')
@@ -2156,13 +2135,13 @@ def update_task(task_id):
     created_by = int(data.get('created_by')) if data.get('created_by') else None
 
     if not all([title, start, new_assigned_user_id, created_by]):
-        return jsonify({'message': 'Required fields are missing!'}), 400
+        return jsonify({'message': 'Gerekli alanlar eksik!'}), 400
 
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Get the current assigned user of the task
+            # Görevin mevcut atanan kullanıcısını al
             cursor.execute("SELECT assigned_user_id FROM tasks WHERE id = %s", (task_id,))
             existing_task = cursor.fetchone()
             old_assigned_user_id = existing_task['assigned_user_id'] if existing_task else None
@@ -2175,35 +2154,35 @@ def update_task(task_id):
             cursor.execute(sql, (title, description, start, end, priority, new_assigned_user_id, created_by, task_id))
             connection.commit()
 
-            # If the assigned user changed, send notifications to old and new users
+            # Atanan kullanıcı değiştiyse, eski ve yeni kullanıcılara bildirim gönder
             if old_assigned_user_id and old_assigned_user_id != new_assigned_user_id:
                 send_notification(
                     old_assigned_user_id,
-                    "Task Assignment Changed",
-                    f"The task '{title}' is no longer assigned to you."
+                    "Görev Ataması Değişti",
+                    f"'{title}' görevi artık size atanmamıştır."
                 )
             send_notification(
                 new_assigned_user_id,
-                "Task Updated",
-                f"The task '{title}' assigned to you has been updated."
+                "Görev Güncellendi",
+                f"Size atanan '{title}' görevi güncellendi."
             )
 
-        return jsonify({'message': 'Task successfully updated!'}), 200
+        return jsonify({'message': 'Görev başarıyla güncellendi!'}), 200
     except Exception as e:
-        print(f"Error updating task: {e}")
-        return jsonify({'message': 'Error occurred while updating task.'}), 500
+        print(f"Görev güncellerken hata: {e}")
+        return jsonify({'message': 'Görev güncellenirken hata oluştu.'}), 500
     finally:
         if connection:
             connection.close()
 
 @app.route('/api/tasks/<int:task_id>', methods=['DELETE'])
 def delete_task(task_id):
-    """Deletes a task from the database."""
+    """Veritabanından bir görevi siler."""
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Get task information to send notification
+            # Bildirim göndermek için görev bilgilerini al
             cursor.execute("SELECT title, assigned_user_id FROM tasks WHERE id = %s", (task_id,))
             task_info = cursor.fetchone()
             
@@ -2213,21 +2192,21 @@ def delete_task(task_id):
             if task_info:
                 send_notification(
                     task_info['assigned_user_id'],
-                    "Task Deleted",
-                    f"The task '{task_info['title']}' assigned to you has been deleted."
+                    "Görev Silindi",
+                    f"Size atanan '{task_info['title']}' görevi silindi."
                 )
 
-        return jsonify({'message': 'Task successfully deleted!'}), 200
+        return jsonify({'message': 'Görev başarıyla silindi!'}), 200
     except Exception as e:
-        print(f"Error deleting task: {e}")
-        return jsonify({'message': 'Error occurred while deleting task.'}), 500
+        print(f"Görev silerken hata: {e}")
+        return jsonify({'message': 'Görev silinirken hata oluştu.'}), 500
     finally:
         if connection:
             connection.close()
 
 @app.route('/api/manager-stats')
 def manager_stats():
-    """Fetches statistics related to project managers' performance."""
+    """Proje yöneticilerinin performansıyla ilgili istatistikleri getirir."""
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
@@ -2278,7 +2257,7 @@ def manager_stats():
 
 @app.route('/api/worker-performance')
 def worker_performance():
-    """Fetches performance metrics for workers (project managers)."""
+    """Çalışanlar (proje yöneticileri) için performans metriklerini getirir."""
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
