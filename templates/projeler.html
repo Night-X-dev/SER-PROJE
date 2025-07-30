@@ -1376,14 +1376,13 @@
          <div class="notification-btn" id="notificationButton" data-count="0">
                     <i class="fas fa-bell"></i>
                 </div>
-         <!-- user-avatar.js tarafından yönetilecek avatar kapsayıcısı -->
-                <div class="user-profile" id="userProfileLink">
-                    <div id="userAvatarContainer" class="avatar-container"></div>
-                    <div class="user-info">
-                        <div class="user-name" id="userName"></div>
-                        <div class="user-role" id="userRole"></div>
-                    </div>
-                </div>
+          <div class="user-profile">
+            <div class="user-avatar" id="userAvatar">MÖ</div>
+            <div class="user-info">
+              <div class="user-name" id="userName">Mustafa Öztürk</div>
+              <div class="user-role" id="userRole">Veritabanı Yöneticisi</div>
+            </div>
+          </div>
           <!-- Tek Çıkış Yap Butonu -->
           <button
             class="btn btn-outline logout-btn"
@@ -1549,7 +1548,7 @@
       let currentConfirmAction = null;
       const pageTitleElement = document.getElementById('pageTitle');
       const toggleMyProjectsBtn = document.getElementById('toggleMyProjectsBtn');
-      
+
 
       // --- Kullanıcı Oturum Kontrolü ve Tema ---
       document.addEventListener("DOMContentLoaded", function () {
@@ -1628,6 +1627,9 @@
         logoutButton.addEventListener("click", handleLogout);
     document.addEventListener('DOMContentLoaded', function() {
         const notificationBtn = document.querySelector('.notification-btn');
+
+        // Örnek: Bildirim sayısını güncelleyen bir fonksiyon
+        // Bu fonksiyonu, arka uçtan veya başka bir kaynaktan gelen gerçek bildirim sayısıyla çağıracaksınız.
         function updateNotificationCount(count) {
             notificationBtn.setAttribute('data-count', count);
             if (count > 0) {
@@ -1636,8 +1638,18 @@
                 notificationBtn.classList.remove('has-notifications');
             }
         }
+
+        // Sayfa yüklendiğinde veya dinamik olarak bildirim sayısını ayarla (örnek olarak 5 bildirim)
+        // Gerçek kullanımda bu değer, sunucudan veya başka bir kaynaktan alınacaktır.
+        updateNotificationCount(5); // Başlangıçta 5 bildirim olduğunu varsayalım
+
+        // Bildirim düğmesine tıklama olayı (isteğe bağlı, bir bildirim panelini açmak için kullanılabilir)
         notificationBtn.addEventListener('click', function() {
             console.log('Bildirim düğmesine tıklandı!');
+            // Buraya bildirim panelini açma veya bildirimleri gösterme mantığını ekleyebilirsiniz.
+            // Örneğin, bir modal veya dropdown açabilirsiniz.
+            // Tıklandıktan sonra bildirim sayısını sıfırlamak isterseniz:
+            // updateNotificationCount(0);
         });
 
         // Tema değiştirme ve sidebar için gerekli JavaScript (index.html'den alınmıştır)
@@ -1713,45 +1725,8 @@
 
         updateRowsPerPage(); // Sayfa yüklendiğinde başlangıç değeri ayarla
       });
-  function loadUserInfo() {
-        const storedUser = localStorage.getItem('currentUser');
-        if (!storedUser) {
-            console.log("LocalStorage'da kullanıcı verisi bulunamadı. Giriş sayfasına yönlendiriliyor...");
-            showToast("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", true);
-            setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 2000);
-            return; // Buradan sonra işlem yapma, direkt yönlendir
-        }
 
-        try {
-            currentUser = JSON.parse(storedUser); 
-        } catch (e) {
-            console.error("Kayıtlı kullanıcı verisi bozuk:", e);
-            localStorage.removeItem('currentUser'); // Bozuk veriyi temizle
-            showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", true);
-            setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 2000);
-            return; // Buradan sonra işlem yapma, direkt yönlendir
-        }
-
-        // Kullanıcı arayüzünü güncelleme fonksiyonu (Topbar için)
-        // Bu kısım user-avatar.js'e taşındığından burada sadeleştirilebilir
-        const userNameElement = document.getElementById('userName');
-        const userRoleElement = document.getElementById('userRole');
-
-        if (userNameElement) {
-            userNameElement.textContent = currentUser.fullname || currentUser.username || 'Kullanıcı';
-        }
-        if (userRoleElement) {
-            userRoleElement.textContent = currentUser.role || 'Rol Yok';
-        }
-        // user-avatar.js'teki updateUserAvatar fonksiyonunu çağır (bu scriptten sonra yüklenecek)
-        // Eğer updateUserAvatar burada hata veriyorsa, user-avatar.js'in yüklenmesini beklemeniz gerekebilir.
-        // En iyisi, DOMContentLoaded içinde çağırmak.
-        // updateUserAvatar(currentUser); // Bu satırı şimdilik kaldırın, DOMContentLoaded içinde çağıracağız.
-    }      // --- Yardımcı Fonksiyonlar ---
+      // --- Yardımcı Fonksiyonlar ---
       function showToast(message, isError = false) {
         const toast = document.getElementById("toast");
         const toastMessage = document.getElementById("toastMessage");
@@ -3066,17 +3041,11 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
           }
       });
 
-       loadUserInfo();
 
       // Event listeners for page load and button clicks
       document.addEventListener("DOMContentLoaded", () => {
         fetchProjects(); // Sayfa yüklendiğinde projeleri çek
-        const userProfileLink = document.getElementById('userProfileLink'); // Yeni eklendi
-          if (userProfileLink) {
-            userProfileLink.addEventListener('click', () => {
-                window.location.href = 'users.html'; // users.html sayfasına yönlendir
-            });
-        }
+
         // Filtreleme butonları
         const filterBtn = document.getElementById("filterBtn");
         const filtersContainer = document.getElementById("filtersContainer");
@@ -3254,6 +3223,5 @@ async function checkPermission(permissionKey) {
 }
     </script>
     <script src="static/bildirim.js"></script>
-    <script src="static/user-avatar.js"></script>
   </body>
 </html>
