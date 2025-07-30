@@ -216,11 +216,11 @@ def check_role_permission(role_name, permission_key):
 # Mark all notifications as read API (for notifications table)
 @app.route('/api/notifications/mark_all_read', methods=['PUT'])
 def mark_all_notifications_as_read():
-    """Marks all notifications as read in the database."""
-    data = request.get_json() # Use get_json() for PUT requests
-    user_id = data.get('user_id') # Get user_id from the request body
+    """Veritabanındaki tüm bildirimleri okundu olarak işaretler."""
+    data = request.get_json() # PUT istekleri için get_json() kullanın
+    user_id = data.get('user_id') # İstek gövdesinden user_id'yi alın
     if not user_id:
-        return jsonify({'message': 'User ID missing.'}), 400
+        return jsonify({'message': 'Kullanıcı ID\'si eksik.'}), 400
 
     connection = get_db_connection()
     try:
@@ -229,24 +229,25 @@ def mark_all_notifications_as_read():
             cursor.execute(sql, (user_id,))
             connection.commit()
             rows_affected = cursor.rowcount 
-        return jsonify({'message': f'{rows_affected} notifications marked as read.'}), 200
+        return jsonify({'message': f'{rows_affected} bildirim okundu olarak işaretlendi.'}), 200
     except pymysql.Error as e:
-        print(f"Database error updating all notifications: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası tüm bildirimleri güncellerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error updating all notifications: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata tüm bildirimleri güncellerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
+
 # Unread Notification Count API (for notifications table)
 @app.route('/api/notifications/unread-count', methods=['GET'])
 def get_unread_notifications_count():
-    """Returns the count of unread notifications in the database."""
+    """Veritabanındaki okunmamış bildirim sayısını döndürür."""
     user_id = request.args.get('user_id')
     if not user_id:
-        return jsonify({'unread_count': 0, 'message': 'User ID missing.'}), 400 # Return 0 if user_id is missing
+        return jsonify({'unread_count': 0, 'message': 'Kullanıcı ID\'si eksik.'}), 400
 
     connection = get_db_connection()
     try:
@@ -256,11 +257,11 @@ def get_unread_notifications_count():
             result = cursor.fetchone()
             return jsonify(result), 200
     except pymysql.Error as e:
-        print(f"Database error fetching unread notification count: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası okunmamış bildirim sayısını çekerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error fetching unread notification count: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata okunmamış bildirim sayısını çekerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
@@ -269,51 +270,45 @@ def get_unread_notifications_count():
 # Mark Notification as Read API (for notifications table)
 @app.route('/api/notifications/<int:notification_id>/read', methods=['PUT'])
 def mark_notification_as_read(notification_id):
-    """Marks a specific notification as read in the database."""
-    # User ID'yi body'den almak yerine, oturumdan veya URL'den alabilirsiniz.
-    # Eğer bu endpoint'e bir kullanıcı ID'si gönderilmiyorsa, oturumdan alınması daha güvenlidir.
-    # Örneğin: user_id = session.get('user_id')
-    # Şu anki hata bağlamında, bu endpoint'in doğrudan çağrıldığı varsayıldığı için user_id'yi body'den alalım.
+    """Belirli bir bildirimi veritabanında okundu olarak işaretler."""
     data = request.get_json()
     user_id = data.get('user_id')
     if not user_id:
-        return jsonify({'message': 'User ID missing.'}), 400
+        return jsonify({'message': 'Kullanıcı ID\'si eksik.'}), 400
 
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
             cursor.execute("SELECT id FROM notifications WHERE id = %s AND user_id = %s", (notification_id, user_id))
             if not cursor.fetchone():
-                return jsonify({'message': 'Notification not found or you do not have permission to modify it.'}), 404
+                return jsonify({'message': 'Bildirim bulunamadı veya değiştirme izniniz yok.'}), 404
 
             sql = "UPDATE notifications SET is_read = 1 WHERE id = %s"
             cursor.execute(sql, (notification_id,))
             connection.commit()
 
-        return jsonify({'message': 'Notification successfully marked as read.'}), 200
+        return jsonify({'message': 'Bildirim başarıyla okundu olarak işaretlendi.'}), 200
     except pymysql.Error as e:
-        print(f"Database error updating notification: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası bildirimi güncellerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error updating notification: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata bildirimi güncellerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
-
 # Fetch Notifications API (for notifications table)
 @app.route('/api/notifications', methods=['GET'])
 def get_notifications():
-    """Fetches notifications for a specific user."""
+    """Belirli bir kullanıcı için bildirimleri getirir."""
     user_id = request.args.get('user_id')
     if not user_id:
-        return jsonify({'message': 'User ID missing.'}), 400
+        return jsonify({'message': 'Kullanıcı ID\'si eksik.'}), 400
 
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            # Fetch notifications only for the relevant user
             sql = "SELECT id, user_id, title, message, is_read, created_at FROM notifications WHERE user_id = %s ORDER BY created_at DESC"
             cursor.execute(sql, (user_id,))
             result = cursor.fetchall()
@@ -325,61 +320,57 @@ def get_notifications():
                         row['is_read'] = 0
             return jsonify(result)
     except pymysql.Error as e:
-        print(f"Database error fetching notifications: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası bildirimleri çekerken: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error fetching notifications: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata bildirimleri çekerken: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
 @app.route('/api/notifications/<int:notification_id>', methods=['DELETE'])
 def delete_notification(notification_id):
-    """Deletes a specific notification for the logged-in user."""
-    # User ID'yi body'den almak yerine, oturumdan veya URL'den alabilirsiniz.
-    # Eğer bu endpoint'e bir kullanıcı ID'si gönderilmiyorsa, oturumdan alınması daha güvenlidir.
-    # Şu anki hata bağlamında, bu endpoint'in doğrudan çağrıldığı varsayıldığı için user_id'yi body'den alalım.
-    data = request.get_json() # DELETE request body'sinden user_id'yi al
+    """Giriş yapmış kullanıcı için belirli bir bildirimi siler."""
+    data = request.get_json()
     user_id = data.get('user_id')
     if not user_id:
-        return jsonify({'message': 'User ID missing.'}), 400
+        return jsonify({'message': 'Kullanıcı ID\'si eksik.'}), 400
 
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
-            # Allow user to delete only their own notification
             cursor.execute("SELECT id FROM notifications WHERE id = %s AND user_id = %s", (notification_id, user_id))
             if not cursor.fetchone():
-                return jsonify({'message': 'Notification not found or you do not have permission to delete it.'}), 404
+                return jsonify({'message': 'Bildirim bulunamadı veya silme izniniz yok.'}), 404
 
             cursor.execute("DELETE FROM notifications WHERE id = %s", (notification_id,))
             connection.commit()
-            return jsonify({'message': 'Notification deleted.'}), 200
+            return jsonify({'message': 'Bildirim silindi.'}), 200
     except Exception as e:
-        print(f"Notification deletion error: {e}")
-        return jsonify({'message': 'Server error'}), 500
+        print(f"Bildirim silme hatası: {e}")
+        return jsonify({'message': 'Sunucu hatası'}), 500
     finally:
         connection.close()
 
 @app.route('/api/notifications/all', methods=['DELETE'])
 def delete_all_notifications():
-    """Deletes all notifications for the logged-in user."""
-    data = request.get_json() # DELETE request body'sinden user_id'yi al
+    """Giriş yapmış kullanıcı için tüm bildirimleri siler."""
+    data = request.get_json()
     user_id = data.get('user_id')
     if not user_id:
-        return jsonify({'message': 'User ID missing.'}), 400
+        return jsonify({'message': 'Kullanıcı ID\'si eksik.'}), 400
 
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
             cursor.execute("DELETE FROM notifications WHERE user_id = %s", (user_id,))
             connection.commit()
-            return jsonify({'message': 'All your notifications have been deleted.'})
+            return jsonify({'message': 'Tüm bildirimleriniz silindi.'})
     except Exception as e:
         if connection:
             connection.rollback()
-        return jsonify({'message': f'Error: {str(e)}'}), 500
+        return jsonify({'message': f'Hata: {str(e)}'}), 500
     finally:
         connection.close()
 
