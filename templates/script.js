@@ -26,7 +26,7 @@ function showRegister() {
 window.onload = showLogin;
 
 // Bildirim Paneli ve Sayaç (Tüm sayfalarda çalışır)
-const API_BASE_URL = "http://localhost:3001";
+const API_BASE_URL = 'http://serotomasyon.tr';
 
 function getCurrentUser() {
 const storedUser = localStorage.getItem("currentUser");
