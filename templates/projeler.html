@@ -3242,54 +3242,43 @@ function uint8ToBase64(uint8) {
   return btoa(result);
 }
 
-// 1. Yardımcı fonksiyon: Kullanıcı rolünü al
 function getCurrentUserRole() {
-    if (typeof currentUser !== 'undefined' && currentUser && currentUser.role) {
-        return currentUser.role;
-    } else {
-        const storedUser = localStorage.getItem('currentUser');
-        if (storedUser) {
-            try {
-                const user = JSON.parse(storedUser);
-                return user.role;
-            } catch (e) { return null; }
-        }
-    }
-    return null;
+    // currentUser global olarak set edildiği için doğrudan ona erişebiliriz
+    return currentUser ? currentUser.role : null;
 }
 
-// 2. Yardımcı fonksiyon: Yetki kontrolü
 async function checkPermission(permissionKey) {
     const role = getCurrentUserRole();
     if (!role) {
         showToast('Kullanıcı rolü bulunamadı. Lütfen tekrar giriş yapın.', true);
+        setTimeout(() => { window.location.href = 'index.html'; }, 1500);
         return false;
-    }
-    // Admin rolü için tüm yetkileri varsay
-    if (role === 'Admin') {
-        return true;
     }
     try {
         const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(role)}`);
         if (!response.ok) throw new Error('Yetki sorgusu başarısız');
         const perms = await response.json();
-        const permission = Array.isArray(perms) ? perms[0] : perms;
-        if (permission[permissionKey] != 1) {
-            let msg = '';
-            if (permissionKey === 'pdf_olusturma') msg = 'PDF oluşturma yetkiniz yok!';
-            else if (permissionKey === 'proje_duzenle') msg = 'Proje düzenleme yetkiniz yok!';
-            else if (permissionKey === 'proje_sil') msg = 'Proje silme yetkiniz yok!';
-            else msg = 'Bu işlem için yetkiniz yok!';
-            showToast(msg, true);
+        const permission = Array.isArray(perms) ? perms[0] : perms; // API'den dönen yapıya göre ayarlayın
+        if (permission[permissionKey] != 1) { // Yetkinin 1 olması gerekiyor
+            showToast('Bu sayfayı görüntüleme yetkiniz yok!', true);
+            setTimeout(() => { window.location.href = 'index.html'; }, 1500);
             return false;
         }
         return true;
     } catch (error) {
-        showToast('Yetki sorgusu sırasında hata oluştu.', true);
+        console.error('Yetki sorgusu sırasında hata oluştu:', error);
+        showToast('Yetki sorgusu sırasında hata oluştu. Lütfen tekrar deneyin.', true);
+        setTimeout(() => { window.location.href = 'index.html'; }, 1500);
         return false;
     }
 }
+
+// DOMContentLoaded içinde çağrıldığından emin olun
+window.addEventListener('DOMContentLoaded', function() {
+    checkPermission('projeler'); // Sayfaya özel yetki anahtarı
+});
     </script>
     <script src="static/bildirim.js"></script>
+    <script src="static/user-avatar.js"></script>
   </body>
 </html>
