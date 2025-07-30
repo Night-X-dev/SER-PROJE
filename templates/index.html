@@ -2445,9 +2445,29 @@
             }
             try {
                 const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(role)}`);
-                if (!response.ok) throw new Error('Yetki bilgisi alınamadı');
+                if (!response.ok) {
+                    // Hata durumunda, yanıtın JSON olup olmadığını kontrol etmeden önce metin olarak al
+                    const errorText = await response.text();
+                    console.error('Yetki bilgisi alınamadı - Sunucu yanıtı:', response.status, errorText);
+                    throw new Error('Yetki bilgisi alınamadı');
+                }
                 const perms = await response.json();
-                userPermissions = Array.isArray(perms) ? perms[0] : perms;
+                // Backend'den gelen yanıtın doğrudan bir obje mi yoksa tek elemanlı bir dizi mi olduğunu kontrol et
+                userPermissions = Array.isArray(perms) && perms.length > 0 ? perms[0] : perms;
+                
+                // Eğer hala userPermissions boşsa veya beklenen yetkileri içermiyorsa
+                if (!userPermissions || typeof userPermissions.proje_ekle === 'undefined') {
+                    console.warn('Yetki bilgisi beklenenden farklı formatta geldi veya boş.');
+                    userPermissions = {
+                        proje_ekle: 0,
+                        proje_duzenle: 0,
+                        proje_sil: 0,
+                        pdf_olusturma: 0,
+                        musteri_duzenleme: 0,
+                        raporlar: 0
+                    }; // Varsayılan olarak tüm yetkileri sıfırla
+                }
+
                 console.log('userPermissions:', userPermissions);
                 updateButtonPermissions();
             } catch (error) {
