@@ -17,7 +17,7 @@ app = Flask(__name__)
 # Oturum yönetimi gizli anahtarı
 # BU, GÜVENLİ VE TAHMİN EDİLEMEYEN BİR DİZE İLE DEĞİŞTİRİLMELİDİR!
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex") 
-
+CORS(app, resources={r"/*": {"origins": "*"}})
 @app.route('/')
 @app.route('/login.html') # Her iki URL de aynı fonksiyona yönlendirilecektir
 def serve_login_page():
