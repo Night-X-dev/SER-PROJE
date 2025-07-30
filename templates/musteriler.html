@@ -1812,7 +1812,7 @@
                     }
                     showConfirmModal('Tümünü Okundu İşaretle', 'Tüm bildirimleri okundu olarak işaretlemek istediğinizden emin misiniz?', async () => {
                         try {
-                            const response = await fetch(`${API_BASE_URL}/api/notifications/mark-all-read`, {
+                            const response = await fetch(`${API_BASE_URL}/api/notifications/mark_all_read`, {
                                 method: 'PUT',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ user_id: currentUser.id })
@@ -1836,8 +1836,10 @@
                     }
                     showConfirmModal('Tüm Bildirimleri Temizle', 'Tüm bildirimleri silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.', async () => {
                         try {
-                            const response = await fetch(`${API_BASE_URL}/api/notifications/clear-all?user_id=${currentUser.id}`, {
-                                method: 'DELETE'
+                            const response = await fetch(`${API_BASE_URL}/api/notifications/all`, {
+                                method: 'DELETE',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ user_id: currentUser.id })
                             });
                             if (!response.ok) throw new Error('Tüm bildirimler temizlenemedi.');
                             showToast('Tüm bildirimler başarıyla temizlendi.');
@@ -1891,7 +1893,7 @@
                             <div class="notification-item-content">
                                 <div class="notification-item-title">${notification.title}</div>
                                 <div class="notification-item-description">${notification.message}</div>
-                                <div class="notification-item-time">${new Date(notification.timestamp).toLocaleString('tr-TR')}</div>
+                                <div class="notification-item-time">${new Date(notification.created_at).toLocaleString('tr-TR')}</div>
                             </div>
                             <div class="notification-item-actions">
                                 <button class="delete-notification-btn" data-id="${notification.id}">
@@ -1948,8 +1950,12 @@
                 }
                 showConfirmModal('Bildirimi Sil', 'Bu bildirimi silmek istediğinizden emin misiniz?', async () => {
                     try {
-                        const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}?user_id=${currentUser.id}`, {
-                            method: 'DELETE'
+                        const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ user_id: currentUser.id })
                         });
                         if (!response.ok) throw new Error('Bildirim silinemedi.');
                         showToast('Bildirim başarıyla silindi.', false);
@@ -2410,7 +2416,7 @@
             searchInput.addEventListener('input', applyFiltersAndRenderTable);
             filterCustomerNameInput.addEventListener('input', applyFiltersAndRenderTable);
             filterContactPersonInput.addEventListener('input', applyFiltersAndRenderTable);
-            filterPhoneInput.addEventListener('input', applyFiltersAndHenderTable);
+            filterPhoneInput.addEventListener('input', applyFiltersAndRenderTable); // Corrected typo here
             filterStatusSelect.addEventListener('change', applyFiltersAndRenderTable);
             resetFiltersBtn.addEventListener('click', () => {
                 filterCustomerNameInput.value = '';
