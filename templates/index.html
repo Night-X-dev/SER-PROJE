@@ -2435,44 +2435,20 @@
         function updateButtonPermissions() {
             console.log('updateButtonPermissions çağrıldı. Mevcut yetkiler:', userPermissions);
 
-            const projeEkleLink = document.querySelector('a[href="proje_ekle.html"]');
-            const raporlarLink = document.querySelector('a[href="raporlar.html"]');
-            const musteriLink = document.querySelector('a[href="musteriler.html"]'); 
+            // Sadece PDF Oluştur butonu için görünürlük kontrolü
             const pdfExportBtn = document.getElementById('exportPdf'); 
 
-            if (userPermissions) {
-                // Proje Ekle yetkisi
-                if (projeEkleLink) {
-                    projeEkleLink.style.display = userPermissions.proje_ekle === 1 ? '' : 'none';
-                    console.log('Proje Ekle linki görünürlüğü:', projeEkleLink.style.display);
-                }
-
-                // Raporlar yetkisi
-                if (raporlarLink) {
-                    raporlarLink.style.display = userPermissions.raporlar === 1 ? '' : 'none';
-                    console.log('Raporlar linki görünürlüğü:', raporlarLink.style.display);
-                }
-
-                // Müşteri Düzenleme yetkisi (Müşteriler linki için)
-                // Bu linkin kendisi yetkiye bağlıysa:
-                if (musteriLink) {
-                    musteriLink.style.display = userPermissions.musteri_duzenleme === 1 ? '' : 'none';
-                    console.log('Müşteriler linki görünürlüğü:', musteriLink.style.display);
-                }
-                
-                // PDF Oluştur yetkisi (Dashboard sayfasındaki buton)
-                if (pdfExportBtn) {
-                    pdfExportBtn.style.display = userPermissions.pdf_olusturma === 1 ? '' : 'none';
-                    console.log('PDF Oluştur butonu görünürlüğü:', pdfExportBtn.style.display);
-                }
-
-            } else {
-                console.warn('userPermissions boş veya null, tüm yetkiye bağlı elementler gizleniyor.');
-                if (projeEkleLink) projeEkleLink.style.display = 'none';
-                if (raporlarLink) raporlarLink.style.display = 'none';
-                if (musteriLink) musteriLink.style.display = 'none';
-                if (pdfExportBtn) pdfExportBtn.style.display = 'none';
+            if (pdfExportBtn && userPermissions) {
+                // userPermissions.pdf_olusturma 0 ise 'none', 1 ise boş string (görünür)
+                pdfExportBtn.style.display = userPermissions.pdf_olusturma === 1 ? '' : 'none';
+                console.log('PDF Oluştur butonu görünürlüğü:', pdfExportBtn.style.display);
+            } else if (pdfExportBtn) {
+                // Eğer userPermissions null ise (yetki çekilemediyse), PDF butonunu gizle
+                pdfExportBtn.style.display = 'none';
+                console.warn('userPermissions boş veya null, PDF Oluştur butonu gizleniyor.');
             }
+            // Diğer menü öğeleri (proje_ekle, raporlar, musteriler) için gizleme/gösterme mantığı kaldırıldı.
+            // Bu öğeler artık her zaman görünür olacak.
         }
 
         async function fetchUserPermissions(role) {
@@ -2495,7 +2471,11 @@
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.error('Yetki bilgisi alınamadı - Sunucu yanıtı:', response.status, errorText);
-                    throw new Error('Yetki bilgisi alınamadı'); // Bu hata yakalanacak
+                    // Hata durumunda userPermissions'ı sıfırla ve toast göster
+                    userPermissions = null;
+                    showToast('Yetki bilgisi alınamadı. Lütfen tekrar giriş yapın.', true);
+                    setTimeout(() => { window.location.href = '/'; }, 2000);
+                    return; // Önemli: Hata durumunda buradan çık
                 }
                 const perms = await response.json();
                 userPermissions = Array.isArray(perms) && perms.length > 0 ? perms[0] : perms;
@@ -2515,24 +2495,27 @@
 
                 console.log('fetchUserPermissions başarılı. userPermissions:', userPermissions);
                 
-                // updateButtonPermissions'ı ayrı bir try-catch içinde çağırarak olası hataları izole et
-                try {
-                    updateButtonPermissions();
-                    console.log('updateButtonPermissions başarıyla tamamlandı.');
-                } catch (updateError) {
-                    console.error('updateButtonPermissions sırasında hata:', updateError);
-                    // Bu hata, ana fetchUserPermissions catch bloğuna düşmemeli, sadece loglanmalı.
-                    showToast('Yetki butonları güncellenirken bir sorun oluştu.', true);
+                // Sadece yetkiler başarıyla alındıysa ve geçerliyse butonları güncelle
+                if (userPermissions) {
+                    try {
+                        updateButtonPermissions();
+                        console.log('updateButtonPermissions başarıyla tamamlandı.');
+                    } catch (updateError) {
+                        console.error('updateButtonPermissions sırasında hata:', updateError);
+                        showToast('Yetki butonları güncellenirken bir sorun oluştu.', true);
+                    }
+                } else {
+                    // Bu duruma düşmemesi lazım ama defensive programlama
+                    showToast('Yetki bilgisi alınamadı. Lütfen tekrar giriş yapın.', true);
+                    setTimeout(() => { window.location.href = '/'; }, 2000);
                 }
 
             } catch (error) {
+                // Bu catch bloğu sadece fetch hatası veya JSON parse hatası gibi beklenmedik durumlar için
                 console.error('fetchUserPermissions sırasında genel hata:', error);
-                userPermissions = null; // Hata durumunda yetkileri sıfırla
+                userPermissions = null;
                 showToast('Yetki bilgisi alınamadı. Lütfen tekrar giriş yapın.', true);
-                // Hata durumunda, kullanıcıyı login sayfasına yönlendirme mantığını burada tutabiliriz.
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 2000);
+                setTimeout(() => { window.location.href = '/'; }, 2000);
             }
         }
 
