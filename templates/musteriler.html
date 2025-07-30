@@ -249,7 +249,8 @@
             flex-shrink: 0;
         }
 
-        .user-avatar {
+        /* user-avatar.js tarafından yönetilecek */
+        /* .user-avatar {
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -260,7 +261,7 @@
             color: var(--white);
             font-weight: 600;
             flex-shrink: 0;
-        }
+        } */
 
         .user-info {
             display: flex;
@@ -1368,9 +1369,9 @@
             }
             return null;
         }
- document.getElementById('userProfileLink').addEventListener('click', function() {
-                window.location.href = 'users.html';
-            });
+        document.getElementById('userProfileLink').addEventListener('click', function() {
+            window.location.href = 'users.html';
+        });
         async function checkPermission(permissionKey) {
             const role = getCurrentUserRole();
             if (!role) {
@@ -1406,7 +1407,7 @@
             const themeToggle = document.getElementById('theme-toggle');
             const userNameElement = document.getElementById('userName');
             const userRoleElement = document.getElementById('userRole');
-            const userAvatarElement = document.getElementById('userAvatar');
+            // const userAvatarElement = document.getElementById('userAvatar'); // Bu satır kaldırıldı
             const logoutButton = document.getElementById('logoutButton');
 
             const customersTableBody = document.querySelector('#customersTable tbody');
@@ -1487,23 +1488,29 @@
             // Kullanıcı arayüzünü güncelleme fonksiyonu (Topbar için)
             function updateUserInfo(user) {
                 if (user) {
-                    userNameElement.textContent = user.fullname;
-                    userRoleElement.textContent = user.role;
-                    userAvatarElement.textContent = getInitials(user.fullname);
+                    // userNameElement ve userRoleElement'in varlığını kontrol et
+                    if (userNameElement) {
+                        userNameElement.textContent = user.fullname || user.username || 'Kullanıcı';
+                    }
+                    if (userRoleElement) {
+                        userRoleElement.textContent = user.role || 'Rol Yok';
+                    }
+                    // user-avatar.js'teki updateUserAvatar fonksiyonunu çağır
+                    updateUserAvatar(user); 
                 }
             }
 
-            // İsimden baş harfleri alma fonksiyonu
-            function getInitials(fullname) {
-                if (!fullname) return '';
-                const parts = fullname.split(' ');
-                if (parts.length === 1) {
-                    return parts[0].charAt(0).toUpperCase();
-                } else if (parts.length >= 2) {
-                    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-                }
-                return '';
-            }
+            // İsimden baş harfleri alma fonksiyonu (user-avatar.js'e taşındı, burada kaldırılabilir)
+            // function getInitials(fullname) {
+            //     if (!fullname) return '';
+            //     const parts = fullname.split(' ');
+            //     if (parts.length === 1) {
+            //         return parts[0].charAt(0).toUpperCase();
+            //     } else if (parts.length >= 2) {
+            //         return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+            //     }
+            //     return '';
+            // }
 
             // --- Tema Değiştirme ---
             const savedTheme = localStorage.getItem('theme');
