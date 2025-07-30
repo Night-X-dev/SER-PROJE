@@ -1009,73 +1009,67 @@
             }
         }
 
-        /* Notification Panel Styles */
+        /* Notification Panel Styles (index.html'den alındı) */
         .notification-panel {
             position: fixed;
-            top: 60px; /* Topbar'ın hemen altından başlasın */
+            top: 60px;
             right: 20px;
-            width: 350px;
-            max-width: 90%;
+            width: 360px;
+            max-height: 500px;
             background-color: var(--card-bg);
             border-radius: 12px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
-            display: none; /* Varsayılan olarak gizli */
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border: 1px solid var(--border-color);
+            z-index: 1001;
+            display: none;
             flex-direction: column;
             overflow: hidden;
-            transform: translateY(-10px);
             opacity: 0;
-            transition: all 0.3s ease-out;
-            border: 1px solid var(--border-color);
+            transform: translateY(-10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
         }
 
         .notification-panel.show {
             display: flex;
-            transform: translateY(0);
             opacity: 1;
+            transform: translateY(0);
         }
 
         .notification-panel-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px 20px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .notification-panel-header h3 {
-            font-size: 18px;
             font-weight: 600;
-            margin: 0;
             color: var(--text-color);
         }
 
         .notification-panel-header .close-btn {
             background: none;
             border: none;
-            font-size: 24px;
+            font-size: 20px;
             color: var(--light-gray);
             cursor: pointer;
             transition: color 0.2s;
         }
 
         .notification-panel-header .close-btn:hover {
-            color: var(--primary-light);
+            color: var(--primary);
         }
 
         .notification-list {
-            max-height: 300px; /* Bildirim listesi için maksimum yükseklik */
+            flex-grow: 1;
             overflow-y: auto;
-            padding: 10px 20px;
+            padding: 5px 0;
         }
 
         .notification-item {
             display: flex;
             align-items: flex-start;
-            gap: 10px;
-            padding: 10px 0;
+            padding: 12px 15px;
             border-bottom: 1px solid var(--border-color);
-            cursor: pointer;
+            position: relative;
             transition: background-color 0.2s;
         }
 
@@ -1084,75 +1078,136 @@
         }
 
         .notification-item:hover {
-            background-color: var(--primary-light-bg); /* Hafif birincil renk arka planı */
+            background-color: var(--primary-light-bg);
         }
 
         .notification-item.unread {
-            background-color: var(--primary-light-bg); /* Okunmamış bildirimler için vurgu */
+            background-color: var(--primary-light-bg);
+            border-left: 3px solid var(--primary);
         }
 
-        .notification-item i {
-            font-size: 18px;
-            color: var(--primary-light);
-            flex-shrink: 0;
-            padding-top: 3px;
-        }
-
-        .notification-content {
+        .notification-item-content {
+            cursor: pointer;
             flex-grow: 1;
+            padding-right: 30px; /* Silme butonu için yer aç */
+        }
+        
+        .notification-item-icon {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(9, 128, 211, 0.1);
+            color: var(--primary-light);
+            font-size: 16px;
+            margin-right: 12px;
+            flex-shrink: 0;
         }
 
-        .notification-title {
+        .notification-item-title {
             font-weight: 600;
             font-size: 15px;
-            margin-bottom: 3px;
+            margin-bottom: 4px;
             color: var(--text-color);
         }
 
-        .notification-message {
+        .notification-item-description {
             font-size: 13px;
-            color: var(--dark-gray);
-            margin-bottom: 5px;
+            color: var(--light-gray);
+            line-height: 1.4;
         }
 
-        .notification-time {
+        .notification-item-time {
             font-size: 11px;
             color: var(--light-gray);
+            margin-top: 5px;
+        }
+
+        .notification-item-actions {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .notification-item:hover .notification-item-actions {
+            opacity: 1;
+        }
+
+        .delete-notification-btn {
+            background: transparent;
+            border: none;
+            color: var(--light-gray);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 5px;
+            border-radius: 50%;
+        }
+
+        .delete-notification-btn:hover {
+            background-color: rgba(255, 71, 87, 0.1);
+            color: var(--danger);
+        }
+
+        .notification-panel-footer {
+            padding: 10px 15px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--bg-color);
+        }
+
+        .notification-action-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .notification-action-btn:hover {
+            background-color: var(--input-bg);
+            border-color: var(--primary-light);
+            color: var(--primary-light);
+        }
+        
+        .notification-action-btn.danger:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+            background-color: rgba(255, 71, 87, 0.1);
         }
 
         .no-notifications {
             text-align: center;
-            color: var(--light-gray);
             padding: 20px;
-        }
-
-        .notification-panel-footer {
-            padding: 15px 20px;
-            border-top: 1px solid var(--border-color);
-            text-align: center;
-        }
-
-        .mark-all-read-btn {
-            background: none;
-            border: none;
-            color: var(--primary-light);
-            cursor: pointer;
+            color: var(--light-gray);
             font-size: 14px;
-            font-weight: 500;
-            transition: text-decoration 0.2s;
         }
 
-        .mark-all-read-btn:hover {
-            text-decoration: underline;
-        }
-
-        /* Responsive adjustments for notification panel */
         @media (max-width: 576px) {
             .notification-panel {
-                top: 55px; /* Adjust for smaller topbar height */
+                width: calc(100% - 20px);
+                left: 10px;
                 right: 10px;
-                left: 10px; /* Make it full width on very small screens */
-                width: auto;
+                top: 65px;
+            }
+            .notification-action-btn span {
+                display: none;
+            }
+            .notification-action-btn {
+                padding: 8px;
             }
         }
     </style>
@@ -1201,7 +1256,9 @@
             <span class="nav-text">Ayarlar</span>
         </a>
     </div>
-    
+     <div id="notification-panel-placeholder">
+            <!-- bildirim.html içeriği buraya yüklenecek -->
+        </div>
     <div class="main-content" id="mainContent">
         <div class="topbar">
             <!-- Hamburger Menü Butonu -->
@@ -1247,7 +1304,12 @@
                 <p class="no-notifications">Henüz bildirim yok.</p>
             </div>
             <div class="notification-panel-footer">
-                <button id="markAllReadBtn" class="mark-all-read-btn">Tümünü Okundu İşaretle</button>
+                <button id="markAllReadBtn" class="notification-action-btn">
+                    <i class="fas fa-check-double"></i> <span>Tümünü Okundu İşaretle</span>
+                </button>
+                <button id="clearAllNotificationsBtn" class="notification-action-btn danger">
+                    <i class="fas fa-trash-alt"></i> <span>Tümünü Sil</span>
+                </button>
             </div>
         </div>
         
@@ -1583,6 +1645,7 @@
             const closeNotificationPanel = document.getElementById('closeNotificationPanel');
             const notificationList = document.getElementById('notificationList');
             const markAllReadBtn = document.getElementById('markAllReadBtn');
+            const clearAllNotificationsBtn = document.getElementById('clearAllNotificationsBtn');
 
 
             // Filtre inputları
@@ -1766,14 +1829,28 @@
                         notificationItem.className = `notification-item ${notification.is_read ? '' : 'unread'}`;
                         notificationItem.dataset.id = notification.id;
                         notificationItem.innerHTML = `
-                            <i class="${notification.icon || 'fas fa-info-circle'}"></i>
-                            <div class="notification-content">
-                                <div class="notification-title">${notification.title}</div>
-                                <div class="notification-message">${notification.message}</div>
-                                <div class="notification-time">${new Date(notification.timestamp).toLocaleString('tr-TR')}</div>
+                            <div class="notification-item-icon">
+                                <i class="${notification.icon || 'fas fa-info-circle'}"></i>
+                            </div>
+                            <div class="notification-item-content">
+                                <div class="notification-item-title">${notification.title}</div>
+                                <div class="notification-item-description">${notification.message}</div>
+                                <div class="notification-item-time">${new Date(notification.timestamp).toLocaleString('tr-TR')}</div>
+                            </div>
+                            <div class="notification-item-actions">
+                                <button class="delete-notification-btn" data-id="${notification.id}">
+                                    <i class="fas fa-times"></i>
+                                </button>
                             </div>
                         `;
-                        notificationItem.addEventListener('click', () => markNotificationAsRead(notification.id));
+                        notificationItem.querySelector('.notification-item-content').addEventListener('click', (e) => {
+                            e.stopPropagation(); // İçerik tıklaması silme butonuna yayılmasın
+                            markNotificationAsRead(notification.id);
+                        });
+                        notificationItem.querySelector('.delete-notification-btn').addEventListener('click', (e) => {
+                            e.stopPropagation(); // Silme butonu tıklaması öğeye yayılmasın
+                            deleteNotification(notification.id);
+                        });
                         notificationList.appendChild(notificationItem);
                     });
                     notificationButton.setAttribute('data-count', unreadCount);
@@ -1823,6 +1900,49 @@
                     showToast('Tüm bildirimler okundu olarak işaretlenemedi.', true);
                 }
             });
+
+            // Bildirimi sil
+            async function deleteNotification(notificationId) {
+                if (!currentUser || !currentUser.id) {
+                    showToast('Kullanıcı oturumu bulunamadı.', true);
+                    return;
+                }
+                showConfirmModal('Bildirimi Sil', 'Bu bildirimi silmek istediğinizden emin misiniz?', async () => {
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}?user_id=${currentUser.id}`, {
+                            method: 'DELETE'
+                        });
+                        if (!response.ok) throw new Error('Bildirim silinemedi.');
+                        showToast('Bildirim başarıyla silindi.', false);
+                        fetchAndRenderNotifications(); // Listeyi yenile
+                    } catch (error) {
+                        console.error('Bildirim silme hatası:', error);
+                        showToast('Bildirim silinirken hata oluştu.', true);
+                    }
+                });
+            }
+
+            // Tüm bildirimleri temizle
+            clearAllNotificationsBtn.addEventListener('click', async () => {
+                if (!currentUser || !currentUser.id) {
+                    showToast('Kullanıcı oturumu bulunamadı.', true);
+                    return;
+                }
+                showConfirmModal('Tüm Bildirimleri Sil', 'Tüm bildirimleri silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.', async () => {
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/api/notifications/clear-all?user_id=${currentUser.id}`, {
+                            method: 'DELETE'
+                        });
+                        if (!response.ok) throw new Error('Tüm bildirimler silinemedi.');
+                        showToast('Tüm bildirimler başarıyla silindi.', false);
+                        fetchAndRenderNotifications(); // Listeyi yenile
+                    } catch (error) {
+                        console.error('Tüm bildirimleri silme hatası:', error);
+                        showToast('Tüm bildirimler silinirken hata oluştu.', true);
+                    }
+                });
+            });
+
 
             // Sayfa yüklendiğinde bildirimleri çek
             fetchAndRenderNotifications();
