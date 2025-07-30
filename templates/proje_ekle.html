@@ -248,7 +248,8 @@
             flex-shrink: 0;
         }
 
-        .user-avatar {
+        /* user-avatar.js tarafından yönetilecek */
+        /* .user-avatar {
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -258,7 +259,7 @@
             justify-content: center;
             color: var(--white);
             font-weight: 600;
-        }
+        } */
 
         .user-info {
             display: flex;
@@ -955,7 +956,7 @@
     <div class="sidebar" id="sidebar">
         <a href="index.html" style="text-decoration: none;">
             <div class="logo-container" style="cursor: pointer;">
-              <img src="{{ url_for('static', filename='serlogo.png') }}" alt="Ser Elektrik Otomasyon" style="width: 180px; height: auto; padding-left: 10px;">
+              <img src="static/serlogo.png" alt="Ser Elektrik Otomasyon" style="width: 180px; height: auto; padding-left: 10px;">
             </div>
           </a>
           
@@ -1010,11 +1011,12 @@
                     <i class="fas fa-bell"></i>
                 </div>
                 
-                <div class="user-profile">
-                    <div class="user-avatar" id="userAvatar">MÖ</div>
+                <!-- user-avatar.js tarafından yönetilecek avatar kapsayıcısı -->
+                <div class="user-profile" id="userProfileLink">
+                    <div id="userAvatarContainer" class="avatar-container"></div>
                     <div class="user-info">
-                        <div class="user-name" id="userName">Mustafa Öztürk</div>
-                        <div class="user-role" id="userRole">Müdür</div>
+                        <div class="user-name" id="userName"></div>
+                        <div class="user-role" id="userRole"></div>
                     </div>
                 </div>
                 <button class="btn btn-outline logout-btn" id="logoutButton">
@@ -1200,8 +1202,16 @@
             // Element Referansları (Topbar ve Oturum Kontrolü için)
             const userNameElement = document.getElementById('userName');
             const userRoleElement = document.getElementById('userRole');
-            const userAvatarElement = document.getElementById('userAvatar');
+            // userAvatarElement kaldırıldı, userAvatarContainer kullanılacak
             const logoutButton = document.getElementById('logoutButton');
+            const userProfileLink = document.getElementById('userProfileLink'); // Yeni eklendi
+
+            // userProfileLink'e tıklama olayı ekle
+            if (userProfileLink) {
+                userProfileLink.addEventListener('click', () => {
+                    window.location.href = 'users.html'; // users.html sayfasına yönlendir
+                });
+            }
 
             // Yeni Proje Ekle sayfasının form elementleri
             const customerNameSelect = document.getElementById('customer-name');
@@ -1253,11 +1263,13 @@
                 if (user) {
                     userNameElement.textContent = user.fullname;
                     userRoleElement.textContent = user.role;
-                    userAvatarElement.textContent = getInitials(user.fullname);
+                    // user-avatar.js'teki updateUserAvatar fonksiyonunu çağır
+                    updateUserAvatar(user); 
                 }
             }
 
-            // İsimden baş harfleri alma fonksiyonu
+            // İsimden baş harfleri alma fonksiyonu (user-avatar.js'e taşındı, burada kaldırılabilir)
+            /*
             function getInitials(fullname) {
                 if (!fullname) return '';
                 const parts = fullname.split(' ');
@@ -1268,6 +1280,7 @@
                 }
                 return '';
             }
+            */
 
             // --- Tema Değiştirme (Mevcut) ---
             const themeToggle = document.getElementById('theme-toggle');
@@ -1627,5 +1640,6 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <script src="static/bildirim.js"></script>
+<script src="static/user-avatar.js"></script>
 </body>
 </html>
