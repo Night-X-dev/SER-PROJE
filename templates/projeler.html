@@ -1376,12 +1376,13 @@
          <div class="notification-btn" id="notificationButton" data-count="0">
                     <i class="fas fa-bell"></i>
                 </div>
-                  <div class="user-profile" id="userProfileLink">
+                 <div class="user-profile" id="userProfileLink">
                     <div id="userAvatarContainer" class="avatar-container"></div>
                     <div class="user-info">
                         <div class="user-name" id="userName"></div>
                         <div class="user-role" id="userRole"></div>
                     </div>
+                </div>
                 </div>
           <!-- Tek Çıkış Yap Butonu -->
           <button
@@ -1525,11 +1526,10 @@
     </div>
 
     <!-- Bildirim Paneli (toggle ile açılır/kapanır) -->
-    
-
     <script>
+      // API Base URL
       const API_BASE_URL = "https://ser-proje.onrender.com";
-      let currentUser = null;
+      let currentUser = null; // Mevcut kullanıcı bilgisi
       let allProjectsData = [];
       let filteredProjects = []; // Filtrelenmiş projeleri tutacak
       let currentPage = 1;
@@ -1549,68 +1549,73 @@
       const pageTitleElement = document.getElementById('pageTitle');
       const toggleMyProjectsBtn = document.getElementById('toggleMyProjectsBtn');
 
-function showToast(message, isError = false) {
-        const toast = document.getElementById('toast');
-        const toastMessage = document.getElementById('toastMessage');
 
-        if (!toast || !toastMessage) {
-            console.error("Toast elementleri bulunamadı!");
-            return;
-        }
+      // Genel Toast bildirim fonksiyonu
+      function showToast(message, isError = false) {
+          const toast = document.getElementById('toast');
+          const toastMessage = document.getElementById('toastMessage');
 
-        toastMessage.textContent = message;
-        toast.classList.remove('success', 'error');
-        toast.classList.add(isError ? 'error' : 'success');
+          if (!toast || !toastMessage) {
+              console.error("Toast elementleri bulunamadı!");
+              return;
+          }
 
-        toast.classList.add('show');
+          toastMessage.textContent = message;
+          toast.classList.remove('success', 'error');
+          toast.classList.add(isError ? 'error' : 'success');
 
-        setTimeout(() => {
-            toast.classList.remove('show');
-        }, 3000);
-    }
+          toast.classList.add('show');
 
-    // Bu fonksiyonu DOMContentLoaded dışına taşıyarak currentUser'ın erken ayarlanmasını sağlıyoruz.
-    function loadUserInfo() {
-        const storedUser = localStorage.getItem('currentUser');
-        if (!storedUser) {
-            console.log("LocalStorage'da kullanıcı verisi bulunamadı. Giriş sayfasına yönlendiriliyor...");
-            showToast("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", true);
-            setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 2000);
-            return;
-        }
+          setTimeout(() => {
+              toast.classList.remove('show');
+          }, 3000);
+      }
 
-        try {
-            currentUser = JSON.parse(storedUser); 
-        } catch (e) {
-            console.error("Kayıtlı kullanıcı verisi bozuk:", e);
-            localStorage.removeItem('currentUser');
-            showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", true);
-            setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 2000);
-            return;
-        }
+      // Kullanıcı bilgilerini yükle ve oturum kontrolünü yap
+      function loadUserInfo() {
+          const storedUser = localStorage.getItem('currentUser');
+          if (!storedUser) {
+              console.log("LocalStorage'da kullanıcı verisi bulunamadı. Giriş sayfasına yönlendiriliyor...");
+              showToast("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", true);
+              setTimeout(() => {
+                  window.location.href = 'login.html';
+              }, 2000);
+              return; // Buradan sonra işlem yapma, direkt yönlendir
+          }
 
-        const userNameElement = document.getElementById('userName');
-        const userRoleElement = document.getElementById('userRole');
+          try {
+              currentUser = JSON.parse(storedUser); 
+          } catch (e) {
+              console.error("Kayıtlı kullanıcı verisi bozuk:", e);
+              localStorage.removeItem('currentUser'); // Bozuk veriyi temizle
+              showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", true);
+              setTimeout(() => {
+                  window.location.href = 'login.html';
+              }, 2000);
+              return; // Buradan sonra işlem yapma, direkt yönlendir
+          }
 
-        if (userNameElement) {
-            userNameElement.textContent = currentUser.fullname || currentUser.username || 'Kullanıcı';
-        }
-        if (userRoleElement) {
-            userRoleElement.textContent = currentUser.role || 'Rol Yok';
-        }
-        // updateUserAvatar DOMContentLoaded içinde çağrılacak, user-avatar.js yüklendikten sonra
-    }
+          // Kullanıcı arayüzünü güncelleme (user-avatar.js yüklendikten sonra çağrılacak)
+          const userNameElement = document.getElementById('userName');
+          const userRoleElement = document.getElementById('userRole');
 
-    // loadUserInfo fonksiyonunu hemen çağırıyoruz ki currentUser değişkeni set edilsin
-    loadUserInfo();
-      // --- Kullanıcı Oturum Kontrolü ve Tema ---
+          if (userNameElement) {
+              userNameElement.textContent = currentUser.fullname || currentUser.username || 'Kullanıcı';
+          }
+          if (userRoleElement) {
+              userRoleElement.textContent = currentUser.role || 'Rol Yok';
+          }
+          // updateUserAvatar DOMContentLoaded içinde çağrılacak
+      }
+
+      // loadUserInfo fonksiyonunu hemen çağırıyoruz ki currentUser değişkeni set edilsin
+      loadUserInfo();
+
+      // --- DOM Yüklendiğinde Çalışacak Kod ---
       document.addEventListener("DOMContentLoaded", function () {
-          if (currentUser) {
-            updateUserAvatar(currentUser); // user-avatar.js yüklendiyse
+        // user-avatar.js yüklendiyse updateUserAvatar'ı çağır
+        if (currentUser && typeof updateUserAvatar === 'function') {
+            updateUserAvatar(currentUser); 
         }
 
         // Topbar kullanıcı profili linki için event listener
@@ -1620,54 +1625,14 @@ function showToast(message, isError = false) {
                 window.location.href = 'users.html';
             });
         }
-        const userNameElement = document.getElementById("userName");
-        const userRoleElement = document.getElementById("userRole");
-        const userAvatarElement = document.getElementById("userAvatar");
+
         const logoutButton = document.getElementById("logoutButton");
-
-        const storedUser = localStorage.getItem("currentUser");
-        if (!storedUser) {
-          showToast("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", true);
-          setTimeout(() => {
-              window.location.href = "login.html";
-          }, 2000);
-        } else {
-          try {
-            currentUser = JSON.parse(storedUser);
-            updateUserInfo(currentUser);
-          } catch (e) {
-            console.error("Kayıtlı kullanıcı verisi bozuk:", e);
-            localStorage.removeItem("currentUser");
-            showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", true);
-            setTimeout(() => {
-                window.location.href = "login.html";
-            }, 2000);
-          }
-        }
-
-        
-        function updateUserInfo(user) {
-          if (user) {
-            userNameElement.textContent = user.fullname;
-            userRoleElement.textContent = user.role;
-            userAvatarElement.textContent = getInitials(user.fullname);
-          }
-        }
-
-        function getInitials(fullname) {
-          if (!fullname) return "";
-          const parts = fullname.split(" ");
-          if (parts.length === 1) {
-            return parts[0].charAt(0).toUpperCase();
-          } else if (parts.length >= 2) {
-            return (
-              parts[0].charAt(0) + parts[parts.length - 1].charAt(0)
-            ).toUpperCase();
-          }
-          return "";
-        }
-
         const themeToggle = document.getElementById("theme-toggle");
+        const hamburgerMenu = document.getElementById('hamburgerMenu');
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+
+        // Tema değiştirme
         const savedTheme = localStorage.getItem("theme");
         if (savedTheme) {
           document.body.setAttribute("data-theme", savedTheme);
@@ -1687,85 +1652,13 @@ function showToast(message, isError = false) {
           localStorage.setItem("theme", newTheme);
         });
 
-        const handleLogout = () => {
+        // Çıkış Yap butonu
+        logoutButton.addEventListener("click", () => {
             localStorage.removeItem("currentUser");
             window.location.href = "login.html";
-        };
-
-        logoutButton.addEventListener("click", handleLogout);
-    document.addEventListener('DOMContentLoaded', function() {
-        const notificationBtn = document.querySelector('.notification-btn');
-
-        // Örnek: Bildirim sayısını güncelleyen bir fonksiyon
-        // Bu fonksiyonu, arka uçtan veya başka bir kaynaktan gelen gerçek bildirim sayısıyla çağıracaksınız.
-        function updateNotificationCount(count) {
-            notificationBtn.setAttribute('data-count', count);
-            if (count > 0) {
-                notificationBtn.classList.add('has-notifications');
-            } else {
-                notificationBtn.classList.remove('has-notifications');
-            }
-        }
-
-        // Sayfa yüklendiğinde veya dinamik olarak bildirim sayısını ayarla (örnek olarak 5 bildirim)
-        // Gerçek kullanımda bu değer, sunucudan veya başka bir kaynaktan alınacaktır.
-        updateNotificationCount(5); // Başlangıçta 5 bildirim olduğunu varsayalım
-
-        // Bildirim düğmesine tıklama olayı (isteğe bağlı, bir bildirim panelini açmak için kullanılabilir)
-        notificationBtn.addEventListener('click', function() {
-            console.log('Bildirim düğmesine tıklandı!');
-            // Buraya bildirim panelini açma veya bildirimleri gösterme mantığını ekleyebilirsiniz.
-            // Örneğin, bir modal veya dropdown açabilirsiniz.
-            // Tıklandıktan sonra bildirim sayısını sıfırlamak isterseniz:
-            // updateNotificationCount(0);
         });
 
-        // Tema değiştirme ve sidebar için gerekli JavaScript (index.html'den alınmıştır)
-        const themeToggle = document.querySelector('.theme-toggle');
-        const body = document.body;
-
-        themeToggle.addEventListener('click', function() {
-            if (body.getAttribute('data-theme') === 'dark') {
-                body.removeAttribute('data-theme');
-                themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
-            } else {
-                body.setAttribute('data-theme', 'dark');
-                themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
-            }
-        });
-
-        // Sayfa yüklendiğinde mevcut tema ayarını kontrol et
-        if (body.getAttribute('data-theme') === 'dark') {
-            themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
-        } else {
-            themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
-        }
-
-        const hamburgerMenu = document.querySelector('.hamburger-menu');
-        const sidebar = document.querySelector('.sidebar');
-        const mainContent = document.querySelector('.main-content');
-
-        hamburgerMenu.addEventListener('click', () => {
-            sidebar.classList.toggle('hidden');
-            mainContent.classList.toggle('expanded');
-        });
-
-        // Ekran boyutu değiştiğinde sidebar görünürlüğünü yönet (masaüstünde her zaman açık)
-        window.addEventListener('resize', () => {
-            if (window.innerWidth > 992) { // Geniş ekranlar için (992px üstü)
-                sidebar.classList.remove('hidden');
-                mainContent.classList.remove('expanded');
-            } else { // Küçük ekranlar için
-                // Mobil görünümde başlangıçta gizli tut veya son durumu koru
-                // Bu kısım, hamburger menü açıldığında yönetilecek
-            }
-        });
-    });
         // Hamburger menü işlevselliği
-        const hamburgerMenu = document.getElementById('hamburgerMenu');
-        const sidebar = document.getElementById('sidebar');
-        const mainContent = document.getElementById('mainContent');
-
         hamburgerMenu.addEventListener('click', () => {
             sidebar.classList.toggle('show');
             mainContent.classList.toggle('expanded');
@@ -1792,46 +1685,88 @@ function showToast(message, isError = false) {
         });
 
         updateRowsPerPage(); // Sayfa yüklendiğinde başlangıç değeri ayarla
+
+        fetchProjects(); // Sayfa yüklendiğinde projeleri çek
+        fetchUnreadNotificationCount(); // Sayfa yüklendiğinde okunmamış bildirim sayısını çek
+
+        // Filtreleme butonları
+        const filterBtn = document.getElementById("filterBtn");
+        const filtersContainer = document.getElementById("filtersContainer");
+        filterBtn.addEventListener("click", () => {
+          filtersContainer.style.display =
+            filtersContainer.style.display === "none" ? "grid" : "none";
+        });
+
+        document.getElementById("refreshData").addEventListener("click", () => {
+          fetchProjects();
+          showToast("Proje verileri yenilendi.");
+        });
+
+        document.getElementById("exportAllPdf").addEventListener("click", async function() {
+            const hasPermission = await checkPermission('pdf_olusturma');
+            if (!hasPermission) return;
+            exportAllProjectsToPdf();
+        });
+
+        // "Projelerim" butonuna tıklama olayı
+        toggleMyProjectsBtn.addEventListener('click', () => {
+            isMyProjectsView = !isMyProjectsView; // Durumu tersine çevir
+            if (isMyProjectsView) {
+                toggleMyProjectsBtn.innerHTML = '<i class="fas fa-list"></i> Tüm Projeleri Görüntüle';
+                pageTitleElement.innerHTML = '<i class="fas fa-project-diagram"></i> Projelerim';
+            } else {
+                toggleMyProjectsBtn.innerHTML = '<i class="fas fa-user-tie"></i> Projelerim';
+                pageTitleElement.innerHTML = '<i class="fas fa-project-diagram"></i> Tüm Projeler';
+            }
+            applyFiltersAndRenderTable(); // Filtreleri yeniden uygula
+        });
+
+
+        // Genel arama inputu
+        document.getElementById("searchInput").addEventListener("keyup", applyFiltersAndRenderTable);
+
+        // Filtre inputlarına keyup ve change event'leri
+        document
+          .getElementById("filterProjectName")
+          .addEventListener("keyup", applyFiltersAndRenderTable);
+        document
+          .getElementById("filterRefNo")
+          .addEventListener("keyup", applyFiltersAndRenderTable);
+        document
+          .getElementById("filterCustomer")
+          .addEventListener("keyup", applyFiltersAndRenderTable);
+        document
+          .getElementById("filterStatus")
+          .addEventListener("change", applyFiltersAndRenderTable);
+
+        // Filtreleri sıfırlama
+        document.getElementById("resetFilters").addEventListener("click", () => {
+          document.getElementById("filterProjectName").value = "";
+          document.getElementById("filterRefNo").value = "";
+          document.getElementById("filterCustomer").value = "";
+          document.getElementById("filterStatus").value = "";
+          document.getElementById("searchInput").value = ""; // Global aramayı da sıfırla
+          applyFiltersAndRenderTable();
+          showToast("Filtreler sıfırlandı.");
+        });
+
+        // Confirmation Modal "Onayla" butonu için olay dinleyicisi
+        if (confirmActionBtn) {
+            confirmActionBtn.addEventListener('click', () => {
+                if (currentConfirmAction) {
+                    currentConfirmAction();
+                }
+                confirmationModal.hide();
+                const confirmationModalElement = document.getElementById('confirmationModal');
+                confirmationModalElement.style.zIndex = ''; // z-index'i sıfırla
+            });
+        }
+        
+        // İzin kontrolünü DOMContentLoaded içinde çağırın
+        checkPermission('projeler'); // Sayfaya özel yetki anahtarı
       });
 
       // --- Yardımcı Fonksiyonlar ---
-      function showToast(message, isError = false) {
-        const toast = document.getElementById("toast");
-        const toastMessage = document.getElementById("toastMessage");
-
-        toastMessage.textContent = message;
-        toast.className = "toast show";
-        if (isError) {
-          toast.classList.add("error");
-        } else {
-          toast.classList.remove("error");
-        }
-
-        setTimeout(() => {
-          toast.className = "toast";
-        }, 3000);
-      }
-
-      // Confirmation Modal'ı gösterme fonksiyonu
-      function showConfirmationModal(message, actionCallback) {
-          document.getElementById('confirmationMessage').innerHTML = message;
-          currentConfirmAction = actionCallback;
-          // Ensure the modal is on top
-          const confirmationModalElement = document.getElementById('confirmationModal');
-          confirmationModalElement.style.zIndex = '2001'; // Higher than projectModal
-          confirmationModal.show();
-      }
-
-      // Confirmation Modal'daki onay butonuna tıklama
-      confirmActionBtn.addEventListener('click', () => {
-          if (currentConfirmAction) {
-              currentConfirmAction();
-          }
-          confirmationModal.hide();
-          const confirmationModalElement = document.getElementById('confirmationModal');
-          confirmationModalElement.style.zIndex = ''; // Reset z-index
-      });
-
       // Tarih formatlama (DD.MM.YYYY)
       function formatDateForDisplay(dateStr) {
         if (!dateStr) return "";
@@ -1965,7 +1900,6 @@ function showToast(message, isError = false) {
       function renderProjectsTable(projectsToRender) {
         let tbody = document.getElementById("projectsTableBody");
         if (!tbody) {
-          // Eğer tbody yoksa, tabloya tbody ekle
           const table = document.getElementById("projectsTable");
           if (table) {
             tbody = document.createElement("tbody");
@@ -2016,7 +1950,6 @@ function showToast(message, isError = false) {
           const dt1 = parseDate(date1);
           const dt2 = parseDate(date2);
           if (!dt1 || !dt2) return null;
-          // Sıfırdan küçükse daima 0 döndürme, gerçek farkı döndür
           return Math.ceil((dt2 - dt1) / (1000 * 60 * 60 * 24));
         }
 
@@ -2042,7 +1975,6 @@ function showToast(message, isError = false) {
 
           // Gecikme Durumu
           let delayDays = 0;
-          // Backend'den gelen total_delay_days'i kullan
           if (project.total_delay_days !== undefined && project.total_delay_days !== null) {
             delayDays = Number(project.total_delay_days);
             if (isNaN(delayDays)) delayDays = 0;
@@ -3109,75 +3041,6 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
           }
       });
 
-
-      // Event listeners for page load and button clicks
-      document.addEventListener("DOMContentLoaded", () => {
-        fetchProjects(); // Sayfa yüklendiğinde projeleri çek
-
-        // Filtreleme butonları
-        const filterBtn = document.getElementById("filterBtn");
-        const filtersContainer = document.getElementById("filtersContainer");
-        filterBtn.addEventListener("click", () => {
-          filtersContainer.style.display =
-            filtersContainer.style.display === "none" ? "grid" : "none"; // 'block' yerine 'grid' kullanıldı
-        });
-
-        document.getElementById("refreshData").addEventListener("click", () => {
-          fetchProjects();
-          showToast("Proje verileri yenilendi.");
-        });
-
-        // exportAllPdf butonu için sadece burada olay dinleyicisi ekleniyor.
-        // Aşağıdaki tekrar eden kısım kaldırıldı.
-        document.getElementById("exportAllPdf").addEventListener("click", async function() {
-            const hasPermission = await checkPermission('pdf_olusturma');
-            if (!hasPermission) return;
-            exportAllProjectsToPdf();
-        });
-
-        // "Projelerim" butonuna tıklama olayı
-        toggleMyProjectsBtn.addEventListener('click', () => {
-            isMyProjectsView = !isMyProjectsView; // Durumu tersine çevir
-            if (isMyProjectsView) {
-                toggleMyProjectsBtn.innerHTML = '<i class="fas fa-list"></i> Tüm Projeleri Görüntüle';
-                pageTitleElement.innerHTML = '<i class="fas fa-project-diagram"></i> Projelerim';
-            } else {
-                toggleMyProjectsBtn.innerHTML = '<i class="fas fa-user-tie"></i> Projelerim';
-                pageTitleElement.innerHTML = '<i class="fas fa-project-diagram"></i> Tüm Projeler';
-            }
-            applyFiltersAndRenderTable(); // Filtreleri yeniden uygula
-        });
-
-
-        // Genel arama inputu
-        document.getElementById("searchInput").addEventListener("keyup", applyFiltersAndRenderTable);
-
-        // Filtre inputlarına keyup ve change event'leri
-        document
-          .getElementById("filterProjectName")
-          .addEventListener("keyup", applyFiltersAndRenderTable);
-        document
-          .getElementById("filterRefNo")
-          .addEventListener("keyup", applyFiltersAndRenderTable);
-        document
-          .getElementById("filterCustomer")
-          .addEventListener("keyup", applyFiltersAndRenderTable);
-        document
-          .getElementById("filterStatus")
-          .addEventListener("change", applyFiltersAndRenderTable);
-
-        // Filtreleri sıfırlama
-        document.getElementById("resetFilters").addEventListener("click", () => {
-          document.getElementById("filterProjectName").value = "";
-          document.getElementById("filterRefNo").value = "";
-          document.getElementById("filterCustomer").value = "";
-          document.getElementById("filterStatus").value = "";
-          document.getElementById("searchInput").value = ""; // Global aramayı da sıfırla
-          applyFiltersAndRenderTable();
-          showToast("Filtreler sıfırlandı.");
-        });
-      });
-
       function applyFiltersAndRenderTable() {
         const searchTerm = document.getElementById("searchInput").value.toLowerCase();
         const filterProjectName = document.getElementById("filterProjectName").value.toLowerCase();
@@ -3247,6 +3110,45 @@ function getCurrentUserRole() {
     return currentUser ? currentUser.role : null;
 }
 
+async function fetchUnreadNotificationCount() {
+    const notificationButton = document.getElementById('notificationButton');
+    try {
+        let userId = currentUser ? currentUser.id : null;
+
+        if (!userId) {
+            console.warn('Kullanıcı ID bulunamadı. Okunmamış bildirim sayısı çekilemiyor.');
+            notificationButton.setAttribute('data-count', '0');
+            notificationButton.classList.remove('has-notifications');
+            return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/api/notifications/unread-count?user_id=${userId}`);
+        if (!response.ok) {
+            if (response.status === 404) {
+                console.warn('API endpoint not found: /api/notifications/unread-count. Setting notification count to 0.');
+                notificationButton.setAttribute('data-count', '0');
+                notificationButton.classList.remove('has-notifications');
+                return;
+            }
+            const errorText = await response.text();
+            throw new Error(`Okunmamış bildirim sayısı çekilemedi. Sunucu yanıtı: ${response.status} - ${errorText.substring(0, 100)}...`);
+        }
+        const data = await response.json();
+        const unreadCount = data.unread_count;
+
+        notificationButton.setAttribute('data-count', unreadCount);
+        if (unreadCount > 0) {
+            notificationButton.classList.add('has-notifications');
+        } else {
+            notificationButton.classList.remove('has-notifications');
+        }
+    } catch (error) {
+        console.error('Okunmamış bildirim sayısı çekilemedi:', error);
+        notificationButton.setAttribute('data-count', '!');
+        showToast(`Bildirim sayısı yüklenirken hata oluştu: ${error.message}`, true);
+    }
+}
+
 async function checkPermission(permissionKey) {
     const role = getCurrentUserRole();
     if (!role) {
@@ -3272,12 +3174,8 @@ async function checkPermission(permissionKey) {
         return false;
     }
 }
-
-// DOMContentLoaded içinde çağrıldığından emin olun
-window.addEventListener('DOMContentLoaded', function() {
-    checkPermission('projeler'); // Sayfaya özel yetki anahtarı
-});
     </script>
+
     <script src="static/bildirim.js"></script>
     <script src="static/user-avatar.js"></script>
   </body>
