@@ -1524,95 +1524,93 @@
       <i class="fas fa-check-circle"></i>
       <span id="toastMessage">İşlem başarıyla tamamlandı</span>
     </div>
+<script>
+    // API Base URL
+    const API_BASE_URL = "https://ser-proje.onrender.com";
+    let currentUser = null; // Mevcut kullanıcı bilgisi
+    let allProjectsData = [];
+    let filteredProjects = []; // Filtrelenmiş projeleri tutacak
+    let currentPage = 1;
+    let rowsPerPage = 10; // Masaüstü varsayılanı
+    let isMyProjectsView = false; // "Projelerim" görünümünde miyiz?
 
-    <!-- Bildirim Paneli (toggle ile açılır/kapanır) -->
-    <script>
-      // API Base URL
-      const API_BASE_URL = "https://ser-proje.onrender.com";
-      let currentUser = null; // Mevcut kullanıcı bilgisi
-      let allProjectsData = [];
-      let filteredProjects = []; // Filtrelenmiş projeleri tutacak
-      let currentPage = 1;
-      let rowsPerPage = 10; // Masaüstü varsayılanı
-      let isMyProjectsView = false; // "Projelerim" görünümünde miyiz?
-
-      // Pagination elementleri
-      const totalProjectsCountSpan = document.getElementById('totalProjectsCount');
-      const currentPageSpan = document.getElementById('currentPage');
-      const totalPagesSpan = document.getElementById('totalPages');
-      const prevPageButton = document.getElementById('prevPage');
-      const nextPageButton = document.getElementById('nextPage');
-      const pageNumbersContainer = document.getElementById('pageNumbers');
-      const confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
-      const confirmActionBtn = document.getElementById('confirmActionBtn');
-      let currentConfirmAction = null;
-      const pageTitleElement = document.getElementById('pageTitle');
-      const toggleMyProjectsBtn = document.getElementById('toggleMyProjectsBtn');
+    // Pagination elementleri
+    const totalProjectsCountSpan = document.getElementById('totalProjectsCount');
+    const currentPageSpan = document.getElementById('currentPage');
+    const totalPagesSpan = document.getElementById('totalPages');
+    const prevPageButton = document.getElementById('prevPage');
+    const nextPageButton = document.getElementById('nextPage');
+    const pageNumbersContainer = document.getElementById('pageNumbers');
+    const confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+    const confirmActionBtn = document.getElementById('confirmActionBtn');
+    let currentConfirmAction = null;
+    const pageTitleElement = document.getElementById('pageTitle');
+    const toggleMyProjectsBtn = document.getElementById('toggleMyProjectsBtn');
 
 
-      // Genel Toast bildirim fonksiyonu
-      function showToast(message, isError = false) {
-          const toast = document.getElementById('toast');
-          const toastMessage = document.getElementById('toastMessage');
+    // Genel Toast bildirim fonksiyonu
+    function showToast(message, isError = false) {
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
 
-          if (!toast || !toastMessage) {
-              console.error("Toast elementleri bulunamadı!");
-              return;
-          }
+        if (!toast || !toastMessage) {
+            console.error("Toast elementleri bulunamadı!");
+            return;
+        }
 
-          toastMessage.textContent = message;
-          toast.classList.remove('success', 'error');
-          toast.classList.add(isError ? 'error' : 'success');
+        toastMessage.textContent = message;
+        toast.classList.remove('success', 'error');
+        toast.classList.add(isError ? 'error' : 'success');
 
-          toast.classList.add('show');
+        toast.classList.add('show');
 
-          setTimeout(() => {
-              toast.classList.remove('show');
-          }, 3000);
-      }
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
 
-      // Kullanıcı bilgilerini yükle ve oturum kontrolünü yap
-      function loadUserInfo() {
-          const storedUser = localStorage.getItem('currentUser');
-          if (!storedUser) {
-              console.log("LocalStorage'da kullanıcı verisi bulunamadı. Giriş sayfasına yönlendiriliyor...");
-              showToast("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", true);
-              setTimeout(() => {
-                  window.location.href = 'login.html';
-              }, 2000);
-              return; // Buradan sonra işlem yapma, direkt yönlendir
-          }
+    // Kullanıcı bilgilerini yükle ve oturum kontrolünü yap
+    function loadUserInfo() {
+        const storedUser = localStorage.getItem('currentUser');
+        if (!storedUser) {
+            console.log("LocalStorage'da kullanıcı verisi bulunamadı. Giriş sayfasına yönlendiriliyor...");
+            showToast("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", true);
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 2000);
+            return; // Buradan sonra işlem yapma, direkt yönlendir
+        }
 
-          try {
-              currentUser = JSON.parse(storedUser); 
-          } catch (e) {
-              console.error("Kayıtlı kullanıcı verisi bozuk:", e);
-              localStorage.removeItem('currentUser'); // Bozuk veriyi temizle
-              showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", true);
-              setTimeout(() => {
-                  window.location.href = 'login.html';
-              }, 2000);
-              return; // Buradan sonra işlem yapma, direkt yönlendir
-          }
+        try {
+            currentUser = JSON.parse(storedUser); 
+        } catch (e) {
+            console.error("Kayıtlı kullanıcı verisi bozuk:", e);
+            localStorage.removeItem('currentUser'); // Bozuk veriyi temizle
+            showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", true);
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 2000);
+            return; // Buradan sonra işlem yapma, direkt yönlendir
+        }
 
-          // Kullanıcı arayüzünü güncelleme (user-avatar.js yüklendikten sonra çağrılacak)
-          const userNameElement = document.getElementById('userName');
-          const userRoleElement = document.getElementById('userRole');
+        // Kullanıcı arayüzünü güncelleme (user-avatar.js yüklendikten sonra çağrılacak)
+        const userNameElement = document.getElementById('userName');
+        const userRoleElement = document.getElementById('userRole');
 
-          if (userNameElement) {
-              userNameElement.textContent = currentUser.fullname || currentUser.username || 'Kullanıcı';
-          }
-          if (userRoleElement) {
-              userRoleElement.textContent = currentUser.role || 'Rol Yok';
-          }
-          // updateUserAvatar DOMContentLoaded içinde çağrılacak
-      }
+        if (userNameElement) {
+            userNameElement.textContent = currentUser.fullname || currentUser.username || 'Kullanıcı';
+        }
+        if (userRoleElement) {
+            userRoleElement.textContent = currentUser.role || 'Rol Yok';
+        }
+        // updateUserAvatar DOMContentLoaded içinde çağrılacak
+    }
 
-      // loadUserInfo fonksiyonunu hemen çağırıyoruz ki currentUser değişkeni set edilsin
-      loadUserInfo();
+    // loadUserInfo fonksiyonunu hemen çağırıyoruz ki currentUser değişkeni set edilsin
+    loadUserInfo();
 
-      // --- DOM Yüklendiğinde Çalışacak Kod ---
-      document.addEventListener("DOMContentLoaded", function () {
+    // --- DOM Yüklendiğinde Çalışacak Kod ---
+    document.addEventListener("DOMContentLoaded", function () {
         // user-avatar.js yüklendiyse updateUserAvatar'ı çağır
         if (currentUser && typeof updateUserAvatar === 'function') {
             updateUserAvatar(currentUser); 
@@ -1635,21 +1633,21 @@
         // Tema değiştirme
         const savedTheme = localStorage.getItem("theme");
         if (savedTheme) {
-          document.body.setAttribute("data-theme", savedTheme);
-          themeToggle.innerHTML =
-            savedTheme === "dark"
-              ? '<i class="fas fa-sun"></i>'
-              : '<i class="fas fa-moon"></i>';
+            document.body.setAttribute("data-theme", savedTheme);
+            themeToggle.innerHTML =
+                savedTheme === "dark"
+                ? '<i class="fas fa-sun"></i>'
+                : '<i class="fas fa-moon"></i>';
         }
         themeToggle.addEventListener("click", () => {
-          const currentTheme = document.body.getAttribute("data-theme");
-          const newTheme = currentTheme === "dark" ? "light" : "dark";
-          document.body.setAttribute("data-theme", newTheme);
-          themeToggle.innerHTML =
-            newTheme === "dark"
-              ? '<i class="fas fa-sun"></i>'
-              : '<i class="fas fa-moon"></i>';
-          localStorage.setItem("theme", newTheme);
+            const currentTheme = document.body.getAttribute("data-theme");
+            const newTheme = currentTheme === "dark" ? "light" : "dark";
+            document.body.setAttribute("data-theme", newTheme);
+            themeToggle.innerHTML =
+                newTheme === "dark"
+                ? '<i class="fas fa-sun"></i>'
+                : '<i class="fas fa-moon"></i>';
+            localStorage.setItem("theme", newTheme);
         });
 
         // Çıkış Yap butonu
@@ -1693,13 +1691,13 @@
         const filterBtn = document.getElementById("filterBtn");
         const filtersContainer = document.getElementById("filtersContainer");
         filterBtn.addEventListener("click", () => {
-          filtersContainer.style.display =
-            filtersContainer.style.display === "none" ? "grid" : "none";
+            filtersContainer.style.display =
+                filtersContainer.style.display === "none" ? "grid" : "none";
         });
 
         document.getElementById("refreshData").addEventListener("click", () => {
-          fetchProjects();
-          showToast("Proje verileri yenilendi.");
+            fetchProjects();
+            showToast("Proje verileri yenilendi.");
         });
 
         document.getElementById("exportAllPdf").addEventListener("click", async function() {
@@ -1727,27 +1725,27 @@
 
         // Filtre inputlarına keyup ve change event'leri
         document
-          .getElementById("filterProjectName")
-          .addEventListener("keyup", applyFiltersAndRenderTable);
+            .getElementById("filterProjectName")
+            .addEventListener("keyup", applyFiltersAndRenderTable);
         document
-          .getElementById("filterRefNo")
-          .addEventListener("keyup", applyFiltersAndRenderTable);
+            .getElementById("filterRefNo")
+            .addEventListener("keyup", applyFiltersAndRenderTable);
         document
-          .getElementById("filterCustomer")
-          .addEventListener("keyup", applyFiltersAndRenderTable);
+            .getElementById("filterCustomer")
+            .addEventListener("keyup", applyFiltersAndRenderTable);
         document
-          .getElementById("filterStatus")
-          .addEventListener("change", applyFiltersAndRenderTable);
+            .getElementById("filterStatus")
+            .addEventListener("change", applyFiltersAndRenderTable);
 
         // Filtreleri sıfırlama
         document.getElementById("resetFilters").addEventListener("click", () => {
-          document.getElementById("filterProjectName").value = "";
-          document.getElementById("filterRefNo").value = "";
-          document.getElementById("filterCustomer").value = "";
-          document.getElementById("filterStatus").value = "";
-          document.getElementById("searchInput").value = ""; // Global aramayı da sıfırla
-          applyFiltersAndRenderTable();
-          showToast("Filtreler sıfırlandı.");
+            document.getElementById("filterProjectName").value = "";
+            document.getElementById("filterRefNo").value = "";
+            document.getElementById("filterCustomer").value = "";
+            document.getElementById("filterStatus").value = "";
+            document.getElementById("searchInput").value = ""; // Global aramayı da sıfırla
+            applyFiltersAndRenderTable();
+            showToast("Filtreler sıfırlandı.");
         });
 
         // Confirmation Modal "Onayla" butonu için olay dinleyicisi
@@ -1764,34 +1762,34 @@
         
         // İzin kontrolünü DOMContentLoaded içinde çağırın
         checkPermission('projeler'); // Sayfaya özel yetki anahtarı
-      });
+    });
 
-      // --- Yardımcı Fonksiyonlar ---
-      // Tarih formatlama (DD.MM.YYYY)
-      function formatDateForDisplay(dateStr) {
+    // --- Yardımcı Fonksiyonlar ---
+    // Tarih formatlama (DD.MM.YYYY)
+    function formatDateForDisplay(dateStr) {
         if (!dateStr) return "";
         const parts = dateStr.split("-");
         if (parts.length === 3) {
-          return `${parts[2]}.${parts[1]}.${parts[0]}`;
+            return `${parts[2]}.${parts[1]}.${parts[0]}`;
         }
         return dateStr;
-      }
+    }
 
-      // Tarih formatlama (YYYY-MM-DD) input için
-      function formatDateForInput(dateStr) {
+    // Tarih formatlama (YYYY-MM-DD) input için
+    function formatDateForInput(dateStr) {
         if (!dateStr) return "";
         if (dateStr.includes(".")) {
-          const parts = dateStr.split(".");
-          return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(
-            2,
-            "0"
-          )}`;
+            const parts = dateStr.split(".");
+            return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(
+                2,
+                "0"
+            )}`;
         }
         return dateStr;
-      }
+    }
 
-      // Durum rozeti ve renk sınıfı HTML'i döndürür
-      function getStatusBadgeHtml(status) {
+    // Durum rozeti ve renk sınıfı HTML'i döndürür
+    function getStatusBadgeHtml(status) {
         let statusClass = "normal"; // Varsayılan olarak normal (yeşil)
         let statusText = status;
 
@@ -1804,126 +1802,126 @@
         // Diğer durumlar için varsayılan normal kalır
 
         return `<span class="status-badge ${statusClass}">${statusText}</span>`;
-      }
+    }
 
-      // Aktivite loglama fonksiyonu (frontend'den backend'e istek gönderecek)
-      async function addActivity(title, rawDescription, project_id, icon = "fas fa-info-circle", actionType = "other") {
+    // Aktivite loglama fonksiyonu (frontend'den backend'e istek gönderecek)
+    async function addActivity(title, rawDescription, project_id, icon = "fas fa-info-circle", actionType = "other") {
         if (!currentUser || !currentUser.id) {
-          console.warn("Kullanıcı oturumu bulunamadı, aktivite kaydedilemedi.");
-          return;
+            console.warn("Kullanıcı oturumu bulunamadı, aktivite kaydedilemedi.");
+            return;
         }
 
         const activityData = {
-          user_id: currentUser.id,
-          project_id: project_id, // null olabilir
-          title: title,
-          description: rawDescription,
-          icon: icon,
-          action_type: actionType
+            user_id: currentUser.id,
+            project_id: project_id, // null olabilir
+            title: title,
+            description: rawDescription,
+            icon: icon,
+            action_type: actionType
         };
 
         try {
-          const response = await fetch(`${API_BASE_URL}/api/activities`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(activityData)
-          });
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Aktivite eklenirken bilinmeyen bir hata oluştu.');
-          }
-          console.log("Aktivite başarıyla kaydedildi:", activityData);
+            const response = await fetch(`${API_BASE_URL}/api/activities`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(activityData)
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Aktivite eklenirken bilinmeyen bir hata oluştu.');
+            }
+            console.log("Aktivite başarıyla kaydedildi:", activityData);
         } catch (error) {
-          console.error('Aktivite ekleme hatası:', error);
+            console.error('Aktivite ekleme hatası:', error);
         }
-      }
-      
+    }
+    
 
-      // --- Proje Listesi ve İşlemleri ---
-      async function fetchProjects() {
+    // --- Proje Listesi ve İşlemleri ---
+    async function fetchProjects() {
         const tbody = document.getElementById("projectsTableBody");
         if (!tbody) {
-          console.error("HATA: projectsTableBody elementi bulunamadı!");
-          return;
+            console.error("HATA: projectsTableBody elementi bulunamadı!");
+            return;
         }
 
         tbody.innerHTML =
-          '<tr><td colspan="11" style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Projeler yükleniyor...</td></tr>';
+            '<tr><td colspan="11" style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Projeler yükleniyor...</td></tr>';
         console.log("FETCH_DEBUG: 'Projeler yükleniyor...' mesajı ayarlandı.");
 
         try {
-          console.log(
-            "FETCH_DEBUG: API çağrısı başlatılıyor:",
-            `${API_BASE_URL}/api/projects`
-          );
-          const response = await fetch(`${API_BASE_URL}/api/projects`);
-          console.log(
-            "FETCH_DEBUG: API yanıtı alındı. Status:",
-            response.status
-          );
-
-          if (!response.ok) {
-            let errorDetails = "Bilinmeyen Hata";
-            try {
-              const errorData = await response.json();
-              errorDetails = errorData.message || errorDetails;
-            } catch (jsonError) {
-              errorDetails = `Yanıt JSON olarak parse edilemedi: ${response.statusText}`;
-            }
-            console.error(
-              "FETCH_DEBUG HATA: API yanıtı OK değil.",
-              `Durum: ${response.status}`,
-              `Detay: ${errorDetails}`
+            console.log(
+                "FETCH_DEBUG: API çağrısı başlatılıyor:",
+                `${API_BASE_URL}/api/projects`
             );
-            throw new Error(`HTTP hatası! Durum: ${response.status} - ${errorDetails}`);
-          }
+            const response = await fetch(`${API_BASE_URL}/api/projects`);
+            console.log(
+                "FETCH_DEBUG: API yanıtı alındı. Status:",
+                response.status
+            );
 
-          const projects = await response.json();
-          console.log(
-            "FETCH_DEBUG: API'den çekilen ham projeler (allProjectsData'ya atanacak):",
-            projects
-          );
+            if (!response.ok) {
+                let errorDetails = "Bilinmeyen Hata";
+                try {
+                    const errorData = await response.json();
+                    errorDetails = errorData.message || errorDetails;
+                } catch (jsonError) {
+                    errorDetails = `Yanıt JSON olarak parse edilemedi: ${response.statusText}`;
+                }
+                console.error(
+                    "FETCH_DEBUG HATA: API yanıtı OK değil.",
+                    `Durum: ${response.status}`,
+                    `Detay: ${errorDetails}`
+                );
+                throw new Error(`HTTP hatası! Durum: ${response.status} - ${errorDetails}`);
+            }
 
-          allProjectsData = projects;
-          console.log("FETCH_DEBUG: allProjectsData güncellendi. applyFiltersAndRenderTable çağrılıyor.");
-          applyFiltersAndRenderTable(); // Filtreleri uygula ve tabloyu render et
-          console.log("FETCH_DEBUG: Projeler yükleme tamamlandı.");
+            const projects = await response.json();
+            console.log(
+                "FETCH_DEBUG: API'den çekilen ham projeler (allProjectsData'ya atanacak):",
+                projects
+            );
+
+            allProjectsData = projects;
+            console.log("FETCH_DEBUG: allProjectsData güncellendi. applyFiltersAndRenderTable çağrılıyor.");
+            applyFiltersAndRenderTable(); // Filtreleri uygula ve tabloyu render et
+            console.log("FETCH_DEBUG: Projeler yükleme tamamlandı.");
         } catch (error) {
-          console.error("FETCH KAPSAMLI HATA: Projeler çekilemedi:", error);
-          showToast(`Projeler yüklenirken hata oluştu: ${error.message}`, true);
-          if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: var(--danger);">Projeler yüklenemedi. Hata: ${error.message} Lütfen sunucu bağlantısını ve loglarını kontrol edin.</td></tr>`;
-          }
+            console.error("FETCH KAPSAMLI HATA: Projeler çekilemedi:", error);
+            showToast(`Projeler yüklenirken hata oluştu: ${error.message}`, true);
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: var(--danger);">Projeler yüklenemedi. Hata: ${error.message} Lütfen sunucu bağlantısını ve loglarını kontrol edin.</td></tr>`;
+            }
         }
-      }
+    }
 
-      function renderProjectsTable(projectsToRender) {
+    function renderProjectsTable(projectsToRender) {
         let tbody = document.getElementById("projectsTableBody");
         if (!tbody) {
-          const table = document.getElementById("projectsTable");
-          if (table) {
-            tbody = document.createElement("tbody");
-            tbody.id = "projectsTableBody";
-            table.appendChild(tbody);
-            console.warn("projectsTableBody bulunamadı, yeni tbody eklendi.");
-          } else {
-            console.error("RENDER_DEBUG: projectsTable ve projectsTableBody elementi bulunamadı!");
-            return;
-          }
+            const table = document.getElementById("projectsTable");
+            if (table) {
+                tbody = document.createElement("tbody");
+                tbody.id = "projectsTableBody";
+                table.appendChild(tbody);
+                console.warn("projectsTableBody bulunamadı, yeni tbody eklendi.");
+            } else {
+                console.error("RENDER_DEBUG: projectsTable ve projectsTableBody elementi bulunamadı!");
+                return;
+            }
         }
         console.log(
-          "RENDER_DEBUG: renderProjectsTable başladı. projectsToRender (gelecek veri):",
-          projectsToRender
+            "RENDER_DEBUG: renderProjectsTable başladı. projectsToRender (gelecek veri):",
+            projectsToRender
         );
 
         tbody.innerHTML = "";
         console.log("RENDER_DEBUG: tbody içeriği temizlendi.");
 
         if (projectsToRender.length === 0) {
-          tbody.innerHTML =
-            '<tr><td colspan="11" style="text-align: center;">Gösterilecek proje bulunamadı.</td></tr>';
-          updatePagination(0, 0, 0); // Sayfalandırmayı güncelle
-          return;
+            tbody.innerHTML =
+                '<tr><td colspan="11" style="text-align: center;">Gösterilecek proje bulunamadı.</td></tr>';
+            updatePagination(0, 0, 0); // Sayfalandırmayı güncelle
+            return;
         }
 
         // Pagination için dilimleme
@@ -1933,446 +1931,446 @@
 
         // Yardımcı fonksiyonlar:
         function dateDiffInDays(date1, date2) {
-          // Tarih formatı: YYYY-MM-DD veya DD.MM.YYYY
-          function parseDate(str) {
-            if (!str) return null;
-            if (str.includes('-')) {
-              // YYYY-MM-DD
-              const [y, m, d] = str.split('-');
-              return new Date(Number(y), Number(m) - 1, Number(d));
-            } else if (str.includes('.')) {
-              // DD.MM.YYYY
-              const [d, m, y] = str.split('.');
-              return new Date(Number(y), Number(m) - 1, Number(d));
+            // Tarih formatı: YYYY-MM-DD veya DD.MM.YYYY
+            function parseDate(str) {
+                if (!str) return null;
+                if (str.includes('-')) {
+                    // YYYY-MM-DD
+                    const [y, m, d] = str.split('-');
+                    return new Date(Number(y), Number(m) - 1, Number(d));
+                } else if (str.includes('.')) {
+                    // DD.MM.YYYY
+                    const [d, m, y] = str.split('.');
+                    return new Date(Number(y), Number(m) - 1, Number(d));
+                }
+                return null;
             }
-            return null;
-          }
-          const dt1 = parseDate(date1);
-          const dt2 = parseDate(date2);
-          if (!dt1 || !dt2) return null;
-          return Math.ceil((dt2 - dt1) / (1000 * 60 * 60 * 24));
+            const dt1 = parseDate(date1);
+            const dt2 = parseDate(date2);
+            if (!dt1 || !dt2) return null;
+            return Math.ceil((dt2 - dt1) / (1000 * 60 * 60 * 24));
         }
 
         function sumDelayDays(progressArr) {
-          if (!Array.isArray(progressArr)) return 0;
-          return progressArr.reduce((sum, step) => sum + (step.delay_days || 0), 0);
+            if (!Array.isArray(progressArr)) return 0;
+            return progressArr.reduce((sum, step) => sum + (step.delay_days || 0), 0);
         }
 
         function getTodayStr() {
-          const today = new Date();
-          return today.toISOString().slice(0, 10); // YYYY-MM-DD
+            const today = new Date();
+            return today.toISOString().slice(0, 10); // YYYY-MM-DD
         }
 
         paginatedProjects.forEach((project) => {
-          // Toplam Gün
-          let totalDays = dateDiffInDays(project.start_date, project.end_date);
-          totalDays = (typeof totalDays === "number" && !isNaN(totalDays)) ? (totalDays >= 0 ? totalDays : 0) : '-';
+            // Toplam Gün
+            let totalDays = dateDiffInDays(project.start_date, project.end_date);
+            totalDays = (typeof totalDays === "number" && !isNaN(totalDays)) ? (totalDays >= 0 ? totalDays : 0) : '-';
 
-          // Geçen Gün
-          const todayStr = getTodayStr();
-          let elapsedDays = dateDiffInDays(project.start_date, todayStr);
-          elapsedDays = (typeof elapsedDays === "number" && !isNaN(elapsedDays)) ? (elapsedDays >= 0 ? elapsedDays : 0) : '-';
+            // Geçen Gün
+            const todayStr = getTodayStr();
+            let elapsedDays = dateDiffInDays(project.start_date, todayStr);
+            elapsedDays = (typeof elapsedDays === "number" && !isNaN(elapsedDays)) ? (elapsedDays >= 0 ? elapsedDays : 0) : '-';
 
-          // Gecikme Durumu
-          let delayDays = 0;
-          if (project.total_delay_days !== undefined && project.total_delay_days !== null) {
-            delayDays = Number(project.total_delay_days);
-            if (isNaN(delayDays)) delayDays = 0;
-          }
-          
-          let overdue = 0;
-          if (project.end_date) {
-            const endDateObj = (() => {
-              if (project.end_date.includes('-')) {
-                const [y, m, d] = project.end_date.split('-');
-                return new Date(Number(y), Number(m) - 1, Number(d));
-              } else if (project.end_date.includes('.')) {
-                const [d, m, y] = project.end_date.split('.');
-                return new Date(Number(y), Number(m) - 1, Number(d));
-              }
-              return null;
-            })();
-            const todayObj = new Date();
-            if (endDateObj && todayObj > endDateObj && project.status !== 'Tamamlandı') { // Sadece tamamlanmamış projeler için
-              overdue = Math.ceil((todayObj - endDateObj) / (1000 * 60 * 60 * 24));
+            // Gecikme Durumu
+            let delayDays = 0;
+            if (project.total_delay_days !== undefined && project.total_delay_days !== null) {
+                delayDays = Number(project.total_delay_days);
+                if (isNaN(delayDays)) delayDays = 0;
             }
-          }
+            
+            let overdue = 0;
+            if (project.end_date) {
+                const endDateObj = (() => {
+                    if (project.end_date.includes('-')) {
+                        const [y, m, d] = project.end_date.split('-');
+                        return new Date(Number(y), Number(m) - 1, Number(d));
+                    } else if (project.end_date.includes('.')) {
+                        const [d, m, y] = project.end_date.split('.');
+                        return new Date(Number(y), Number(m) - 1, Number(d));
+                    }
+                    return null;
+                })();
+                const todayObj = new Date();
+                if (endDateObj && todayObj > endDateObj && project.status !== 'Tamamlandı') { // Sadece tamamlanmamış projeler için
+                    overdue = Math.ceil((todayObj - endDateObj) / (1000 * 60 * 60 * 24));
+                }
+            }
 
-          // Gecikme günleri toplamı
-          let gecikmeDurumu = "-";
-          const combinedDelay = delayDays + overdue;
-          if (combinedDelay > 0) {
-            gecikmeDurumu = combinedDelay + " gün";
-          } else if (typeof combinedDelay === 'number' && combinedDelay === 0) {
-            gecikmeDurumu = "0 gün";
-          }
+            // Gecikme günleri toplamı
+            let gecikmeDurumu = "-";
+            const combinedDelay = delayDays + overdue;
+            if (combinedDelay > 0) {
+                gecikmeDurumu = combinedDelay + " gün";
+            } else if (typeof combinedDelay === 'number' && combinedDelay === 0) {
+                gecikmeDurumu = "0 gün";
+            }
 
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td data-label="Proje Adı">${project.project_name ? project.project_name.normalize('NFC') : "-"}</td>
-            <td data-label="Referans No">${project.reference_no || "-"}</td>
-            <td data-label="Müşteri">${project.customer_name || "-"}</td>
-            <td data-label="Durum">${getStatusBadgeHtml(project.display_status || "-")}</td>
-            <td data-label="Başlangıç">${formatDateForDisplay(project.start_date || "-")}</td>
-            <td data-label="Bitiş">${formatDateForDisplay(project.end_date || "-")}</td>
-            <td data-label="Toplam Gün">${totalDays !== '-' ? totalDays + ' gün' : '-'}</td>
-            <td data-label="Geçen Gün">${elapsedDays !== '-' ? elapsedDays + ' gün' : '-'}</td>
-            <td data-label="Gecikme Durumu">${gecikmeDurumu}</td>
-            <td data-label="Yönetici">${project.project_manager_name || "-"}</td>
-            <td data-label="İşlemler">
-              <div style="display: flex; gap: 10px;">
-                <button class="action-btn view-project-btn" data-id="${project.project_id}" title="Detayları Görüntüle"><i class="fas fa-eye"></i></button>
-                <button class="action-btn edit-project-btn" data-id="${project.project_id}" title="Projeyi Düzenle"><i class="fas fa-edit"></i></button>
-                <button class="action-btn delete-project-btn" data-id="${project.project_id}" title="Projeyi Sil"><i class="fas fa-trash"></i></button>
-                <button class="action-btn generate-pdf-btn" data-id="${project.project_id}" title="PDF Raporu Oluştur"><i class="fas fa-file-pdf"></i></button>
-              </div>
-            </td>
-          `;
-          tbody.appendChild(row);
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td data-label="Proje Adı">${project.project_name ? project.project_name.normalize('NFC') : "-"}</td>
+                <td data-label="Referans No">${project.reference_no || "-"}</td>
+                <td data-label="Müşteri">${project.customer_name || "-"}</td>
+                <td data-label="Durum">${getStatusBadgeHtml(project.display_status || "-")}</td>
+                <td data-label="Başlangıç">${formatDateForDisplay(project.start_date || "-")}</td>
+                <td data-label="Bitiş">${formatDateForDisplay(project.end_date || "-")}</td>
+                <td data-label="Toplam Gün">${totalDays !== '-' ? totalDays + ' gün' : '-'}</td>
+                <td data-label="Geçen Gün">${elapsedDays !== '-' ? elapsedDays + ' gün' : '-'}</td>
+                <td data-label="Gecikme Durumu">${gecikmeDurumu}</td>
+                <td data-label="Yönetici">${project.project_manager_name || "-"}</td>
+                <td data-label="İşlemler">
+                    <div style="display: flex; gap: 10px;">
+                        <button class="action-btn view-project-btn" data-id="${project.project_id}" title="Detayları Görüntüle"><i class="fas fa-eye"></i></button>
+                        <button class="action-btn edit-project-btn" data-id="${project.project_id}" title="Projeyi Düzenle"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn delete-project-btn" data-id="${project.project_id}" title="Projeyi Sil"><i class="fas fa-trash"></i></button>
+                        <button class="action-btn generate-pdf-btn" data-id="${project.project_id}" title="PDF Raporu Oluştur"><i class="fas fa-file-pdf"></i></button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
         });
         attachProjectTableEventListeners();
         updatePagination(projectsToRender.length, currentPage, Math.ceil(projectsToRender.length / rowsPerPage));
-      }
+    }
 
-      function attachProjectTableEventListeners() {
+    function attachProjectTableEventListeners() {
         document.querySelectorAll(".view-project-btn").forEach((btn) => {
-          btn.onclick = (e) => {
-            e.preventDefault();
-            const projectId = e.currentTarget.dataset.id;
-            openProjectModal(projectId, "view");
-          };
+            btn.onclick = (e) => {
+                e.preventDefault();
+                const projectId = e.currentTarget.dataset.id;
+                openProjectModal(projectId, "view");
+            };
         });
         document.querySelectorAll(".edit-project-btn").forEach((btn) => {
-          btn.onclick = async (e) => {
-            e.preventDefault();
-            const projectId = e.currentTarget.dataset.id;
-            const hasPermission = await checkPermission('proje_duzenle');
-            if (!hasPermission) return;
-            openProjectModal(projectId, "edit");
-          };
+            btn.onclick = async (e) => {
+                e.preventDefault();
+                const projectId = e.currentTarget.dataset.id;
+                const hasPermission = await checkPermission('proje_duzenle');
+                if (!hasPermission) return;
+                openProjectModal(projectId, "edit");
+            };
         });
         document.querySelectorAll(".delete-project-btn").forEach((btn) => {
-          btn.onclick = async (e) => {
-            e.preventDefault();
-            const projectId = e.currentTarget.dataset.id;
-            const hasPermission = await checkPermission('proje_sil');
-            if (!hasPermission) return;
-            showConfirmationModal(`Bu projeyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz!`, () => deleteProject(projectId));
-          };
+            btn.onclick = async (e) => {
+                e.preventDefault();
+                const projectId = e.currentTarget.dataset.id;
+                const hasPermission = await checkPermission('proje_sil');
+                if (!hasPermission) return;
+                showConfirmationModal(`Bu projeyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz!`, () => deleteProject(projectId));
+            };
         });
         document.querySelectorAll(".generate-pdf-btn").forEach((btn) => {
-          btn.onclick = async (e) => {
-            e.preventDefault();
-            const projectId = e.currentTarget.dataset.id;
-            const project = allProjectsData.find((p) => p.project_id == projectId);
-            if (project) {
-              const hasPermission = await checkPermission('pdf_olusturma');
-              if (!hasPermission) return;
-              generateProjectPdf(project);
-            } else showToast("Proje bulunamadı!", true);
-          };
+            btn.onclick = async (e) => {
+                e.preventDefault();
+                const projectId = e.currentTarget.dataset.id;
+                const project = allProjectsData.find((p) => p.project_id == projectId);
+                if (project) {
+                    const hasPermission = await checkPermission('pdf_olusturma');
+                    if (!hasPermission) return;
+                    generateProjectPdf(project);
+                } else showToast("Proje bulunamadı!", true);
+            };
         });
-      }
+    }
 
-      async function deleteProject(id) {
+    async function deleteProject(id) {
         const project = allProjectsData.find(p => String(p.project_id) === String(id));
         const projectName = project ? project.project_name : `ID: ${id}`;
         try {
-          // user_id'yi query parametresi olarak ekle
-          const response = await fetch(`${API_BASE_URL}/api/projects/${id}?user_id=${currentUser.id}`, {
-            method: "DELETE",
-          });
-          const data = await response.json();
-          if (response.ok) {
-            showToast(data.message || "Proje başarıyla silindi");
-            fetchProjects();
-            // Aktivite kaydı eklendi
-            addActivity(
-              "Proje Silindi",
-              `"${projectName}" projesi silindi.`,
-              id,
-              "fas fa-trash",
-              "project_delete"
-            );
-          } else {
-            showToast(`Hata: ${data.message}`, true);
-          }
+            // user_id'yi query parametresi olarak ekle
+            const response = await fetch(`${API_BASE_URL}/api/projects/${id}?user_id=${currentUser.id}`, {
+                method: "DELETE",
+            });
+            const data = await response.json();
+            if (response.ok) {
+                showToast(data.message || "Proje başarıyla silindi");
+                fetchProjects();
+                // Aktivite kaydı eklendi
+                addActivity(
+                    "Proje Silindi",
+                    `"${projectName}" projesi silindi.`,
+                    id,
+                    "fas fa-trash",
+                    "project_delete"
+                );
+            } else {
+                showToast(`Hata: ${data.message}`, true);
+            }
         } catch (error) {
-          console.error("Proje silme hatası:", error);
-          showToast("Sunucuya bağlanılamadı veya bir sorun oluştu.", true);
+            console.error("Proje silme hatası:", error);
+            showToast("Sunucuya bağlanılamadı veya bir sorun oluştu.", true);
         }
-      }
+    }
 
-      // --- Proje Detay/Düzenleme Modalı ve İş Gidişatı Fonksiyonları ---
+    // --- Proje Detay/Düzenleme Modalı ve İş Gidişatı Fonksiyonları ---
 
-const projectModal = document.getElementById("projectModal");
-const projectModalContent = document.getElementById("projectModalContent");
-const closeModalBtn = document.getElementById("closeModalBtn");
-const cancelModalBtn = document.getElementById("cancelModalBtn");
-const modalTitle = document.getElementById("modalTitle");
-const modalBody = document.getElementById("modalBody");
-const modalActions = document.getElementById("modalActions");
+    const projectModal = document.getElementById("projectModal");
+    const projectModalContent = document.getElementById("projectModalContent");
+    const closeModalBtn = document.getElementById("closeModalBtn");
+    const cancelModalBtn = document.getElementById("cancelModalBtn");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalBody = document.getElementById("modalBody");
+    const modalActions = document.getElementById("modalActions");
 
-let modalBodyClickListener = null;
+    let modalBodyClickListener = null;
 
-// Modal kapatma fonksiyonu
-function closeProjectModal() {
-  if (modalBodyClickListener) {
-    modalBody.removeEventListener('click', modalBodyClickListener);
-    modalBodyClickListener = null;
-  }
-  projectModal.style.display = "none";
-  modalTitle.innerHTML = '<i class="fas fa-info-circle"></i> Proje Detayları';
-  modalBody.innerHTML = "<p>Yükleniyor...</p>";
-  modalActions.innerHTML = `<button class="modal-btn modal-btn-cancel" id="cancelModalBtn">Kapat</button>`;
-  document.removeEventListener("keydown", handleEscapeKey);
-  document.getElementById("cancelModalBtn").addEventListener("click", closeProjectModal);
-  console.log("Modal kapatıldı.");
-}
-
-// Modal açma fonksiyonu
-async function openProjectModal(projectId, mode) {
-  const project = allProjectsData.find((p) => p.project_id == projectId);
-  if (!project) {
-    showToast("Proje bulunamadı!", true);
-    return;
-  }
-
-  projectModal.style.display = "flex";
-  modalBody.innerHTML =
-    '<p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</p>';
-
-  if (mode === "view") {
-    modalTitle.innerHTML = `<i class="fas fa-info-circle"></i> Proje Detayları: ${project.project_name}`;
-    await renderViewModal(project);
-    modalActions.innerHTML = `<button class="modal-btn modal-btn-cancel" id="cancelModalBtn">Kapat</button>`;
-
-    if (!modalBodyClickListener) {
-      modalBodyClickListener = function(e) {
-        if (e.target.closest('.open-location-btn')) {
-          const btn = e.target.closest('.open-location-btn');
-          const location = btn.dataset.location;
-          openLocationInGoogleMaps(location);
+    // Modal kapatma fonksiyonu
+    function closeProjectModal() {
+        if (modalBodyClickListener) {
+            modalBody.removeEventListener('click', modalBodyClickListener);
+            modalBodyClickListener = null;
         }
-      };
-      modalBody.addEventListener('click', modalBodyClickListener);
+        projectModal.style.display = "none";
+        modalTitle.innerHTML = '<i class="fas fa-info-circle"></i> Proje Detayları';
+        modalBody.innerHTML = "<p>Yükleniyor...</p>";
+        modalActions.innerHTML = `<button class="modal-btn modal-btn-cancel" id="cancelModalBtn">Kapat</button>`;
+        document.removeEventListener("keydown", handleEscapeKey);
+        document.getElementById("cancelModalBtn").addEventListener("click", closeProjectModal);
+        console.log("Modal kapatıldı.");
     }
-  } else if (mode === "edit") {
-    modalTitle.innerHTML = `<i class="fas fa-edit"></i> Projeyi Düzenle: ${project.project_name}`;
-    await renderEditModal(project);
-    modalActions.innerHTML = `
-      <button class="modal-btn modal-btn-save" id="saveProjectBtn"><i class="fas fa-save"></i> Kaydet</button>
-      <button class="modal-btn modal-btn-cancel" id="cancelModalBtn">İptal</button>
-    `;
-    document.getElementById("saveProjectBtn").addEventListener("click", saveProjectChanges);
-    document.getElementById("cancelModalBtn").addEventListener("click", closeProjectModal);
-  }
 
-  // Her zaman güncel kapatma butonlarına olay dinleyicisi ekle
-  const cancelBtn = document.getElementById("cancelModalBtn");
-  if (cancelBtn) {
-    cancelBtn.addEventListener("click", closeProjectModal);
-  }
-  if (closeModalBtn) {
-    closeModalBtn.addEventListener("click", closeProjectModal);
-  }
-
-  // Modalın dışına tıklayarak kapatma
-  projectModal.onclick = (e) => {
-    if (e.target === projectModal) {
-      closeProjectModal();
-    }
-  };
-
-  // Esc tuşu ile kapatma
-  document.addEventListener("keydown", handleEscapeKey);
-}
-
-function handleEscapeKey(e) {
-  if (e.key === "Escape" && projectModal.style.display === "flex") {
-    closeProjectModal();
-  }
-}
-
-// Google Haritalar'da konum açma fonksiyonu
-function openLocationInGoogleMaps(location) {
-  if (!location) {
-    showToast("Konum bilgisi bulunamadı!", true);
-    return;
-  }
-  const encodedLocation = encodeURIComponent(location);
-  const url = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
-  window.open(url, '_blank');
-}
-
-async function renderViewModal(project) {
-  let locationHtml = project.project_location || "-";
-  if (project.project_location) {
-    locationHtml += ` <button class="action-btn open-location-btn" data-location="${project.project_location}" title="Haritada Aç"><i class="fas fa-map-marker-alt"></i></button>`;
-  }
-  modalBody.innerHTML = `
-    <div class="detail-item">
-        <span class="detail-label">Proje Adı:</span>
-        <span class="detail-value">${project.project_name ? project.project_name.normalize('NFC') : "-"}</span>
-    </div>
-    <div class="detail-item">
-        <span class="detail-label">Referans No:</span>
-        <span class="detail-value">${project.reference_no || "-"}</span>
-    </div>
-    <div class="detail-item">
-        <span class="detail-label">Müşteri:</span>
-        <span class="detail-value">${project.customer_name || "-"}</span>
-    </div>
-    <div class="detail-item">
-        <span class="detail-label">Konum:</span>
-        <span class="detail-value">${locationHtml}</span>
-    </div>
-    <div class="detail-item">
-        <span class="detail-label">Durum:</span>
-        <span class="detail-value">${getStatusBadgeHtml(project.display_status || "-")}</span>
-    </div>
-    <div class="detail-item">
-        <span class="detail-label">Başlangıç Tarihi:</span>
-        <span class="detail-value">${formatDateForDisplay(project.start_date || "-")}</span>
-    </div>
-    <div class="detail-item">
-        <span class="detail-label">Bitiş Tarihi:</span>
-        <span class="detail-value">${formatDateForDisplay(project.end_date || "-")}</span>
-    </div>
-    <div class="detail-item">
-        <span class="detail-label">Yönetici:</span>
-        <span class="detail-value">${project.project_manager_name || "-"}</span>
-    </div>
-    <div class="detail-item">
-        <span class="detail-label">Açıklama:</span>
-        <span class="detail-value">${project.description || "-"}</span>
-    </div>
-    <div class="progress-detail-section">
-        <h3 class="modal-title" style="margin-bottom: 15px;"><i class="fas fa-tasks"></i> İş Gidişatı</h3>
-        <div id="progressStepsContainer"></div>
-        <button class="btn" style="margin-top: 15px;" id="addProgressStepBtn">
-            <i class="fas fa-plus"></i> İş Adımı Ekle
-        </button>
-    </div>
-  `;
-  try {
-    await fetchProgressSteps(project.project_id);
-  } catch (err) {
-    const progressStepsContainer = document.getElementById("progressStepsContainer");
-    if (progressStepsContainer) {
-      progressStepsContainer.innerHTML = `<p style="color: var(--danger);">İş adımları yüklenemedi. Sunucuya ulaşılamıyor veya API hatası.</p>`;
-    }
-  }
-}
-
-// Düzenleme modalı fonksiyonu
-async function renderEditModal(project) {
-  // Müşterileri ve Proje Yöneticilerini çek
-  const customers = await fetchCustomersForSelect();
-  const projectManagers = await fetchProjectManagersForSelect();
-
-  let customerOptions = customers.map(c => 
-    `<option value="${c.customer_id}" ${c.customer_id === project.customer_id ? 'selected' : ''}>${c.customer_name}</option>`
-  ).join('');
-
-  let managerOptions = projectManagers.map(pm => 
-    `<option value="${pm.id}" ${pm.id === project.project_manager_user_id ? 'selected' : ''}>${pm.fullname}</option>`
-  ).join('');
-
-  modalBody.innerHTML = `
-    <input type="hidden" id="editProjectId" value="${project.project_id}">
-    <div class="form-group">
-        <label for="editProjectName" class="form-label">Proje Adı</label>
-        <input type="text" id="editProjectName" class="form-input" value="${project.project_name ? project.project_name.normalize('NFC') : ""}">
-    </div>
-    <div class="form-group">
-        <label for="editReferenceNo" class="form-label">Referans No</label>
-        <input type="text" id="editReferenceNo" class="form-input" value="${project.reference_no || ""}">
-    </div>
-    <div class="form-group">
-        <label for="editCustomerId" class="form-label">Müşteri</label>
-        <select id="editCustomerId" class="form-input">
-            ${customerOptions}
-        </select>
-    </div>
-    <div class="form-group">
-        <label for="editLocation" class="form-label">Konum</label>
-        <input type="text" id="editLocation" class="form-input" value="${project.project_location || ""}">
-    </div>
-    <div class="form-group">
-        <label for="editStatus" class="form-label">Durum</label>
-        <select id="editStatus" class="form-input">
-            <option value="Aktif" ${project.status === "Aktif" ? "selected" : ""}>Aktif</option>
-            <option value="Tamamlandı" ${project.status === "Tamamlandı" ? "selected" : ""}>Tamamlandı</option>
-            <option value="Gecikti" ${project.status === "Gecikti" ? "selected" : ""}>Gecikti</option>
-            <option value="Planlama Aşamasında" ${project.status === "Planlama Aşamasında" ? "selected" : ""}>Planlama Aşamasında</option>
-            <option value="Aktif (İş Gecikmeli)" ${project.status === "Aktif (İş Gecikmeli)" ? "selected" : ""}>Aktif (İş Gecikmeli)</option>
-            <option value="Planlama (İş Gecikmeli)" ${project.status === "Planlama (İş Gecikmeli)" ? "selected" : ""}>Planlama (İş Gecikmeli)</option>
-        </select>
-    </div>
-    <div class="form-group">
-        <label for="editStartDate" class="form-label">Başlangıç Tarihi</label>
-        <input type="date" id="editStartDate" class="form-input" value="${formatDateForInput(project.start_date || "")}">
-    </div>
-    <div class="form-group">
-        <label for="editEndDate" class="form-label">Bitiş Tarihi</label>
-        <input type="date" id="editEndDate" class="form-input" value="${formatDateForInput(project.end_date || "")}">
-    </div>
-    <div class="form-group">
-        <label for="editProjectManagerId" class="form-label">Proje Yöneticisi</label>
-        <select id="editProjectManagerId" class="form-input">
-            ${managerOptions}
-        </select>
-    </div>
-    <div class="form-group">
-        <label for="editDescription" class="form-label">Açıklama</label>
-        <textarea id="editDescription" class="form-input" rows="4">${project.description || ""}</textarea>
-    </div>
-    <div class="progress-detail-section">
-        <h3 class="modal-title" style="margin-bottom: 15px;"><i class="fas fa-tasks"></i> İş Gidişatı</h3>
-        <div id="progressStepsContainer"></div>
-        <button class="btn" style="margin-top: 15px;" id="addProgressStepBtn">
-            <i class="fas fa-plus"></i> İş Adımı Ekle
-        </button>
-    </div>
-  `;
-  await fetchProgressSteps(project.project_id, true);
-}
-
-// Müşterileri API'den çeken fonksiyon
-async function fetchCustomersForSelect() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/customers`);
-        if (!response.ok) {
-            throw new Error('Müşteriler çekilemedi.');
+    // Modal açma fonksiyonu
+    async function openProjectModal(projectId, mode) {
+        const project = allProjectsData.find((p) => p.project_id == projectId);
+        if (!project) {
+            showToast("Proje bulunamadı!", true);
+            return;
         }
-        const customers = await response.json();
-        return customers;
-    } catch (error) {
-        console.error("Müşteriler çekilirken hata:", error);
-        showToast("Müşteriler yüklenirken bir sorun oluştu.", true);
-        return [];
-    }
-}
 
-// Proje Yöneticilerini API'den çeken fonksiyon
-async function fetchProjectManagersForSelect() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/project_managers`);
-        if (!response.ok) {
-            throw new Error('Proje yöneticileri çekilemedi.');
+        projectModal.style.display = "flex";
+        modalBody.innerHTML =
+            '<p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</p>';
+
+        if (mode === "view") {
+            modalTitle.innerHTML = `<i class="fas fa-info-circle"></i> Proje Detayları: ${project.project_name}`;
+            await renderViewModal(project);
+            modalActions.innerHTML = `<button class="modal-btn modal-btn-cancel" id="cancelModalBtn">Kapat</button>`;
+
+            if (!modalBodyClickListener) {
+                modalBodyClickListener = function(e) {
+                    if (e.target.closest('.open-location-btn')) {
+                        const btn = e.target.closest('.open-location-btn');
+                        const location = btn.dataset.location;
+                        openLocationInGoogleMaps(location);
+                    }
+                };
+                modalBody.addEventListener('click', modalBodyClickListener);
+            }
+        } else if (mode === "edit") {
+            modalTitle.innerHTML = `<i class="fas fa-edit"></i> Projeyi Düzenle: ${project.project_name}`;
+            await renderEditModal(project);
+            modalActions.innerHTML = `
+                <button class="modal-btn modal-btn-save" id="saveProjectBtn"><i class="fas fa-save"></i> Kaydet</button>
+                <button class="modal-btn modal-btn-cancel" id="cancelModalBtn">İptal</button>
+            `;
+            document.getElementById("saveProjectBtn").addEventListener("click", saveProjectChanges);
+            document.getElementById("cancelModalBtn").addEventListener("click", closeProjectModal);
         }
-        const managers = await response.json();
-        return managers;
-    } catch (error) {
-        console.error("Proje yöneticileri çekilirken hata:", error);
-        showToast("Proje yöneticileri yüklenirken bir sorun oluştu.", true);
-        return [];
+
+        // Her zaman güncel kapatma butonlarına olay dinleyicisi ekle
+        const cancelBtn = document.getElementById("cancelModalBtn");
+        if (cancelBtn) {
+            cancelBtn.addEventListener("click", closeProjectModal);
+        }
+        if (closeModalBtn) {
+            closeModalBtn.addEventListener("click", closeProjectModal);
+        }
+
+        // Modalın dışına tıklayarak kapatma
+        projectModal.onclick = (e) => {
+            if (e.target === projectModal) {
+                closeProjectModal();
+            }
+        };
+
+        // Esc tuşu ile kapatma
+        document.addEventListener("keydown", handleEscapeKey);
     }
-}
+
+    function handleEscapeKey(e) {
+        if (e.key === "Escape" && projectModal.style.display === "flex") {
+            closeProjectModal();
+        }
+    }
+
+    // Google Haritalar'da konum açma fonksiyonu
+    function openLocationInGoogleMaps(location) {
+        if (!location) {
+            showToast("Konum bilgisi bulunamadı!", true);
+            return;
+        }
+        const encodedLocation = encodeURIComponent(location);
+        const url = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
+        window.open(url, '_blank');
+    }
+
+    async function renderViewModal(project) {
+        let locationHtml = project.project_location || "-";
+        if (project.project_location) {
+            locationHtml += ` <button class="action-btn open-location-btn" data-location="${project.project_location}" title="Haritada Aç"><i class="fas fa-map-marker-alt"></i></button>`;
+        }
+        modalBody.innerHTML = `
+            <div class="detail-item">
+                <span class="detail-label">Proje Adı:</span>
+                <span class="detail-value">${project.project_name ? project.project_name.normalize('NFC') : "-"}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Referans No:</span>
+                <span class="detail-value">${project.reference_no || "-"}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Müşteri:</span>
+                <span class="detail-value">${project.customer_name || "-"}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Konum:</span>
+                <span class="detail-value">${locationHtml}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Durum:</span>
+                <span class="detail-value">${getStatusBadgeHtml(project.display_status || "-")}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Başlangıç Tarihi:</span>
+                <span class="detail-value">${formatDateForDisplay(project.start_date || "-")}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Bitiş Tarihi:</span>
+                <span class="detail-value">${formatDateForDisplay(project.end_date || "-")}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Yönetici:</span>
+                <span class="detail-value">${project.project_manager_name || "-"}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Açıklama:</span>
+                <span class="detail-value">${project.description || "-"}</span>
+            </div>
+            <div class="progress-detail-section">
+                <h3 class="modal-title" style="margin-bottom: 15px;"><i class="fas fa-tasks"></i> İş Gidişatı</h3>
+                <div id="progressStepsContainer"></div>
+                <button class="btn" style="margin-top: 15px;" id="addProgressStepBtn">
+                    <i class="fas fa-plus"></i> İş Adımı Ekle
+                </button>
+            </div>
+        `;
+        try {
+            await fetchProgressSteps(project.project_id);
+        } catch (err) {
+            const progressStepsContainer = document.getElementById("progressStepsContainer");
+            if (progressStepsContainer) {
+                progressStepsContainer.innerHTML = `<p style="color: var(--danger);">İş adımları yüklenemedi. Sunucuya ulaşılamıyor veya API hatası.</p>`;
+            }
+        }
+    }
+
+    // Düzenleme modalı fonksiyonu
+    async function renderEditModal(project) {
+        // Müşterileri ve Proje Yöneticilerini çek
+        const customers = await fetchCustomersForSelect();
+        const projectManagers = await fetchProjectManagersForSelect();
+
+        let customerOptions = customers.map(c => 
+            `<option value="${c.customer_id}" ${c.customer_id === project.customer_id ? 'selected' : ''}>${c.customer_name}</option>`
+        ).join('');
+
+        let managerOptions = projectManagers.map(pm => 
+            `<option value="${pm.id}" ${pm.id === project.project_manager_user_id ? 'selected' : ''}>${pm.fullname}</option>`
+        ).join('');
+
+        modalBody.innerHTML = `
+            <input type="hidden" id="editProjectId" value="${project.project_id}">
+            <div class="form-group">
+                <label for="editProjectName" class="form-label">Proje Adı</label>
+                <input type="text" id="editProjectName" class="form-input" value="${project.project_name ? project.project_name.normalize('NFC') : ""}">
+            </div>
+            <div class="form-group">
+                <label for="editReferenceNo" class="form-label">Referans No</label>
+                <input type="text" id="editReferenceNo" class="form-input" value="${project.reference_no || ""}">
+            </div>
+            <div class="form-group">
+                <label for="editCustomerId" class="form-label">Müşteri</label>
+                <select id="editCustomerId" class="form-input">
+                    ${customerOptions}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="editLocation" class="form-label">Konum</label>
+                <input type="text" id="editLocation" class="form-input" value="${project.project_location || ""}">
+            </div>
+            <div class="form-group">
+                <label for="editStatus" class="form-label">Durum</label>
+                <select id="editStatus" class="form-input">
+                    <option value="Aktif" ${project.status === "Aktif" ? "selected" : ""}>Aktif</option>
+                    <option value="Tamamlandı" ${project.status === "Tamamlandı" ? "selected" : ""}>Tamamlandı</option>
+                    <option value="Gecikti" ${project.status === "Gecikti" ? "selected" : ""}>Gecikti</option>
+                    <option value="Planlama Aşamasında" ${project.status === "Planlama Aşamasında" ? "selected" : ""}>Planlama Aşamasında</option>
+                    <option value="Aktif (İş Gecikmeli)" ${project.status === "Aktif (İş Gecikmeli)" ? "selected" : ""}>Aktif (İş Gecikmeli)</option>
+                    <option value="Planlama (İş Gecikmeli)" ${project.status === "Planlama (İş Gecikmeli)" ? "selected" : ""}>Planlama (İş Gecikmeli)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="editStartDate" class="form-label">Başlangıç Tarihi</label>
+                <input type="date" id="editStartDate" class="form-input" value="${formatDateForInput(project.start_date || "")}">
+            </div>
+            <div class="form-group">
+                <label for="editEndDate" class="form-label">Bitiş Tarihi</label>
+                <input type="date" id="editEndDate" class="form-input" value="${formatDateForInput(project.end_date || "")}">
+            </div>
+            <div class="form-group">
+                <label for="editProjectManagerId" class="form-label">Proje Yöneticisi</label>
+                <select id="editProjectManagerId" class="form-input">
+                    ${managerOptions}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="editDescription" class="form-label">Açıklama</label>
+                <textarea id="editDescription" class="form-input" rows="4">${project.description || ""}</textarea>
+            </div>
+            <div class="progress-detail-section">
+                <h3 class="modal-title" style="margin-bottom: 15px;"><i class="fas fa-tasks"></i> İş Gidişatı</h3>
+                <div id="progressStepsContainer"></div>
+                <button class="btn" style="margin-top: 15px;" id="addProgressStepBtn">
+                    <i class="fas fa-plus"></i> İş Adımı Ekle
+                </button>
+            </div>
+        `;
+        await fetchProgressSteps(project.project_id, true);
+    }
+
+    // Müşterileri API'den çeken fonksiyon
+    async function fetchCustomersForSelect() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/customers`);
+            if (!response.ok) {
+                throw new Error('Müşteriler çekilemedi.');
+            }
+            const customers = await response.json();
+            return customers;
+        } catch (error) {
+            console.error("Müşteriler çekilirken hata:", error);
+            showToast("Müşteriler yüklenirken bir sorun oluştu.", true);
+            return [];
+        }
+    }
+
+    // Proje Yöneticilerini API'den çeken fonksiyon
+    async function fetchProjectManagersForSelect() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/project_managers`);
+            if (!response.ok) {
+                throw new Error('Proje yöneticileri çekilemedi.');
+            }
+            const managers = await response.json();
+            return managers;
+        } catch (error) {
+            console.error("Proje yöneticileri çekilirken hata:", error);
+            showToast("Proje yöneticileri yüklenirken bir sorun oluştu.", true);
+            return [];
+        }
+    }
 
 
-      async function saveProjectChanges() {
+    async function saveProjectChanges() {
         const hasPermission = await checkPermission('proje_duzenle');
         if (!hasPermission) return;
         const projectId = document.getElementById("editProjectId").value;
@@ -2387,183 +2385,182 @@ async function fetchProjectManagersForSelect() {
         const description = document.getElementById("editDescription").value;
 
         const updatedProject = {
-          project_name: projectName,
-          reference_no: referenceNo,
-          customer_id: customerId, // Müşteri ID'si eklendi
-          project_location: location,
-          status: status,
-          start_date: startDate,
-          end_date: endDate,
-          project_manager_id: projectManagerId, // Proje Yöneticisi ID'si eklendi
-          description: description,
-          user_id: currentUser.id // Kullanıcı ID'si eklendi
+            project_name: projectName,
+            reference_no: referenceNo,
+            customer_id: customerId, // Müşteri ID'si eklendi
+            project_location: location,
+            status: status,
+            start_date: startDate,
+            end_date: endDate,
+            project_manager_id: projectManagerId, // Proje Yöneticisi ID'si eklendi
+            description: description,
+            user_id: currentUser.id // Kullanıcı ID'si eklendi
         };
 
         try {
-          const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(updatedProject),
-          });
+            const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(updatedProject),
+            });
 
-          const data = await response.json();
-          if (response.ok) {
-            showToast("Proje başarıyla güncellendi!");
-            addActivity(
-              "Proje Güncellendi",
-              `${projectName} adlı proje güncellendi.`,
-              projectId,
-              "fas fa-pen-to-square",
-              "project_update"
-            );
-            fetchProjects(); // Listeyi yenile
-            closeProjectModal();
-          } else {
-            showToast(`Hata: ${data.message}`, true);
-          }
+            const data = await response.json();
+            if (response.ok) {
+                showToast("Proje başarıyla güncellendi!");
+                addActivity(
+                    "Proje Güncellendi",
+                    `${projectName} adlı proje güncellendi.`,
+                    projectId,
+                    "fas fa-pen-to-square",
+                    "project_update"
+                );
+                fetchProjects(); // Listeyi yenile
+                closeProjectModal();
+            } else {
+                showToast(`Hata: ${data.message}`, true);
+            }
         } catch (error) {
-          console.error("Proje güncelleme hatası:", error);
-          showToast("Proje güncellenirken bir sorun oluştu.", true);
+            console.error("Proje güncelleme hatası:", error);
+            showToast("Proje güncellenirken bir sorun oluştu.", true);
         }
-      }
+    }
 
-      // `isEditable` parametresi eklendi
-      async function fetchProgressSteps(projectId, isEditable = false) {
+    // `isEditable` parametresi eklendi
+    async function fetchProgressSteps(projectId, isEditable = false) {
 
         const progressStepsContainer = document.getElementById("progressStepsContainer");
         console.log("DEBUG: fetchProgressSteps başı, projectId:", projectId, "isEditable:", isEditable, "progressStepsContainer:", progressStepsContainer);
         if (!progressStepsContainer) {
-          console.error("DEBUG: fetchProgressSteps, progressStepsContainer bulunamadı!");
-          return;
+            console.error("DEBUG: fetchProgressSteps, progressStepsContainer bulunamadı!");
+            return;
         }
         progressStepsContainer.innerHTML =
-          '<p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> İş adımları yükleniyor...</td></tr>';
+            '<p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> İş adımları yükleniyor...</td></tr>';
 
         let timeoutId = setTimeout(() => {
-          progressStepsContainer.innerHTML = `<p style='color: var(--danger);'>İş adımları yüklenemedi. Sunucuya ulaşılamıyor veya API çok yavaş.</p>`;
+            progressStepsContainer.innerHTML = `<p style='color: var(--danger);'>İş adımları yüklenemedi. Sunucuya ulaşılamıyor veya API çok yavaş.</p>`;
         }, 7000); // 7 saniye sonra hata mesajı göster
 
         try {
-          console.log("DEBUG: fetchProgressSteps, API fetch başlıyor:", `${API_BASE_URL}/api/projects/${projectId}/progress`);
-          const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`);
-          clearTimeout(timeoutId);
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`API Yanıtı Hata (Durum: ${response.status}):`, errorText);
-            throw new Error(`HTTP hatası! Sunucu yanıtı: ${response.status} - ${errorText.substring(0, 100)}...`);
-          }
-          const progressSteps = await response.json();
-          console.log("DEBUG: fetchProgressSteps, API'den progressSteps geldi:", progressSteps);
-          renderProgressSteps(progressSteps, projectId, isEditable);
-          console.log("DEBUG: fetchProgressSteps, renderProgressSteps çağrıldı");
+            console.log("DEBUG: fetchProgressSteps, API fetch başlıyor:", `${API_BASE_URL}/api/projects/${projectId}/progress`);
+            const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`);
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`API Yanıtı Hata (Durum: ${response.status}):`, errorText);
+                throw new Error(`HTTP hatası! Sunucu yanıtı: ${response.status} - ${errorText.substring(0, 100)}...`);
+            }
+            const progressSteps = await response.json();
+            console.log("DEBUG: fetchProgressSteps, API'den progressSteps geldi:", progressSteps);
+            renderProgressSteps(progressSteps, projectId, isEditable);
+            console.log("DEBUG: fetchProgressSteps, renderProgressSteps çağrıldı");
         } catch (error) {
-          clearTimeout(timeoutId);
-          console.error("İş adımları çekilemedi:", error);
-          progressStepsContainer.innerHTML = `<p style=\"color: var(--danger);\">İş adımları yüklenemedi. Hata: ${error.message}. Lütfen sunucu bağlantısını ve API rotalarını kontrol edin.</p>`;
-          showToast("İş adımları yüklenirken bir sorun oluştu.", true);
+            clearTimeout(timeoutId);
+            console.error("İş adımları çekilemedi:", error);
+            progressStepsContainer.innerHTML = `<p style=\"color: var(--danger);\">İş adımları yüklenemedi. Hata: ${error.message}. Lütfen sunucu bağlantısını ve API rotalarını kontrol edin.</p>`;
+            showToast("İş adımları yüklenirken bir sorun oluştu.", true);
         }
-      }
-
-      // `isEditable` parametresi eklendi
-  
-function renderProgressSteps(steps, projectId, isEditable = false) {
-  const progressStepsContainer = document.getElementById("progressStepsContainer");
-  if (!progressStepsContainer) return;
-  progressStepsContainer.innerHTML = "";
-
-  if (steps.length === 0) {
-    progressStepsContainer.innerHTML = '<p>Bu proje için henüz iş adımı eklenmemiş.</p>';
-  } else {
-    steps.forEach((step) => {
-      const stepElement = document.createElement("div");
-      stepElement.className = "progress-detail-item";
-
-      const titleContent = isEditable ?
-        `<input type="text" id="step-${step.progress_id}-name" class="progress-step-name-input" value="${step.step_name || ''}" placeholder="Adım Adı" required>` :
-        `<span class="progress-detail-title">${step.step_name || ''}</span>`;
-
-      const startDateContent = isEditable ?
-        `<label for="step-${step.progress_id}-start">Başlangıç:</label><input type="date" id="step-${step.progress_id}-start" class="progress-datepicker" value="${formatDateForInput(step.start_date || '')}" required>` :
-        `Başlangıç: ${formatDateForDisplay(step.start_date || '-')}`;
-
-      const endDateContent = isEditable ?
-        `<label for="step-${step.progress_id}-end">Bitiş:</label><input type="date" id="step-${step.progress_id}-end" class="progress-datepicker" value="${formatDateForInput(step.end_date || '')}" required>` :
-        `Bitiş: ${formatDateForDisplay(step.end_date || '-')}`;
-
-      const delayDisplay = (step.delay_days > 0 && !isEditable) ? `<span class='pdf-delay-text'>(${step.delay_days} gün gecikmeli)</span>` : '';
-
-      const descriptionContent = isEditable ?
-        `<textarea id="step-${step.progress_id}-desc" class="progress-description-textarea" placeholder="Açıklama">${step.description || ''}</textarea>` :
-        `<div class="progress-detail-description">Açıklama: ${step.description || 'Yok'}</div>`;
-
-      const actionsContent = isEditable ?
-       
-        `
-          <div class="progress-actions">
-              <button type="button" class="action-btn save-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Kaydet"><i class="fas fa-save"></i> Kaydet</button>
-              <button type="button" class="action-btn delete-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Sil"><i class="fas fa-trash"></i> Sil</button>
-          </div>
-               ` : ``;
-
-      stepElement.innerHTML = `
-          <div class="progress-item-header">
-              <div class="input-group" style="flex: 1;">
-                  ${isEditable ? '<label for="step-' + step.progress_id + '-name">Adım Başlığı</label>' : ''}
-                  ${titleContent}
-              </div>
-              <div class="progress-dates" style="margin-left: ${isEditable ? '20px' : '0'};">
-                  <span>
-                      ${startDateContent}
-                  </span>
-                  <span>
-                      ${endDateContent}
-                  </span>
-                  ${delayDisplay}
-              </div>
-          </div>
-          <div class="input-group">
-              ${isEditable ? '<label for="step-' + step.progress_id + '-desc">Açıklama</label>' : ''}
-              ${descriptionContent}
-          </div>
-          ${actionsContent}
-      `;
-      progressStepsContainer.appendChild(stepElement);
-    });
-
-    // Event listener'ları dinamik olarak atama (sadece düzenleme modunda)
-    if (isEditable) {
-      document.querySelectorAll('.save-progress-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-          const progressId = e.currentTarget.dataset.id;
-          const projId = e.currentTarget.dataset.projectId;
-          const stepName = document.getElementById(`step-${progressId}-name`).value;
-          const startDate = document.getElementById(`step-${progressId}-start`).value;
-          const endDate = document.getElementById(`step-${progressId}-end`).value;
-          const description = document.getElementById(`step-${progressId}-desc`).value;
-          editProgressStep(progressId, projId, { step_name: stepName, start_date: startDate, end_date: endDate, description: description });
-        });
-      });
-      document.querySelectorAll('.delete-progress-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-          const progressId = e.currentTarget.dataset.id;
-          const projId = e.currentTarget.dataset.projectId;
-          showConfirmationModal(`Bu iş adımını silmek istediğinize emin misiniz? Bu işlem geri alınamaz!`, () => deleteProgressStep(progressId, projId));
-        });
-      });
     }
-  }
 
-  // "İş Adımı Ekle" butonu için olay dinleyicisi
-  const addProgressStepButton = document.getElementById("addProgressStepBtn");
-  if (addProgressStepButton) {
-    addProgressStepButton.onclick = null;
-    addProgressStepButton.onclick = () => addNewProgressStepForm(projectId);
-  }
-}
-      // MODAL İÇİNE YENİ İŞ ADIMI EKLEME FORMU OLUŞTURAN FONKSİYON
-      function addNewProgressStepForm(projectId) {
+    // `isEditable` parametresi eklendi
+    function renderProgressSteps(steps, projectId, isEditable = false) {
+        const progressStepsContainer = document.getElementById("progressStepsContainer");
+        if (!progressStepsContainer) return;
+        progressStepsContainer.innerHTML = "";
+
+        if (steps.length === 0) {
+            progressStepsContainer.innerHTML = '<p>Bu proje için henüz iş adımı eklenmemiş.</p>';
+        } else {
+            steps.forEach((step) => {
+                const stepElement = document.createElement("div");
+                stepElement.className = "progress-detail-item";
+
+                const titleContent = isEditable ?
+                    `<input type="text" id="step-${step.progress_id}-name" class="progress-step-name-input" value="${step.step_name || ''}" placeholder="Adım Adı" required>` :
+                    `<span class="progress-detail-title">${step.step_name || ''}</span>`;
+
+                const startDateContent = isEditable ?
+                    `<label for="step-${step.progress_id}-start">Başlangıç:</label><input type="date" id="step-${step.progress_id}-start" class="progress-datepicker" value="${formatDateForInput(step.start_date || '')}" required>` :
+                    `Başlangıç: ${formatDateForDisplay(step.start_date || '-')}`;
+
+                const endDateContent = isEditable ?
+                    `<label for="step-${step.progress_id}-end">Bitiş:</label><input type="date" id="step-${step.progress_id}-end" class="progress-datepicker" value="${formatDateForInput(step.end_date || '')}" required>` :
+                    `Bitiş: ${formatDateForDisplay(step.end_date || '-')}`;
+
+                const delayDisplay = (step.delay_days > 0 && !isEditable) ? `<span class='pdf-delay-text'>(${step.delay_days} gün gecikmeli)</span>` : '';
+
+                const descriptionContent = isEditable ?
+                    `<textarea id="step-${step.progress_id}-desc" class="progress-description-textarea" placeholder="Açıklama">${step.description || ''}</textarea>` :
+                    `<div class="progress-detail-description">Açıklama: ${step.description || 'Yok'}</div>`;
+
+                const actionsContent = isEditable ?
+                
+                    `
+                    <div class="progress-actions">
+                        <button type="button" class="action-btn save-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Kaydet"><i class="fas fa-save"></i> Kaydet</button>
+                        <button type="button" class="action-btn delete-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Sil"><i class="fas fa-trash"></i> Sil</button>
+                    </div>
+                        ` : ``;
+
+                stepElement.innerHTML = `
+                    <div class="progress-item-header">
+                        <div class="input-group" style="flex: 1;">
+                            ${isEditable ? '<label for="step-' + step.progress_id + '-name">Adım Başlığı</label>' : ''}
+                            ${titleContent}
+                        </div>
+                        <div class="progress-dates" style="margin-left: ${isEditable ? '20px' : '0'};">
+                            <span>
+                                ${startDateContent}
+                            </span>
+                            <span>
+                                ${endDateContent}
+                            </span>
+                            ${delayDisplay}
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        ${isEditable ? '<label for="step-' + step.progress_id + '-desc">Açıklama</label>' : ''}
+                        ${descriptionContent}
+                    </div>
+                    ${actionsContent}
+                `;
+                progressStepsContainer.appendChild(stepElement);
+            });
+
+            // Event listener'ları dinamik olarak atama (sadece düzenleme modunda)
+            if (isEditable) {
+                document.querySelectorAll('.save-progress-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const progressId = e.currentTarget.dataset.id;
+                        const projId = e.currentTarget.dataset.projectId;
+                        const stepName = document.getElementById(`step-${progressId}-name`).value;
+                        const startDate = document.getElementById(`step-${progressId}-start`).value;
+                        const endDate = document.getElementById(`step-${progressId}-end`).value;
+                        const description = document.getElementById(`step-${progressId}-desc`).value;
+                        editProgressStep(progressId, projId, { step_name: stepName, start_date: startDate, end_date: endDate, description: description });
+                    });
+                });
+                document.querySelectorAll('.delete-progress-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const progressId = e.currentTarget.dataset.id;
+                        const projId = e.currentTarget.dataset.projectId;
+                        showConfirmationModal(`Bu iş adımını silmek istediğinize emin misiniz? Bu işlem geri alınamaz!`, () => deleteProgressStep(progressId, projId));
+                    });
+                });
+            }
+        }
+
+        // "İş Adımı Ekle" butonu için olay dinleyicisi
+        const addProgressStepButton = document.getElementById("addProgressStepBtn");
+        if (addProgressStepButton) {
+            addProgressStepButton.onclick = null;
+            addProgressStepButton.onclick = () => addNewProgressStepForm(projectId);
+        }
+    }
+    // MODAL İÇİNE YENİ İŞ ADIMI EKLEME FORMU OLUŞTURAN FONKSİYON
+    function addNewProgressStepForm(projectId) {
         const progressStepsContainer = document.getElementById("progressStepsContainer");
         // Zaten bir ekleme formu varsa yeni bir tane daha açma
         if (document.getElementById('newProgressForm')) {
@@ -2640,111 +2637,111 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
             formElement.remove(); // Formu kaldır
             showToast("İş adımı ekleme iptal edildi.", false);
         });
-      }
+    }
 
-      // editProgressStep fonksiyonu doğrudan SweetAlert2 kullanmak yerine
-      // renderProgressSteps içinde inline form elemanlarından veri alacak şekilde güncellendi.
-      // progress_id kullanıldı
-      async function editProgressStep(progressId, projectId, updatedStepData) {
+    // editProgressStep fonksiyonu doğrudan SweetAlert2 kullanmak yerine
+    // renderProgressSteps içinde inline form elemanlarından veri alacak şekilde güncellendi.
+    // progress_id kullanıldı
+    async function editProgressStep(progressId, projectId, updatedStepData) {
         try {
-          const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, { // progressId kullanılıyor
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(updatedStepData),
-          });
-          const data = await response.json();
-          if (response.ok) {
-            showToast("İş adımı başarıyla güncellendi.");
-            fetchProjects(); // Projeler listesini de yenile (durum güncellenmiş olabilir)
-            fetchProgressSteps(projectId, true); // Adımları yenile (düzenleme modunda kal)
-            addActivity(
-              "İş Adımı Güncellendi",
-              `Proje ID: ${projectId} için "${updatedStepData.step_name}" iş adımı güncellendi.`,
-              projectId,
-              "fas fa-pen",
-              "progress_update"
-            );
-          } else {
-            showToast(`Hata: ${data.message}`, true);
-          }
-        } catch (error) {
-          console.error("İş adımı güncelleme hatası:", error);
-          showToast("İş adımı güncellenirken bir sorun oluştu.", true);
-        }
-      }
-
-      // progress_id kullanıldı
-      async function deleteProgressStep(progressId, projectId) {
-          try {
             const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, { // progressId kullanılıyor
-              method: "DELETE",
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updatedStepData),
             });
             const data = await response.json();
             if (response.ok) {
-              showToast("İş adımı başarıyla silindi!");
-              fetchProjects(); // Projeler listesini de yenile (durum güncellenmiş olabilir)
-              fetchProgressSteps(projectId, true); // Adımları yenile (düzenleme modunda kal)
-              addActivity(
-                "İş Adımı Silindi",
-                `Proje ID: ${projectId} için bir iş adımı silindi.`,
-                projectId,
-                "fas fa-times",
-                "progress_delete"
-              );
+                showToast("İş adımı başarıyla güncellendi.");
+                fetchProjects(); // Projeler listesini de yenile (durum güncellenmiş olabilir)
+                fetchProgressSteps(projectId, true); // Adımları yenile (düzenleme modunda kal)
+                addActivity(
+                    "İş Adımı Güncellendi",
+                    `Proje ID: ${projectId} için "${updatedStepData.step_name}" iş adımı güncellendi.`,
+                    projectId,
+                    "fas fa-pen",
+                    "progress_update"
+                );
             } else {
-              showToast(`Hata: ${data.message}`, true);
+                showToast(`Hata: ${data.message}`, true);
             }
-          } catch (error) {
+        } catch (error) {
+            console.error("İş adımı güncelleme hatası:", error);
+            showToast("İş adımı güncellenirken bir sorun oluştu.", true);
+        }
+    }
+
+    // progress_id kullanıldı
+    async function deleteProgressStep(progressId, projectId) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, { // progressId kullanılıyor
+                method: "DELETE",
+            });
+            const data = await response.json();
+            if (response.ok) {
+                showToast("İş adımı başarıyla silindi!");
+                fetchProjects(); // Projeler listesini de yenile (durum güncellenmiş olabilir)
+                fetchProgressSteps(projectId, true); // Adımları yenile (düzenleme modunda kal)
+                addActivity(
+                    "İş Adımı Silindi",
+                    `Proje ID: ${projectId} için bir iş adımı silindi.`,
+                    projectId,
+                    "fas fa-times",
+                    "progress_delete"
+                );
+            } else {
+                showToast(`Hata: ${data.message}`, true);
+            }
+        } catch (error) {
             console.error("İş adımı silme hatası:", error);
             showToast("İş adımı silinirken bir sorun oluştu.", true);
-          }
-      }
+        }
+    }
 
-      // PDF Oluşturma Fonksiyonları (progress_id kullanıldı)
-      async function generateProjectPdf(project) {
+    // PDF Oluşturma Fonksiyonları (progress_id kullanıldı)
+    async function generateProjectPdf(project) {
         // 1. Progress adımlarını çek
         let progressSteps = [];
         try {
-          const response = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
-          if (response.ok) {
-            progressSteps = await response.json();
-          }
+            const response = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
+            if (response.ok) {
+                progressSteps = await response.json();
+            }
         } catch (e) {
-          // Progress adımları olmadan da PDF oluşturulabilir
+            // Progress adımları olmadan da PDF oluşturulabilir
         }
 
         // 2. PDF içeriğini detaylı ve görsel olarak hazırla
         const pdfContent = document.createElement('div');
         pdfContent.className = 'pdf-report-content';
         pdfContent.innerHTML = `
-          <div class="pdf-header">
-            <h1 style='font-size:28px;color:#005c9d;margin-bottom:5px;'>Ser Elektrik Otomasyon</h1>
-            <h2 style='font-size:22px;color:#0980d3;margin-bottom:15px;'>Proje Detaylı Raporu</h2>
-          </div>
-          <table class="pdf-info-table" style="width:100%;margin-bottom:20px;font-size:15px;">
-            <tr><th>Proje Adı</th><td>${project.project_name ? project.project_name.normalize('NFC') : "-"}</td></tr>
-            <tr><th>Referans No</th><td>${project.reference_no || '-'}</td></tr>
-            <tr><th>Müşteri</th><td>${project.customer_name || '-'}</td></tr>
-            <tr><th>Konum</th><td>${project.project_location || '-'}</td></tr>
-            <tr><th>Durum</th><td>${project.display_status || '-'}</td></tr>
-            <tr><th>Başlangıç Tarihi</th><td>${formatDateForDisplay(project.start_date || '-')}</td></tr>
-            <tr><th>Bitiş Tarihi</th><td>${formatDateForDisplay(project.end_date || '-')}</td></tr>
-            <tr><th>Yönetici</th><td>${project.project_manager_name || '-'}</td></tr>
-            <tr><th>Açıklama</th><td>${project.description || '-'}</td></tr>
-          </table>
-          <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
-          <div>
-            ${progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => `
-              <div style="margin-bottom:12px;">
-                <div style="font-weight:bold;font-size:15px;">${step.step_name || ''}</div>
-                <div style="font-size:13px; color:#555;">Başlangıç: ${formatDateForDisplay(step.start_date || '-')} - Bitiş: ${formatDateForDisplay(step.end_date || '-')} ${(step.delay_days > 0) ? `<span class='pdf-delay-text'>(${step.delay_days} gün gecikmeli)</span>` : ''}</div>
-                <div style="font-size:13px;">${step.description || ''}</div>
-              </div>
-            `).join('')}
-          </div>
-          <div class="pdf-footer" style='margin-top:40px; font-size:12px; color:#6c757d; border-top:1px solid #eee; padding-top:15px;'>
-            &copy; 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır.
-          </div>
+            <div class="pdf-header">
+                <h1 style='font-size:28px;color:#005c9d;margin-bottom:5px;'>Ser Elektrik Otomasyon</h1>
+                <h2 style='font-size:22px;color:#0980d3;margin-bottom:15px;'>Proje Detaylı Raporu</h2>
+            </div>
+            <table class="pdf-info-table" style="width:100%;margin-bottom:20px;font-size:15px;">
+                <tr><th>Proje Adı</th><td>${project.project_name ? project.project_name.normalize('NFC') : "-"}</td></tr>
+                <tr><th>Referans No</th><td>${project.reference_no || '-'}</td></tr>
+                <tr><th>Müşteri</th><td>${project.customer_name || '-'}</td></tr>
+                <tr><th>Konum</th><td>${project.project_location || '-'}</td></tr>
+                <tr><th>Durum</th><td>${project.display_status || '-'}</td></tr>
+                <tr><th>Başlangıç Tarihi</th><td>${formatDateForDisplay(project.start_date || '-')}</td></tr>
+                <tr><th>Bitiş Tarihi</th><td>${formatDateForDisplay(project.end_date || '-')}</td></tr>
+                <tr><th>Yönetici</th><td>${project.project_manager_name || '-'}</td></tr>
+                <tr><th>Açıklama</th><td>${project.description || '-'}</td></tr>
+            </table>
+            <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
+            <div>
+                ${progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => `
+                    <div style="margin-bottom:12px;">
+                        <div style="font-weight:bold;font-size:15px;">${step.step_name || ''}</div>
+                        <div style="font-size:13px; color:#555;">Başlangıç: ${formatDateForDisplay(step.start_date || '-')} - Bitiş: ${formatDateForDisplay(step.end_date || '-')} ${(step.delay_days > 0) ? `<span class='pdf-delay-text'>(${step.delay_days} gün gecikmeli)</span>` : ''}</div>
+                        <div style="font-size:13px;">${step.description || ''}</div>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="pdf-footer" style='margin-top:40px; font-size:12px; color:#6c757d; border-top:1px solid #eee; padding-top:15px;'>
+                © 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır.
+            </div>
         `;
 
         // Yeni pencere aç
@@ -2835,10 +2832,10 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
                 "pdf_preview"
             );
         };
-      }
+    }
 
-      // Tüm projeleri PDF olarak dışa aktar
-      async function exportAllProjectsToPdf() {
+    // Tüm projeleri PDF olarak dışa aktar
+    async function exportAllProjectsToPdf() {
         showToast("Tüm projeler PDF olarak hazırlanıyor...", false);
 
         // 1. Tüm projeleri içeren bir HTML tablosu oluştur
@@ -2953,7 +2950,7 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
                     </tbody>
                 </table>
                 <div style="text-align: center; font-size: 10px; color: #6c757d; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;">
-                    &copy; 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır.
+                    © 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır.
                 </div>
             </div>
         `;
@@ -2984,64 +2981,64 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
             console.error("Tüm projeleri PDF'e aktarırken hata oluştu:", error);
             showToast(`PDF oluşturulurken hata oluştu: ${error.message}`, true);
         }
-      }
+    }
 
-      // --- Sayfalandırma Fonksiyonları ---
-      function updateRowsPerPage() {
-          // Ekran genişliğine göre sayfa başına gösterilecek proje sayısını ayarla
-          if (window.innerWidth <= 576) { // Mobil cihazlar için
-              rowsPerPage = 8;
-          } else { // Masaüstü ve tabletler için
-              rowsPerPage = 10;
-          }
-      }
+    // --- Sayfalandırma Fonksiyonları ---
+    function updateRowsPerPage() {
+        // Ekran genişliğine göre sayfa başına gösterilecek proje sayısını ayarla
+        if (window.innerWidth <= 576) { // Mobil cihazlar için
+            rowsPerPage = 8;
+        } else { // Masaüstü ve tabletler için
+            rowsPerPage = 10;
+        }
+    }
 
-      function updatePagination(totalItems, currentP, totalP) {
-          totalProjectsCountSpan.textContent = totalItems;
-          currentPageSpan.textContent = currentP;
-          totalPagesSpan.textContent = totalP;
+    function updatePagination(totalItems, currentP, totalP) {
+        totalProjectsCountSpan.textContent = totalItems;
+        currentPageSpan.textContent = currentP;
+        totalPagesSpan.textContent = totalP;
 
-          prevPageButton.disabled = currentP === 1;
-          nextPageButton.disabled = currentP === totalP || totalP === 0;
+        prevPageButton.disabled = currentP === 1;
+        nextPageButton.disabled = currentP === totalP || totalP === 0;
 
-          pageNumbersContainer.innerHTML = '';
-          // Sadece mevcut sayfa etrafında birkaç numara göster
-          const maxPageButtons = 5;
-          let startPage = Math.max(1, currentP - Math.floor(maxPageButtons / 2));
-          let endPage = Math.min(totalP, startPage + maxPageButtons - 1);
+        pageNumbersContainer.innerHTML = '';
+        // Sadece mevcut sayfa etrafında birkaç numara göster
+        const maxPageButtons = 5;
+        let startPage = Math.max(1, currentP - Math.floor(maxPageButtons / 2));
+        let endPage = Math.min(totalP, startPage + maxPageButtons - 1);
 
-          if (endPage - startPage + 1 < maxPageButtons) {
-              startPage = Math.max(1, endPage - maxPageButtons + 1);
-          }
+        if (endPage - startPage + 1 < maxPageButtons) {
+            startPage = Math.max(1, endPage - maxPageButtons + 1);
+        }
 
-          for (let i = startPage; i <= endPage; i++) {
-              const pageButton = document.createElement('button');
-              pageButton.className = `page-btn ${i === currentP ? 'active' : ''}`;
-              pageButton.textContent = i;
-              pageButton.addEventListener('click', () => {
-                  currentPage = i;
-                  renderProjectsTable(filteredProjects);
-              });
-              pageNumbersContainer.appendChild(pageButton);
-          }
-      }
-      
-      // Sayfalandırma butonları olay dinleyicileri
-      prevPageButton.addEventListener('click', () => {
-          if (currentPage > 1) {
-              currentPage--;
-              renderProjectsTable(filteredProjects);
-          }
-      });
+        for (let i = startPage; i <= endPage; i++) {
+            const pageButton = document.createElement('button');
+            pageButton.className = `page-btn ${i === currentP ? 'active' : ''}`;
+            pageButton.textContent = i;
+            pageButton.addEventListener('click', () => {
+                currentPage = i;
+                renderProjectsTable(filteredProjects);
+            });
+            pageNumbersContainer.appendChild(pageButton);
+        }
+    }
+    
+    // Sayfalandırma butonları olay dinleyicileri
+    prevPageButton.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            renderProjectsTable(filteredProjects);
+        }
+    });
 
-      nextPageButton.addEventListener('click', () => {
-          if (currentPage < Math.ceil(filteredProjects.length / rowsPerPage)) {
-              currentPage++;
-              renderProjectsTable(filteredProjects);
-          }
-      });
+    nextPageButton.addEventListener('click', () => {
+        if (currentPage < Math.ceil(filteredProjects.length / rowsPerPage)) {
+            currentPage++;
+            renderProjectsTable(filteredProjects);
+        }
+    });
 
-      function applyFiltersAndRenderTable() {
+    function applyFiltersAndRenderTable() {
         const searchTerm = document.getElementById("searchInput").value.toLowerCase();
         const filterProjectName = document.getElementById("filterProjectName").value.toLowerCase();
         const filterRefNo = document.getElementById("filterRefNo").value.toLowerCase();
@@ -3058,124 +3055,123 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
         }
 
         filteredProjects = projectsToFilter.filter((project) => {
-          const matchesSearch =
-            (project.project_name &&
-              project.project_name.toLowerCase().includes(searchTerm)) ||
-            (project.reference_no &&
-              project.reference_no.toLowerCase().includes(searchTerm)) ||
-            (project.customer_name &&
-              project.customer_name.toLowerCase().includes(searchTerm)) ||
-            (project.project_location &&
-              project.project_location.toLowerCase().includes(searchTerm));
+            const matchesSearch =
+                (project.project_name &&
+                project.project_name.toLowerCase().includes(searchTerm)) ||
+                (project.reference_no &&
+                project.reference_no.toLowerCase().includes(searchTerm)) ||
+                (project.customer_name &&
+                project.customer_name.toLowerCase().includes(searchTerm)) ||
+                (project.project_location &&
+                project.project_location.toLowerCase().includes(searchTerm));
 
-          // Backend'den gelen 'display_status' ile filtreleme yap
-          const matchesStatus = filterStatus === "" || 
+            // Backend'den gelen 'display_status' ile filtreleme yap
+            const matchesStatus = filterStatus === "" || 
                                 (project.display_status && project.display_status.includes(filterStatus));
 
 
-          const matchesFilters =
-            (filterProjectName === "" ||
-              (project.project_name &&
-                project.project_name.toLowerCase().includes(filterProjectName))) &&
-            (filterRefNo === "" ||
-              (project.reference_no &&
-                project.reference_no.toLowerCase().includes(filterRefNo))) &&
-            (filterCustomer === "" ||
-              (project.customer_name &&
-                project.customer_name.toLowerCase().includes(filterCustomer))) &&
-            matchesStatus; // Yeni durum filtresi
+            const matchesFilters =
+                (filterProjectName === "" ||
+                (project.project_name &&
+                    project.project_name.toLowerCase().includes(filterProjectName))) &&
+                (filterRefNo === "" ||
+                (project.reference_no &&
+                    project.reference_no.toLowerCase().includes(filterRefNo))) &&
+                (filterCustomer === "" ||
+                (project.customer_name &&
+                    project.customer_name.toLowerCase().includes(filterCustomer))) &&
+                matchesStatus; // Yeni durum filtresi
 
-          return matchesSearch && matchesFilters;
+            return matchesSearch && matchesFilters;
         });
         currentPage = 1; // Filtreler değiştiğinde ilk sayfaya dön
         renderProjectsTable(filteredProjects);
-      }
+    }
 
-function uint8ToBase64(uint8) {
-  let CHUNK_SIZE = 0x8000; // 32KB
-  let index = 0;
-  let length = uint8.length;
-  let result = '';
-  let slice;
-  while (index < length) {
-    slice = uint8.subarray(index, Math.min(index + CHUNK_SIZE, length));
-    result += String.fromCharCode.apply(null, slice);
-    index += CHUNK_SIZE;
-  }
-  return btoa(result);
-}
-
-function getCurrentUserRole() {
-    // currentUser global olarak set edildiği için doğrudan ona erişebiliriz
-    return currentUser ? currentUser.role : null;
-}
-
-async function fetchUnreadNotificationCount() {
-    const notificationButton = document.getElementById('notificationButton');
-    try {
-        let userId = currentUser ? currentUser.id : null;
-
-        if (!userId) {
-            console.warn('Kullanıcı ID bulunamadı. Okunmamış bildirim sayısı çekilemiyor.');
-            notificationButton.setAttribute('data-count', '0');
-            notificationButton.classList.remove('has-notifications');
-            return;
+    function uint8ToBase64(uint8) {
+        let CHUNK_SIZE = 0x8000; // 32KB
+        let index = 0;
+        let length = uint8.length;
+        let result = '';
+        let slice;
+        while (index < length) {
+            slice = uint8.subarray(index, Math.min(index + CHUNK_SIZE, length));
+            result += String.fromCharCode.apply(null, slice);
+            index += CHUNK_SIZE;
         }
+        return btoa(result);
+    }
 
-        const response = await fetch(`${API_BASE_URL}/api/notifications/unread-count?user_id=${userId}`);
-        if (!response.ok) {
-            if (response.status === 404) {
-                console.warn('API endpoint not found: /api/notifications/unread-count. Setting notification count to 0.');
+    function getCurrentUserRole() {
+        // currentUser global olarak set edildiği için doğrudan ona erişebiliriz
+        return currentUser ? currentUser.role : null;
+    }
+
+    async function fetchUnreadNotificationCount() {
+        const notificationButton = document.getElementById('notificationButton');
+        try {
+            let userId = currentUser ? currentUser.id : null;
+
+            if (!userId) {
+                console.warn('Kullanıcı ID bulunamadı. Okunmamış bildirim sayısı çekilemiyor.');
                 notificationButton.setAttribute('data-count', '0');
                 notificationButton.classList.remove('has-notifications');
                 return;
             }
-            const errorText = await response.text();
-            throw new Error(`Okunmamış bildirim sayısı çekilemedi. Sunucu yanıtı: ${response.status} - ${errorText.substring(0, 100)}...`);
-        }
-        const data = await response.json();
-        const unreadCount = data.unread_count;
 
-        notificationButton.setAttribute('data-count', unreadCount);
-        if (unreadCount > 0) {
-            notificationButton.classList.add('has-notifications');
-        } else {
-            notificationButton.classList.remove('has-notifications');
-        }
-    } catch (error) {
-        console.error('Okunmamış bildirim sayısı çekilemedi:', error);
-        notificationButton.setAttribute('data-count', '!');
-        showToast(`Bildirim sayısı yüklenirken hata oluştu: ${error.message}`, true);
-    }
-}
+            const response = await fetch(`${API_BASE_URL}/api/notifications/unread-count?user_id=${userId}`);
+            if (!response.ok) {
+                if (response.status === 404) {
+                    console.warn('API endpoint not found: /api/notifications/unread-count. Setting notification count to 0.');
+                    notificationButton.setAttribute('data-count', '0');
+                    notificationButton.classList.remove('has-notifications');
+                    return;
+                }
+                const errorText = await response.text();
+                throw new Error(`Okunmamış bildirim sayısı çekilemedi. Sunucu yanıtı: ${response.status} - ${errorText.substring(0, 100)}...`);
+            }
+            const data = await response.json();
+            const unreadCount = data.unread_count;
 
-async function checkPermission(permissionKey) {
-    const role = getCurrentUserRole();
-    if (!role) {
-        showToast('Kullanıcı rolü bulunamadı. Lütfen tekrar giriş yapın.', true);
-        setTimeout(() => { window.location.href = 'index.html'; }, 1500);
-        return false;
+            notificationButton.setAttribute('data-count', unreadCount);
+            if (unreadCount > 0) {
+                notificationButton.classList.add('has-notifications');
+            } else {
+                notificationButton.classList.remove('has-notifications');
+            }
+        } catch (error) {
+            console.error('Okunmamış bildirim sayısı çekilemedi:', error);
+            notificationButton.setAttribute('data-count', '!');
+            showToast(`Bildirim sayısı yüklenirken hata oluştu: ${error.message}`, true);
+        }
     }
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(role)}`);
-        if (!response.ok) throw new Error('Yetki sorgusu başarısız');
-        const perms = await response.json();
-        const permission = Array.isArray(perms) ? perms[0] : perms; // API'den dönen yapıya göre ayarlayın
-        if (permission[permissionKey] != 1) { // Yetkinin 1 olması gerekiyor
-            showToast('Bu sayfayı görüntüleme yetkiniz yok!', true);
+
+    async function checkPermission(permissionKey) {
+        const role = getCurrentUserRole();
+        if (!role) {
+            showToast('Kullanıcı rolü bulunamadı. Lütfen tekrar giriş yapın.', true);
             setTimeout(() => { window.location.href = 'index.html'; }, 1500);
             return false;
         }
-        return true;
-    } catch (error) {
-        console.error('Yetki sorgusu sırasında hata oluştu:', error);
-        showToast('Yetki sorgusu sırasında hata oluştu. Lütfen tekrar deneyin.', true);
-        setTimeout(() => { window.location.href = 'index.html'; }, 1500);
-        return false;
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(role)}`);
+            if (!response.ok) throw new Error('Yetki sorgusu başarısız');
+            const perms = await response.json();
+            const permission = Array.isArray(perms) ? perms[0] : perms; // API'den dönen yapıya göre ayarlayın
+            if (permission[permissionKey] != 1) { // Yetkinin 1 olması gerekiyor
+                showToast('Bu sayfayı görüntüleme yetkiniz yok!', true);
+                setTimeout(() => { window.location.href = 'index.html'; }, 1500);
+                return false;
+            }
+            return true;
+        } catch (error) {
+            console.error('Yetki sorgusu sırasında hata oluştu:', error);
+            showToast('Yetki sorgusu sırasında hata oluştu. Lütfen tekrar deneyin.', true);
+            setTimeout(() => { window.location.href = 'index.html'; }, 1500);
+            return false;
+        }
     }
-}
-    </script>
-
+</script>
     <script src="static/bildirim.js"></script>
     <script src="static/user-avatar.js"></script>
   </body>
