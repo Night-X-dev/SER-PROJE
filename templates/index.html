@@ -1587,7 +1587,7 @@
             if (!storedUser) {
                 showToast("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", true);
                 setTimeout(() => {
-                    window.location.href = 'login.html';
+                    window.location.href = '/'; // 'login.html' yerine '/' kullanıldı
                 }, 2000); // 2 saniye sonra yönlendir
             } else {
                 try {
@@ -1604,7 +1604,7 @@
                     localStorage.removeItem('currentUser');
                     showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", true);
                     setTimeout(() => {
-                        window.location.href = 'login.html';
+                        window.location.href = '/'; // 'login.html' yerine '/' kullanıldı
                     }, 2000); // 2 saniye sonra yönlendir
                 }
             }
@@ -1636,7 +1636,7 @@
 
             const handleLogout = () => {
                 localStorage.removeItem('currentUser');
-                window.location.href = 'login.html';
+                window.location.href = '/'; // 'login.html' yerine '/' kullanıldı
             };
 
             logoutButton.addEventListener('click', handleLogout);
@@ -2431,6 +2431,50 @@
 
         let userPermissions = null;
 
+        // Yetkilere göre buton ve linklerin görünürlüğünü ayarlayan fonksiyon
+        function updateButtonPermissions() {
+            console.log('updateButtonPermissions çağrıldı. Mevcut yetkiler:', userPermissions);
+
+            const projeEkleLink = document.querySelector('a[href="proje_ekle.html"]');
+            const raporlarLink = document.querySelector('a[href="raporlar.html"]');
+            const musteriLink = document.querySelector('a[href="musteriler.html"]'); 
+            const pdfExportBtn = document.getElementById('exportPdf'); 
+
+            if (userPermissions) {
+                // Proje Ekle yetkisi
+                if (projeEkleLink) {
+                    projeEkleLink.style.display = userPermissions.proje_ekle === 1 ? '' : 'none';
+                    console.log('Proje Ekle linki görünürlüğü:', projeEkleLink.style.display);
+                }
+
+                // Raporlar yetkisi
+                if (raporlarLink) {
+                    raporlarLink.style.display = userPermissions.raporlar === 1 ? '' : 'none';
+                    console.log('Raporlar linki görünürlüğü:', raporlarLink.style.display);
+                }
+
+                // Müşteri Düzenleme yetkisi (Müşteriler linki için)
+                // Bu linkin kendisi yetkiye bağlıysa:
+                if (musteriLink) {
+                    musteriLink.style.display = userPermissions.musteri_duzenleme === 1 ? '' : 'none';
+                    console.log('Müşteriler linki görünürlüğü:', musteriLink.style.display);
+                }
+                
+                // PDF Oluştur yetkisi (Dashboard sayfasındaki buton)
+                if (pdfExportBtn) {
+                    pdfExportBtn.style.display = userPermissions.pdf_olusturma === 1 ? '' : 'none';
+                    console.log('PDF Oluştur butonu görünürlüğü:', pdfExportBtn.style.display);
+                }
+
+            } else {
+                console.warn('userPermissions boş veya null, tüm yetkiye bağlı elementler gizleniyor.');
+                if (projeEkleLink) projeEkleLink.style.display = 'none';
+                if (raporlarLink) raporlarLink.style.display = 'none';
+                if (musteriLink) musteriLink.style.display = 'none';
+                if (pdfExportBtn) pdfExportBtn.style.display = 'none';
+            }
+        }
+
         async function fetchUserPermissions(role) {
             if (role === "Admin") {
                 userPermissions = {
@@ -2438,26 +2482,27 @@
                     proje_duzenle: 1,
                     proje_sil: 1,
                     pdf_olusturma: 1,
-                    musteri_duzenleme: 1
+                    musteri_duzenleme: 1,
+                    raporlar: 1 // Admin için raporlar yetkisi de eklendi
                 };
-                updateButtonPermissions();
+                console.log('Admin rolü için yetkiler ayarlandı:', userPermissions);
+                updateButtonPermissions(); // Admin için yetkileri güncelle
                 return;
             }
             try {
+                console.log(`Yetki bilgisi çekiliyor rol için: ${role}`);
                 const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(role)}`);
                 if (!response.ok) {
-                    // Hata durumunda, yanıtın JSON olup olmadığını kontrol etmeden önce metin olarak al
                     const errorText = await response.text();
                     console.error('Yetki bilgisi alınamadı - Sunucu yanıtı:', response.status, errorText);
-                    throw new Error('Yetki bilgisi alınamadı');
+                    throw new Error('Yetki bilgisi alınamadı'); // Bu hata yakalanacak
                 }
                 const perms = await response.json();
-                // Backend'den gelen yanıtın doğrudan bir obje mi yoksa tek elemanlı bir dizi mi olduğunu kontrol et
                 userPermissions = Array.isArray(perms) && perms.length > 0 ? perms[0] : perms;
                 
-                // Eğer hala userPermissions boşsa veya beklenen yetkileri içermiyorsa
-                if (!userPermissions || typeof userPermissions.proje_ekle === 'undefined') {
-                    console.warn('Yetki bilgisi beklenenden farklı formatta geldi veya boş.');
+                // Eğer backend'den gelen yetki objesi eksikse veya beklenenden farklıysa varsayılan değerler ata
+                if (!userPermissions || typeof userPermissions.proje_ekle === 'undefined' || typeof userPermissions.raporlar === 'undefined') {
+                    console.warn('Yetki bilgisi beklenenden farklı formatta geldi veya boş. Varsayılan yetkiler atanıyor.');
                     userPermissions = {
                         proje_ekle: 0,
                         proje_duzenle: 0,
@@ -2465,14 +2510,29 @@
                         pdf_olusturma: 0,
                         musteri_duzenleme: 0,
                         raporlar: 0
-                    }; // Varsayılan olarak tüm yetkileri sıfırla
+                    };
                 }
 
-                console.log('userPermissions:', userPermissions);
-                updateButtonPermissions();
+                console.log('fetchUserPermissions başarılı. userPermissions:', userPermissions);
+                
+                // updateButtonPermissions'ı ayrı bir try-catch içinde çağırarak olası hataları izole et
+                try {
+                    updateButtonPermissions();
+                    console.log('updateButtonPermissions başarıyla tamamlandı.');
+                } catch (updateError) {
+                    console.error('updateButtonPermissions sırasında hata:', updateError);
+                    // Bu hata, ana fetchUserPermissions catch bloğuna düşmemeli, sadece loglanmalı.
+                    showToast('Yetki butonları güncellenirken bir sorun oluştu.', true);
+                }
+
             } catch (error) {
-                userPermissions = null;
+                console.error('fetchUserPermissions sırasında genel hata:', error);
+                userPermissions = null; // Hata durumunda yetkileri sıfırla
                 showToast('Yetki bilgisi alınamadı. Lütfen tekrar giriş yapın.', true);
+                // Hata durumunda, kullanıcıyı login sayfasına yönlendirme mantığını burada tutabiliriz.
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
             }
         }
 
