@@ -117,15 +117,10 @@ def get_db_connection():
     """Veritabanı bağlantısı kurar ve döndürür."""
     connection = None
     try:
-        host = None
-        port = None
-        user = None
-        password = None
-        database = None
-
+        # Eğer MySQL_PUBLIC_URL gibi tek bir URL ortam değişkeni kullanılıyorsa, onu ayrıştırmayı dener.
+        # XCloud'un böyle bir URL sağlamadığını varsayarak bu kısım muhtemelen çalışmayacaktır.
+        # Ancak kodunuzda olduğu için bırakıyorum.
         public_url = os.getenv("MYSQL_PUBLIC_URL")
-        print(f"DEBUG: Ortam değişkeninden MYSQL_PUBLIC_URL: '{public_url}'") 
-
         if public_url:
             try:
                 parsed_url = urllib.parse.urlparse(public_url)
@@ -136,29 +131,32 @@ def get_db_connection():
                 database = parsed_url.path.lstrip('/')
                 print(f"DEBUG: Ayrıştırılmış genel URL kullanılıyor. Host={host}, Port={port}, User={user}, DB={database}")
             except Exception as url_parse_e:
-                print(f"HATA: MYSQL_PUBLIC_URL ayrıştırılamadı: {url_parse_e}. Bireysel ortam değişkenlerine geri dönülüyor.")
-                host = os.getenv("MYSQL_HOST") or "localhost"
-                port = int(os.getenv("MYSQL_PORT") or 3306)
-                user = os.getenv("MYSQL_USER") or "root"
-                password = os.getenv("MYSQL_PASSWORD") or ""
-                database = os.getenv("MYSQL_DATABASE") or "ser"
-                print(f"DEBUG: Bireysel ortam değişkenleri geri dönüşü kullanılıyor: Host={host}, Port={port}, User={user}, DB={database}")
+                print(f"HATA: MYSQL_PUBLIC_URL ayrıştırılamadı: {url_parse_e}. Sabit değerlere veya bireysel ortam değişkenlerine geri dönülüyor.")
+                # URL ayrıştırma hatası durumunda sabit değerlere veya bireysel ortam değişkenlerine düşer
+                host = os.getenv("MYSQL_HOST", "localhost")
+                port = int(os.getenv("MYSQL_PORT", 3306))
+                user = os.getenv("MYSQL_USER", "admin") # Güncellendi
+                password = os.getenv("MYSQL_PASSWORD", "Ser171234") # Güncellendi
+                database = os.getenv("MYSQL_DATABASE", "ser_db") # Güncellendi
+                print(f"DEBUG: Ortam değişkenleri veya sabit değerler kullanılıyor: Host={host}, Port={port}, User={user}, DB={database}")
         else:
-            print("DEBUG: MYSQL_PUBLIC_URL bulunamadı veya boş. Bireysel ortam değişkenleri kullanılıyor.")
-            host = os.getenv("MYSQL_HOST") or "localhost"
-            port = int(os.getenv("MYSQL_PORT") or 3306)
-            user = os.getenv("MYSQL_USER") or "root"
-            password = os.getenv("MYSQL_PASSWORD") or ""
-            database = os.getenv("MYSQL_DATABASE") or "ser"
-            print(f"DEBUG: Bireysel ortam değişkenleri kullanılıyor: Host={host}, Port={port}, User={user}, DB={database}")
+            print("DEBUG: MYSQL_PUBLIC_URL bulunamadı veya boş. Ortam değişkenleri veya sabit değerler kullanılıyor.")
+            # MYSQL_PUBLIC_URL yoksa veya boşsa, bireysel ortam değişkenlerini kullanır.
+            # Eğer ortam değişkenleri de yoksa, burada belirttiğiniz sabit değerleri kullanır.
+            host = os.getenv("MYSQL_HOST", "localhost")
+            port = int(os.getenv("MYSQL_PORT", 3306))
+            user = os.getenv("MYSQL_USER", "admin") # Güncellendi
+            password = os.getenv("MYSQL_PASSWORD", "Ser171234") # Güncellendi
+            database = os.getenv("MYSQL_DATABASE", "ser_db") # Güncellendi
+            print(f"DEBUG: Ortam değişkenleri veya sabit değerler kullanılıyor: Host={host}, Port={port}, User={user}, DB={database}")
 
         connection = pymysql.connect(
             host=host,
             user=user,
             password=password,
             database=database,
-            port=port, 
-            cursorclass=pymysql.cursors.DictCursor 
+            port=port,
+            cursorclass=pymysql.cursors.DictCursor
         )
         print("MySQL veritabanına başarıyla bağlandı!")
         return connection
@@ -166,7 +164,7 @@ def get_db_connection():
         print(f"MySQL bağlantı hatası: {e}")
         if connection:
             connection.close()
-        raise 
+        raise
 
 # Yardımcı fonksiyon: Veritabanından kullanıcı rolünü alır
 def get_user_role_from_db(user_id):
@@ -2290,5 +2288,5 @@ def worker_performance():
         if connection:
             connection.close()
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=3001, debug=True)
+##if __name__ == '__main__':
+  ##  app.run(host='0.0.0.0', port=3001, debug=True)
