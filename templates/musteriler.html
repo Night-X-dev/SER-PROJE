@@ -1008,6 +1008,153 @@
                 margin-right: 0;
             }
         }
+
+        /* Notification Panel Styles */
+        .notification-panel {
+            position: fixed;
+            top: 60px; /* Topbar'ın hemen altından başlasın */
+            right: 20px;
+            width: 350px;
+            max-width: 90%;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            display: none; /* Varsayılan olarak gizli */
+            flex-direction: column;
+            overflow: hidden;
+            transform: translateY(-10px);
+            opacity: 0;
+            transition: all 0.3s ease-out;
+            border: 1px solid var(--border-color);
+        }
+
+        .notification-panel.show {
+            display: flex;
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .notification-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .notification-panel-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0;
+            color: var(--text-color);
+        }
+
+        .notification-panel-header .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--light-gray);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .notification-panel-header .close-btn:hover {
+            color: var(--primary-light);
+        }
+
+        .notification-list {
+            max-height: 300px; /* Bildirim listesi için maksimum yükseklik */
+            overflow-y: auto;
+            padding: 10px 20px;
+        }
+
+        .notification-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .notification-item:last-child {
+            border-bottom: none;
+        }
+
+        .notification-item:hover {
+            background-color: var(--primary-light-bg); /* Hafif birincil renk arka planı */
+        }
+
+        .notification-item.unread {
+            background-color: var(--primary-light-bg); /* Okunmamış bildirimler için vurgu */
+        }
+
+        .notification-item i {
+            font-size: 18px;
+            color: var(--primary-light);
+            flex-shrink: 0;
+            padding-top: 3px;
+        }
+
+        .notification-content {
+            flex-grow: 1;
+        }
+
+        .notification-title {
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 3px;
+            color: var(--text-color);
+        }
+
+        .notification-message {
+            font-size: 13px;
+            color: var(--dark-gray);
+            margin-bottom: 5px;
+        }
+
+        .notification-time {
+            font-size: 11px;
+            color: var(--light-gray);
+        }
+
+        .no-notifications {
+            text-align: center;
+            color: var(--light-gray);
+            padding: 20px;
+        }
+
+        .notification-panel-footer {
+            padding: 15px 20px;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .mark-all-read-btn {
+            background: none;
+            border: none;
+            color: var(--primary-light);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: text-decoration 0.2s;
+        }
+
+        .mark-all-read-btn:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive adjustments for notification panel */
+        @media (max-width: 576px) {
+            .notification-panel {
+                top: 55px; /* Adjust for smaller topbar height */
+                right: 10px;
+                left: 10px; /* Make it full width on very small screens */
+                width: auto;
+            }
+        }
     </style>
 </head>
 <body data-theme="light">
@@ -1054,7 +1201,7 @@
             <span class="nav-text">Ayarlar</span>
         </a>
     </div>
-    <div id="notification-panel-placeholder"></div>
+    
     <div class="main-content" id="mainContent">
         <div class="topbar">
             <!-- Hamburger Menü Butonu -->
@@ -1089,9 +1236,19 @@
             </div>
         </div>
 
-        <!-- Bildirim Paneli Placeholder -->
-        <div id="notification-panel-placeholder">
-            <!-- bildirim.html içeriği buraya yüklenecek -->
+        <!-- Bildirim Paneli -->
+        <div id="notificationPanel" class="notification-panel">
+            <div class="notification-panel-header">
+                <h3>Bildirimler</h3>
+                <button id="closeNotificationPanel" class="close-btn">&times;</button>
+            </div>
+            <div class="notification-list" id="notificationList">
+                <!-- Bildirimler buraya yüklenecek -->
+                <p class="no-notifications">Henüz bildirim yok.</p>
+            </div>
+            <div class="notification-panel-footer">
+                <button id="markAllReadBtn" class="mark-all-read-btn">Tümünü Okundu İşaretle</button>
+            </div>
         </div>
         
         <div class="customers-content">
@@ -1407,7 +1564,6 @@
             const themeToggle = document.getElementById('theme-toggle');
             const userNameElement = document.getElementById('userName');
             const userRoleElement = document.getElementById('userRole');
-            // const userAvatarElement = document.getElementById('userAvatar'); // Bu satır kaldırıldı
             const logoutButton = document.getElementById('logoutButton');
 
             const customersTableBody = document.querySelector('#customersTable tbody');
@@ -1420,6 +1576,14 @@
             const hamburgerMenu = document.getElementById('hamburgerMenu'); // Hamburger menü butonu
             const sidebar = document.getElementById('sidebar'); // Sidebar
             const mainContent = document.getElementById('mainContent'); // Main content
+
+            // Bildirim Paneli Elementleri
+            const notificationButton = document.getElementById('notificationButton');
+            const notificationPanel = document.getElementById('notificationPanel');
+            const closeNotificationPanel = document.getElementById('closeNotificationPanel');
+            const notificationList = document.getElementById('notificationList');
+            const markAllReadBtn = document.getElementById('markAllReadBtn');
+
 
             // Filtre inputları
             const filterCustomerNameInput = document.getElementById('filterCustomerName');
@@ -1451,12 +1615,6 @@
             const editAddressInput = document.getElementById('editAddress');
             const editNotesInput = document.getElementById('editNotes');
             const saveCustomerChangesBtn = document.getElementById('saveCustomerChanges');
-
-            // Bildirim Paneli ile ilgili kaldırılan referanslar:
-            // const notificationButton = document.getElementById('notificationButton');
-            // const notificationPanel = document.getElementById('notificationPanel');
-            // const closeNotificationPanel = document.getElementById('closeNotificationPanel');
-            // const markAllReadBtn = document.getElementById('markAllReadBtn');
 
 
             let allCustomersData = []; // Tüm müşterileri tutacak
@@ -1554,12 +1712,120 @@
                 }
             });
 
-            // Bildirim Paneli İşlevselliği ile ilgili kaldırılan kodlar:
-            // notificationButton.addEventListener('click', (event) => { ... });
-            // closeNotificationPanel.addEventListener('click', () => { ... });
-            // document.addEventListener('click', (event) => { ... });
-            // markAllReadBtn.addEventListener('click', markAllNotificationsAsRead);
-            // fetchUnreadNotificationCount(); // Sayfa yüklendiğinde SADECE okunmamış sayısını çek
+            // Bildirim Paneli İşlevselliği
+            notificationButton.addEventListener('click', (event) => {
+                event.stopPropagation(); // Olayın body'ye yayılmasını engelle
+                notificationPanel.classList.toggle('show');
+                // Panel açıldığında bildirimleri yeniden yükle
+                if (notificationPanel.classList.contains('show')) {
+                    fetchAndRenderNotifications();
+                }
+            });
+
+            closeNotificationPanel.addEventListener('click', () => {
+                notificationPanel.classList.remove('show');
+            });
+
+            // Panel dışına tıklayınca kapatma
+            document.addEventListener('click', (event) => {
+                if (notificationPanel.classList.contains('show') &&
+                    !notificationPanel.contains(event.target) &&
+                    !notificationButton.contains(event.target)) {
+                    notificationPanel.classList.remove('show');
+                }
+            });
+
+            // Bildirimleri çekme ve gösterme fonksiyonu
+            async function fetchAndRenderNotifications() {
+                if (!currentUser || !currentUser.id) {
+                    notificationList.innerHTML = '<p class="no-notifications">Bildirimleri görmek için giriş yapın.</p>';
+                    notificationButton.setAttribute('data-count', '0');
+                    notificationButton.classList.remove('has-notifications');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/notifications?user_id=${currentUser.id}`);
+                    if (!response.ok) throw new Error('Bildirimler çekilemedi.');
+                    const notifications = await response.json();
+                    
+                    notificationList.innerHTML = ''; // Listeyi temizle
+                    if (notifications.length === 0) {
+                        notificationList.innerHTML = '<p class="no-notifications">Henüz bildirim yok.</p>';
+                        notificationButton.setAttribute('data-count', '0');
+                        notificationButton.classList.remove('has-notifications');
+                        return;
+                    }
+
+                    let unreadCount = 0;
+                    notifications.forEach(notification => {
+                        if (!notification.is_read) {
+                            unreadCount++;
+                        }
+                        const notificationItem = document.createElement('div');
+                        notificationItem.className = `notification-item ${notification.is_read ? '' : 'unread'}`;
+                        notificationItem.dataset.id = notification.id;
+                        notificationItem.innerHTML = `
+                            <i class="${notification.icon || 'fas fa-info-circle'}"></i>
+                            <div class="notification-content">
+                                <div class="notification-title">${notification.title}</div>
+                                <div class="notification-message">${notification.message}</div>
+                                <div class="notification-time">${new Date(notification.timestamp).toLocaleString('tr-TR')}</div>
+                            </div>
+                        `;
+                        notificationItem.addEventListener('click', () => markNotificationAsRead(notification.id));
+                        notificationList.appendChild(notificationItem);
+                    });
+                    notificationButton.setAttribute('data-count', unreadCount);
+                    if (unreadCount > 0) {
+                        notificationButton.classList.add('has-notifications');
+                    } else {
+                        notificationButton.classList.remove('has-notifications');
+                    }
+
+                } catch (error) {
+                    console.error('Bildirimleri çekerken hata:', error);
+                    notificationList.innerHTML = '<p class="no-notifications" style="color: var(--danger);">Bildirimler yüklenemedi.</p>';
+                }
+            }
+
+            // Bildirimi okundu olarak işaretle
+            async function markNotificationAsRead(notificationId) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: currentUser.id })
+                    });
+                    if (!response.ok) throw new Error('Bildirim okundu olarak işaretlenemedi.');
+                    fetchAndRenderNotifications(); // Listeyi yenile
+                } catch (error) {
+                    console.error('Bildirim okundu hatası:', error);
+                    showToast('Bildirim okundu olarak işaretlenemedi.', true);
+                }
+            }
+
+            // Tüm bildirimleri okundu olarak işaretle
+            markAllReadBtn.addEventListener('click', async () => {
+                if (!currentUser || !currentUser.id) {
+                    showToast('Kullanıcı oturumu bulunamadı.', true);
+                    return;
+                }
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/notifications/mark-all-read?user_id=${currentUser.id}`, {
+                        method: 'PUT'
+                    });
+                    if (!response.ok) throw new Error('Tüm bildirimler okundu olarak işaretlenemedi.');
+                    showToast('Tüm bildirimler okundu olarak işaretlendi.', false);
+                    fetchAndRenderNotifications(); // Listeyi yenile
+                } catch (error) {
+                    console.error('Tüm bildirimleri okundu hatası:', error);
+                    showToast('Tüm bildirimler okundu olarak işaretlenemedi.', true);
+                }
+            });
+
+            // Sayfa yüklendiğinde bildirimleri çek
+            fetchAndRenderNotifications();
 
             // --- Müşterileri Backend'den Çekme ---
             async function fetchCustomers() {
