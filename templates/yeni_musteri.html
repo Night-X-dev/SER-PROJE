@@ -248,7 +248,8 @@
             flex-shrink: 0;
         }
 
-        .user-avatar {
+        /* user-avatar.js tarafından yönetilecek */
+        /* .user-avatar {
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -258,7 +259,7 @@
             justify-content: center;
             color: var(--white);
             font-weight: 600;
-        }
+        } */
 
         .user-info {
             display: flex;
@@ -625,8 +626,8 @@
                 padding: 12px 25px;
             }
             
-            .nav-item i {
-                margin-right: 15px;
+    .nav-item i {
+            margin-right: 15px;
             }
             
             .main-content {
@@ -792,7 +793,7 @@
     <div class="sidebar" id="sidebar">
         <a href="index.html" style="text-decoration: none;">
             <div class="logo-container" style="cursor: pointer;">
-              <img src="{{ url_for('static', filename='serlogo.png') }}" alt="Ser Elektrik Otomasyon" style="width: 180px; height: auto; padding-left: 10px;">
+              <img src="static/serlogo.png" alt="Ser Elektrik Otomasyon" style="width: 180px; height: auto; padding-left: 10px;">
             </div>
           </a>
           
@@ -845,11 +846,12 @@
                <div class="notification-btn" id="notificationButton" data-count="0">
                     <i class="fas fa-bell"></i>
                 </div>
-                <div class="user-profile">
-                    <div class="user-avatar" id="userAvatar">MÖ</div>
+                <!-- user-avatar.js tarafından yönetilecek avatar kapsayıcısı -->
+                <div class="user-profile" id="userProfileLink">
+                    <div id="userAvatarContainer" class="avatar-container"></div>
                     <div class="user-info">
-                        <div class="user-name" id="userName">Mustafa Öztürk</div>
-                        <div class="user-role" id="userRole">Veritabanı Yöneticisi</div>
+                        <div class="user-name" id="userName"></div>
+                        <div class="user-role" id="userRole"></div>
                     </div>
                 </div>
                 <button class="btn btn-outline logout-btn" id="logoutButton">
@@ -1048,17 +1050,66 @@
             });
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // Element Referansları
-            const themeToggle = document.getElementById('theme-toggle');
+        // Kullanıcı bilgilerini localStorage'dan yükleyen fonksiyon
+        let currentUser = null; // currentUser'ı global olarak tanımla
+        function loadUserInfo() {
+            const storedUser = localStorage.getItem('currentUser');
+            if (!storedUser) {
+                console.log("LocalStorage'da kullanıcı verisi bulunamadı. Giriş sayfasına yönlendiriliyor...");
+                showToast("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", true);
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000);
+                return;
+            }
+
+            try {
+                currentUser = JSON.parse(storedUser); 
+            } catch (e) {
+                console.error("Kayıtlı kullanıcı verisi bozuk:", e);
+                localStorage.removeItem('currentUser');
+                showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", true);
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000);
+                return;
+            }
+
             const userNameElement = document.getElementById('userName');
             const userRoleElement = document.getElementById('userRole');
-            const userAvatarElement = document.getElementById('userAvatar');
+            // userAvatarElement kaldırıldı, userAvatarContainer kullanılacak
+
+            // Topbar kullanıcı bilgileri
+            if (userNameElement) {
+                userNameElement.textContent = currentUser.fullname || currentUser.username || 'Kullanıcı';
+            }
+            if (userRoleElement) {
+                userRoleElement.textContent = currentUser.role || 'Rol Yok';
+            }
+
+            // user-avatar.js'teki updateUserAvatar fonksiyonunu çağır
+            updateUserAvatar(currentUser); 
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Kullanıcı bilgilerini yükle (Topbar için)
+            loadUserInfo();
+
+            // Element Referansları
+            const themeToggle = document.getElementById('theme-toggle');
             const logoutButton = document.getElementById('logoutButton');
             const hamburgerMenu = document.getElementById('hamburgerMenu');
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
             const notificationButton = document.getElementById('notificationButton'); // Zil butonu
+            const userProfileLink = document.getElementById('userProfileLink'); // Yeni eklendi
+
+            // userProfileLink'e tıklama olayı ekle
+            if (userProfileLink) {
+                userProfileLink.addEventListener('click', () => {
+                    window.location.href = 'users.html'; // users.html sayfasına yönlendir
+                });
+            }
 
             // Form ve butonlar
             const customerForm = document.getElementById('customerForm'); // Form elementine referans
@@ -1068,43 +1119,6 @@
             const countrySelect = document.getElementById('country');
             const citySelect = document.getElementById('city');
             const districtSelect = document.getElementById('district');
-
-            // --- Oturum Kontrolü ve Yönlendirme ---
-            let user = null; // user değişkenini burada tanımla
-            const storedUser = localStorage.getItem('currentUser');
-            if (!storedUser) {
-                window.location.href = 'login.html';
-            } else {
-                try {
-                    user = JSON.parse(storedUser); // user'ı burada ata
-                    updateUserInfo(user);
-                } catch (e) {
-                    console.error("Kayıtlı kullanıcı verisi bozuk:", e);
-                    localStorage.removeItem('currentUser');
-                    window.location.href = 'login.html';
-                }
-            }
-
-            // Kullanıcı arayüzünü güncelleme fonksiyonu (Topbar için)
-            function updateUserInfo(user) {
-                if (user) {
-                    userNameElement.textContent = user.fullname;
-                    userRoleElement.textContent = user.role;
-                    userAvatarElement.textContent = getInitials(user.fullname);
-                }
-            }
-
-            // İsimden baş harfleri alma fonksiyonu
-            function getInitials(fullname) {
-                if (!fullname) return '';
-                const parts = fullname.split(' ');
-                if (parts.length === 1) {
-                    return parts[0].charAt(0).toUpperCase();
-                } else if (parts.length >= 2) {
-                    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-                }
-                return '';
-            }
 
             // --- Tema Değiştirme ---
             const savedTheme = localStorage.getItem('theme');
@@ -1256,7 +1270,7 @@
                     postalCode: postalCode || null,
                     address: address || null,
                     notes: notes || null,
-                    user_id: user ? user.id : null // user objesi varsa id'sini ekle
+                    user_id: currentUser ? currentUser.id : null // currentUser objesi varsa id'sini ekle
                 };
 
                 try {
@@ -1391,5 +1405,7 @@
         }); 
     </script>
     <script src="static/bildirim.js"></script>
+    <!-- user-avatar.js dosyasını buraya dahil ediyoruz -->
+    <script src="static/user-avatar.js"></script>
 </body>
 </html>

@@ -1256,9 +1256,8 @@
             <span class="nav-text">Ayarlar</span>
         </a>
     </div>
-     <div id="notification-panel-placeholder">
-            <!-- bildirim.html içeriği buraya yüklenecek -->
-        </div>
+    <!-- Bildirim paneli için placeholder. İçerik 'static/bildirim.js' tarafından yüklenecektir. -->
+    <div id="notification-panel-placeholder"></div>
     <div class="main-content" id="mainContent">
         <div class="topbar">
             <!-- Hamburger Menü Butonu -->
@@ -1292,9 +1291,6 @@
                 </button>
             </div>
         </div>
-
-        <!-- Bildirim Paneli -->
-      
         
         <div class="customers-content">
             <div class="page-header">
@@ -1621,13 +1617,16 @@
             const sidebar = document.getElementById('sidebar'); // Sidebar
             const mainContent = document.getElementById('mainContent'); // Main content
 
-            // Bildirim Paneli Elementleri
+            // Bildirim Paneli Elementleri - Bu elementler artık doğrudan HTML'de değil,
+            // 'static/bildirim.js' tarafından 'notification-panel-placeholder' içine yüklenecektir.
+            // Bu nedenle, bu elementlere doğrudan erişim 'DOMContentLoaded' sırasında başarısız olabilir.
+            // Bu işlevselliği 'static/bildirim.js' dosyasının kendisinin ele alması beklenir.
             const notificationButton = document.getElementById('notificationButton');
-            const notificationPanel = document.getElementById('notificationPanel');
-            const closeNotificationPanel = document.getElementById('closeNotificationPanel');
-            const notificationList = document.getElementById('notificationList');
-            const markAllReadBtn = document.getElementById('markAllReadBtn');
-            const clearAllNotificationsBtn = document.getElementById('clearAllNotificationsBtn');
+            // const notificationPanel = document.getElementById('notificationPanel'); // Bu artık doğrudan burada bulunmayacak
+            // const closeNotificationPanel = document.getElementById('closeNotificationPanel'); // Bu artık doğrudan burada bulunmayacak
+            // const notificationList = document.getElementById('notificationList'); // Bu artık doğrudan burada bulunmayacak
+            // const markAllReadBtn = document.getElementById('markAllReadBtn'); // Bu artık doğrudan burada bulunmayacak
+            // const clearAllNotificationsBtn = document.getElementById('clearAllNotificationsBtn'); // Bu artık doğrudan burada bulunmayacak
 
 
             // Filtre inputları
@@ -1758,34 +1757,54 @@
             });
 
             // Bildirim Paneli İşlevselliği
-            notificationButton.addEventListener('click', (event) => {
-                event.stopPropagation(); // Olayın body'ye yayılmasını engelle
-                notificationPanel.classList.toggle('show');
-                // Panel açıldığında bildirimleri yeniden yükle
-                if (notificationPanel.classList.contains('show')) {
-                    fetchAndRenderNotifications();
-                }
-            });
+            // Bu kısım artık 'static/bildirim.js' tarafından yönetilmelidir.
+            // Bu script, 'notification-panel-placeholder' içine yüklenecek olan
+            // bildirim panelinin HTML'ini ve onunla ilgili tüm etkileşimleri
+            // (açma/kapama, okundu işaretleme, silme) ele almalıdır.
+            // Eğer 'bildirim.js' bu işlevselliği sağlamıyorsa,
+            // bu kodun çalışması için gerekli elementler bulunamayabilir.
+            if (notificationButton) {
+                notificationButton.addEventListener('click', (event) => {
+                    event.stopPropagation(); // Olayın body'ye yayılmasını engelle
+                    const notificationPanel = document.getElementById('notificationPanel');
+                    if (notificationPanel) {
+                        notificationPanel.classList.toggle('show');
+                        // Panel açıldığında bildirimleri yeniden yükle
+                        if (notificationPanel.classList.contains('show')) {
+                            fetchAndRenderNotifications();
+                        }
+                    } else {
+                        console.warn("Bildirim paneli elementi bulunamadı. 'static/bildirim.js' tarafından yüklenmiş olmalı.");
+                    }
+                });
+            }
 
-            closeNotificationPanel.addEventListener('click', () => {
-                notificationPanel.classList.remove('show');
-            });
+            // Bu event listener'lar da bildirim paneli yüklendikten sonra dinamik olarak atanmalıdır.
+            // Örneğin, 'static/bildirim.js' içinde veya bildirim paneli yüklendikten sonra çağrılan bir fonksiyonda.
+            // Şu an için, bu scriptin doğrudan erişimi olmadığı için kaldırılmıştır.
+            // closeNotificationPanel.addEventListener('click', () => { ... });
+            // document.addEventListener('click', (event) => { ... });
+            // markAllReadBtn.addEventListener('click', async () => { ... });
+            // clearAllNotificationsBtn.addEventListener('click', async () => { ... });
 
-            // Panel dışına tıklayınca kapatma
-            document.addEventListener('click', (event) => {
-                if (notificationPanel.classList.contains('show') &&
-                    !notificationPanel.contains(event.target) &&
-                    !notificationButton.contains(event.target)) {
-                    notificationPanel.classList.remove('show');
-                }
-            });
+            // fetchAndRenderNotifications() fonksiyonu, bildirim paneli elementlerine ihtiyaç duyduğu için
+            // bu fonksiyonun çağrılması da bildirim paneli yüklendikten sonraya bırakılmalıdır.
+            // Şu an için, bu scriptin doğrudan erişimi olmadığı için kaldırılmıştır.
+            // fetchAndRenderNotifications(); // Bu satır kaldırıldı.
 
-            // Bildirimleri çekme ve gösterme fonksiyonu
+            // Bildirimleri çekme ve gösterme fonksiyonu (Bu fonksiyon hala burada kalabilir,
+            // ancak çağrılması bildirim paneli yüklendikten sonra yapılmalıdır.)
             async function fetchAndRenderNotifications() {
+                // Bu fonksiyonun içindeki 'notificationList' ve 'notificationButton' erişimleri
+                // hala geçerli olmalıdır, ancak 'notificationPanel' ve diğer alt elementlere
+                // erişim için dikkatli olunmalıdır.
+                const notificationList = document.getElementById('notificationList');
                 if (!currentUser || !currentUser.id) {
-                    notificationList.innerHTML = '<p class="no-notifications">Bildirimleri görmek için giriş yapın.</p>';
-                    notificationButton.setAttribute('data-count', '0');
-                    notificationButton.classList.remove('has-notifications');
+                    if (notificationList) notificationList.innerHTML = '<p class="no-notifications">Bildirimleri görmek için giriş yapın.</p>';
+                    if (notificationButton) {
+                        notificationButton.setAttribute('data-count', '0');
+                        notificationButton.classList.remove('has-notifications');
+                    }
                     return;
                 }
 
@@ -1794,11 +1813,13 @@
                     if (!response.ok) throw new Error('Bildirimler çekilemedi.');
                     const notifications = await response.json();
                     
-                    notificationList.innerHTML = ''; // Listeyi temizle
+                    if (notificationList) notificationList.innerHTML = ''; // Listeyi temizle
                     if (notifications.length === 0) {
-                        notificationList.innerHTML = '<p class="no-notifications">Henüz bildirim yok.</p>';
-                        notificationButton.setAttribute('data-count', '0');
-                        notificationButton.classList.remove('has-notifications');
+                        if (notificationList) notificationList.innerHTML = '<p class="no-notifications">Henüz bildirim yok.</p>';
+                        if (notificationButton) {
+                            notificationButton.setAttribute('data-count', '0');
+                            notificationButton.classList.remove('has-notifications');
+                        }
                         return;
                     }
 
@@ -1833,18 +1854,20 @@
                             e.stopPropagation(); // Silme butonu tıklaması öğeye yayılmasın
                             deleteNotification(notification.id);
                         });
-                        notificationList.appendChild(notificationItem);
+                        if (notificationList) notificationList.appendChild(notificationItem);
                     });
-                    notificationButton.setAttribute('data-count', unreadCount);
-                    if (unreadCount > 0) {
-                        notificationButton.classList.add('has-notifications');
-                    } else {
-                        notificationButton.classList.remove('has-notifications');
+                    if (notificationButton) {
+                        notificationButton.setAttribute('data-count', unreadCount);
+                        if (unreadCount > 0) {
+                            notificationButton.classList.add('has-notifications');
+                        } else {
+                            notificationButton.classList.remove('has-notifications');
+                        }
                     }
 
                 } catch (error) {
                     console.error('Bildirimleri çekerken hata:', error);
-                    notificationList.innerHTML = '<p class="no-notifications" style="color: var(--danger);">Bildirimler yüklenemedi.</p>';
+                    if (notificationList) notificationList.innerHTML = '<p class="no-notifications" style="color: var(--danger);">Bildirimler yüklenemedi.</p>';
                 }
             }
 
@@ -1865,23 +1888,8 @@
             }
 
             // Tüm bildirimleri okundu olarak işaretle
-            markAllReadBtn.addEventListener('click', async () => {
-                if (!currentUser || !currentUser.id) {
-                    showToast('Kullanıcı oturumu bulunamadı.', true);
-                    return;
-                }
-                try {
-                    const response = await fetch(`${API_BASE_URL}/api/notifications/mark-all-read?user_id=${currentUser.id}`, {
-                        method: 'PUT'
-                    });
-                    if (!response.ok) throw new Error('Tüm bildirimler okundu olarak işaretlenemedi.');
-                    showToast('Tüm bildirimler okundu olarak işaretlendi.', false);
-                    fetchAndRenderNotifications(); // Listeyi yenile
-                } catch (error) {
-                    console.error('Tüm bildirimleri okundu hatası:', error);
-                    showToast('Tüm bildirimler okundu olarak işaretlenemedi.', true);
-                }
-            });
+            // Bu buton artık doğrudan burada bulunmayacak, 'static/bildirim.js' tarafından yönetilmelidir.
+            // markAllReadBtn.addEventListener('click', async () => { ... });
 
             // Bildirimi sil
             async function deleteNotification(notificationId) {
@@ -1905,29 +1913,14 @@
             }
 
             // Tüm bildirimleri temizle
-            clearAllNotificationsBtn.addEventListener('click', async () => {
-                if (!currentUser || !currentUser.id) {
-                    showToast('Kullanıcı oturumu bulunamadı.', true);
-                    return;
-                }
-                showConfirmModal('Tüm Bildirimleri Sil', 'Tüm bildirimleri silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.', async () => {
-                    try {
-                        const response = await fetch(`${API_BASE_URL}/api/notifications/clear-all?user_id=${currentUser.id}`, {
-                            method: 'DELETE'
-                        });
-                        if (!response.ok) throw new Error('Tüm bildirimler silinemedi.');
-                        showToast('Tüm bildirimler başarıyla silindi.', false);
-                        fetchAndRenderNotifications(); // Listeyi yenile
-                    } catch (error) {
-                        console.error('Tüm bildirimleri silme hatası:', error);
-                        showToast('Tüm bildirimler silinirken hata oluştu.', true);
-                    }
-                });
-            });
+            // Bu buton artık doğrudan burada bulunmayacak, 'static/bildirim.js' tarafından yönetilmelidir.
+            // clearAllNotificationsBtn.addEventListener('click', async () => { ... });
 
 
             // Sayfa yüklendiğinde bildirimleri çek
-            fetchAndRenderNotifications();
+            // Bu çağrı, bildirim paneli yüklendikten sonra yapılmalıdır.
+            // Örneğin, 'static/bildirim.js' içinde veya bildirim paneli yüklendikten sonra çağrılan bir fonksiyonda.
+            // fetchAndRenderNotifications(); // Bu satır kaldırıldı.
 
             // --- Müşterileri Backend'den Çekme ---
             async function fetchCustomers() {
@@ -2394,6 +2387,7 @@
         }
     </script>
     <script src="static/user-avatar.js"></script>
+    <!-- bildirim.js dosyasını en sona, kendi scriptlerimizin altına taşıdık -->
     <script src="static/bildirim.js"></script>
 </body>
 </html>
