@@ -1226,6 +1226,8 @@ def send_notification(user_id, title, message):
             connection.close()
 
 # Proje Güncelleme API'si (PUT) - projeler tablosu için
+# app.py dosyasında update_project fonksiyonunu bulun ve aşağıdaki gibi güncelleyin:
+
 @app.route('/api/projects/<int:project_id>', methods=['PUT'])
 def update_project(project_id):
     data = request.get_json()
@@ -1246,6 +1248,13 @@ def update_project(project_id):
     end_date = clean_input_value(data.get('end_date'))
     project_location = clean_input_value(data.get('project_location'))
     status = clean_input_value(data.get('status'))
+    
+    # customer_id'yi burada alıyoruz
+    customer_id_new = data.get('customer_id')
+    try:
+        customer_id_new = int(customer_id_new) if customer_id_new else None
+    except ValueError:
+        customer_id_new = None
 
     project_manager_id_new = data.get('project_manager_id')
     try:
@@ -1258,7 +1267,7 @@ def update_project(project_id):
     print(f"DEBUG: İşlenmiş değerler: "
           f"ad='{project_name}', ref='{reference_no}', açıklama='{description}', "
           f"sözleşme='{contract_date}', toplantı='{meeting_date}', başlangıç='{start_date}', bitiş='{end_date}', "
-          f"konum='{project_location}', durum='{status}', yönetici_id='{project_manager_id_new}', kullanıcı_id='{user_id}'")
+          f"konum='{project_location}', durum='{status}', müşteri_id='{customer_id_new}', yönetici_id='{project_manager_id_new}', kullanıcı_id='{user_id}'")
 
     if not user_id: 
         print("HATA: Kullanıcı ID'si eksik.")
@@ -1271,7 +1280,7 @@ def update_project(project_id):
         with connection.cursor() as cursor:
             cursor.execute("""
                 SELECT project_name, reference_no, description, contract_date, meeting_date,
-                       start_date, end_date, project_location, status, project_manager_id
+                       start_date, end_date, project_location, status, customer_id, project_manager_id
                 FROM projects WHERE project_id = %s
             """, (project_id,))
             existing_project_info = cursor.fetchone()
@@ -1290,12 +1299,13 @@ def update_project(project_id):
             old_end_date = existing_project_info['end_date'].isoformat() if isinstance(existing_project_info['end_date'], datetime.date) else None
             old_project_location = existing_project_info['project_location']
             old_status = existing_project_info['status']
+            old_customer_id = existing_project_info['customer_id'] # Eski müşteri ID'si
             old_project_manager_id = existing_project_info['project_manager_id'] 
 
             print(f"DEBUG: Eski değerler: "
                   f"ad='{old_project_name}', ref='{old_reference_no}', açıklama='{old_description}', "
                   f"sözleşme='{old_contract_date}', toplantı='{old_meeting_date}', başlangıç='{old_start_date}', bitiş='{old_end_date}', "
-                  f"konum='{old_project_location}', durum='{old_status}', yönetici_id='{old_project_manager_id}'")
+                  f"konum='{old_project_location}', durum='{old_status}', müşteri_id='{old_customer_id}', yönetici_id='{old_project_manager_id}'")
 
             updates = []
             params = []
@@ -1325,10 +1335,14 @@ def update_project(project_id):
             if clean_input_value(project_location) != clean_input_value(old_project_location):
                 updates.append("project_location = %s")
                 params.append(project_location)
-
             if clean_input_value(status) != clean_input_value(old_status):
                 updates.append("status = %s")
                 params.append(status)
+            
+            # Müşteri ID'sinin güncellenmesi eklendi
+            if customer_id_new != old_customer_id:
+                updates.append("customer_id = %s")
+                params.append(customer_id_new)
 
             if project_manager_id_new != old_project_manager_id:
                 updates.append("project_manager_id = %s")
