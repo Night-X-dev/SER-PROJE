@@ -566,47 +566,30 @@
       }
 
       /* Modal CSS - Genel Modal Stilleri */
-      /* Kendi modal stilinizi, Bootstrap'in modalını etkilemeyecek şekilde düzenleyin */
-      /* Bootstrap modalı için `modal` sınıfını kullanmayın, kendi modalınıza farklı bir sınıf verin */
-      #projectModal.modal { /* Sadece kendi modalımızı hedefliyoruz */
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(0, 0, 0, 0.5);
-          display: none;
-          align-items: center;
-          justify-content: center;
-          z-index: 1050; /* Bootstrap modalından daha düşük bir z-index */
-          overflow-y: auto;
+      .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+        overflow-y: auto;
       }
 
-      #projectModal .modal-content { /* Kendi modal içeriğimiz */
-          background: var(--card-bg);
-          padding: 30px;
-          border-radius: 12px;
-          width: 800px;
-          max-width: 95%; /* Mobil uyumluluk için */
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-          overflow-y: auto;
-          max-height: 90vh;
-          margin: auto;
-      }
-
-      /* Bootstrap modalının içeriği için ek stil */
-      #confirmationModal .modal-body {
-          text-align: center; /* Metni ortala */
-          padding: 20px; /* İç boşluğu artır */
-          font-size: 1.1em; /* Yazı boyutunu büyüt */
-          color: var(--text-color); /* Metin rengini temaya göre ayarla */
-      }
-
-      #confirmationModal .modal-footer {
-          justify-content: center; /* Butonları ortala */
-          gap: 15px; /* Butonlar arası boşluk */
-          padding: 15px;
-          border-top: 1px solid var(--border-color);
+      .modal-content {
+        background: var(--card-bg);
+        padding: 30px;
+        border-radius: 12px;
+        width: 800px;
+        max-width: 95%; /* Mobil uyumluluk için */
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        overflow-y: auto;
+        max-height: 90vh;
+        margin: auto;
       }
 
       .modal-header {
@@ -885,7 +868,7 @@
       }
       .pdf-section-title {
         color: #005c9d;
-        border-bottom: 1px solid var(--border-color);
+        border-bottom: 1px solid #e1e5e9;
         padding-bottom: 5px;
         margin-bottom: 15px;
       }
@@ -1323,11 +1306,10 @@
     <div id="notification-panel-placeholder"></div>
 
     <div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-sm modal-dialog-centered"> 
+        <div class="modal-dialog modal-sm modal-dialog-centered"> <!-- modal-dialog-centered eklendi -->
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="confirmationModalLabel">Onay Gerekli</h5>
-                    <!-- Bootstrap'in kendi kapatma butonu -->
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="confirmationMessage">
@@ -1626,7 +1608,7 @@
         document.getElementById('confirmationModalLabel').textContent = title; // Başlığı ayarla
         document.getElementById('confirmationMessage').textContent = message;
         currentConfirmAction = onConfirm;
-        // Z-index manuel olarak ayarlanmayacak, Bootstrap'in kendi yönetimine bırakılacak.
+        confirmationModalElement.style.zIndex = '20000'; // Modalın en üstte olmasını sağla
         confirmationModal.show();
     }
 
@@ -1900,7 +1882,7 @@
                     currentConfirmAction();
                 }
                 confirmationModal.hide();
-                // Z-index manuel olarak sıfırlanmayacak, Bootstrap'in kendi yönetimine bırakılacak.
+                confirmationModalElement.style.zIndex = ''; // z-index'i sıfırla
             });
         }
         
@@ -2882,7 +2864,7 @@
                 <tr><th>Yönetici</th><td>${project.project_manager_name || '-'}</td></tr>
                 <tr><th>Açıklama</th><td>${project.description || '-'}</td></tr>
             </table>
-            <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid var(--border-color); padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
+            <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
             <div>
                 ${progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => `
                     <div style="margin-bottom:12px;">
