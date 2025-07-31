@@ -8,15 +8,13 @@
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <style>
+        /* --- anasayfa.html'den alınan tüm CSS buraya gelecek --- */
         :root {
-            /* Renk Paleti */
             --primary: #005c9d;
             --primary-light: #0980d3;
             --white: #ffffff;
             --light-gray: #97a1aa;
             --dark-gray: #5e6870;
-            
-            /* Gündüz Modu */
             --bg-color: #f8f9fa;
             --card-bg: #ffffff;
             --text-color: #333333;
@@ -1172,6 +1170,7 @@
                 <!-- JS ile doldurulacak -->
             </div>
             <div class="modal-footer" id="taskDetailFooter" style="justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn btn-primary" id="editTaskFromDetail">Düzenle</button>
                 <button class="btn btn-danger" id="deleteTaskFromDetail" style="display:none;">Sil</button>
             </div>
         </div>
@@ -1247,13 +1246,12 @@
                 eventClick: function(info) {
                     const eventId = info.event.id;
                     const eventType = eventId.split('-')[0]; // event-id veya project-id
-                    // const originalId = parseInt(eventId.split('-')[1]); // Bu satır artık kullanılmıyor
 
                     if (eventType === 'task') {
-                        // Task'ın extendedProps'u zaten tüm gerekli bilgileri içeriyor
-                        openTaskDetailModal(info.event.extendedProps); 
+                        // Takvimden tıklayınca doğrudan düzenleme modalını aç
+                        openTaskModal(info.event.extendedProps);
                     } else if (eventType === 'project') {
-                        // Project'in extendedProps'u zaten tüm gerekli bilgileri içeriyor
+                        // Proje detay modalını aç
                         openProjectDetailModal(info.event.extendedProps);
                     }
                 },
@@ -1318,7 +1316,6 @@
                 let titleText = '';
                 let descriptionText = '';
                 let timeText = '';
-                // let originalData = null; // Bu değişken kullanılmadığı için kaldırıldı
 
                 if (event.type === 'task') {
                     typeClass = `task-type-task`;
@@ -1327,7 +1324,6 @@
                     timeText = new Date(event.end || event.start).toLocaleDateString('tr-TR', {
                         day: '2-digit', month: 'long', year: 'numeric'
                     });
-                    // originalData = event.extendedProps; // Bu değişken kullanılmadığı için kaldırıldı
                 } else if (event.type === 'project') {
                     typeClass = `task-type-project`;
                     titleText = event.title; // Proje adını zaten "Proje: Adı" şeklinde alıyoruz
@@ -1335,7 +1331,6 @@
                     timeText = new Date(event.end || event.start).toLocaleDateString('tr-TR', {
                         day: '2-digit', month: 'long', year: 'numeric'
                     });
-                    // originalData = event.extendedProps; // Bu değişken kullanılmadığı için kaldırıldı
                 }
 
                 item.innerHTML = `
@@ -1367,6 +1362,7 @@
                     const event = eventsData.find(e => e.id === eventId && e.type === eventType); // event.type ile eşleşme
                     if (event) {
                         if (eventType === 'task') {
+                            // Göz ikonuna tıklayınca görev detay modalını aç
                             openTaskDetailModal(event.extendedProps);
                         } else if (eventType === 'project') {
                             openProjectDetailModal(event.extendedProps);
@@ -1379,7 +1375,7 @@
         // Modal işlemleri
         const taskModal = document.getElementById('taskModal');
         const projectDetailModal = document.getElementById('projectDetailModal'); // Yeni proje detay modalı
-        const taskDetailModal = document.getElementById('taskDetailModal'); // Görev detay modalı
+        const taskDetailModal = document.getElementById('taskDetailModal'); // Görev detay modalı (sadece görüntüleme)
         const addTaskBtn = document.getElementById('addTask');
         const closeModal = document.getElementById('closeModal'); // Görev ekleme/düzenleme modalı kapatma
         const closeProjectDetailModalBtn = document.getElementById('closeProjectDetailModal'); // Proje detay modal kapatma
@@ -1387,9 +1383,10 @@
         const cancelTask = document.getElementById('cancelTask');
         const saveTaskBtn = document.getElementById('saveTask');
         const deleteTaskBtn = document.getElementById('deleteTask'); // Görev ekleme/düzenleme modalındaki sil butonu
+        const editTaskFromDetailBtn = document.getElementById('editTaskFromDetail'); // Görev detay modalındaki düzenle butonu
 
-        // Modal açma fonksiyonu (Görevler için)
-        function openTaskModal(task = null) { // viewOnly parametresi kaldırıldı, detay modalı için ayrı fonksiyon var
+        // Modal açma fonksiyonu (Görevler için - Düzenleme/Ekleme)
+        function openTaskModal(task = null) {
             editingTask = task;
             const titleInput = document.getElementById('taskTitle');
             const startInput = document.getElementById('taskStart');
@@ -1430,6 +1427,7 @@
                         el.disabled = true; // Sadece görüntüleme
                     });
                 }
+                document.querySelector('#taskModal .modal-title').textContent = 'Görevi Düzenle';
             } else { // Yeni görev ekle
                 titleInput.value = '';
                 startInput.value = '';
@@ -1445,8 +1443,11 @@
                 [titleInput, startInput, endInput, priorityInput, descInput, assigneeSelect].forEach(el => {
                     el.disabled = false;
                 });
+                document.querySelector('#taskModal .modal-title').textContent = 'Yeni Görev Ekle';
             }
             taskModal.style.display = 'flex';
+            // Görev detay modalı açıksa kapat
+            closeTaskDetailModal();
         }
         
         // Modal kapatma fonksiyonu (Görev ekleme/düzenleme için)
@@ -1512,6 +1513,8 @@
                 </div>
             `;
             modal.style.display = 'flex';
+            // Görev detay modalı açıksa kapat
+            closeTaskDetailModal();
         }
 
         // Proje Detay Modalını kapatma fonksiyonu
@@ -1519,10 +1522,13 @@
             projectDetailModal.style.display = 'none';
         }
 
+        // Görev Detay Modalını açma fonksiyonu (Sadece Görüntüleme)
         function openTaskDetailModal(task) {
             const modal = document.getElementById('taskDetailModal');
             const body = document.getElementById('taskDetailBody');
             const deleteBtn = document.getElementById('deleteTaskFromDetail'); // Detay modalındaki sil butonu
+            const editBtn = document.getElementById('editTaskFromDetail'); // Detay modalındaki düzenle butonu
+
             if (!task) {
                 console.error("Görev bilgisi eksik.");
                 showNotification("Görev detayı yüklenemedi.", "error");
@@ -1596,17 +1602,18 @@
                     </span>
                 </div>
             `;
-            // Sil butonunu sadece görevi oluşturan veya atanan kullanıcıya göster
+            // Sil ve Düzenle butonlarını sadece görevi oluşturan veya atanan kullanıcıya göster
             const currentUserFromStorage = JSON.parse(localStorage.getItem('currentUser'));
             // task.id, FullCalendar'dan geldiği için "task-ID" formatında olabilir. Sadece sayısal ID'yi al.
-            const taskIdForDelete = typeof task.id === 'string' ? task.id.replace('task-', '') : task.id;
+            const taskIdForAction = typeof task.id === 'string' ? task.id.replace('task-', '') : task.id;
 
             if (currentUserFromStorage && (currentUserFromStorage.id == task.created_by || currentUserFromStorage.id == task.assigned_user_id)) {
                 deleteBtn.style.display = '';
+                editBtn.style.display = '';
                 // Silme işlemi için event listener
                 deleteBtn.onclick = function() {
                     showConfirmationModal('Bu görevi silmek istediğinize emin misiniz?', () => {
-                        fetch(`${API_BASE_URL}/api/tasks/${taskIdForDelete}`, { // Doğru ID'yi kullan
+                        fetch(`${API_BASE_URL}/api/tasks/${taskIdForAction}`, { // Doğru ID'yi kullan
                             method: 'DELETE'
                             // user_id session'dan alınacağı için body göndermiyoruz
                         })
@@ -1614,9 +1621,9 @@
                             if (res.ok) {
                                 closeTaskDetailModal();
                                 showNotification('Görev başarıyla silindi!', "success");
-                                setTimeout(() => {
+                                // setTimeout(() => { // Gecikmeye gerek yok, direkt yenile
                                     loadCalendarEvents(); // Takvimi yenile
-                                }, 100); 
+                                // }, 100); 
                             } else {
                                 // Hata durumunda JSON yanıtını ayrıştır
                                 const errorText = await res.text();
@@ -1640,22 +1647,32 @@
                         });
                     });
                 };
+                // Düzenleme işlemi için event listener
+                editBtn.onclick = function() {
+                    closeTaskDetailModal(); // Detay modalını kapat
+                    openTaskModal(task); // Düzenleme modalını aç
+                };
+
             } else {
                 deleteBtn.style.display = 'none';
+                editBtn.style.display = 'none';
                 deleteBtn.onclick = null;
+                editBtn.onclick = null;
             }
             modal.style.display = 'flex';
         }
 
         function closeTaskDetailModal() {
             const taskDetailModal = document.getElementById('taskDetailModal');
+            // Bootstrap modal instance'ı varsa hide metodunu kullan, yoksa display none yap
             const bootstrapModalInstance = bootstrap.Modal.getInstance(taskDetailModal);
             if (bootstrapModalInstance) {
-                bootstrapModalInstance.hide(); // Bootstrap modalını gizle
+                bootstrapModalInstance.hide(); 
             } else {
-                taskDetailModal.style.display = 'none'; // Manuel olarak gizle
+                taskDetailModal.style.display = 'none'; 
             }
             document.getElementById('deleteTaskFromDetail').style.display = 'none'; // Detay modalını kapatınca sil butonunu gizle
+            document.getElementById('editTaskFromDetail').style.display = 'none'; // Detay modalını kapatınca düzenle butonunu gizle
         }
         
         // Tarih formatı dönüştürme
@@ -1910,9 +1927,9 @@
                         if (res.ok) {
                             closeTaskModal();
                             showNotification('Görev başarıyla silindi!', "success");
-                            setTimeout(() => {
+                            // setTimeout(() => { // Gecikmeye gerek yok, direkt yenile
                                 loadCalendarEvents(); // Takvimi yenile
-                            }, 100);
+                            // }, 100);
                         } else {
                             const errorText = await res.text();
                             try {
