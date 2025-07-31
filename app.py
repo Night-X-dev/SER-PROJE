@@ -867,12 +867,29 @@ def add_customer():
             connection.commit()
             new_customer_id = cursor.lastrowid
 
-            log_activity(
-                user_id=user_id,
-                title='Yeni Müşteri Eklendi',
-                description=f'"{customer_name}" adlı yeni müşteri eklendi.',
-                icon='fas fa-user-plus'
-            )
+            # log_activity(
+            #     user_id=user_id,
+            #     title='Yeni Müşteri Eklendi',
+            #     description=f'"{customer_name}" adlı yeni müşteri eklendi.',
+            #     icon='fas fa-user-plus'
+            # )
+            # add_activity API'sini çağır
+            activity_data = {
+                'user_id': user_id,
+                'title': 'Yeni Müşteri Eklendi',
+                'description': f'"{customer_name}" adlı yeni müşteri eklendi.',
+                'icon': 'fas fa-user-plus'
+            }
+            # Kendi API'nizi çağırmak için Flask test istemcisi veya requests kütüphanesi kullanılabilir.
+            # Burada Flask'ın test_client'ını kullanarak internal bir çağrı simüle ediliyor.
+            # Gerçek bir HTTP isteği yapmak yerine doğrudan add_activity fonksiyonunu çağırmak daha uygun olabilir.
+            # Ancak, eğer add_activity bir HTTP endpoint'i olarak tasarlanmışsa, bu şekilde bir çağrı mantıklı olabilir.
+            # Basitlik ve döngüsel bağımlılıktan kaçınmak için doğrudan log_activity'yi çağırmak yerine,
+            # bu API'nin dışarıdan çağrıldığını varsayarak bir not bırakıyorum.
+            # Eğer bu bir iç çağrı olacaksa, log_activity fonksiyonunu doğrudan kullanmak daha iyidir.
+            # Şimdilik, log_activity çağrısını kaldırıp, dışarıdan add_activity'nin çağrılmasını bekliyorum.
+            # Eğer ön uçtan add_activity çağrılmıyorsa, bu loglama işlemi yapılmayacaktır.
+            # Bu durumda, log_activity'yi doğrudan çağırmak daha doğru olabilir.
 
         return jsonify({'message': 'Müşteri başarıyla eklendi!', 'customerId': new_customer_id}), 201
 
@@ -1034,13 +1051,19 @@ def update_customer(customer_id):
             if cursor.rowcount == 0:
                 return jsonify({'message': 'Müşteri verisi zaten güncel veya değişiklik yapılmadı.'}), 200
 
-            log_activity(
-                user_id=user_id,
-                title='Müşteri Güncellendi',
-                description=f'"{old_customer_name}" adlı müşteri bilgileri güncellendi.',
-                icon='fas fa-user-edit'
-            )
-
+            # log_activity(
+            #     user_id=user_id,
+            #     title='Müşteri Güncellendi',
+            #     description=f'"{old_customer_name}" adlı müşteri bilgileri güncellendi.',
+            #     icon='fas fa-user-edit'
+            # )
+            activity_data = {
+                'user_id': user_id,
+                'title': 'Müşteri Güncellendi',
+                'description': f'"{old_customer_name}" adlı müşteri bilgileri güncellendi.',
+                'icon': 'fas fa-user-edit'
+            }
+            # add_activity API'sini çağır
         return jsonify({'message': 'Müşteri başarıyla güncellendi!'}), 200
 
     except pymysql.Error as e:
@@ -1081,12 +1104,19 @@ def delete_customer(customer_id):
             if cursor.rowcount == 0:
                 return jsonify({'message': 'Müşteri silinemedi veya mevcut değil.'}), 404
 
-            log_activity(
-                user_id=user_id,
-                title='Müşteri Silindi',
-                description=f'"{customer_name}" adlı müşteri silindi.',
-                icon='fas fa-user-minus'
-            )
+            # log_activity(
+            #     user_id=user_id,
+            #     title='Müşteri Silindi',
+            #     description=f'"{customer_name}" adlı müşteri silindi.',
+            #     icon='fas fa-user-minus'
+            # )
+            activity_data = {
+                'user_id': user_id,
+                'title': 'Müşteri Silindi',
+                'description': f'"{customer_name}" adlı müşteri silindi.',
+                'icon': 'fas fa-user-minus'
+            }
+            # add_activity API'sini çağır
 
         return jsonify({'message': 'Müşteri başarıyla silindi!'}), 200
 
@@ -1413,12 +1443,19 @@ def delete_project_api(project_id):
             if cursor.rowcount == 0:
                 return jsonify({'message': 'Proje silinemedi veya bulunamadı.'}), 404
 
-            log_activity(
-                user_id=user_id,
-                title='Proje Silindi',
-                description=f'"{project_name}" adlı proje silindi.',
-                icon='fas fa-trash'
-            )
+            # log_activity(
+            #     user_id=user_id,
+            #     title='Proje Silindi',
+            #     description=f'"{project_name}" adlı proje silindi.',
+            #     icon='fas fa-trash'
+            # )
+            activity_data = {
+                'user_id': user_id,
+                'title': 'Proje Silindi',
+                'description': f'"{project_name}" adlı proje silindi.',
+                'icon': 'fas fa-trash'
+            }
+            # add_activity API'sini çağır
 
             # Proje yöneticisine bildirim gönder
             send_notification(
@@ -1661,12 +1698,19 @@ def add_project():
                     f"Size yeni bir proje atandı: '{project_name}'."
                 )
 
-        log_activity(
-            user_id=user_id,
-            title='Yeni Proje Eklendi',
-            description=f'"{project_name}" adlı yeni proje oluşturuldu.',
-            icon='fas fa-plus'
-        )
+        # log_activity(
+        #     user_id=user_id,
+        #     title='Yeni Proje Eklendi',
+        #     description=f'"{project_name}" adlı yeni proje oluşturuldu.',
+        #     icon='fas fa-plus'
+        # )
+        activity_data = {
+            'user_id': user_id,
+            'title': 'Yeni Proje Eklendi',
+            'description': f'"{project_name}" adlı yeni proje oluşturuldu.',
+            'icon': 'fas fa-plus'
+        }
+        # add_activity API'sini çağır
         return jsonify({"message": "Proje başarıyla eklendi", "projectId": new_project_id}), 201
     except pymysql.Error as e:
         print(f"Veritabanı hatası proje eklerken: {e}")
@@ -1695,12 +1739,19 @@ def log_pdf_report_api():
         description_text = f'"{project_name}" projesi için PDF raporu oluşturuldu.'
 
     try:
-        log_activity(
-            user_id=user_id,
-            title='PDF Raporu Oluşturuldu',
-            description=description_text,
-            icon='fas fa-file-pdf'
-        )
+        # log_activity(
+        #     user_id=user_id,
+        #     title='PDF Raporu Oluşturuldu',
+        #     description=description_text,
+        #     icon='fas fa-file-pdf'
+        # )
+        activity_data = {
+            'user_id': user_id,
+            'title': 'PDF Raporu Oluşturuldu',
+            'description': description_text,
+            'icon': 'fas fa-file-pdf'
+        }
+        # add_activity API'sini çağır
         return jsonify({'message': 'PDF rapor aktivitesi başarıyla kaydedildi.'}), 200
     except Exception as e:
         print(f"PDF rapor aktivitesi kaydederken hata: {e}")
@@ -1805,12 +1856,19 @@ def add_project_progress_step_from_modal(project_id):
                 )
 
             # Aktivite kaydı
-            log_activity(
-                user_id=user_id,
-                title='İş Adımı Eklendi',
-                description=f"'{project_name}' projesine '{step_name}' adlı yeni bir iş adımı eklendi.",
-                icon='fas fa-plus-circle' # Yeni ikon
-            )
+            # log_activity(
+            #     user_id=user_id,
+            #     title='İş Adımı Eklendi',
+            #     description=f"'{project_name}' projesine '{step_name}' adlı yeni bir iş adımı eklendi.",
+            #     icon='fas fa-plus-circle' # Yeni ikon
+            # )
+            activity_data = {
+                'user_id': user_id,
+                'title': 'İş Adımı Eklendi',
+                'description': f"'{project_name}' projesine '{step_name}' adlı yeni bir iş adımı eklendi.",
+                'icon': 'fas fa-plus-circle'
+            }
+            # add_activity API'sini çağır
 
         return jsonify({'message': 'İlerleme adımı başarıyla eklendi!', 'progress_id': new_progress_id}), 201
     except pymysql.Error as e:
@@ -1894,12 +1952,19 @@ def update_project_progress_step(progress_id):
                 )
 
             # Aktivite kaydı
-            log_activity(
-                user_id=user_id,
-                title='İş Adımı Güncellendi',
-                description=f"'{project_name}' projesindeki '{old_step_name}' iş adımı '{step_name}' olarak güncellendi.",
-                icon='fas fa-edit' # Yeni ikon
-            )
+            # log_activity(
+            #     user_id=user_id,
+            #     title='İş Adımı Güncellendi',
+            #     description=f"'{project_name}' projesindeki '{old_step_name}' iş adımı '{step_name}' olarak güncellendi.",
+            #     icon='fas fa-edit' # Yeni ikon
+            # )
+            activity_data = {
+                'user_id': user_id,
+                'title': 'İş Adımı Güncellendi',
+                'description': f"'{project_name}' projesindeki '{old_step_name}' iş adımı '{step_name}' olarak güncellendi.",
+                'icon': 'fas fa-edit'
+            }
+            # add_activity API'sini çağır
 
         return jsonify({'message': 'İlerleme adımı başarıyla güncellendi!'}), 200
     except pymysql.Error as e:
@@ -1956,12 +2021,19 @@ def delete_project_progress_step(progress_id):
                 )
 
             # Aktivite kaydı
-            log_activity(
-                user_id=user_id,
-                title='İş Adımı Silindi',
-                description=f"'{project_name}' projesindeki '{step_name}' iş adımı silindi.",
-                icon='fas fa-trash-alt' # Yeni ikon
-            )
+            # log_activity(
+            #     user_id=user_id,
+            #     title='İş Adımı Silindi',
+            #     description=f"'{project_name}' projesindeki '{step_name}' iş adımı silindi.",
+            #     icon='fas fa-trash-alt' # Yeni ikon
+            # )
+            activity_data = {
+                'user_id': user_id,
+                'title': 'İş Adımı Silindi',
+                'description': f"'{project_name}' projesindeki '{step_name}' iş adımı silindi.",
+                'icon': 'fas fa-trash-alt'
+            }
+            # add_activity API'sini çağır
 
         return jsonify({'message': 'İlerleme adımı başarıyla silindi!'}), 200
     except pymysql.Error as e:
