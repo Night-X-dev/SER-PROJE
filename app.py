@@ -1467,7 +1467,7 @@ def get_project_managers():
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            cursor.execute("SELECT id, fullname FROM users WHERE role IN ('Teknisyen', 'Mühendis', 'Müdür', 'Proje Yöneticisi', 'Tekniker') ORDER BY fullname")
+            cursor.execute("SELECT id, fullname FROM users WHERE role IN ('Technician', 'Engineer', 'Manager', 'Project Manager') ORDER BY fullname")
             managers = cursor.fetchall()
         return jsonify(managers), 200
     except pymysql.Error as e:
@@ -1811,7 +1811,8 @@ def add_project_progress_step_from_modal(project_id):
             INSERT INTO project_progress (project_id, title, description, start_date, end_date, delay_days)
             VALUES (%s, %s, %s, %s, %s, %s)
             """
-            cursor.execute(sql_insert, (new_project_id, step_name, description, start_date_str, end_date_str, delay_days))
+            # new_project_id yerine project_id kullanıldı
+            cursor.execute(sql_insert, (project_id, step_name, description, start_date_str, end_date_str, delay_days))
             new_progress_id = cursor.lastrowid
             connection.commit()
 
@@ -2043,6 +2044,33 @@ def get_all_users():
         return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
     except Exception as e:
         print(f"General error while fetching all users: {e}")
+        return jsonify({'message': 'Server error, please try again later.'}), 500
+    finally:
+        if connection:
+            connection.close()
+
+@app.route('/api/users/non-admin', methods=['GET'])
+def get_non_admin_users():
+    """Retrieves a list of all users excluding those with the 'Admin' role."""
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            sql = "SELECT id, fullname, email, phone, role, profile_picture, hide_email, hide_phone, created_at FROM users WHERE role != 'Admin' ORDER BY fullname"
+            cursor.execute(sql)
+            users = cursor.fetchall()
+
+            # Convert datetime objects to string for JSON serialization
+            for user in users:
+                if 'created_at' in user and isinstance(user['created_at'], datetime.datetime):
+                    user['created_at'] = user['created_at'].isoformat()
+
+            return jsonify(users), 200
+    except pymysql.Error as e:
+        print(f"Database error while fetching non-admin users: {e}")
+        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+    except Exception as e:
+        print(f"General error while fetching non-admin users: {e}")
         return jsonify({'message': 'Server error, please try again later.'}), 500
     finally:
         if connection:
