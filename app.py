@@ -8,15 +8,15 @@ import json
 import datetime
 import dotenv
 from dotenv import load_dotenv
-import urllib.parse
-import re
+import urllib.parse 
+import re 
 
 load_dotenv()
 
 app = Flask(__name__)
 # Session management secret key
 # THIS SHOULD BE A SECURE AND UNPREDICTABLE STRING!
-app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex")
+app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex") 
 CORS(app, resources={r"/*": {"origins": ["https://37.148.213.89:8000", "http://serotomasyon.tr"]}}, supports_credentials=True)
 @app.route('/')
 @app.route('/login.html') # Both URLs will be directed to the same function
@@ -343,7 +343,7 @@ def delete_notification(notification_id):
         with connection.cursor() as cursor:
             cursor.execute("SELECT id FROM notifications WHERE id = %s AND user_id = %s", (notification_id, user_id))
             if not cursor.fetchone():
-                return jsonify({'message': 'Notification not found or you do not have permission to delete it.'}), 404
+                return jsonify({'message': 'Notification not found or you do not have permission to modify it.'}), 404
 
             cursor.execute("DELETE FROM notifications WHERE id = %s", (notification_id,))
             connection.commit()
@@ -1811,7 +1811,7 @@ def add_project_progress_step_from_modal(project_id):
             INSERT INTO project_progress (project_id, title, description, start_date, end_date, delay_days)
             VALUES (%s, %s, %s, %s, %s, %s)
             """
-            cursor.execute(sql_insert, (project_id, step_name, description, start_date_str, end_date_str, delay_days))
+            cursor.execute(sql_insert, (new_project_id, step_name, description, start_date_str, end_date_str, delay_days))
             new_progress_id = cursor.lastrowid
             connection.commit()
 
@@ -2171,7 +2171,7 @@ def get_calendar_events():
                     'id': f"task-{task['id']}", # Add type to ID
                     'title': task['title'],
                     'start': task['start'].isoformat() if isinstance(task['start'], (datetime.datetime, datetime.date)) else task['start'],
-                    'end': task['end'].isoformat() if isinstance(task['end'], (datetime.datetime, datetime.date)) else task['end'] if task['end'] else None,
+                    'end': task['end'].isoformat() if isinstance(task['end'], (datetime.datetime, datetime.date)) else (task['end'] if task['end'] else None), # Handle None for end date
                     'color': color,
                     'type': 'task',
                     'extendedProps': {
@@ -2180,7 +2180,10 @@ def get_calendar_events():
                         'description': task['description'],
                         'assigned_user_id': task['assigned_user_id'],
                         'created_by': task['created_by'],
-                        'id': task['id'] # Add original task ID here for detail modals
+                        'id': task['id'], # Add original task ID here for detail modals
+                        'title': task['title'], # Add title to extendedProps for consistency
+                        'start': task['start'].isoformat() if isinstance(task['start'], (datetime.datetime, datetime.date)) else task['start'],
+                        'end': task['end'].isoformat() if isinstance(task['end'], (datetime.datetime, datetime.date)) else (task['end'] if task['end'] else None) # Add end to extendedProps for consistency
                     }
                 })
 
@@ -2199,7 +2202,7 @@ def get_calendar_events():
                     'id': f"project-{project['project_id']}", # Add type to ID
                     'title': f"Project: {project['project_name']}",
                     'start': project['start_date'].isoformat() if isinstance(project['start_date'], (datetime.datetime, datetime.date)) else project['start_date'],
-                    'end': project['end_date'].isoformat() if isinstance(project['end_date'], (datetime.datetime, datetime.date)) else project['end_date'],
+                    'end': project['end_date'].isoformat() if isinstance(project['end_date'], (datetime.datetime, datetime.date)) else (project['end_date'] if project['end_date'] else None), # Handle None for end date
                     'color': project_color,
                     'type': 'project',
                     'extendedProps': {
@@ -2207,7 +2210,10 @@ def get_calendar_events():
                         'description': project['description'],
                         'status': project['status'],
                         'project_manager_id': project['project_manager_id'],
-                        'id': project['project_id'] # Add original project ID here for detail modals
+                        'id': project['project_id'], # Add original project ID here for detail modals
+                        'project_name': project['project_name'], # Add project_name to extendedProps for consistency
+                        'start': project['start_date'].isoformat() if isinstance(project['start_date'], (datetime.datetime, datetime.date)) else project['start_date'],
+                        'end': project['end_date'].isoformat() if isinstance(project['end_date'], (datetime.datetime, datetime.date)) else (project['end_date'] if project['end_date'] else None) # Add end to extendedProps for consistency
                     }
                 })
 
@@ -2477,7 +2483,7 @@ def worker_performance():
             FROM projects p
             LEFT JOIN users u ON u.id = p.project_manager_id
             WHERE u.role IN ('Technician', 'Engineer', 'Manager', 'Project Manager')
-            GROUP BY p.project_id, u.fullname
+            GROUP BY u.fullname
             """
             cursor.execute(sql)
             result = cursor.fetchall()
