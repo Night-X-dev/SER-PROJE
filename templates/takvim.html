@@ -1247,7 +1247,7 @@
                 eventClick: function(info) {
                     const eventId = info.event.id;
                     const eventType = eventId.split('-')[0]; // event-id veya project-id
-                    const originalId = parseInt(eventId.split('-')[1]);
+                    // const originalId = parseInt(eventId.split('-')[1]); // Bu satır artık kullanılmıyor
 
                     if (eventType === 'task') {
                         // Task'ın extendedProps'u zaten tüm gerekli bilgileri içeriyor
@@ -1318,7 +1318,7 @@
                 let titleText = '';
                 let descriptionText = '';
                 let timeText = '';
-                let originalData = null;
+                // let originalData = null; // Bu değişken kullanılmadığı için kaldırıldı
 
                 if (event.type === 'task') {
                     typeClass = `task-type-task`;
@@ -1327,7 +1327,7 @@
                     timeText = new Date(event.end || event.start).toLocaleDateString('tr-TR', {
                         day: '2-digit', month: 'long', year: 'numeric'
                     });
-                    originalData = event.extendedProps;
+                    // originalData = event.extendedProps; // Bu değişken kullanılmadığı için kaldırıldı
                 } else if (event.type === 'project') {
                     typeClass = `task-type-project`;
                     titleText = event.title; // Proje adını zaten "Proje: Adı" şeklinde alıyoruz
@@ -1335,7 +1335,7 @@
                     timeText = new Date(event.end || event.start).toLocaleDateString('tr-TR', {
                         day: '2-digit', month: 'long', year: 'numeric'
                     });
-                    originalData = event.extendedProps;
+                    // originalData = event.extendedProps; // Bu değişken kullanılmadığı için kaldırıldı
                 }
 
                 item.innerHTML = `
@@ -1364,7 +1364,7 @@
                     e.stopPropagation();
                     const eventId = e.currentTarget.dataset.id;
                     const eventType = e.currentTarget.dataset.type;
-                    const event = eventsData.find(e => e.id === eventId && e.type === eventType);
+                    const event = eventsData.find(e => e.id === eventId && e.extendedProps.type === eventType); // event.type yerine extendedProps.type kullanıldı
                     if (event) {
                         if (eventType === 'task') {
                             openTaskDetailModal(event.extendedProps);
@@ -1466,6 +1466,7 @@
             }
 
             // Tarihleri Date objelerine dönüştür ve formatla
+            // project.start ve project.end zaten Date objesi veya ISO string olabilir
             const formattedStart = new Date(project.start).toLocaleDateString('tr-TR', {
                 day: '2-digit', month: 'long', year: 'numeric'
             });
@@ -1474,7 +1475,7 @@
             });
 
             let managerName = '';
-            // project.project_manager_id yerine project.project_manager_id kullanılıyor
+            // project.project_manager_id doğrudan kullanılıyor
             if (project.project_manager_id) {
                 const user = users.find(u => u.id == project.project_manager_id);
                 managerName = user ? user.fullname : `Kullanıcı ID: ${project.project_manager_id}`;
@@ -1485,7 +1486,7 @@
             const textColor = isDark ? '#e0e0e0' : '#333333'; // Varsayılan metin rengi
 
             body.innerHTML = `
-                <div style="font-size:20px; font-weight:600; margin-bottom:8px; color:${textColor};">${project.title.replace('Proje: ', '')}</div>
+                <div style="font-size:20px; font-weight:600; margin-bottom:8px; color:${textColor};">${project.title}</div>
                 <div style="margin:6px 0 12px 0; color:var(--light-gray);">${project.description || ''}</div>
                 <div style="margin-bottom:6px; color:${textColor};">
                     <i class="fas fa-calendar-alt" style="color:var(--primary-light);"></i>
@@ -1524,6 +1525,7 @@
                 return;
             }
 
+            // task.start ve task.end zaten Date objesi veya ISO string olabilir
             const formattedStart = new Date(task.start).toLocaleString('tr-TR', {
                 day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
             });
@@ -1588,12 +1590,15 @@
             `;
             // Sil butonunu sadece görevi oluşturan veya atanan kullanıcıya göster
             const currentUserFromStorage = JSON.parse(localStorage.getItem('currentUser'));
+            // task.id, FullCalendar'dan geldiği için "task-ID" formatında olabilir. Sadece sayısal ID'yi al.
+            const taskIdForDelete = typeof task.id === 'string' ? task.id.replace('task-', '') : task.id;
+
             if (currentUserFromStorage && (currentUserFromStorage.id == task.created_by || currentUserFromStorage.id == task.assigned_user_id)) {
                 deleteBtn.style.display = '';
                 // Silme işlemi için event listener
                 deleteBtn.onclick = function() {
                     showConfirmationModal('Bu görevi silmek istediğinize emin misiniz?', () => {
-                        fetch(`${API_BASE_URL}/api/tasks/${task.id}`, {
+                        fetch(`${API_BASE_URL}/api/tasks/${taskIdForDelete}`, { // Doğru ID'yi kullan
                             method: 'DELETE'
                             // user_id session'dan alınacağı için body göndermiyoruz
                         })
@@ -1605,7 +1610,7 @@
                                     loadCalendarEvents(); // Takvimi yenile
                                 }, 100); 
                             } else {
-                                const data = await res.json();
+                                const data = await res.json(); // Hata durumunda JSON yanıtını ayrıştır
                                 showNotification('Silme başarısız: ' + (data.message || 'Bilinmeyen hata.'), "error");
                             }
                         })
@@ -1795,7 +1800,9 @@
 
                 // Eğer editingTask varsa, güncelleme yap
                 if (editingTask && editingTask.id) {
-                    fetch(`${API_BASE_URL}/api/tasks/${editingTask.id.replace('task-', '')}`, { // ID'den 'task-' ön ekini kaldır
+                    // ID'den 'task-' ön ekini kaldır
+                    const taskIdToUpdate = typeof editingTask.id === 'string' ? editingTask.id.replace('task-', '') : editingTask.id;
+                    fetch(`${API_BASE_URL}/api/tasks/${taskIdToUpdate}`, { 
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -1847,8 +1854,11 @@
             // Görev ekleme/düzenleme modalındaki silme işlemi
             deleteTaskBtn.addEventListener('click', function() {
                 if (!editingTask || !editingTask.id) return;
+                // ID'den 'task-' ön ekini kaldır
+                const taskIdToDelete = typeof editingTask.id === 'string' ? editingTask.id.replace('task-', '') : editingTask.id;
+
                 showConfirmationModal('Bu görevi silmek istediğinize emin misiniz?', () => {
-                    fetch(`${API_BASE_URL}/api/tasks/${editingTask.id.replace('task-', '')}`, { // ID'den 'task-' ön ekini kaldır
+                    fetch(`${API_BASE_URL}/api/tasks/${taskIdToDelete}`, { // Doğru ID'yi kullan
                         method: 'DELETE'
                         // user_id session'dan alınacağı için body göndermiyoruz
                     })
