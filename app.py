@@ -316,6 +316,9 @@ def get_notifications():
                         row['is_read'] = int(row['is_read'])
                     except Exception:
                         row['is_read'] = 0
+                # created_at'ı ISO formatına çevir
+                if 'created_at' in row and isinstance(row['created_at'], datetime.datetime):
+                    row['created_at'] = row['created_at'].isoformat()
             return jsonify(result)
     except pymysql.Error as e:
         print(f"Veritabanı hatası bildirimleri çekerken: {e}")
@@ -1530,6 +1533,10 @@ def get_recent_activities():
             """
             cursor.execute(sql)
             activities = cursor.fetchall()
+            # created_at'ı ISO formatına çevir
+            for activity in activities:
+                if 'created_at' in activity and isinstance(activity['created_at'], datetime.datetime):
+                    activity['created_at'] = activity['created_at'].isoformat()
             return jsonify(activities)
     except pymysql.Error as e:
         print(f"Veritabanı hatası (son aktiviteler): {e}")
