@@ -1042,12 +1042,27 @@
             fetch(`${API_BASE_URL}/api/worker-performance`)
                 .then(response => response.json())
                 .then(data => {
+                    // Veri boşsa veya tanımsızsa hata oluşmaması için kontrol ekle
+                    if (!data || data.length === 0) {
+                        document.getElementById('totalWorkers').textContent = '0';
+                        document.getElementById('avgEfficiency').textContent = '0%';
+                        document.getElementById('bestPerformer').textContent = 'N/A';
+                        document.getElementById('tasksCompleted').textContent = '0';
+                        if (performanceChartInstance) performanceChartInstance.destroy();
+                        performanceChartInstance = null;
+                        console.warn('İşçi performans verisi boş geldi.');
+                        return; // Diğer işlemleri durdur
+                    }
+
                     // İstatistik kutularını doldurmak için örnek:
                     document.getElementById('totalWorkers').textContent = data.length;
                     document.getElementById('avgEfficiency').textContent = 
                         (data.reduce((sum, w) => sum + w.on_time_projects, 0) / data.length).toFixed(2) + '%';
-                    document.getElementById('bestPerformer').textContent = 
-                        data.reduce((best, w) => w.on_time_projects > best.on_time_projects ? w : best, data[0]).manager_name;
+                    
+                    // En iyi performans göstereni bulurken, data dizisinin boş olmadığından emin olduktan sonra data[0] kullan
+                    const bestPerformer = data.reduce((best, w) => w.on_time_projects > best.on_time_projects ? w : best, data[0]);
+                    document.getElementById('bestPerformer').textContent = bestPerformer.manager_name;
+                    
                     document.getElementById('tasksCompleted').textContent = 
                         data.reduce((sum, w) => sum + w.total_projects, 0);
 
