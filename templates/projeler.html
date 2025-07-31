@@ -1185,7 +1185,7 @@
         color: var(--text-color);
         border-radius: 14px;
         box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-        z-index: 20000;
+        z-index: 20000; /* Z-index artırıldı */
         border: 1px solid var(--border-color);
         display: none; /* Başlangıçta gizli */
         flex-direction: column;
@@ -1574,7 +1574,8 @@
     const prevPageButton = document.getElementById('prevPage');
     const nextPageButton = document.getElementById('nextPage');
     const pageNumbersContainer = document.getElementById('pageNumbers');
-    const confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+    const confirmationModalElement = document.getElementById('confirmationModal'); // Elementi al
+    const confirmationModal = new bootstrap.Modal(confirmationModalElement); // Modal objesini oluştur
     const confirmActionBtn = document.getElementById('confirmActionBtn');
     let currentConfirmAction = null;
     const pageTitleElement = document.getElementById('pageTitle');
@@ -1603,9 +1604,11 @@
     }
 
     // Custom Confirm Modal (alert yerine kullanılacak)
-    function showConfirmationModal(message, onConfirm) {
+    function showConfirmationModal(title, message, onConfirm) {
+        document.getElementById('confirmationModalLabel').textContent = title; // Başlığı ayarla
         document.getElementById('confirmationMessage').textContent = message;
         currentConfirmAction = onConfirm;
+        confirmationModalElement.style.zIndex = '20000'; // Modalın en üstte olmasını sağla
         confirmationModal.show();
     }
 
@@ -1879,7 +1882,6 @@
                     currentConfirmAction();
                 }
                 confirmationModal.hide();
-                const confirmationModalElement = document.getElementById('confirmationModal');
                 confirmationModalElement.style.zIndex = ''; // z-index'i sıfırla
             });
         }
@@ -2180,7 +2182,7 @@
                 const projectId = e.currentTarget.dataset.id;
                 const hasPermission = await checkPermission('proje_sil');
                 if (!hasPermission) return;
-                showConfirmationModal(`Bu projeyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz!`, () => deleteProject(projectId));
+                showConfirmationModal(`Projeyi Sil`, `Bu projeyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz!`, () => deleteProject(projectId));
             };
         });
         document.querySelectorAll(".generate-pdf-btn").forEach((btn) => {
@@ -2679,7 +2681,7 @@
                     button.addEventListener('click', (e) => {
                         const progressId = e.currentTarget.dataset.id;
                         const projId = e.currentTarget.dataset.projectId;
-                        showConfirmationModal(`Bu iş adımını silmek istediğinize emin misiniz? Bu işlem geri alınamaz!`, () => deleteProgressStep(progressId, projId));
+                        showConfirmationModal(`İş Adımı Sil`, `Bu iş adımını silmek istediğinize emin misiniz? Bu işlem geri alınamaz!`, () => deleteProgressStep(progressId, projId));
                     });
                 });
             }
