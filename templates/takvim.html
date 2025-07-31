@@ -1250,11 +1250,11 @@
                     const originalId = parseInt(eventId.split('-')[1]);
 
                     if (eventType === 'task') {
-                        const task = eventsData.find(e => e.id === eventId && e.type === 'task');
-                        if (task) openTaskModal(task.extendedProps, true); // Sadece görüntüleme modunda aç
+                        // Task'ın extendedProps'u zaten tüm gerekli bilgileri içeriyor
+                        openTaskDetailModal(info.event.extendedProps); 
                     } else if (eventType === 'project') {
-                        const project = eventsData.find(e => e.id === eventId && e.type === 'project');
-                        if (project) openProjectDetailModal(project.extendedProps);
+                        // Project'in extendedProps'u zaten tüm gerekli bilgileri içeriyor
+                        openProjectDetailModal(info.event.extendedProps);
                     }
                 },
                 eventContent: function(arg) {
@@ -1379,15 +1379,17 @@
         // Modal işlemleri
         const taskModal = document.getElementById('taskModal');
         const projectDetailModal = document.getElementById('projectDetailModal'); // Yeni proje detay modalı
+        const taskDetailModal = document.getElementById('taskDetailModal'); // Görev detay modalı
         const addTaskBtn = document.getElementById('addTask');
-        const closeModal = document.getElementById('closeModal');
+        const closeModal = document.getElementById('closeModal'); // Görev ekleme/düzenleme modalı kapatma
         const closeProjectDetailModalBtn = document.getElementById('closeProjectDetailModal'); // Proje detay modal kapatma
+        const closeTaskDetailModalBtn = document.getElementById('closeTaskDetailModal'); // Görev detay modal kapatma
         const cancelTask = document.getElementById('cancelTask');
         const saveTaskBtn = document.getElementById('saveTask');
-        const deleteTaskBtn = document.getElementById('deleteTask');
+        const deleteTaskBtn = document.getElementById('deleteTask'); // Görev ekleme/düzenleme modalındaki sil butonu
 
         // Modal açma fonksiyonu (Görevler için)
-        function openTaskModal(task = null, viewOnly = false) {
+        function openTaskModal(task = null) { // viewOnly parametresi kaldırıldı, detay modalı için ayrı fonksiyon var
             editingTask = task;
             const titleInput = document.getElementById('taskTitle');
             const startInput = document.getElementById('taskStart');
@@ -1399,7 +1401,7 @@
             const deleteBtn = document.getElementById('deleteTask');
             const assigneeInfo = document.getElementById('assigneeInfo');
 
-            if (task && task.id) {
+            if (task && task.id) { // Mevcut bir görevi düzenle
                 titleInput.value = task.title;
                 startInput.value = formatDateTimeLocal(task.start);
                 endInput.value = formatDateTimeLocal(task.end);
@@ -1413,8 +1415,22 @@
                     }
                     assigneeInfo.textContent = assigneeName ? `Şu an atanan kişi: ${assigneeName}` : '';
                 });
-                deleteBtn.style.display = '';
-            } else {
+                // Sadece görevi oluşturan veya atanan kişi düzenleyebilir/silebilir
+                const currentUserFromStorage = JSON.parse(localStorage.getItem('currentUser'));
+                if (currentUserFromStorage && (currentUserFromStorage.id == task.created_by || currentUserFromStorage.id == task.assigned_user_id)) {
+                    saveBtn.style.display = '';
+                    deleteBtn.style.display = '';
+                    [titleInput, startInput, endInput, priorityInput, descInput, assigneeSelect].forEach(el => {
+                        el.disabled = false;
+                    });
+                } else {
+                    saveBtn.style.display = 'none';
+                    deleteBtn.style.display = 'none';
+                    [titleInput, startInput, endInput, priorityInput, descInput, assigneeSelect].forEach(el => {
+                        el.disabled = true; // Sadece görüntüleme
+                    });
+                }
+            } else { // Yeni görev ekle
                 titleInput.value = '';
                 startInput.value = '';
                 endInput.value = '';
@@ -1424,37 +1440,41 @@
                     assigneeInfo.textContent = '';
                 });
                 assigneeSelect.value = '';
-                deleteBtn.style.display = 'none'; // Yeni görevde sil butonunu kesinlikle gizle
+                saveBtn.style.display = '';
+                deleteBtn.style.display = 'none'; // Yeni görevde sil butonu olmaz
+                [titleInput, startInput, endInput, priorityInput, descInput, assigneeSelect].forEach(el => {
+                    el.disabled = false;
+                });
             }
-
-            [titleInput, startInput, endInput, priorityInput, descInput, assigneeSelect].forEach(el => {
-                el.disabled = !!viewOnly;
-            });
-            saveBtn.style.display = viewOnly ? 'none' : '';
-            deleteBtn.style.display = viewOnly ? 'none' : deleteBtn.style.display;
             taskModal.style.display = 'flex';
         }
         
-        // Modal kapatma fonksiyonu (Görevler için)
+        // Modal kapatma fonksiyonu (Görev ekleme/düzenleme için)
         function closeTaskModal() {
             taskModal.style.display = 'none';
             editingTask = null; // Modal kapatıldığında editingTask'i temizle
         }
 
-        // Proje Detay Modalını açma fonksiyonu (Yeni)
+        // Proje Detay Modalını açma fonksiyonu
         function openProjectDetailModal(project) {
             const modal = document.getElementById('projectDetailModal');
             const body = document.getElementById('projectDetailBody');
-            if (!project) return;
+            if (!project) {
+                console.error("Proje bilgisi eksik.");
+                showNotification("Proje detayı yüklenemedi.", "error");
+                return;
+            }
 
-            const formattedStart = new Date(project.start_date).toLocaleDateString('tr-TR', {
+            // Tarihleri Date objelerine dönüştür ve formatla
+            const formattedStart = new Date(project.start).toLocaleDateString('tr-TR', {
                 day: '2-digit', month: 'long', year: 'numeric'
             });
-            const formattedEnd = new Date(project.end_date).toLocaleDateString('tr-TR', {
+            const formattedEnd = new Date(project.end).toLocaleDateString('tr-TR', {
                 day: '2-digit', month: 'long', year: 'numeric'
             });
 
             let managerName = '';
+            // project.project_manager_id yerine project.project_manager_id kullanılıyor
             if (project.project_manager_id) {
                 const user = users.find(u => u.id == project.project_manager_id);
                 managerName = user ? user.fullname : `Kullanıcı ID: ${project.project_manager_id}`;
@@ -1462,17 +1482,17 @@
 
             // Karanlık modda metinler beyaz olsun
             const isDark = document.body.getAttribute('data-theme') === 'dark';
-            const textColor = isDark ? '#fff' : '#555';
+            const textColor = isDark ? '#e0e0e0' : '#333333'; // Varsayılan metin rengi
 
             body.innerHTML = `
-                <div style="font-size:20px; font-weight:600; margin-bottom:8px; color:${textColor};">${project.project_name}</div>
-                <div style="margin:6px 0 12px 0; color:#888;">${project.description || ''}</div>
+                <div style="font-size:20px; font-weight:600; margin-bottom:8px; color:${textColor};">${project.title.replace('Proje: ', '')}</div>
+                <div style="margin:6px 0 12px 0; color:var(--light-gray);">${project.description || ''}</div>
                 <div style="margin-bottom:6px; color:${textColor};">
-                    <i class="fas fa-calendar-alt"></i>
+                    <i class="fas fa-calendar-alt" style="color:var(--primary-light);"></i>
                     <b>Başlangıç:</b> ${formattedStart}
                 </div>
                 <div style="margin-bottom:6px; color:${textColor};">
-                    <i class="fas fa-calendar-check"></i>
+                    <i class="fas fa-calendar-check" style="color:var(--primary-light);"></i>
                     <b>Bitiş:</b> ${formattedEnd}
                 </div>
                 <div style="margin-bottom:6px; color:${textColor};">
@@ -1489,7 +1509,7 @@
             modal.style.display = 'flex';
         }
 
-        // Proje Detay Modalını kapatma fonksiyonu (Yeni)
+        // Proje Detay Modalını kapatma fonksiyonu
         function closeProjectDetailModal() {
             projectDetailModal.style.display = 'none';
         }
@@ -1497,11 +1517,13 @@
         function openTaskDetailModal(task) {
             const modal = document.getElementById('taskDetailModal');
             const body = document.getElementById('taskDetailBody');
-            const footer = document.getElementById('taskDetailFooter');
             const deleteBtn = document.getElementById('deleteTaskFromDetail'); // Detay modalındaki sil butonu
-            if (!task) return;
+            if (!task) {
+                console.error("Görev bilgisi eksik.");
+                showNotification("Görev detayı yüklenemedi.", "error");
+                return;
+            }
 
-            const endDate = task.end ? new Date(task.end) : new Date(task.start);
             const formattedStart = new Date(task.start).toLocaleString('tr-TR', {
                 day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
             });
@@ -1509,8 +1531,8 @@
                 day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
             }) : 'Yok';
 
-            let assignee = task.assignee_name || '';
-            if (!assignee && task.assigned_user_id) {
+            let assignee = '';
+            if (task.assigned_user_id) {
                 const user = users.find(u => u.id == task.assigned_user_id);
                 assignee = user ? user.fullname : `Kullanıcı ID: ${task.assigned_user_id}`;
             }
@@ -1534,17 +1556,17 @@
 
             // Karanlık modda metinler beyaz olsun
             const isDark = document.body.getAttribute('data-theme') === 'dark';
-            const textColor = isDark ? '#fff' : '#555';
+            const textColor = isDark ? '#e0e0e0' : '#333333';
 
             body.innerHTML = `
                 <div style="font-size:20px; font-weight:600; margin-bottom:8px; color:${textColor};">${task.title}</div>
-                <div style="margin:6px 0 12px 0; color:#888;">${task.description || ''}</div>
+                <div style="margin:6px 0 12px 0; color:var(--light-gray);">${task.description || ''}</div>
                 <div style="margin-bottom:6px; color:${textColor};">
-                    <i class="fas fa-calendar-alt"></i>
+                    <i class="fas fa-calendar-alt" style="color:var(--primary-light);"></i>
                     <b>Başlangıç:</b> ${formattedStart}
                 </div>
                 <div style="margin-bottom:6px; color:${textColor};">
-                    <i class="fas fa-calendar-check"></i>
+                    <i class="fas fa-calendar-check" style="color:var(--primary-light);"></i>
                     <b>Bitiş:</b> ${formattedEnd}
                 </div>
                 <div style="margin-bottom:6px; display:flex; align-items:center; color:${textColor};">
@@ -1565,27 +1587,30 @@
                 </div>
             `;
             // Sil butonunu sadece görevi oluşturan veya atanan kullanıcıya göster
-            const currentUserFromStorage = JSON.parse(localStorage.getItem('currentUser')); // Yeni değişken adı
+            const currentUserFromStorage = JSON.parse(localStorage.getItem('currentUser'));
             if (currentUserFromStorage && (currentUserFromStorage.id == task.created_by || currentUserFromStorage.id == task.assigned_user_id)) {
                 deleteBtn.style.display = '';
+                // Silme işlemi için event listener
                 deleteBtn.onclick = function() {
                     showConfirmationModal('Bu görevi silmek istediğinize emin misiniz?', () => {
                         fetch(`${API_BASE_URL}/api/tasks/${task.id}`, {
                             method: 'DELETE'
+                            // user_id session'dan alınacağı için body göndermiyoruz
                         })
                         .then(async res => {
-                            const data = await res.json();
                             if (res.ok) {
                                 closeTaskDetailModal();
-                                showNotification(data.message, "success");
+                                showNotification('Görev başarıyla silindi!', "success");
                                 setTimeout(() => {
-                                    if (typeof loadCalendarEvents === 'function') loadCalendarEvents(); // loadTasksFromApi yerine loadCalendarEvents
-                                }, 100); // Kısa bir gecikme ile kesin yenile
+                                    loadCalendarEvents(); // Takvimi yenile
+                                }, 100); 
                             } else {
+                                const data = await res.json();
                                 showNotification('Silme başarısız: ' + (data.message || 'Bilinmeyen hata.'), "error");
                             }
                         })
                         .catch(error => {
+                            console.error('Görev silinirken bir hata oluştu:', error);
                             showNotification('Görev silinirken bir hata oluştu.', "error");
                         });
                     });
@@ -1739,7 +1764,7 @@
                 mainContent.classList.toggle('expanded');
             });
             
-            // Takvimi başlat
+            // Takvimi başlat (ilk yüklemede)
             initCalendar();
             
             // Yaklaşan görevleri listele
@@ -1747,8 +1772,9 @@
             
             // Modal event listener'ları
             addTaskBtn.addEventListener('click', () => openTaskModal());
-            closeModal.addEventListener('click', closeTaskModal);
+            closeModal.addEventListener('click', closeTaskModal); // Görev ekleme/düzenleme modalı kapatma
             closeProjectDetailModalBtn.addEventListener('click', closeProjectDetailModal); // Proje detay modal kapatma
+            closeTaskDetailModalBtn.addEventListener('click', closeTaskDetailModal); // Görev detay modal kapatma
             cancelTask.addEventListener('click', closeTaskModal);
             
             // Görevi kaydetme
@@ -1769,12 +1795,12 @@
 
                 // Eğer editingTask varsa, güncelleme yap
                 if (editingTask && editingTask.id) {
-                    fetch(`${API_BASE_URL}/api/tasks/${editingTask.id}`, {
+                    fetch(`${API_BASE_URL}/api/tasks/${editingTask.id.replace('task-', '')}`, { // ID'den 'task-' ön ekini kaldır
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             title, description, start, end, priority,
-                            assigned_user_id, created_by
+                            assigned_user_id: parseInt(assigned_user_id), created_by: parseInt(created_by)
                         })
                     })
                     .then(res => res.json())
@@ -1798,7 +1824,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             title, description, start, end, priority,
-                            assigned_user_id, created_by
+                            assigned_user_id: parseInt(assigned_user_id), created_by: parseInt(created_by)
                         })
                     })
                     .then(res => res.json())
@@ -1818,60 +1844,33 @@
                 }
             });
 
-            // Silme işlemi
+            // Görev ekleme/düzenleme modalındaki silme işlemi
             deleteTaskBtn.addEventListener('click', function() {
                 if (!editingTask || !editingTask.id) return;
                 showConfirmationModal('Bu görevi silmek istediğinize emin misiniz?', () => {
-                    fetch(`${API_BASE_URL}/api/tasks/${editingTask.id}`, {
+                    fetch(`${API_BASE_URL}/api/tasks/${editingTask.id.replace('task-', '')}`, { // ID'den 'task-' ön ekini kaldır
                         method: 'DELETE'
+                        // user_id session'dan alınacağı için body göndermiyoruz
                     })
                     .then(async res => {
-                        const data = await res.json();
                         if (res.ok) {
                             closeTaskModal();
-                            showNotification(data.message, "success");
+                            showNotification('Görev başarıyla silindi!', "success");
                             setTimeout(() => {
-                                if (typeof loadCalendarEvents === 'function') loadCalendarEvents();
+                                loadCalendarEvents(); // Takvimi yenile
                             }, 100);
                         } else {
+                            const data = await res.json();
                             console.error('Silme başarısız:', data.message);
                             showNotification('Silme başarısız: ' + (data.message || 'Bilinmeyen hata.'), "error");
                         }
                     })
                     .catch(error => {
-                        console.error('Görev silinirken hata:', error);
+                        console.error('Görev silinirken bir hata oluştu:', error);
                         showNotification('Görev silinirken bir hata oluştu. Lütfen backend sunucusunun çalıştığından emin olun.', "error");
                     });
                 });
             });
-
-            // Detay modalındaki sil butonu için olay dinleyicisi
-            const deleteTaskFromDetailBtn = document.getElementById('deleteTaskFromDetail');
-            if (deleteTaskFromDetailBtn) {
-                deleteTaskFromDetailBtn.addEventListener('click', () => {
-                    if (!editingTask || !editingTask.id) return;
-                    showConfirmationModal('Bu görevi silmek istediğinize emin misiniz?', () => {
-                        fetch(`${API_BASE_URL}/api/tasks/${editingTask.id}`, {
-                            method: 'DELETE'
-                        })
-                        .then(async res => {
-                            const data = await res.json();
-                            if (res.ok) {
-                                closeTaskDetailModal();
-                                showNotification(data.message, "success");
-                                loadCalendarEvents(); // Takvimi yenile
-                            } else {
-                                console.error('Silme başarısız:', data.message);
-                                showNotification('Silme başarısız: ' + (data.message || 'Bilinmeyen hata.'), "error");
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Görev silinirken hata:', error);
-                            showNotification('Görev silinirken bir hata oluştu. Lütfen backend sunucusunun çalıştığından emin olun.', "error");
-                        });
-                    });
-                });
-            }
             
             // Dışarı tıklayınca modal kapatma
             window.addEventListener('click', (e) => {
@@ -1882,7 +1881,7 @@
                 if (e.target === projectDetailModal) {
                     closeProjectDetailModal();
                 }
-                if (e.target === document.getElementById('taskDetailModal')) {
+                if (e.target === taskDetailModal) { // Görev detay modalı için de eklendi
                     closeTaskDetailModal();
                 }
             });
