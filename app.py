@@ -2172,8 +2172,8 @@ def get_calendar_events():
                 events.append({
                     'id': f"task-{task['id']}", # ID'ye tip ekle
                     'title': task['title'],
-                    'start': task['start'].isoformat() if isinstance(task['start'], datetime.datetime) else task['start'].isoformat(),
-                    'end': task['end'].isoformat() if isinstance(task['end'], datetime.datetime) else task['end'].isoformat() if task['end'] else None,
+                    'start': task['start'].isoformat() if isinstance(task['start'], (datetime.datetime, datetime.date)) else task['start'],
+                    'end': task['end'].isoformat() if isinstance(task['end'], (datetime.datetime, datetime.date)) else task['end'] if task['end'] else None,
                     'color': color,
                     'type': 'task',
                     'extendedProps': {
@@ -2199,8 +2199,8 @@ def get_calendar_events():
                 events.append({
                     'id': f"project-{project['project_id']}", # ID'ye tip ekle
                     'title': f"Proje: {project['project_name']}",
-                    'start': project['start_date'].isoformat() if isinstance(project['start_date'], datetime.date) else project['start_date'].isoformat(),
-                    'end': project['end_date'].isoformat() if isinstance(project['end_date'], datetime.date) else project['end_date'].isoformat(),
+                    'start': project['start_date'].isoformat() if isinstance(project['start_date'], (datetime.datetime, datetime.date)) else project['start_date'],
+                    'end': project['end_date'].isoformat() if isinstance(project['end_date'], (datetime.datetime, datetime.date)) else project['end_date'],
                     'color': project_color,
                     'type': 'project',
                     'extendedProps': {
@@ -2350,6 +2350,15 @@ def update_task(task_id):
 @app.route('/api/tasks/<int:task_id>', methods=['DELETE'])
 def delete_task(task_id):
     """Veritabanından bir görevi siler."""
+    # user_id'yi request.get_json() yerine session'dan alıyoruz, çünkü DELETE isteği body'si boş olabilir.
+    # Eğer front-end'den user_id gönderiliyorsa, request.get_json() kullanılabilir.
+    # Ancak, genel olarak DELETE isteklerinde body gönderimi tavsiye edilmez.
+    # Bu nedenle, user_id'yi oturumdan almak daha güvenli ve standart bir yaklaşımdır.
+    user_id = session.get('user_id')
+
+    if not user_id:
+        return jsonify({'message': 'Kullanıcı ID\'si eksik.'}), 400
+
     connection = None
     try:
         connection = get_db_connection()
@@ -2358,15 +2367,17 @@ def delete_task(task_id):
             cursor.execute("SELECT title, assigned_user_id FROM tasks WHERE id = %s", (task_id,))
             task_info = cursor.fetchone()
 
+            if not task_info:
+                return jsonify({'message': 'Görev bulunamadı.'}), 404
+
             cursor.execute("DELETE FROM tasks WHERE id = %s", (task_id,))
             connection.commit()
 
-            if task_info:
-                send_notification(
-                    task_info['assigned_user_id'],
-                    "Görev Silindi",
-                    f"Size atanan '{task_info['title']}' görevi silindi."
-                )
+            send_notification(
+                task_info['assigned_user_id'],
+                "Görev Silindi",
+                f"Size atanan '{task_info['title']}' görevi silindi."
+            )
 
         return jsonify({'message': 'Görev başarıyla silindi!'}), 200
     except Exception as e:
