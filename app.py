@@ -1746,25 +1746,28 @@ def get_project_progress_steps(project_id):
     finally:
         if connection:
             connection.close()
-
-# Yeni Proje İlerleme Adımı Ekle API'si (projects.html'den çağrılır)
 @app.route('/api/projects/<int:project_id>/progress', methods=['POST'])
-def add_project_progress_step_from_modal(project_id): # project_id artık URL'den geliyor
+def add_project_progress_step_from_modal(project_id):
     """Bir projeye yeni bir ilerleme adımı ekler."""
     data = request.get_json()
-    # project_id = data.get('project_id') # KALDIRILDI: project_id artık URL'den geliyor
     step_name = data.get('step_name')
     description = data.get('description')
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
+    user_id = session.get('user_id') # Oturumdan kullanıcı ID'sini al
 
-    if not all([project_id, step_name, start_date_str, end_date_str]):
-        return jsonify({'message': 'Proje ID\'si, başlık, başlangıç ve bitiş tarihi zorunludur.'}), 400
+    if not all([project_id, step_name, start_date_str, end_date_str, user_id]):
+        return jsonify({'message': 'Proje ID\'si, başlık, başlangıç, bitiş tarihi ve kullanıcı ID\'si zorunludur.'}), 400
 
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # Projenin adını al
+            cursor.execute("SELECT project_name FROM projects WHERE project_id = %s", (project_id,))
+            project_info = cursor.fetchone()
+            project_name = project_info['project_name'] if project_info else f"ID: {project_id}"
+
             # Projenin mevcut bitiş tarihini bul (gecikme günlerini hesaplamak için)
             cursor.execute("""
                 SELECT end_date FROM project_progress
@@ -1778,9 +1781,8 @@ def add_project_progress_step_from_modal(project_id): # project_id artık URL'de
             delay_days = 0
             if previous_end_date:
                 new_step_start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
-                # Önceki adımın bitiş tarihi ile yeni adımın başlangıç tarihi arasındaki farkı hesapla
                 time_diff = (new_step_start_date - previous_end_date).days
-                if time_diff > 1: # 1 günden fazla bir boşluk varsa, gecikme oluşmuştur
+                if time_diff > 1:
                     delay_days = time_diff - 1
 
             sql_insert = """
@@ -1792,16 +1794,23 @@ def add_project_progress_step_from_modal(project_id): # project_id artık URL'de
             connection.commit()
 
             # Proje yöneticisine bildirim gönder
-            cursor.execute("SELECT project_manager_id, project_name FROM projects WHERE project_id = %s", (project_id,))
-            project_info = cursor.fetchone()
-            if project_info:
-                project_manager_id = project_info['project_manager_id']
-                project_name = project_info['project_name']
-                send_notification(
-                    project_manager_id,
-                    "Proje İlerleme Adımı Eklendi",
-                    f"'{step_name}' adlı yeni bir ilerleme adımı '{project_name}' projesine eklendi."
-                )
+            if project_info and project_info.get('project_manager_id'): # project_info'da project_manager_id yok, projects tablosundan çekilmeli
+                cursor.execute("SELECT project_manager_id FROM projects WHERE project_id = %s", (project_id,))
+                manager_info = cursor.fetchone()
+                if manager_info:
+                    send_notification(
+                        manager_info['project_manager_id'],
+                        "Proje İlerleme Adımı Eklendi",
+                        f"'{step_name}' adlı yeni bir ilerleme adımı '{project_name}' projesine eklendi."
+                    )
+
+            # Aktivite kaydı
+            log_activity(
+                user_id=user_id,
+                title='İş Adımı Eklendi',
+                description=f"'{project_name}' projesine '{step_name}' adlı yeni bir iş adımı eklendi.",
+                icon='fas fa-plus-circle' # Yeni ikon
+            )
 
         return jsonify({'message': 'İlerleme adımı başarıyla eklendi!', 'progress_id': new_progress_id}), 201
     except pymysql.Error as e:
@@ -1823,9 +1832,10 @@ def update_project_progress_step(progress_id):
     description = data.get('description')
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
+    user_id = session.get('user_id') # Oturumdan kullanıcı ID'sini al
 
-    if not all([step_name, start_date_str, end_date_str]):
-        return jsonify({'message': 'Başlık, başlangıç ve bitiş tarihi zorunludur.'}), 400
+    if not all([step_name, start_date_str, end_date_str, user_id]):
+        return jsonify({'message': 'Başlık, başlangıç, bitiş tarihi ve kullanıcı ID\'si zorunludur.'}), 400
 
     connection = None
     try:
@@ -1839,6 +1849,11 @@ def update_project_progress_step(progress_id):
 
             current_project_id = existing_step['project_id']
             old_step_name = existing_step['title'] # Eski adım adını al
+
+            # Projenin adını al
+            cursor.execute("SELECT project_name FROM projects WHERE project_id = %s", (current_project_id,))
+            project_info = cursor.fetchone()
+            project_name = project_info['project_name'] if project_info else f"ID: {current_project_id}"
 
             # Önceki adımın bitiş tarihini bul (bu adım hariç)
             delay_days = 0
@@ -1869,16 +1884,23 @@ def update_project_progress_step(progress_id):
                 return jsonify({'message': 'İlerleme adımı verisi zaten güncel veya değişiklik yapılmadı.'}), 200
 
             # Proje yöneticisine bildirim gönder
-            cursor.execute("SELECT project_manager_id, project_name FROM projects WHERE project_id = %s", (current_project_id,))
-            project_info = cursor.fetchone()
-            if project_info:
-                project_manager_id = project_info['project_manager_id']
-                project_name = project_info['project_name']
-                send_notification(
-                    project_manager_id,
-                    "Proje İlerleme Adımı Güncellendi",
-                    f"'{project_name}' projesindeki '{step_name}' ilerleme adımı güncellendi."
-                )
+            if project_info and project_info.get('project_manager_id'): # project_info'da project_manager_id yok, projects tablosundan çekilmeli
+                cursor.execute("SELECT project_manager_id FROM projects WHERE project_id = %s", (current_project_id,))
+                manager_info = cursor.fetchone()
+                if manager_info:
+                    send_notification(
+                        manager_info['project_manager_id'],
+                        "Proje İlerleme Adımı Güncellendi",
+                        f"'{project_name}' projesindeki '{step_name}' ilerleme adımı güncellendi."
+                    )
+            
+            # Aktivite kaydı
+            log_activity(
+                user_id=user_id,
+                title='İş Adımı Güncellendi',
+                description=f"'{project_name}' projesindeki '{old_step_name}' iş adımı '{step_name}' olarak güncellendi.",
+                icon='fas fa-edit' # Yeni ikon
+            )
 
         return jsonify({'message': 'İlerleme adımı başarıyla güncellendi!'}), 200
     except pymysql.Error as e:
@@ -1895,11 +1917,16 @@ def update_project_progress_step(progress_id):
 @app.route('/api/progress/<int:progress_id>', methods=['DELETE'])
 def delete_project_progress_step(progress_id):
     """Bir proje ilerleme adımını siler."""
+    user_id = session.get('user_id') # Oturumdan kullanıcı ID'sini al
+
+    if not user_id:
+        return jsonify({'message': 'Kullanıcı ID\'si eksik.'}), 400
+
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Silinecek adımın proje ID'sini al
+            # Silinecek adımın proje ID'sini ve başlığını al
             cursor.execute("SELECT project_id, title FROM project_progress WHERE progress_id = %s", (progress_id,))
             step_info = cursor.fetchone()
             if not step_info:
@@ -1907,6 +1934,11 @@ def delete_project_progress_step(progress_id):
             
             current_project_id = step_info['project_id']
             step_name = step_info['title']
+
+            # Projenin adını al
+            cursor.execute("SELECT project_name FROM projects WHERE project_id = %s", (current_project_id,))
+            project_info = cursor.fetchone()
+            project_name = project_info['project_name'] if project_info else f"ID: {current_project_id}"
 
             sql = "DELETE FROM project_progress WHERE progress_id = %s"
             cursor.execute(sql, (progress_id,))
@@ -1916,16 +1948,23 @@ def delete_project_progress_step(progress_id):
                 return jsonify({'message': 'İlerleme adımı silinemedi veya bulunamadı.'}), 404
 
             # Proje yöneticisine bildirim gönder
-            cursor.execute("SELECT project_manager_id, project_name FROM projects WHERE project_id = %s", (current_project_id,))
-            project_info = cursor.fetchone()
-            if project_info:
-                project_manager_id = project_info['project_manager_id']
-                project_name = project_info['project_name']
-                send_notification(
-                    project_manager_id,
-                    "Proje İlerleme Adımı Silindi",
-                    f"'{project_name}' projesindeki '{step_name}' ilerleme adımı silindi."
-                )
+            if project_info and project_info.get('project_manager_id'): # project_info'da project_manager_id yok, projects tablosundan çekilmeli
+                cursor.execute("SELECT project_manager_id FROM projects WHERE project_id = %s", (current_project_id,))
+                manager_info = cursor.fetchone()
+                if manager_info:
+                    send_notification(
+                        manager_info['project_manager_id'],
+                        "Proje İlerleme Adımı Silindi",
+                        f"'{project_name}' projesindeki '{step_name}' ilerleme adımı silindi."
+                    )
+            
+            # Aktivite kaydı
+            log_activity(
+                user_id=user_id,
+                title='İş Adımı Silindi',
+                description=f"'{project_name}' projesindeki '{step_name}' iş adımı silindi.",
+                icon='fas fa-trash-alt' # Yeni ikon
+            )
 
         return jsonify({'message': 'İlerleme adımı başarıyla silindi!'}), 200
     except pymysql.Error as e:
@@ -1937,7 +1976,6 @@ def delete_project_progress_step(progress_id):
     finally:
         if connection:
             connection.close()
-
 @app.route('/api/user-info', methods=['GET'])
 def get_user_info():
     """Tek bir kullanıcı için detaylı bilgileri getirir."""
