@@ -2510,7 +2510,7 @@ def worker_performance():
                 END) AS on_time_projects
             FROM projects p
             LEFT JOIN users u ON u.id = p.project_manager_id
-            WHERE u.role IN ('Technician', 'Engineer', 'Manager', 'Project Manager')
+            WHERE u.role IN ('Teknisyen', 'Tekniker', 'Mühendis', 'Müdür', 'Proje Yöneticisi')
             GROUP BY u.fullname
             """
             cursor.execute(sql)
