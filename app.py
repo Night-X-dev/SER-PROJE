@@ -8,15 +8,15 @@ import json
 import datetime
 import dotenv
 from dotenv import load_dotenv
-import urllib.parse 
-import re 
+import urllib.parse
+import re
 
 load_dotenv()
 
 app = Flask(__name__)
 # Oturum yönetimi gizli anahtarı
 # BU, GÜVENLİ VE TAHMİN EDİLEMEYEN BİR DİZE İLE DEĞİŞTİRİLMELİDİR!
-app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex") 
+app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex")
 CORS(app, resources={r"/*": {"origins": ["https://37.148.213.89:8000", "http://serotomasyon.tr"]}}, supports_credentials=True)
 @app.route('/')
 @app.route('/login.html') # Her iki URL de aynı fonksiyona yönlendirilecektir
@@ -77,7 +77,7 @@ def serve_raporlar_page():
             return render_template('raporlar.html')
         else:
             # İzin yoksa ana sayfaya yönlendir
-            return redirect(url_for('serve_index_page')) 
+            return redirect(url_for('serve_index_page'))
     else:
         # Kullanıcı rolü bulunamazsa giriş sayfasına yönlendir
         return redirect(url_for('serve_login_page'))
@@ -198,7 +198,7 @@ def check_role_permission(role_name, permission_key):
             sql = f"SELECT {permission_key} FROM yetki WHERE LOWER(role_name) = %s"
             cursor.execute(sql, (role_name.lower(),))
             result = cursor.fetchone()
-            
+
             # Rol için izin kaydı yoksa veya izin değeri 0 ise False döndür
             if result and result[permission_key] == 1:
                 return True
@@ -223,10 +223,10 @@ def mark_all_notifications_as_read():
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
-            sql = "UPDATE notifications SET is_read = 1 WHERE user_id = %s AND is_read = 0" 
+            sql = "UPDATE notifications SET is_read = 1 WHERE user_id = %s AND is_read = 0"
             cursor.execute(sql, (user_id,))
             connection.commit()
-            rows_affected = cursor.rowcount 
+            rows_affected = cursor.rowcount
         return jsonify({'message': f'{rows_affected} bildirim okundu olarak işaretlendi.'}), 200
     except pymysql.Error as e:
         print(f"Veritabanı hatası tüm bildirimleri güncellerken: {e}")
@@ -383,7 +383,7 @@ def add_notification():
     data = request.get_json()
     user_id = data.get('user_id')
     title = data.get('title')
-    message = data.get('message') 
+    message = data.get('message')
 
     if not all([user_id, title, message]):
         return jsonify({'message': 'Kullanıcı ID\'si, başlık ve mesaj zorunludur.'}), 400
@@ -419,7 +419,7 @@ def add_activity():
     user_id = data.get('user_id')
     title = data.get('title')
     description = data.get('description')
-    icon = data.get('icon', 'fas fa-info-circle') 
+    icon = data.get('icon', 'fas fa-info-circle')
 
     if not all([user_id, title, description]):
         return jsonify({'message': 'Kullanıcı ID\'si, başlık ve açıklama zorunludur.'}), 400
@@ -452,9 +452,9 @@ def update_user_profile():
     çünkü bu alanlar için ön uç modalı kaldırılmıştır."""
     data = request.get_json()
     user_id = data.get('userId')
-    profile_picture = data.get('profile_picture') 
-    hide_email = data.get('hide_email') 
-    hide_phone = data.get('hide_phone') 
+    profile_picture = data.get('profile_picture')
+    hide_email = data.get('hide_email')
+    hide_phone = data.get('hide_phone')
 
     if not user_id:
         return jsonify({'message': 'Kullanıcı ID\'si eksik.'}), 400
@@ -473,15 +473,15 @@ def update_user_profile():
             params = []
             message_parts = []
 
-            if profile_picture is not None: 
-                if profile_picture == "null": 
+            if profile_picture is not None:
+                if profile_picture == "null":
                     updates.append("profile_picture = NULL")
                     message_parts.append("Profil Resmi Kaldırıldı")
-                elif profile_picture != user['profile_picture']: 
+                elif profile_picture != user['profile_picture']:
                     updates.append("profile_picture = %s")
                     params.append(profile_picture)
                     message_parts.append("Profil Resmi")
-            
+
             if hide_email is not None and hide_email != user['hide_email']:
                 updates.append("hide_email = %s")
                 params.append(hide_email)
@@ -502,7 +502,7 @@ def update_user_profile():
             connection.commit()
 
             final_message = "Başarıyla güncellendi: " + ", ".join(message_parts) + "."
-            if not message_parts: 
+            if not message_parts:
                  final_message = "Güncellenecek değişiklik bulunamadı."
 
             return jsonify({'message': final_message}), 200
@@ -523,7 +523,7 @@ def get_pending_users():
     connection = None
     try:
         connection = get_db_connection()
-        with connection.cursor(pymysql.cursors.DictCursor) as cursor: 
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
             sql = "SELECT id, fullname, email, phone, role, created_at FROM users WHERE onay = 0"
             cursor.execute(sql)
             pending_users = cursor.fetchall()
@@ -547,11 +547,11 @@ def approve_user(user_id):
         with connection.cursor() as cursor:
             cursor.execute("SELECT id, onay FROM users WHERE id = %s", (user_id,))
             user = cursor.fetchone()
-    
+
             if not user:
                 return jsonify({'message': 'Kullanıcı bulunamadı.'}), 404
             if user['onay'] == 1:
-                return jsonify({'message': 'Kullanıcı zaten onaylanmış.'}), 400 
+                return jsonify({'message': 'Kullanıcı zaten onaylanmış.'}), 400
 
             sql = "UPDATE users SET onay = 1 WHERE id = %s"
             cursor.execute(sql, (user_id,))
@@ -581,8 +581,8 @@ def delete_user(user_id):
             if not user_info:
                 return jsonify({'message': 'Kullanıcı bulunamadı.'}), 404
 
-            if user_info['id'] == 1: 
-                 return jsonify({'message': 'Bu kullanıcı silinemez.'}), 403 
+            if user_info['id'] == 1:
+                 return jsonify({'message': 'Bu kullanıcı silinemez.'}), 403
 
             default_manager_id = None
             cursor.execute("SELECT id FROM users WHERE role = 'Admin' AND id != %s LIMIT 1", (user_id,))
@@ -634,13 +634,13 @@ try:
     print("Konum verileri başarıyla yüklendi.")
 except FileNotFoundError:
     print(f"Hata: 'turkey_locations.json' dosyası bulunamadı. Lütfen '{file_path}' yolunu kontrol edin.")
-    TURKEY_LOCATIONS = {"Türkiye": {"iller": {"Varsayılan İl": []}}} 
+    TURKEY_LOCATIONS = {"Türkiye": {"iller": {"Varsayılan İl": []}}}
 except json.JSONDecodeError:
     print("Hata: 'turkey_locations.json' dosyası JSON formatında değil veya bozuk.")
-    TURKEY_LOCATIONS = {"Türkiye": {"iller": {"Varsayılan İl": []}}} 
+    TURKEY_LOCATIONS = {"Türkiye": {"iller": {"Varsayılan İl": []}}}
 except Exception as e:
     print(f"Konum verileri yüklenirken beklenmeyen hata: {e}")
-    TURKEY_LOCATIONS = {"Türkiye": {"iller": {"Varsayılan İl": []}}} 
+    TURKEY_LOCATIONS = {"Türkiye": {"iller": {"Varsayılan İl": []}}}
 
 
 @app.route('/api/role-permissions', methods=['GET'])
@@ -665,7 +665,7 @@ def get_permissions_by_role():
                     'proje_sil': 0,
                     'pdf_olusturma': 0,
                     'musteri_duzenleme': 0,
-                    'raporlar': 0 
+                    'raporlar': 0
                 }), 200
             return jsonify(result), 200
     except Exception as e:
@@ -687,7 +687,7 @@ def update_role_permissions():
     proje_sil = data.get('proje_sil', 0)
     pdf_olusturma = data.get('pdf_olusturma', 0)
     musteri_duzenleme = data.get('musteri_duzenleme', 0)
-    raporlar = data.get('raporlar', 0) 
+    raporlar = data.get('raporlar', 0)
 
     connection = None
     try:
@@ -727,12 +727,12 @@ def register_user():
     data = request.get_json()
     fullname = data.get('fullname')
     email = data.get('email')
-    phone = data.get('phone', '') 
+    phone = data.get('phone', '')
     password = data.get('password')
     role = data.get('role', 'Çalışan') # Sağlanmazsa varsayılan pozisyon
-    profile_picture = data.get('profile_picture') 
-    hide_email = data.get('hide_email', 0) 
-    hide_phone = data.get('hide_phone', 0) 
+    profile_picture = data.get('profile_picture')
+    hide_email = data.get('hide_email', 0)
+    hide_phone = data.get('hide_phone', 0)
 
     if not all([fullname, email, password, role]):
         return jsonify({'message': 'Lütfen tüm gerekli alanları doldurun.'}), 400
@@ -783,7 +783,7 @@ def login_user():
         with connection.cursor() as cursor:
             # Yeni alanlar dahil tüm kullanıcı detaylarını getir
             cursor.execute("SELECT id, fullname, email, phone, password, role, onay, profile_picture, hide_email, hide_phone, created_at FROM users WHERE email = %s", (email,))
-            
+
             user = cursor.fetchone()
 
             if not user:
@@ -798,19 +798,19 @@ def login_user():
                 return jsonify({
                     'message': 'Hesabınız henüz onaylanmadı. Lütfen yöneticinizle iletişime geçin.',
                     'user': {
-                        'email': user['email'], 
+                        'email': user['email'],
                         'onay': user['onay']
                     },
-                    'redirect': 'waiting.html' 
-                }), 403 
+                    'redirect': 'waiting.html'
+                }), 403
 
             # Kullanıcı ID'sini oturuma kaydet
-            session['user_id'] = user['id'] 
+            session['user_id'] = user['id']
             del user['password'] # Güvenlik nedeniyle şifreyi yanıttan kaldır
 
             return jsonify({
                 'message': 'Giriş başarılı!',
-                'user': user 
+                'user': user
             }), 200
 
     except pymysql.Error as e:
@@ -842,7 +842,7 @@ def add_customer():
     notes = data.get('notes')
     user_id = data.get('user_id') # Aktivite kaydı için projeyi ekleyen kullanıcı ID'si
 
-    if not all([customer_name, contact_person, phone, user_id]): 
+    if not all([customer_name, contact_person, phone, user_id]):
         return jsonify({'message': 'Şirket Adı, İlgili Kişi, Telefon ve Kullanıcı ID\'si zorunlu alanlardır.'}), 400
 
     connection = None
@@ -967,7 +967,7 @@ def update_customer(customer_id):
     notes = data.get('notes')
     user_id = data.get('user_id') # Aktivite kaydı için güncelleyen kullanıcı ID'si
 
-    if not user_id: 
+    if not user_id:
         return jsonify({'message': 'Kullanıcı ID\'si eksik.'}), 400
     if not any([customer_name, status, contact_person, contact_title, phone, email, country, city, district, postal_code, address, notes]):
         return jsonify({'message': 'Güncellenecek veri bulunamadı.'}), 400
@@ -1080,7 +1080,7 @@ def delete_customer(customer_id):
 
             if cursor.rowcount == 0:
                 return jsonify({'message': 'Müşteri silinemedi veya mevcut değil.'}), 404
-            
+
             log_activity(
                 user_id=user_id,
                 title='Müşteri Silindi',
@@ -1115,20 +1115,20 @@ def get_projects():
         connection = get_db_connection()
         with connection.cursor() as cursor:
             sql = """
-            SELECT 
-                p.project_id, 
-                p.project_name, 
-                p.reference_no, 
-                p.description, 
+            SELECT
+                p.project_id,
+                p.project_name,
+                p.reference_no,
+                p.description,
                 p.contract_date,
-                p.meeting_date, 
-                p.start_date, 
-                p.end_date, 
-                p.project_location, 
+                p.meeting_date,
+                p.start_date,
+                p.end_date,
+                p.project_location,
                 p.status,
-                c.customer_name, 
-                u.fullname AS project_manager_name, 
-                c.customer_id, 
+                c.customer_name,
+                u.fullname AS project_manager_name,
+                c.customer_id,
                 u.id AS project_manager_user_id,
                 -- En son iş gidişat başlığını ve gecikme günlerini getir
                 (SELECT title FROM project_progress WHERE project_id = p.project_id ORDER BY created_at DESC LIMIT 1) AS last_progress_title,
@@ -1150,7 +1150,7 @@ def get_projects():
                 # Eğer en son iş adımında gecikme varsa, durumu güncelle
                 if project['last_progress_delay_days'] is not None and project['last_progress_delay_days'] > 0:
                     display_status += ' (Gecikmeli)'
-                
+
                 project['display_status'] = display_status # Yeni bir alan olarak ekle
 
                 # datetime.date nesnelerini JSON serileştirmesi için ISO formatlı dizelere dönüştür
@@ -1251,7 +1251,7 @@ def update_project(project_id):
     end_date = clean_input_value(data.get('end_date'))
     project_location = clean_input_value(data.get('project_location'))
     status = clean_input_value(data.get('status'))
-    
+
     # customer_id'yi burada alıyoruz
     customer_id_new = data.get('customer_id')
     try:
@@ -1272,7 +1272,7 @@ def update_project(project_id):
           f"sözleşme='{contract_date}', toplantı='{meeting_date}', başlangıç='{start_date}', bitiş='{end_date}', "
           f"konum='{project_location}', durum='{status}', müşteri_id='{customer_id_new}', yönetici_id='{project_manager_id_new}', kullanıcı_id='{user_id}'")
 
-    if not user_id: 
+    if not user_id:
         print("HATA: Kullanıcı ID'si eksik.")
         return jsonify({'message': 'Kullanıcı ID\'si eksik.'}), 400
 
@@ -1303,7 +1303,7 @@ def update_project(project_id):
             old_project_location = existing_project_info['project_location']
             old_status = existing_project_info['status']
             old_customer_id = existing_project_info['customer_id'] # Eski müşteri ID'si
-            old_project_manager_id = existing_project_info['project_manager_id'] 
+            old_project_manager_id = existing_project_info['project_manager_id']
 
             print(f"DEBUG: Eski değerler: "
                   f"ad='{old_project_name}', ref='{old_reference_no}', açıklama='{old_description}', "
@@ -1341,7 +1341,7 @@ def update_project(project_id):
             if clean_input_value(status) != clean_input_value(old_status):
                 updates.append("status = %s")
                 params.append(status)
-            
+
             # Müşteri ID'sinin güncellenmesi eklendi
             if customer_id_new != old_customer_id:
                 updates.append("customer_id = %s")
@@ -1353,7 +1353,7 @@ def update_project(project_id):
 
             if not updates:
                 print("DEBUG: Güncellenecek bilgi bulunamadı, 200 döndürülüyor.")
-                return jsonify({'message': 'Güncellenecek bilgi bulunamadı.'}), 200 
+                return jsonify({'message': 'Güncellenecek bilgi bulunamadı.'}), 200
 
             sql = f"UPDATE projects SET {', '.join(updates)} WHERE project_id = %s"
             params.append(project_id)
@@ -1424,9 +1424,9 @@ def delete_project_api(project_id):
             send_notification(
                 project_manager_id,
                 "Proje Silindi",
-                f"Yönettiğiniz '{project_name}' projesi silindi."
+                f"Yönettiğiniz '{project_name}' projesi silindi." # Mesaj güncellendi
             )
-           
+
         return jsonify({'message': 'Proje başarıyla silindi!'}), 200
 
     except pymysql.Error as e:
@@ -1526,7 +1526,7 @@ def get_recent_activities():
                 created_at,
                 is_read
             FROM
-                activities  
+                activities
             ORDER BY
                 created_at DESC
             LIMIT 5;
@@ -1545,7 +1545,7 @@ def get_recent_activities():
         print(f"Bilinmeyen hata (son aktiviteler): {e}")
         return jsonify({"error": "Bilinmeyen bir sunucu hatası oluştu."}), 500
     finally:
-        if connection: 
+        if connection:
             connection.close()
 
 
@@ -1572,7 +1572,7 @@ def log_activity(user_id, title, description, icon, is_read=0):
             VALUES (%s, %s, %s, %s, NOW(), %s)
             """
             cursor.execute(sql, (user_id, title, full_description, icon, is_read))
-        connection.commit() 
+        connection.commit()
         print(f"Aktivite kaydedildi: Başlık: '{title}', Açıklama: '{full_description}'")
     except pymysql.Error as e:
         print(f"Aktivite kaydederken hata: {e}")
@@ -1643,7 +1643,7 @@ def add_project():
                     time_diff = (step_start_date - last_step_end_date).days
                     if time_diff > 1: # 1 günden fazla bir boşluk varsa, gecikme oluşmuştur
                         delay_days = time_diff - 1
-                
+
                 sql_insert_progress = """
                 INSERT INTO project_progress (project_id, title, description, start_date, end_date, delay_days)
                 VALUES (%s, %s, %s, %s, %s, %s)
@@ -1654,11 +1654,12 @@ def add_project():
                 last_step_end_date = step_end_date # Bir sonraki iterasyon için last_step_end_date'i güncelle
 
             # Proje yöneticisine bildirim gönder
-            send_notification(
-                project_manager_id,
-                "Yeni Proje Atandı",
-                f"Size yeni bir proje atandı: '{project_name}'."
-            )
+            if project_manager_id: # project_info'da project_manager_id yok, projects tablosundan çekilmeli
+                send_notification(
+                    project_manager_id,
+                    "Yeni Proje Atandı",
+                    f"Size yeni bir proje atandı: '{project_name}'."
+                )
 
         log_activity(
             user_id=user_id,
@@ -1716,17 +1717,17 @@ def get_project_progress_steps(project_id):
         with connection.cursor() as cursor:
             sql = """
             SELECT
-                progress_id,          
+                progress_id,
                 project_id,
-                title AS step_name,   
+                title AS step_name,
                 description,
                 start_date,
                 end_date,
                 delay_days,
-                created_at            
+                created_at
             FROM project_progress
             WHERE project_id = %s
-            ORDER BY start_date ASC, created_at ASC 
+            ORDER BY start_date ASC, created_at ASC
             """
             cursor.execute(sql, (project_id,))
             steps = cursor.fetchall()
@@ -1764,9 +1765,11 @@ def add_project_progress_step_from_modal(project_id):
         connection = get_db_connection()
         with connection.cursor() as cursor:
             # Projenin adını al
-            cursor.execute("SELECT project_name FROM projects WHERE project_id = %s", (project_id,))
+            cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (project_id,))
             project_info = cursor.fetchone()
             project_name = project_info['project_name'] if project_info else f"ID: {project_id}"
+            project_manager_id = project_info['project_manager_id'] if project_info else None
+
 
             # Projenin mevcut bitiş tarihini bul (gecikme günlerini hesaplamak için)
             cursor.execute("""
@@ -1794,15 +1797,12 @@ def add_project_progress_step_from_modal(project_id):
             connection.commit()
 
             # Proje yöneticisine bildirim gönder
-            if project_info and project_info.get('project_manager_id'): # project_info'da project_manager_id yok, projects tablosundan çekilmeli
-                cursor.execute("SELECT project_manager_id FROM projects WHERE project_id = %s", (project_id,))
-                manager_info = cursor.fetchone()
-                if manager_info:
-                    send_notification(
-                        manager_info['project_manager_id'],
-                        "Proje İlerleme Adımı Eklendi",
-                        f"'{step_name}' adlı yeni bir ilerleme adımı '{project_name}' projesine eklendi."
-                    )
+            if project_manager_id:
+                send_notification(
+                    project_manager_id,
+                    "Proje İlerleme Adımı Eklendi",
+                    f"Yönettiğiniz '{project_name}' projesine '{step_name}' adlı yeni bir iş adımı eklendi." # Mesaj güncellendi
+                )
 
             # Aktivite kaydı
             log_activity(
@@ -1850,10 +1850,12 @@ def update_project_progress_step(progress_id):
             current_project_id = existing_step['project_id']
             old_step_name = existing_step['title'] # Eski adım adını al
 
-            # Projenin adını al
-            cursor.execute("SELECT project_name FROM projects WHERE project_id = %s", (current_project_id,))
+            # Projenin adını ve yöneticisini al
+            cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (current_project_id,))
             project_info = cursor.fetchone()
             project_name = project_info['project_name'] if project_info else f"ID: {current_project_id}"
+            project_manager_id = project_info['project_manager_id'] if project_info else None
+
 
             # Önceki adımın bitiş tarihini bul (bu adım hariç)
             delay_days = 0
@@ -1884,16 +1886,13 @@ def update_project_progress_step(progress_id):
                 return jsonify({'message': 'İlerleme adımı verisi zaten güncel veya değişiklik yapılmadı.'}), 200
 
             # Proje yöneticisine bildirim gönder
-            if project_info and project_info.get('project_manager_id'): # project_info'da project_manager_id yok, projects tablosundan çekilmeli
-                cursor.execute("SELECT project_manager_id FROM projects WHERE project_id = %s", (current_project_id,))
-                manager_info = cursor.fetchone()
-                if manager_info:
-                    send_notification(
-                        manager_info['project_manager_id'],
-                        "Proje İlerleme Adımı Güncellendi",
-                        f"'{project_name}' projesindeki '{step_name}' ilerleme adımı güncellendi."
-                    )
-            
+            if project_manager_id:
+                send_notification(
+                    project_manager_id,
+                    "Proje İlerleme Adımı Güncellendi",
+                    f"Yönettiğiniz '{project_name}' projesindeki '{step_name}' iş adımı güncellendi." # Mesaj güncellendi
+                )
+
             # Aktivite kaydı
             log_activity(
                 user_id=user_id,
@@ -1931,14 +1930,15 @@ def delete_project_progress_step(progress_id):
             step_info = cursor.fetchone()
             if not step_info:
                 return jsonify({'message': 'İlerleme adımı silinemedi veya bulunamadı.'}), 404
-            
+
             current_project_id = step_info['project_id']
             step_name = step_info['title']
 
-            # Projenin adını al
-            cursor.execute("SELECT project_name FROM projects WHERE project_id = %s", (current_project_id,))
+            # Projenin adını ve yöneticisini al
+            cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (current_project_id,))
             project_info = cursor.fetchone()
             project_name = project_info['project_name'] if project_info else f"ID: {current_project_id}"
+            project_manager_id = project_info['project_manager_id'] if project_info else None
 
             sql = "DELETE FROM project_progress WHERE progress_id = %s"
             cursor.execute(sql, (progress_id,))
@@ -1948,16 +1948,13 @@ def delete_project_progress_step(progress_id):
                 return jsonify({'message': 'İlerleme adımı silinemedi veya bulunamadı.'}), 404
 
             # Proje yöneticisine bildirim gönder
-            if project_info and project_info.get('project_manager_id'): # project_info'da project_manager_id yok, projects tablosundan çekilmeli
-                cursor.execute("SELECT project_manager_id FROM projects WHERE project_id = %s", (current_project_id,))
-                manager_info = cursor.fetchone()
-                if manager_info:
-                    send_notification(
-                        manager_info['project_manager_id'],
-                        "Proje İlerleme Adımı Silindi",
-                        f"'{project_name}' projesindeki '{step_name}' ilerleme adımı silindi."
-                    )
-            
+            if project_manager_id:
+                send_notification(
+                    project_manager_id,
+                    "Proje İlerleme Adımı Silindi",
+                    f"Yönettiğiniz '{project_name}' projesindeki '{step_name}' iş adımı silindi." # Mesaj güncellendi
+                )
+
             # Aktivite kaydı
             log_activity(
                 user_id=user_id,
@@ -1992,7 +1989,7 @@ def get_user_info():
             user = cursor.fetchone()
             if not user:
                 return jsonify({'message': 'Kullanıcı bulunamadı'}), 404
-            
+
             # datetime nesnelerini JSON serileştirmesi için dizeye dönüştür
             if 'created_at' in user and isinstance(user['created_at'], datetime.datetime):
                 user['created_at'] = user['created_at'].isoformat()
@@ -2015,7 +2012,7 @@ def get_all_users():
             # Yeni alanlar dahil tüm kullanıcı alanlarını getir
             cursor.execute("SELECT id, fullname, email, phone, role, profile_picture, hide_email, hide_phone, created_at FROM users")
             users = cursor.fetchall()
-            
+
             # datetime nesnelerini JSON serileştirmesi için dizeye dönüştür
             for user in users:
                 if 'created_at' in user and isinstance(user['created_at'], datetime.datetime):
@@ -2041,9 +2038,9 @@ def add_user():
     phone = data.get('phone', '')
     password = data.get('password')
     role = data.get('role', 'Çalışan') # Sağlanmazsa varsayılan pozisyon
-    profile_picture = data.get('profile_picture') 
-    hide_email = data.get('hide_email', 0) 
-    hide_phone = data.get('hide_phone', 0) 
+    profile_picture = data.get('profile_picture')
+    hide_email = data.get('hide_email', 0)
+    hide_phone = data.get('hide_phone', 0)
 
 
     if not fullname or not email or not password or not role:
@@ -2053,7 +2050,7 @@ def add_user():
     created_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     try:
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8') 
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
         connection = get_db_connection()
         with connection.cursor() as cursor:
@@ -2242,7 +2239,7 @@ def delete_task(task_id):
             # Bildirim göndermek için görev bilgilerini al
             cursor.execute("SELECT title, assigned_user_id FROM tasks WHERE id = %s", (task_id,))
             task_info = cursor.fetchone()
-            
+
             cursor.execute("DELETE FROM tasks WHERE id = %s", (task_id,))
             connection.commit()
 
@@ -2268,34 +2265,34 @@ def manager_stats():
     try:
         with connection.cursor() as cursor:
             sql = """
-            SELECT 
+            SELECT
                 p.project_manager_id,
                 u.fullname as manager_name,
                 COUNT(DISTINCT p.project_id) AS total_projects,
-                SUM(CASE 
+                SUM(CASE
                         WHEN p.status = 'Bitti' AND (
-                            SELECT SUM(pr.delay_days) 
-                            FROM project_progress pr 
+                            SELECT SUM(pr.delay_days)
+                            FROM project_progress pr
                             WHERE pr.project_id = p.project_id
                         ) IS NULL OR (
-                            SELECT SUM(pr.delay_days) 
-                            FROM project_progress pr 
+                            SELECT SUM(pr.delay_days)
+                            FROM project_progress pr
                             WHERE pr.project_id = p.project_id
-                        ) = 0 
-                    THEN 1 
-                    ELSE 0 
+                        ) = 0
+                    THEN 1
+                    ELSE 0
                 END) AS on_time_projects,
-                SUM(CASE 
+                SUM(CASE
                         WHEN (
-                            SELECT SUM(pr.delay_days) 
-                            FROM project_progress pr 
+                            SELECT SUM(pr.delay_days)
+                            FROM project_progress pr
                             WHERE pr.project_id = p.project_id
-                        ) > 0 
-                    THEN 1 
-                    ELSE 0 
+                        ) > 0
+                    THEN 1
+                    ELSE 0
                 END) AS delayed_projects,
                 (SELECT IFNULL(SUM(pr.delay_days), 0)
-                 FROM project_progress pr 
+                 FROM project_progress pr
                  WHERE pr.project_id IN (
                      SELECT project_id FROM projects WHERE project_manager_id = p.project_manager_id
                  )
@@ -2322,28 +2319,28 @@ def worker_performance():
             SELECT
                 u.fullname AS manager_name,
                 COUNT(DISTINCT p.project_id) AS total_projects,
-                SUM(CASE 
+                SUM(CASE
                         WHEN p.status = 'Bitti' AND (\
-                            SELECT SUM(pr.delay_days) 
-                            FROM project_progress pr 
+                            SELECT SUM(pr.delay_days)
+                            FROM project_progress pr
                             WHERE pr.project_id = p.project_id
                         ) IS NULL OR (\
-                            SELECT SUM(pr.delay_days) 
-                            FROM project_progress pr 
+                            SELECT SUM(pr.delay_days)
+                            FROM project_progress pr
                             WHERE pr.project_id = p.project_id
-                        ) = 0 
-                    THEN 1 
-                    ELSE 0 
+                        ) = 0
+                    THEN 1
+                    ELSE 0
                 END) AS on_time_projects
             FROM projects p
             LEFT JOIN users u ON u.id = p.project_manager_id
             WHERE u.role IN ('Tekniker', 'Teknisyen', 'Mühendis', 'Müdür', 'Proje Yöneticisi')
-            GROUP BY p.project_manager_id, u.fullname
+            GROUP BY p.project_id, u.fullname
             """
             cursor.execute(sql)
             result = cursor.fetchall()
             return jsonify(result)
-    finally:    
+    finally:
         if connection:
             connection.close()
 
