@@ -1467,7 +1467,7 @@ def get_project_managers():
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            cursor.execute("SELECT id, fullname FROM users WHERE role IN ('Technician', 'Engineer', 'Manager', 'Project Manager') ORDER BY fullname")
+            cursor.execute("SELECT id, fullname FROM users WHERE role IN ('Teknisyen', 'Mühendis', 'Müdür', 'Proje Yöneticisi', 'Tekniker') ORDER BY fullname")
             managers = cursor.fetchall()
         return jsonify(managers), 200
     except pymysql.Error as e:
