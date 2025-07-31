@@ -1051,12 +1051,6 @@ def update_customer(customer_id):
             if cursor.rowcount == 0:
                 return jsonify({'message': 'Müşteri verisi zaten güncel veya değişiklik yapılmadı.'}), 200
 
-            # log_activity(
-            #     user_id=user_id,
-            #     title='Müşteri Güncellendi',
-            #     description=f'"{old_customer_name}" adlı müşteri bilgileri güncellendi.',
-            #     icon='fas fa-user-edit'
-            # )
             activity_data = {
                 'user_id': user_id,
                 'title': 'Müşteri Güncellendi',
@@ -1104,12 +1098,6 @@ def delete_customer(customer_id):
             if cursor.rowcount == 0:
                 return jsonify({'message': 'Müşteri silinemedi veya mevcut değil.'}), 404
 
-            # log_activity(
-            #     user_id=user_id,
-            #     title='Müşteri Silindi',
-            #     description=f'"{customer_name}" adlı müşteri silindi.',
-            #     icon='fas fa-user-minus'
-            # )
             activity_data = {
                 'user_id': user_id,
                 'title': 'Müşteri Silindi',
@@ -1443,12 +1431,6 @@ def delete_project_api(project_id):
             if cursor.rowcount == 0:
                 return jsonify({'message': 'Proje silinemedi veya bulunamadı.'}), 404
 
-            # log_activity(
-            #     user_id=user_id,
-            #     title='Proje Silindi',
-            #     description=f'"{project_name}" adlı proje silindi.',
-            #     icon='fas fa-trash'
-            # )
             activity_data = {
                 'user_id': user_id,
                 'title': 'Proje Silindi',
@@ -1677,7 +1659,7 @@ def add_project():
                 delay_days = 0
                 # Önceki adımın bitiş tarihine veya projenin başlangıç tarihine göre gecikmeyi hesapla
                 if last_step_end_date:
-                    time_diff = (step_start_date - last_step_end_date).days
+                    time_diff = (new_step_start_date - last_step_end_date).days
                     if time_diff > 1: # 1 günden fazla bir boşluk varsa, gecikme oluşmuştur
                         delay_days = time_diff - 1
 
@@ -1698,12 +1680,6 @@ def add_project():
                     f"Size yeni bir proje atandı: '{project_name}'."
                 )
 
-        # log_activity(
-        #     user_id=user_id,
-        #     title='Yeni Proje Eklendi',
-        #     description=f'"{project_name}" adlı yeni proje oluşturuldu.',
-        #     icon='fas fa-plus'
-        # )
         activity_data = {
             'user_id': user_id,
             'title': 'Yeni Proje Eklendi',
@@ -1739,12 +1715,6 @@ def log_pdf_report_api():
         description_text = f'"{project_name}" projesi için PDF raporu oluşturuldu.'
 
     try:
-        # log_activity(
-        #     user_id=user_id,
-        #     title='PDF Raporu Oluşturuldu',
-        #     description=description_text,
-        #     icon='fas fa-file-pdf'
-        # )
         activity_data = {
             'user_id': user_id,
             'title': 'PDF Raporu Oluşturuldu',
@@ -1855,13 +1825,6 @@ def add_project_progress_step_from_modal(project_id):
                     f"Yönettiğiniz '{project_name}' projesine '{step_name}' adlı yeni bir iş adımı eklendi." # Mesaj güncellendi
                 )
 
-            # Aktivite kaydı
-            # log_activity(
-            #     user_id=user_id,
-            #     title='İş Adımı Eklendi',
-            #     description=f"'{project_name}' projesine '{step_name}' adlı yeni bir iş adımı eklendi.",
-            #     icon='fas fa-plus-circle' # Yeni ikon
-            # )
             activity_data = {
                 'user_id': user_id,
                 'title': 'İş Adımı Eklendi',
@@ -1951,13 +1914,6 @@ def update_project_progress_step(progress_id):
                     f"Yönettiğiniz '{project_name}' projesindeki '{step_name}' iş adımı güncellendi." # Mesaj güncellendi
                 )
 
-            # Aktivite kaydı
-            # log_activity(
-            #     user_id=user_id,
-            #     title='İş Adımı Güncellendi',
-            #     description=f"'{project_name}' projesindeki '{old_step_name}' iş adımı '{step_name}' olarak güncellendi.",
-            #     icon='fas fa-edit' # Yeni ikon
-            # )
             activity_data = {
                 'user_id': user_id,
                 'title': 'İş Adımı Güncellendi',
@@ -2020,13 +1976,6 @@ def delete_project_progress_step(progress_id):
                     f"Yönettiğiniz '{project_name}' projesindeki '{step_name}' iş adımı silindi." # Mesaj güncellendi
                 )
 
-            # Aktivite kaydı
-            # log_activity(
-            #     user_id=user_id,
-            #     title='İş Adımı Silindi',
-            #     description=f"'{project_name}' projesindeki '{step_name}' iş adımı silindi.",
-            #     icon='fas fa-trash-alt' # Yeni ikon
-            # )
             activity_data = {
                 'user_id': user_id,
                 'title': 'İş Adımı Silindi',
@@ -2172,6 +2121,103 @@ def get_distinct_roles():
         if connection:
             connection.close()
 
+@app.route('/api/calendar-events', methods=['GET'])
+def get_calendar_events():
+    """Takvim için görevleri ve projeleri getirir."""
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            # Görevleri çek
+            tasks_sql = """
+                SELECT
+                    id,
+                    title,
+                    description,
+                    start,
+                    end,
+                    priority,
+                    assigned_user_id,
+                    created_by
+                FROM tasks
+            """
+            cursor.execute(tasks_sql)
+            tasks_data = cursor.fetchall()
+
+            # Projeleri çek
+            projects_sql = """
+                SELECT
+                    project_id,
+                    project_name,
+                    description,
+                    start_date,
+                    end_date,
+                    status,
+                    project_manager_id
+                FROM projects
+            """
+            cursor.execute(projects_sql)
+            projects_data = cursor.fetchall()
+
+            events = []
+
+            # Görevleri FullCalendar formatına dönüştür
+            for task in tasks_data:
+                color = "#2ed573" # Low priority
+                if task['priority'] == "high":
+                    color = "#ff4757"
+                elif task['priority'] == "medium":
+                    color = "#ffa502"
+
+                events.append({
+                    'id': f"task-{task['id']}", # ID'ye tip ekle
+                    'title': task['title'],
+                    'start': task['start'].isoformat() if isinstance(task['start'], datetime.datetime) else task['start'].isoformat(),
+                    'end': task['end'].isoformat() if isinstance(task['end'], datetime.datetime) else task['end'].isoformat() if task['end'] else None,
+                    'color': color,
+                    'type': 'task',
+                    'extendedProps': {
+                        'originalColor': color,
+                        'priority': task['priority'],
+                        'description': task['description'],
+                        'assigned_user_id': task['assigned_user_id'],
+                        'created_by': task['created_by']
+                    }
+                })
+
+            # Projeleri FullCalendar formatına dönüştür
+            for project in projects_data:
+                # Proje durumuna göre renk ataması
+                project_color = "#005c9d" # Varsayılan
+                if "Gecikmeli" in project['status']:
+                    project_color = "#ff4757" # Kırmızı
+                elif project['status'] == 'Tamamlandı':
+                    project_color = "#2ed573" # Yeşil
+                elif project['status'] == 'Aktif':
+                    project_color = "#0980d3" # Mavi
+
+                events.append({
+                    'id': f"project-{project['project_id']}", # ID'ye tip ekle
+                    'title': f"Proje: {project['project_name']}",
+                    'start': project['start_date'].isoformat() if isinstance(project['start_date'], datetime.date) else project['start_date'].isoformat(),
+                    'end': project['end_date'].isoformat() if isinstance(project['end_date'], datetime.date) else project['end_date'].isoformat(),
+                    'color': project_color,
+                    'type': 'project',
+                    'extendedProps': {
+                        'originalColor': project_color,
+                        'description': project['description'],
+                        'status': project['status'],
+                        'project_manager_id': project['project_manager_id']
+                    }
+                })
+
+        return jsonify(events), 200
+    except Exception as e:
+        print(f"Takvim etkinlikleri çekilirken hata: {e}")
+        return jsonify({'message': 'Takvim etkinlikleri çekilemedi.'}), 500
+    finally:
+        if connection:
+            connection.close()
 
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():

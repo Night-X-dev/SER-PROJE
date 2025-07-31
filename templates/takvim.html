@@ -543,6 +543,22 @@
         .priority-low {
             background-color: #2ed573;
         }
+        .task-type-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .task-type-task {
+            background-color: #2ed573; /* Low priority green */
+        }
+
+        .task-type-project {
+            background-color: #005c9d; /* Project blue */
+        }
+
 
         .task-content {
             flex: 1;
@@ -1063,7 +1079,7 @@
             <!-- Upcoming Tasks -->
             <div class="tasks-container">
                 <div class="tasks-header">
-                    <div class="tasks-title">Yaklaşan Görevlerim</div>
+                    <div class="tasks-title">Yaklaşan Etkinliklerim</div>
                 </div>
                 <div class="task-list" id="taskList">
                     <!-- Tasks will be populated by JavaScript -->
@@ -1130,6 +1146,22 @@
         </div>
     </div>
 
+    <!-- Project Detail Modal (Yeni Eklendi) -->
+    <div class="modal" id="projectDetailModal">
+        <div class="modal-content" style="max-width:550px; min-width:320px;">
+            <div class="modal-header">
+                <h2 class="modal-title" style="font-size:18px;">Proje Detayı</h2>
+                <button class="modal-close" id="closeProjectDetailModal">&times;</button>
+            </div>
+            <div class="modal-body" id="projectDetailBody" style="font-size:15px; padding:10px 0;">
+                <!-- JS ile doldurulacak -->
+            </div>
+            <div class="modal-footer" id="projectDetailFooter" style="justify-content: flex-end; gap: 10px;">
+                <!-- Proje detay modalında silme butonu olmayacak, sadece bilgi -->
+            </div>
+        </div>
+    </div>
+
     <div class="modal" id="taskDetailModal">
         <div class="modal-content" style="max-width:480px; min-width:320px;">
             <div class="modal-header">
@@ -1152,7 +1184,7 @@
 
         // Takvim nesnesi
         let calendar;
-        let tasks = []; // tasks dizisini burada tanımla
+        let eventsData = []; // Hem görevleri hem de projeleri tutacak ana dizi
         let users = []; // Kullanıcıları burada sakla
         let editingTask = null;
         let currentUser = null; // currentUser'ı global olarak tanımla
@@ -1169,11 +1201,11 @@
             const confirmationModal = new bootstrap.Modal(confirmationModalElement);
             confirmationModal.show();
         }
- document.getElementById('userProfileLink').addEventListener('click', function() {
-                window.location.href = 'users.html';
-            });
+        document.getElementById('userProfileLink').addEventListener('click', function() {
+            window.location.href = 'users.html';
+        });
+
         function loadUsersForAssignee(selectedUserId = null, callback = null) {
-            // API_BASE_URL kullanılarak güncellendi
             fetch(`${API_BASE_URL}/api/users`)
                 .then(res => res.json())
                 .then(apiUsers => {
@@ -1211,36 +1243,23 @@
                     center: 'title',
                     right: 'dayGridMonth,timeGridWeek,timeGridDay'
                 },
-                events: tasks.map(task => {
-                    const color = task.priority === "high" ? "#ff4757" : 
-                                task.priority === "medium" ? "#ffa502" : "#2ed573";
-                    
-                    return {
-                        id: task.id,
-                        title: task.title,
-                        start: task.start,
-                        end: task.end,
-                        color: color,
-                        extendedProps: {
-                            originalColor: color,
-                            priority: task.priority,
-                            description: task.description
-                        }
-                    };
-                }),
+                events: eventsData, // Tüm etkinlikleri kullan
                 eventClick: function(info) {
-                    const task = tasks.find(t => t.id === parseInt(info.event.id));
-                    openTaskModal(task);
+                    const eventId = info.event.id;
+                    const eventType = eventId.split('-')[0]; // event-id veya project-id
+                    const originalId = parseInt(eventId.split('-')[1]);
+
+                    if (eventType === 'task') {
+                        const task = eventsData.find(e => e.id === eventId && e.type === 'task');
+                        if (task) openTaskModal(task.extendedProps, true); // Sadece görüntüleme modunda aç
+                    } else if (eventType === 'project') {
+                        const project = eventsData.find(e => e.id === eventId && e.type === 'project');
+                        if (project) openProjectDetailModal(project.extendedProps);
+                    }
                 },
                 eventContent: function(arg) {
-                    const priorityDot = document.createElement('div');
-                    priorityDot.className = 'priority-dot';
-                    priorityDot.style.backgroundColor = arg.event.backgroundColor;
-                    priorityDot.style.width = '10px';
-                    priorityDot.style.height = '10px';
-                    priorityDot.style.borderRadius = '50%';
-                    priorityDot.style.marginRight = '5px';
-                    priorityDot.style.display = 'inline-block';
+                    const typeIndicator = document.createElement('div');
+                    typeIndicator.className = arg.event.extendedProps.type === 'task' ? 'task-type-indicator task-type-task' : 'task-type-indicator task-type-project';
                     
                     const title = document.createElement('div');
                     title.innerHTML = arg.event.title;
@@ -1252,7 +1271,7 @@
                     content.style.display = 'flex';
                     content.style.alignItems = 'center';
                     content.style.padding = '2px';
-                    content.appendChild(priorityDot);
+                    content.appendChild(typeIndicator);
                     content.appendChild(title);
                     
                     return { domNodes: [content] };
@@ -1263,11 +1282,10 @@
                     hour12: false
                 }
             });
-            
             calendar.render();
         }
         
-        // Yaklaşan görevleri listeleme fonksiyonu
+        // Yaklaşan etkinlikleri listeleme fonksiyonu (hem görevler hem projeler)
         function renderUpcomingTasks() {
             const taskList = document.getElementById('taskList');
             taskList.innerHTML = '';
@@ -1276,74 +1294,99 @@
             const twoWeeksLater = new Date();
             twoWeeksLater.setDate(now.getDate() + 14);
 
-            const upcomingTasks = tasks.filter(task => {
-                const endDate = task.end ? new Date(task.end) : new Date(task.start);
+            const upcomingEvents = eventsData.filter(event => {
+                const endDate = new Date(event.end || event.start); // Bitiş tarihi yoksa başlangıç tarihini kullan
                 return endDate > now && endDate <= twoWeeksLater;
             }).sort((a, b) => {
-                const aEnd = a.end ? new Date(a.end) : new Date(a.start);
-                const bEnd = b.end ? new Date(b.end) : new Date(b.start);
-                return aEnd - bEnd; /* Düzeltme: bB yerine bEnd */
+                const aEnd = new Date(a.end || a.start);
+                const bEnd = new Date(b.end || b.start);
+                return aEnd - bEnd;
             });
             
-            const displayTasks = upcomingTasks.slice(0, 5);
+            const displayEvents = upcomingEvents.slice(0, 5); // İlk 5 etkinliği göster
             
-            if (displayTasks.length === 0) {
-                taskList.innerHTML = '<p style="text-align: center; color: var(--light-gray);">Yaklaşan görev bulunmamaktadır.</p>';
+            if (displayEvents.length === 0) {
+                taskList.innerHTML = '<p style="text-align: center; color: var(--light-gray);">Yaklaşan etkinlik bulunmamaktadır.</p>';
                 return;
             }
 
-            displayTasks.forEach(task => {
-                const taskItem = document.createElement('div');
-                taskItem.className = 'task-item';
+            displayEvents.forEach(event => {
+                const item = document.createElement('div');
+                item.className = 'task-item'; // Genel bir stil sınıfı kullan
                 
-                const priorityClass = `priority-${task.priority}`;
-                
-                const formattedDate = (task.end ? new Date(task.end) : new Date(task.start)).toLocaleDateString('tr-TR', {
-                    day: '2-digit',
-                    month: 'long',
-                    year: 'numeric'
-                });
-                
-                taskItem.innerHTML = `
-                    <div class="task-priority ${priorityClass}"></div>
+                let typeClass = '';
+                let titleText = '';
+                let descriptionText = '';
+                let timeText = '';
+                let originalData = null;
+
+                if (event.type === 'task') {
+                    typeClass = `task-type-task`;
+                    titleText = event.title;
+                    descriptionText = event.extendedProps.description || '';
+                    timeText = new Date(event.end || event.start).toLocaleDateString('tr-TR', {
+                        day: '2-digit', month: 'long', year: 'numeric'
+                    });
+                    originalData = event.extendedProps;
+                } else if (event.type === 'project') {
+                    typeClass = `task-type-project`;
+                    titleText = event.title; // Proje adını zaten "Proje: Adı" şeklinde alıyoruz
+                    descriptionText = event.extendedProps.description || '';
+                    timeText = new Date(event.end || event.start).toLocaleDateString('tr-TR', {
+                        day: '2-digit', month: 'long', year: 'numeric'
+                    });
+                    originalData = event.extendedProps;
+                }
+
+                item.innerHTML = `
+                    <div class="task-type-indicator ${typeClass}"></div>
                     <div class="task-content">
-                        <div class="task-title">${task.title}</div>
-                        <div class="task-desc">${task.description}</div>
+                        <div class="task-title">${titleText}</div>
+                        <div class="task-desc">${descriptionText}</div>
                         <div class="task-time">
                             <i class="fas fa-clock"></i>
-                            ${formattedDate}
+                            ${timeText}
                         </div>
                     </div>
                     <div class="task-actions">
-                        <div class="task-action-btn" data-id="${task.id}">
+                        <div class="task-action-btn" data-id="${event.id}" data-type="${event.type}">
                             <i class="fas fa-eye"></i>
                         </div>
                     </div>
                 `;
                 
-                taskList.appendChild(taskItem);
+                taskList.appendChild(item);
             });
 
             // Her bir göz ikonuna tıklama event'i ekle
             taskList.querySelectorAll('.task-action-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const taskId = e.currentTarget.dataset.id;
-                    const task = tasks.find(t => t.id === parseInt(taskId));
-                    openTaskDetailModal(task);
+                    const eventId = e.currentTarget.dataset.id;
+                    const eventType = e.currentTarget.dataset.type;
+                    const event = eventsData.find(e => e.id === eventId && e.type === eventType);
+                    if (event) {
+                        if (eventType === 'task') {
+                            openTaskDetailModal(event.extendedProps);
+                        } else if (eventType === 'project') {
+                            openProjectDetailModal(event.extendedProps);
+                        }
+                    }
                 });
             });
         }
         
         // Modal işlemleri
         const taskModal = document.getElementById('taskModal');
+        const projectDetailModal = document.getElementById('projectDetailModal'); // Yeni proje detay modalı
         const addTaskBtn = document.getElementById('addTask');
         const closeModal = document.getElementById('closeModal');
+        const closeProjectDetailModalBtn = document.getElementById('closeProjectDetailModal'); // Proje detay modal kapatma
         const cancelTask = document.getElementById('cancelTask');
         const saveTaskBtn = document.getElementById('saveTask');
         const deleteTaskBtn = document.getElementById('deleteTask');
 
-        // Modal açma fonksiyonu
+        // Modal açma fonksiyonu (Görevler için)
         function openTaskModal(task = null, viewOnly = false) {
             editingTask = task;
             const titleInput = document.getElementById('taskTitle');
@@ -1362,7 +1405,6 @@
                 endInput.value = formatDateTimeLocal(task.end);
                 priorityInput.value = task.priority;
                 descInput.value = task.description;
-                // Kullanıcıları yükle ve atanan kişiyi seçili yap
                 loadUsersForAssignee(task.assigned_user_id, () => {
                     let assigneeName = '';
                     if (task.assigned_user_id) {
@@ -1393,10 +1435,63 @@
             taskModal.style.display = 'flex';
         }
         
-        // Modal kapatma fonksiyonu
+        // Modal kapatma fonksiyonu (Görevler için)
         function closeTaskModal() {
             taskModal.style.display = 'none';
             editingTask = null; // Modal kapatıldığında editingTask'i temizle
+        }
+
+        // Proje Detay Modalını açma fonksiyonu (Yeni)
+        function openProjectDetailModal(project) {
+            const modal = document.getElementById('projectDetailModal');
+            const body = document.getElementById('projectDetailBody');
+            if (!project) return;
+
+            const formattedStart = new Date(project.start_date).toLocaleDateString('tr-TR', {
+                day: '2-digit', month: 'long', year: 'numeric'
+            });
+            const formattedEnd = new Date(project.end_date).toLocaleDateString('tr-TR', {
+                day: '2-digit', month: 'long', year: 'numeric'
+            });
+
+            let managerName = '';
+            if (project.project_manager_id) {
+                const user = users.find(u => u.id == project.project_manager_id);
+                managerName = user ? user.fullname : `Kullanıcı ID: ${project.project_manager_id}`;
+            }
+
+            // Karanlık modda metinler beyaz olsun
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            const textColor = isDark ? '#fff' : '#555';
+
+            body.innerHTML = `
+                <div style="font-size:20px; font-weight:600; margin-bottom:8px; color:${textColor};">${project.project_name}</div>
+                <div style="margin:6px 0 12px 0; color:#888;">${project.description || ''}</div>
+                <div style="margin-bottom:6px; color:${textColor};">
+                    <i class="fas fa-calendar-alt"></i>
+                    <b>Başlangıç:</b> ${formattedStart}
+                </div>
+                <div style="margin-bottom:6px; color:${textColor};">
+                    <i class="fas fa-calendar-check"></i>
+                    <b>Bitiş:</b> ${formattedEnd}
+                </div>
+                <div style="margin-bottom:6px; color:${textColor};">
+                    <span style="font-size:14px;">
+                        <b>Durum:</b> <span style="color:${textColor};">${project.status}</span>
+                    </span>
+                </div>
+                <div style="margin-bottom:6px; color:${textColor};">
+                    <span style="font-size:14px;">
+                        <b>Proje Yöneticisi:</b> <span style="color:${textColor};">${managerName}</span>
+                    </span>
+                </div>
+            `;
+            modal.style.display = 'flex';
+        }
+
+        // Proje Detay Modalını kapatma fonksiyonu (Yeni)
+        function closeProjectDetailModal() {
+            projectDetailModal.style.display = 'none';
         }
 
         function openTaskDetailModal(task) {
@@ -1475,7 +1570,6 @@
                 deleteBtn.style.display = '';
                 deleteBtn.onclick = function() {
                     showConfirmationModal('Bu görevi silmek istediğinize emin misiniz?', () => {
-                        // API_BASE_URL kullanılarak güncellendi
                         fetch(`${API_BASE_URL}/api/tasks/${task.id}`, {
                             method: 'DELETE'
                         })
@@ -1485,7 +1579,7 @@
                                 closeTaskDetailModal();
                                 showNotification(data.message, "success");
                                 setTimeout(() => {
-                                    if (typeof loadTasksFromApi === 'function') loadTasksFromApi();
+                                    if (typeof loadCalendarEvents === 'function') loadCalendarEvents(); // loadTasksFromApi yerine loadCalendarEvents
                                 }, 100); // Kısa bir gecikme ile kesin yenile
                             } else {
                                 showNotification('Silme başarısız: ' + (data.message || 'Bilinmeyen hata.'), "error");
@@ -1654,6 +1748,7 @@
             // Modal event listener'ları
             addTaskBtn.addEventListener('click', () => openTaskModal());
             closeModal.addEventListener('click', closeTaskModal);
+            closeProjectDetailModalBtn.addEventListener('click', closeProjectDetailModal); // Proje detay modal kapatma
             cancelTask.addEventListener('click', closeTaskModal);
             
             // Görevi kaydetme
@@ -1674,7 +1769,6 @@
 
                 // Eğer editingTask varsa, güncelleme yap
                 if (editingTask && editingTask.id) {
-                    // API_BASE_URL kullanılarak güncellendi
                     fetch(`${API_BASE_URL}/api/tasks/${editingTask.id}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
@@ -1688,7 +1782,7 @@
                         if (data.message && data.message.includes('güncellendi')) {
                             closeTaskModal();
                             showNotification('Görev başarıyla güncellendi!', "success");
-                            loadTasksFromApi(); // Takvimi yenile
+                            loadCalendarEvents(); // Takvimi yenile
                         } else {
                             showNotification(data.message || 'Görev güncellenemedi.', "error");
                         }
@@ -1699,7 +1793,6 @@
                     });
                 } else {
                     // Yeni görev ekle
-                    // API_BASE_URL kullanılarak güncellendi
                     fetch(`${API_BASE_URL}/api/tasks`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1713,7 +1806,7 @@
                         if (data.message && data.message.includes('başarıyla')) {
                             closeTaskModal();
                             showNotification('Görev başarıyla eklendi!', "success");
-                            loadTasksFromApi(); // Takvimi yenile
+                            loadCalendarEvents(); // Takvimi yenile
                         } else {
                             showNotification(data.message || 'Görev eklenemedi.', "error");
                         }
@@ -1729,7 +1822,6 @@
             deleteTaskBtn.addEventListener('click', function() {
                 if (!editingTask || !editingTask.id) return;
                 showConfirmationModal('Bu görevi silmek istediğinize emin misiniz?', () => {
-                    // API_BASE_URL kullanılarak güncellendi
                     fetch(`${API_BASE_URL}/api/tasks/${editingTask.id}`, {
                         method: 'DELETE'
                     })
@@ -1739,7 +1831,7 @@
                             closeTaskModal();
                             showNotification(data.message, "success");
                             setTimeout(() => {
-                                if (typeof loadTasksFromApi === 'function') loadTasksFromApi();
+                                if (typeof loadCalendarEvents === 'function') loadCalendarEvents();
                             }, 100);
                         } else {
                             console.error('Silme başarısız:', data.message);
@@ -1759,7 +1851,6 @@
                 deleteTaskFromDetailBtn.addEventListener('click', () => {
                     if (!editingTask || !editingTask.id) return;
                     showConfirmationModal('Bu görevi silmek istediğinize emin misiniz?', () => {
-                        // API_BASE_URL kullanılarak güncellendi
                         fetch(`${API_BASE_URL}/api/tasks/${editingTask.id}`, {
                             method: 'DELETE'
                         })
@@ -1768,7 +1859,7 @@
                             if (res.ok) {
                                 closeTaskDetailModal();
                                 showNotification(data.message, "success");
-                                loadTasksFromApi(); // Takvimi yenile
+                                loadCalendarEvents(); // Takvimi yenile
                             } else {
                                 console.error('Silme başarısız:', data.message);
                                 showNotification('Silme başarısız: ' + (data.message || 'Bilinmeyen hata.'), "error");
@@ -1784,10 +1875,12 @@
             
             // Dışarı tıklayınca modal kapatma
             window.addEventListener('click', (e) => {
-                // Sadece taskModal'a veya taskDetailModal'a tıklama durumunda kapat
-                // Confirmation modal'a tıklama olayını Bootstrap zaten yönetiyor.
+                // Sadece taskModal veya projectDetailModal'a tıklama durumunda kapat
                 if (e.target === taskModal) {
                     closeTaskModal();
+                }
+                if (e.target === projectDetailModal) {
+                    closeProjectDetailModal();
                 }
                 if (e.target === document.getElementById('taskDetailModal')) {
                     closeTaskDetailModal();
@@ -1834,33 +1927,28 @@
             // Sayfa yüklendiğinde kullanıcıları çek
             loadUsersForAssignee();
           
-            // Görevleri ve kullanıcıları backend'den çek
-            function loadTasksFromApi() {
-                // API_BASE_URL kullanılarak güncellendi
-                fetch(`${API_BASE_URL}/api/tasks`)
+            // Görevleri ve projeleri backend'den çek
+            function loadCalendarEvents() {
+                fetch(`${API_BASE_URL}/api/calendar-events`) // Yeni API ucu
                     .then(res => res.json())
-                    .then(apiTasks => {
-                        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-                        tasks = apiTasks
-                            .filter(task => task.assigned_user_id == currentUser.id)
-                            .map(task => ({
-                                ...task,
-                                start: new Date(task.start),
-                                end: task.end ? new Date(task.end) : null
-                            }));
+                    .then(apiEvents => {
+                        eventsData = apiEvents.map(event => {
+                            // Tarihleri Date objelerine dönüştür
+                            event.start = new Date(event.start);
+                            if (event.end) {
+                                event.end = new Date(event.end);
+                            }
+                            return event;
+                        });
                         initCalendar();
                         renderUpcomingTasks();
                     })
                     .catch(error => {
-                        console.error('Görevler yüklenirken hata:', error);
-                        showNotification('Görevler yüklenemedi. Sunucuya bağlanılamadı veya bir hata oluştu.', "error");
+                        console.error('Takvim etkinlikleri yüklenirken hata:', error);
+                        showNotification('Takvim etkinlikleri yüklenemedi. Sunucuya bağlanılamadı veya bir hata oluştu.', "error");
                     });
             }
-            loadTasksFromApi(); // Bunu buraya ekle
-        });
-        document.getElementById('closeTaskDetailModal').addEventListener('click', () => {
-            document.getElementById('taskDetailModal').style.display = 'none';
-            document.getElementById('deleteTaskFromDetail').style.display = 'none'; // Detay modalını kapatınca sil butonunu gizle
+            loadCalendarEvents(); // Bunu buraya ekle
         });
     </script>
     <!-- The bildirim.js script is now included directly below, as it was in the original file -->
