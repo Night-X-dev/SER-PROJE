@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
+        /* CSS stilleri burada kalacak */
         :root {
             /* Renk Paleti */
             --primary: #005c9d;
@@ -1351,8 +1352,13 @@
 
                     // Proje Yöneticilerini çek
                     const managersResponse = await fetch(`${API_BASE_URL}/api/project_managers`);
-                    if (!managersResponse.ok) throw new Error('Yöneticiler çekilemedi.');
+                    if (!managersResponse.ok) {
+                        const errorText = await managersResponse.text();
+                        console.error('Yöneticiler çekilemedi. Sunucu yanıtı:', managersResponse.status, errorText);
+                        throw new Error('Yöneticiler çekilemedi.');
+                    }
                     const managers = await managersResponse.json();
+                    console.log('Çekilen Proje Yöneticileri:', managers); // Debug için ekledim
 
                     projectManagerSelect.innerHTML = '<option value="">Yönetici Seçin</option>';
                     managers.forEach(manager => {
