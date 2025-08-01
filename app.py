@@ -22,7 +22,7 @@ CORS(app, resources={r"/*": {"origins": ["https://37.148.213.89:8000", "http://s
 @app.route('/welcome.html') # Both URLs will be directed to the same function
 def serve_login_page():
     """Directs root URL (/) and /login.html requests to the login.html page."""
-    return render_template('login.html')
+    return render_template('welcome.html')
 
 @app.route('/index.html')
 def serve_index_page():
