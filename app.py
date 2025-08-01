@@ -19,7 +19,7 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex") 
 CORS(app, resources={r"/*": {"origins": ["https://37.148.213.89:8000", "http://serotomasyon.tr"]}}, supports_credentials=True)
 @app.route('/')
-@app.route('/login.html') # Both URLs will be directed to the same function
+@app.route('welcome.html') # Both URLs will be directed to the same function
 def serve_login_page():
     """Directs root URL (/) and /login.html requests to the login.html page."""
     return render_template('login.html')
@@ -37,8 +37,25 @@ def serve_ayarlar_page():
         return redirect(url_for('serve_login_page'))
     # Allow all logged-in users to access the settings page
     return render_template('ayarlar.html')
-
-
+@app.route('/logout')
+def logout():
+    """
+    Clears the user session and redirects to welcome.html page.
+    """
+    session.clear()
+    return redirect(url_for('serve_welcome_page'))
+@app.route('/kablo_hesap.html')
+def serve_kablo_hesap_page():
+    """Directs /kablo_hesap.html requests to the kablo_hesap.html page."""
+    if 'user_id' not in session:
+        return redirect(url_for('serve_login_page'))
+    return render_template('kablo_hesap.html')
+@app.route('/kablo_hesap.html')
+def serve_kablo_hesap_page():
+    """Directs /kablo_hesap.html requests to the kablo_hesap.html page."""
+    if 'user_id' not in session:
+        return redirect(url_for('serve_login_page'))
+    return render_template('kablo_hesap.html')
 @app.route('/kayitonay.html')
 def serve_kayitonay_page():
     """Directs /kayitonay.html requests to the kayitonay.html page."""
