@@ -52,9 +52,8 @@ def serve_ayarlar_page():
 
 @app.route('/kablo_hesap.html')
 def serve_kablo_hesap_page():
-    """Directs /kablo_hesap.html requests to the kablo_hesap.html page."""
-    if 'user_id' not in session:
-        return redirect(url_for('serve_login_page'))
+    """Directs /kablo_hesap.html requests to the kablo_hesap.html page.
+    This page is now accessible without a login, based on user request."""
     return render_template('kablo_hesap.html')
 
 @app.route('/kayitonay.html')
