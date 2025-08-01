@@ -50,12 +50,6 @@ def serve_kablo_hesap_page():
     if 'user_id' not in session:
         return redirect(url_for('serve_login_page'))
     return render_template('kablo_hesap.html')
-@app.route('/kablo_hesap.html')
-def serve_kablo_hesap_page():
-    """Directs /kablo_hesap.html requests to the kablo_hesap.html page."""
-    if 'user_id' not in session:
-        return redirect(url_for('serve_login_page'))
-    return render_template('kablo_hesap.html')
 @app.route('/kayitonay.html')
 def serve_kayitonay_page():
     """Directs /kayitonay.html requests to the kayitonay.html page."""
