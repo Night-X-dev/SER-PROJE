@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kablo Kanalı Hesaplama ve Dizilim Aracı</title>
+    <!-- jsPDF kütüphanesi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- jsPDF-AutoTable eklentisi (tablo desteği için) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.14/jspdf.plugin.autotable.min.js"></script>
+    <!-- html2canvas kütüphanesi (görselleştirme ekran görüntüsü için) -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        /* Genel Sıfırlamalar ve Font */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto Mono', monospace, Arial, sans-serif; /* Daha teknik bir font */
+        }
+        
+        /* Body Stili */
+        body {
+            background: #2b2b2b; /* Koyu gri arka plan */
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* Ana Konteyner */
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: #3c3c3c; /* Daha açık gri konteyner */
+            border-radius: 4px; /* Daha keskin köşeler */
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4); /* Daha az belirgin gölge */
+            overflow: hidden;
+            border: 1px solid #4a4a4a;
+        }
+        
+        /* Başlık Alanı */
+        header {
+            background: #1e1e1e; /* Koyu başlık çubuğu */
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #4a4a4a;
+        }
+        
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #ffffff;
+            text-shadow: none; /* Gölge kaldırıldı */
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            color: #a0c8ff; /* Teknik mavi vurgu */
+            font-weight: 300;
+        }
+        
+        /* Ana İçerik Bölümü */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        @media (max-width: 900px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Panel Stili */
+        .panel {
+            background: #4a4a4a; /* Panel arka planı */
+            border-radius: 4px;
+            padding: 20px;
+            border: 1px solid #5a5a5a;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2); /* Daha az belirgin iç gölge */
+        }
+        
+        .panel-title {
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #007bff; /* Teknik mavi çizgi */
+            color: #007bff; /* Teknik mavi başlık */
+            display: flex;
+            align-items: center;
+        }
+        
+        .panel-title i {
+            margin-right: 10px;
+            font-size: 24px;
+        }
+        
+        .input-section {
+            margin-bottom: 20px;
+        }
+        
+        .cable-inputs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+            padding: 12px;
+            background: #5a5a5a; /* Giriş kutusu arka planı */
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .cable-inputs:hover {
+            background: #6a6a6a;
+        }
+        
+        /* Seçim Kutuları ve Giriş Alanları */
+        select, input {
+            background: #6a6a6a; /* Giriş arka planı */
+            color: #e0e0e0;
+            border: 1px solid #7a7a7a;
+            border-radius: 2px; /* Daha keskin köşeler */
+            padding: 10px;
+            outline: none;
+            transition: all 0.2s;
+        }
+        
+        select:focus, input:focus {
+            border-color: #007bff; /* Vurgu rengi */
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
+        }
+        
+        select {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .cable-count {
+            width: 80px;
+        }
+        
+        /* Buton Stilleri */
+        .remove-cable {
+            background: #dc3545; /* Kırmızı */
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        
+        .remove-cable:hover {
+            background: #c82333;
+            transform: scale(1.05); /* Hafif büyütme */
+        }
+        
+        button {
+            background: #007bff; /* Teknik mavi */
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none; /* Gölge kaldırıldı */
+        }
+        
+        button i {
+            margin-right: 8px;
+        }
+        
+        button:hover {
+            background: #0056b3; /* Koyu mavi */
+            transform: none; /* Transform kaldırıldı */
+            box-shadow: none; /* Gölge kaldırıldı */
+        }
+        
+        button:active {
+            transform: none;
+        }
+        
+        #add-cable {
+            background: #28a745; /* Yeşil */
+        }
+        
+        #add-cable:hover {
+            background: #218838;
+        }
+        
+        /* Parametre Bölümü */
+        .param-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .param-box {
+            background: #5a5a5a;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #007bff; /* Vurgu rengi */
+        }
+        
+        .param-box h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #007bff;
+        }
+        
+        /* Görselleştirme Alanı */
+        #visualization {
+            width: 100%;
+            height: 400px;
+            background: #ffffff; /* Beyaz arka plan */
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #7a7a7a;
+            margin-top: 20px;
+        }
+        
+        .channel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            bottom: 20px;
+            background: #f0f0f0; /* Kanal içi açık gri */
+            border: 2px solid #007bff; /* Kalın teknik mavi kenarlık */
+            box-sizing: border-box;
+            border-radius: 2px;
+            box-shadow: none; /* Gölge kaldırıldı */
+        }
+        
+        .channel-grid {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(to right, rgba(150, 150, 150, 0.1) 1px, transparent 1px), /* Çok soluk gri ızgara */
+                linear-gradient(to bottom, rgba(150, 150, 150, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        
+        .cable {
+            position: absolute;
+            border-radius: 50%; /* Kabloları yuvarlak yapar */
+            opacity: 0.9;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); /* Daha hafif gölge */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(0, 0, 0, 0.8); /* Kablo içindeki metin rengi */
+            font-size: 9px; /* Daha küçük font */
+            font-weight: bold;
+            text-shadow: none; /* Metin gölgesi kaldırıldı */
+            overflow: hidden;
+        }
+        
+        .cable:hover {
+            opacity: 1;
+            transform: scale(1.05);
+            z-index: 100;
+            box-shadow: 0 0 10px rgba(0, 123, 255, 0.5); /* Vurgu rengiyle parlar */
+        }
+        
+        .cable::after {
+            content: none; /* Parlaklık efekti kaldırıldı */
+        }
+        
+        /* Sonuç Bölümü */
+        .result-section {
+            background: #5a5a5a;
+            border-radius: 4px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .result-card {
+            background: #4a4a4a;
+            border-radius: 4px;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .result-card h3 {
+            font-size: 14px;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        
+        .result-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #28a745; /* Yeşil vurgu */
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .pdf-button {
+            background: #dc3545; /* Kırmızı */
+        }
+        
+        .pdf-button:hover {
+            background: #c82333;
+        }
+        
+        /* Mesaj Kutuları */
+        .message {
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .info-message {
+            background: rgba(0, 123, 255, 0.2);
+            border-left: 4px solid #007bff;
+            color: #a0d2ff;
+        }
+        
+        .warning-message {
+            background: rgba(220, 53, 69, 0.2);
+            border-left: 4px solid #dc3545;
+            color: #ffb8b8;
+        }
+        
+        /* Tablo Stili */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        
+        th {
+            background: #1e1e1e; /* Koyu tablo başlığı */
+            color: #007bff;
+            text-align: left;
+            padding: 12px 15px;
+            font-weight: 600;
+            border-bottom: 1px solid #5a5a5a;
+        }
+        
+        td {
+            padding: 10px 15px;
+            border-bottom: 1px solid #5a5a5a;
+        }
+        
+        tr:nth-child(even) {
+            background: #4a4a4a; /* Çift sıralar için farklı arka plan */
+        }
+        
+        .cable-color {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        
+        /* Lejant */
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+            padding: 10px;
+            background: #4a4a4a;
+            border-radius: 4px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+        }
+        
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 3px;
+            margin-right: 8px;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            border-top: 1px solid #4a4a4a;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        
+        /* Ölçü Çizgileri */
+        .dimension-label {
+            position: absolute;
+            background: #3c3c3c; /* Koyu arka plan */
+            color: #007bff; /* Teknik mavi metin */
+            padding: 2px 8px;
+            border-radius: 2px;
+            font-size: 11px; /* Daha küçük font */
+            font-weight: bold;
+            z-index: 50;
+            border: 1px solid #007bff;
+        }
+        
+        .dimension-line {
+            position: absolute;
+            background: #007bff; /* Teknik mavi çizgi */
+            z-index: 40;
+        }
+        
+        .horizontal-line {
+            height: 1px; /* Daha ince çizgi */
+        }
+        
+        .vertical-line {
+            width: 1px; /* Daha ince çizgi */
+        }
+        
+        .dimension-end {
+            position: absolute;
+            width: 4px; /* Daha küçük uçlar */
+            height: 4px;
+            border: 1px solid #007bff;
+            background: #007bff; /* Dolu uçlar */
+            z-index: 45;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>KABLO KANALI HESAPLAMA VE DİZİLİM ARACI</h1>
+            <div class="subtitle">Profesyonel Kablo Yönetimi ve Boyutlandırma Çözümü | Mustafa Öztürk</div>
+        </header>
+        
+        <div class="main-content">
+            <div class="panel">
+                <div class="panel-title">
+                    <i>📐</i> Kablo Bilgileri ve Parametreler
+                </div>
+                
+                <div class="input-section">
+                    <div id="cable-inputs-container">
+                        <div class="cable-inputs">
+                            <select class="cable-type">
+                                <option value="">-- Kablo Tipi Seçin --</option>
+                                <optgroup label="NYY Kablo">
+                                    <option value="3x2.5" data-diameter="12">3x2,5mm² (Ø12mm)</option>
+                                    <option value="4x2.5" data-diameter="12.6">4x2,5mm² (Ø12.6mm)</option>
+                                    <option value="4x4" data-diameter="14.8">4x4mm² (Ø14.8mm)</option>
+                                    <option value="4x6" data-diameter="16">4x6mm² (Ø16mm)</option>
+                                    <option value="4x10" data-diameter="18">4x10mm² (Ø18mm)</option>
+                                    <option value="4x16" data-diameter="21.5">4x16mm² (Ø21.5mm)</option>
+                                    <option value="3x16+10" data-diameter="21.5">3x16+10mm² (Ø21.5mm)</option>
+                                    <option value="3x25+16" data-diameter="25">3x25+16mm² (Ø25mm)</option>
+                                    <option value="3x35+16" data-diameter="27">3x35+16mm² (Ø27mm)</option>
+                                    <option value="3x50+25" data-diameter="31">3x50+25mm² (Ø31mm)</option>
+                                </optgroup>
+                                <optgroup label="YSLY Kablo">
+                                    <option value="2x0.75" data-diameter="5.5">2x0,75mm² (Ø5.5mm)</option>
+                                    <option value="3x0.75" data-diameter="6">3x0,75mm² (Ø6mm)</option>
+                                    <option value="4x0.75" data-diameter="6.5">4x0,75mm² (Ø6.5mm)</option>
+                                    <option value="5x0.75" data-diameter="7.3">5x0,75mm² (Ø7.3mm)</option>
+                                    <option value="6x0.75" data-diameter="7.9">6x0,75mm² (Ø7.9mm)</option>
+                                    <option value="12x0.75" data-diameter="10.5">12x0,75mm² (Ø10.5mm)</option>
+                                    <option value="18x0.75" data-diameter="12.3">18x0,75mm² (Ø12.3mm)</option>
+                                </optgroup>
+                                <optgroup label="LIYCY Kablo">
+                                    <option value="liyc_2x0.75" data-diameter="5.4">2x0,75mm² (Ø5.4mm)</option>
+                                    <option value="liyc_4x0.75" data-diameter="6.1">4x0,75mm² (Ø6.1mm)</option>
+                                    <option value="liyc_8x0.75" data-diameter="8.1">8x0,75mm² (Ø8.1mm)</option>
+                                    <option value="liyc_12x0.75" data-diameter="9.4">12x0,75mm² (Ø9.4mm)</option>
+                                </optgroup>
+                            </select>
+                            <input type="number" class="cable-count" value="1" min="1" max="20" placeholder="Adet">
+                            <button class="remove-cable">×</button>
+                        </div>
+                    </div>
+                    <button id="add-cable"><i>+</i> Kablo Ekle</button>
+                </div>
+                
+                <div class="param-section">
+                    <div class="param-box">
+                        <h3><i>⚙️</i> Doluluk Oranı</h3>
+                        <input type="number" id="fill-factor" value="40" min="10" max="60" step="5" style="width: 100%;"> %
+                    </div>
+                    
+                    <div class="param-box">
+                        <h3><i>📏</i> Kanal Boyutu</h3>
+                        <select id="channel-size" style="width: 100%;">
+                            <option value="50x40">50x40 mm</option>
+                            <option value="75x40">75x40 mm</option>
+                            <option value="100x40">100x40 mm</option>
+                            <option value="150x40">150x40 mm</option>
+                            <option value="100x60">100x60 mm</option>
+                            <option value="150x60">150x60 mm</option>
+                            <option value="200x60">200x60 mm</option>
+                            <option value="250x60">250x60 mm</option>
+                            <option value="300x60">300x60 mm</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 10px;">
+                    <button id="calculate"><i>🧮</i> HESAPLA VE DİZ</button>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <div class="panel-title">
+                    <i>🔍</i> Sonuçlar ve Görselleştirme
+                </div>
+                
+                <div class="result-section">
+                    <div class="result-grid">
+                        <div class="result-card">
+                            <h3>Gerekli Kanal Alanı</h3>
+                            <div class="result-value">-</div>
+                        </div>
+                        <div class="result-card">
+                            <h3>Seçilen Kanal</h3>
+                            <div class="result-value">-</div>
+                        </div>
+                        <div class="result-card">
+                            <h3>Doluluk Oranı</h3>
+                            <div class="result-value">-</div>
+                        </div>
+                        <div class="result-card">
+                            <h3>Kablo Sayısı</h3>
+                            <div class="result-value">-</div>
+                        </div>
+                    </div>
+                    
+                    <div id="visualization">
+                        <div class="channel">
+                            <div class="channel-grid"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="info-message" class="message info-message"></div>
+                    <div id="warning-message" class="message warning-message"></div>
+                    
+                    <div class="action-buttons">
+                        <button id="export-pdf" class="pdf-button"><i>📄</i> PDF RAPOR OLUŞTUR</button>
+                        <button id="reset"><i>🔄</i> SIFIRLA</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel" style="margin: 20px;">
+            <div class="panel-title">
+                <i>📊</i> Detaylı Kablo Listesi
+            </div>
+            
+            <table id="cable-table">
+                <thead>
+                    <tr>
+                        <th>Kablo Tipi</th>
+                        <th>Çap (mm)</th>
+                        <th>Adet</th>
+                        <th>Toplam Alan (mm²)</th>
+                        <th>Renk Kodu</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Kablo listesi buraya eklenecek -->
+                </tbody>
+            </table>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #007bff;"></div>
+                    <span>Büyük Kablolar (>15mm)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #28a745;"></div>
+                    <span>Orta Kablolar (8-15mm)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #dc3545;"></div>
+                    <span>Küçük Kablolar (<8mm)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #6f42c1;"></div>
+                    <span>Özel Kablolar</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            © SER Elektrik Tüm hakları saklıdır. | Mustafa Öztürk
+        </div>
+    </div>
+
+    <script>
+        // Kablo veritabanı
+        const cableDatabase = {
+            "3x2.5": { name: "NYY 3x2,5mm²", diameter: 12, color: "#007bff" }, /* Teknik mavi */
+            "4x2.5": { name: "NYY 4x2,5mm²", diameter: 12.6, color: "#007bff" },
+            "4x4": { name: "NYY 4x4mm²", diameter: 14.8, color: "#007bff" },
+            "4x6": { name: "NYY 4x6mm²", diameter: 16, color: "#007bff" },
+            "4x10": { name: "NYY 4x10mm²", diameter: 18, color: "#007bff" },
+            "4x16": { name: "NYY 4x16mm²", diameter: 21.5, color: "#007bff" },
+            "3x16+10": { name: "NYY 3x16+10mm²", diameter: 21.5, color: "#007bff" },
+            "3x25+16": { name: "NYY 3x25+16mm²", diameter: 25, color: "#007bff" },
+            "3x35+16": { name: "NYY 3x35+16mm²", diameter: 27, color: "#007bff" },
+            "3x50+25": { name: "NYY 3x50+25mm²", diameter: 31, color: "#007bff" },
+            
+            "2x0.75": { name: "YSLY 2x0,75mm²", diameter: 5.5, color: "#dc3545" }, /* Kırmızı */
+            "3x0.75": { name: "YSLY 3x0,75mm²", diameter: 6, color: "#dc3545" },
+            "4x0.75": { name: "YSLY 4x0,75mm²", diameter: 6.5, color: "#dc3545" },
+            "5x0.75": { name: "YSLY 5x0,75mm²", diameter: 7.3, color: "#dc3545" },
+            "6x0.75": { name: "YSLY 6x0,75mm²", diameter: 7.9, color: "#dc3545" },
+            "12x0.75": { name: "YSLY 12x0,75mm²", diameter: 10.5, color: "#28a745" }, /* Yeşil */
+            "18x0.75": { name: "YSLY 18x0,75mm²", diameter: 12.3, color: "#28a745" },
+            
+            "liyc_2x0.75": { name: "LIYCY 2x0,75mm²", diameter: 5.4, color: "#6f42c1" }, /* Mor */
+            "liyc_4x0.75": { name: "LIYCY 4x0,75mm²", diameter: 6.1, color: "#6f42c1" },
+            "liyc_8x0.75": { name: "LIYCY 8x0,75mm²", diameter: 8.1, color: "#6f42c1" },
+            "liyc_12x0.75": { name: "LIYCY 12x0,75mm²", diameter: 9.4, color: "#6f42c1" }
+        };
+
+        /**
+         * Kabloları kanal içinde fizik kurallarına (yerçekimi) uygun şekilde yerleştirir.
+         * Kablolar, kanalın en altından başlayarak, altlarındaki diğer kabloların veya kanal tabanının üzerine yerleşir.
+         * @param {Array<Object>} cables - Yerleştirilecek kablo nesnelerinin listesi. Her nesne { diameter, color } içermelidir.
+         * @param {number} channelWidth - Kanalın gerçek genişliği (mm).
+         * @param {number} channelHeight - Kanalın gerçek yüksekliği (mm).
+         * @param {number} scale - Görselleştirme için kullanılan ölçek faktörü (piksel/mm).
+         */
+        function placeCables(cables, channelWidth, channelHeight, scale) {
+            const visualization = document.getElementById('visualization');
+            const channel = visualization.querySelector('.channel');
+            channel.innerHTML = '<div class="channel-grid"></div>'; // Izgarayı sıfırla
+
+            // Kanal div'inin gerçek piksel boyutlarını al
+            const actualChannelWidthPx = channel.clientWidth;
+            const actualChannelHeightPx = channel.clientHeight;
+
+            // Kabloları çapa göre büyükten küçüğe sırala (daha iyi paketleme için)
+            cables.sort((a, b) => b.diameter - a.diameter);
+
+            let placedCables = []; // Başarılı bir şekilde yerleştirilen kabloların listesi
+
+            // Her bir kabloyu yerleştirmeye çalış
+            cables.forEach(cable => {
+                const r = (cable.diameter * scale) / 2; // Kablonun ölçeklendirilmiş yarıçapı
+                let bestY = -1; // Kablonun merkezi için en iyi Y koordinatı (kanalın altından ölçülür)
+                let bestX = -1; // Kablonun merkezi için en iyi X koordinatı
+
+                // Kanal genişliği boyunca uygun bir yer bulmaya çalış
+                for (let x = r; x <= actualChannelWidthPx - r; x += 1) { // 1 piksellik adımlarla tara
+                    let y = r; // Kablonun merkezi için başlangıç Y pozisyonu (kanalın tabanından).
+
+                    let stable = false; // Kablonun stabil bir yere oturup oturmadığını kontrol eder
+
+                    while (!stable && y <= actualChannelHeightPx - r) {
+                        stable = true; // Varsayılan olarak stabil kabul et
+
+                        // Daha önce yerleştirilmiş tüm kablolar ile çarpışmayı kontrol et
+                        for (let placed of placedCables) {
+                            const dx = x - placed.x; // X eksenindeki fark
+                            const dy = y - placed.y; // Y eksenindeki fark
+                            const dist = Math.sqrt(dx * dx + dy * dy); // Merkezler arası mesafe
+
+                            if (dist < r + placed.r - 0.5) { // Çarpışma var, kabloyu yukarı kaydır
+                                y = placed.y + Math.sqrt(Math.max(0, (r + placed.r) ** 2 - dx ** 2));
+                                stable = false; // Kablo hala stabil değil, tekrar kontrol et
+                                break; // Diğer yerleştirilmiş kabloları kontrol etmeye gerek yok, pozisyon değişti
+                            }
+                        }
+                        // Eğer kablonun alt kenarı kanalın tabanından daha aşağı düşmeye çalışıyorsa, tabana oturt.
+                        if (y < r) {
+                            y = r;
+                            stable = false;
+                        }
+                    }
+
+                    // Eğer kablo kanalın yüksekliği içinde kalıyorsa ve bu pozisyon daha iyiyse kaydet
+                    if (y + r <= actualChannelHeightPx) {
+                        if (bestY === -1 || y < bestY) {
+                            bestY = y;
+                            bestX = x;
+                        }
+                    }
+                }
+
+                // Eğer kablo için uygun bir yer bulunduysa, yerleştirilen kablolar listesine ekle
+                if (bestX !== -1) {
+                    placedCables.push({
+                        x: bestX,
+                        y: bestY,
+                        r: r,
+                        color: cable.color,
+                        diameter: cable.diameter // Store original diameter for display
+                    });
+                }
+            });
+
+            // Yerleştirilen kabloları çiz
+            placedCables.forEach(cable => {
+                const div = document.createElement('div');
+                div.className = 'cable';
+                const diameterPx = cable.r * 2; // Çap = 2 * yarıçap
+
+                // CSS 'left' ve 'top' değerleri, kablonun sol üst köşesinden ölçülür.
+                // 'cable.x' ve 'cable.y' kablonun merkezidir.
+                // 'cable.x - cable.r' sol kenarı verir.
+                // 'actualChannelHeightPx - (cable.y + cable.r)' alt kenarı kanalın tabanına oturtur.
+                let left = cable.x - cable.r;
+                let top = actualChannelHeightPx - (cable.y + cable.r);
+
+                // Görsel sınırları içinde kalmasını sağla
+                left = Math.max(0, Math.min(actualChannelWidthPx - diameterPx, left));
+                top = Math.max(0, Math.min(actualChannelHeightPx - diameterPx, top));
+
+                div.style.width = `${diameterPx}px`;
+                div.style.height = `${diameterPx}px`;
+                div.style.left = `${left}px`;
+                div.style.top = `${top}px`;
+                div.style.backgroundColor = cable.color;
+                div.textContent = `${(cable.diameter / scale).toFixed(0)}mm`; // Gerçek çapı göster
+                channel.appendChild(div);
+            });
+
+            // Kalan kablolar için uyarı
+            const totalRequestedCables = cables.length;
+            if (placedCables.length < totalRequestedCables) {
+                const warningMessage = document.getElementById('warning-message');
+                warningMessage.style.display = 'block';
+                warningMessage.textContent = `Uyarı: ${totalRequestedCables - placedCables.length} kablo kanala sığmadı. Daha büyük bir kanal seçin.`;
+            } else {
+                document.getElementById('warning-message').style.display = 'none';
+            }
+
+            // Ölçü çizgileri ekle
+            addDimensionLines(channelWidth, channelHeight, scale);
+        }
+        
+        /**
+         * Kanalın genişlik ve yükseklik ölçü çizgilerini görselleştirme alanına ekler.
+         * @param {number} width - Kanalın gerçek genişliği (mm).
+         * @param {number} height - Kanalın gerçek yüksekliği (mm).
+         * @param {number} scale - Görselleştirme için kullanılan ölçek faktörü (piksel/mm).
+         */
+        function addDimensionLines(width, height, scale) {
+            const channel = document.querySelector('.channel');
+            const offset = 20; // Kanal kenarından uzaklık
+            
+            // Önceki ölçü çizgilerini temizle
+            channel.querySelectorAll('.dimension-line, .dimension-end, .dimension-label').forEach(el => el.remove());
+
+            // Yatay çizgi (genişlik)
+            const hLine = document.createElement('div');
+            hLine.className = 'dimension-line horizontal-line';
+            hLine.style.width = `${width * scale}px`;
+            hLine.style.top = `-${offset}px`;
+            hLine.style.left = '0';
+            channel.appendChild(hLine);
+            
+            // Yatay çizgi uçları
+            const hEnd1 = document.createElement('div');
+            hEnd1.className = 'dimension-end';
+            hEnd1.style.left = '0';
+            hEnd1.style.top = `-${offset}px`;
+            channel.appendChild(hEnd1);
+            
+            const hEnd2 = document.createElement('div');
+            hEnd2.className = 'dimension-end';
+            hEnd2.style.right = '0';
+            hEnd2.style.top = `-${offset}px`;
+            channel.appendChild(hEnd2);
+            
+            // Yatay ölçü etiketi
+            const hLabel = document.createElement('div');
+            hLabel.className = 'dimension-label';
+            hLabel.textContent = `${width} mm`;
+            hLabel.style.top = `-${offset + 10}px`;
+            hLabel.style.left = '50%';
+            hLabel.style.transform = 'translateX(-50%)';
+            channel.appendChild(hLabel);
+            
+            // Dikey çizgi (yükseklik)
+            const vLine = document.createElement('div');
+            vLine.className = 'dimension-line vertical-line';
+            vLine.style.height = `${height * scale}px`;
+            vLine.style.left = `-${offset}px`;
+            vLine.style.top = '0';
+            channel.appendChild(vLine);
+            
+            // Dikey çizgi uçları
+            const vEnd1 = document.createElement('div');
+            vEnd1.className = 'dimension-end';
+            vEnd1.style.left = `-${offset}px`;
+            vEnd1.style.top = '0';
+            channel.appendChild(vEnd1);
+            
+            const vEnd2 = document.createElement('div');
+            vEnd2.className = 'dimension-end';
+            vEnd2.style.left = `-${offset}px`;
+            vEnd2.style.bottom = '0';
+            channel.appendChild(vEnd2);
+            
+            // Dikey ölçü etiketi
+            const vLabel = document.createElement('div');
+            vLabel.className = 'dimension-label';
+            vLabel.textContent = `${height} mm`;
+            vLabel.style.left = `-${offset + 10}px`;
+            vLabel.style.top = '50%';
+            vLabel.style.transform = 'translateY(-50%) rotate(-90deg)';
+            channel.appendChild(vLabel);
+        }
+        
+        // Hesaplama fonksiyonu
+        function calculate() {
+            const cableSelects = document.querySelectorAll('.cable-type');
+            const cableCounts = document.querySelectorAll('.cable-count');
+            const fillFactor = parseFloat(document.getElementById('fill-factor').value) / 100;
+            const channelSize = document.getElementById('channel-size').value.split('x');
+            const channelWidth = parseInt(channelSize[0]);
+            const channelHeight = parseInt(channelSize[1]);
+            
+            let cables = [];
+            let totalArea = 0;
+            let maxCableDiameter = 0;
+            let cableCount = 0;
+            
+            // Kabloları topla
+            cableSelects.forEach((select, index) => {
+                if (select.value) {
+                    const diameter = parseFloat(select.selectedOptions[0].getAttribute('data-diameter'));
+                    const count = parseInt(cableCounts[index].value) || 1;
+                    const area = Math.PI * Math.pow(diameter/2, 2) * count;
+                    
+                    cables.push({
+                        id: select.value,
+                        name: cableDatabase[select.value].name,
+                        diameter: diameter,
+                        color: cableDatabase[select.value].color,
+                        count: count,
+                        area: area
+                    });
+                    
+                    totalArea += area;
+                    cableCount += count;
+                    
+                    // En büyük kablo çapını bul
+                    if (diameter > maxCableDiameter) {
+                        maxCableDiameter = diameter;
+                    }
+                }
+            });
+            
+            if (cables.length === 0) {
+                // Özel bir modal veya mesaj kutusu kullanın, alert() kullanmayın
+                const warningMessage = document.getElementById('warning-message');
+                warningMessage.style.display = 'block';
+                warningMessage.textContent = "Lütfen en az bir kablo tipi seçin!";
+                return;
+            }
+            
+            // Gerekli kanal alanını hesapla
+            const requiredArea = totalArea / fillFactor;
+            const actualArea = channelWidth * channelHeight;
+            const actualFillFactor = (totalArea / actualArea) * 100;
+            
+            // Sonuçları güncelle
+            document.querySelectorAll('.result-value')[0].textContent = `${Math.ceil(requiredArea)} mm²`;
+            document.querySelectorAll('.result-value')[1].textContent = `${channelWidth}x${channelHeight} mm`;
+            document.querySelectorAll('.result-value')[2].textContent = `${actualFillFactor.toFixed(1)}%`;
+            document.querySelectorAll('.result-value')[3].textContent = cableCount;
+            
+            // Kablo tablosunu güncelle
+            const tableBody = document.querySelector('#cable-table tbody');
+            tableBody.innerHTML = '';
+            
+            cables.forEach(cable => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><span class="cable-color" style="background:${cable.color}"></span> ${cable.name}</td>
+                    <td>${cable.diameter}</td>
+                    <td>${cable.count}</td>
+                    <td>${cable.area.toFixed(2)}</td>
+                    <td><span style="color:${cable.color}">${cable.color.toUpperCase()}</span></td>
+                `;
+                tableBody.appendChild(row);
+            });
+            
+            // Kabloları yerleştir
+            const visualization = document.getElementById('visualization');
+            // Kanalın kenar boşluklarını hesaba kat
+            const channelPadding = 40; // 20px sol + 20px sağ
+            const scale = Math.min(
+                (visualization.offsetWidth - channelPadding) / channelWidth,
+                (visualization.offsetHeight - channelPadding) / channelHeight
+            );
+            
+            // Tek tek kabloları oluştur
+            let allCables = [];
+            cables.forEach(cable => {
+                for (let i = 0; i < cable.count; i++) {
+                    allCables.push({
+                        name: cable.name,
+                        diameter: cable.diameter,
+                        color: cable.color
+                    });
+                }
+            });
+            
+            placeCables(allCables, channelWidth, channelHeight, scale);
+            
+            // Bilgi mesajı
+            if (actualFillFactor > fillFactor * 100) {
+                const infoMessage = document.getElementById('info-message');
+                infoMessage.style.display = 'block';
+                infoMessage.textContent = `Dikkat: Doluluk oranı %${(fillFactor*100).toFixed(0)}'den yüksek (%${actualFillFactor.toFixed(1)}). Daha büyük bir kanal seçmeniz önerilir.`;
+            } else {
+                document.getElementById('info-message').style.display = 'none';
+            }
+        }
+        
+        // PDF için Türkçe destekli font'u base64 olarak gömmeniz lazım.
+        // Örnek: https://github.com/dejavu-fonts/dejavu/blob/master/ttf/DejaVuSans.ttf indirip base64'e çevirin:
+        // Linux/Mac: base64 DejaVuSans.ttf | tr -d '\\n' > font.txt
+        // Ardından font.txt içeriğini aşağıya yapıştırın.
+        // ÖNEMLİ: Bu değişkeni gerçek Base64 string ile doldurmanız gerekmektedir.
+        // Aksi takdirde, Türkçe karakterler düzgün görüntülenmeyebilir.
+        const turkishFontBase64 = "BURAYA_DEJAVU_SANS_TTF_BASE64_STRING_GELECEK"; // Örnek uzun bir base64 string
+
+        function loadTurkishFont(doc) {
+            try {
+                if (turkishFontBase64 && !turkishFontBase64.startsWith("BURAYA")) {
+                    doc.addFileToVFS("DejaVuSans.ttf", turkishFontBase64);
+                    doc.addFont("DejaVuSans.ttf", "DejaVuSans", "normal");
+                    doc.setFont("DejaVuSans");
+                } else {
+                    // Placeholder bırakılmışsa veya boşsa varsayılanla devam eder
+                    console.warn("Turkish font Base64 string eksik veya hatalı. Varsayılan 'helvetica' fontu kullanılacak. Türkçe karakterlerde sorun yaşanabilir.");
+                    doc.setFont("helvetica");
+                }
+            } catch (e) {
+                console.warn("Font yüklenirken bir hata oluştu, varsayılan font kullanılacak.", e);
+                doc.setFont("helvetica");
+            }
+        }
+
+        // Türkçe karakterleri İngilizce eşdeğerlerine çeviren yardımcı fonksiyon
+        function convertToEnglishChars(text) {
+            if (typeof text !== 'string') return text;
+            return text
+                .replace(/İ/g, 'I')
+                .replace(/ı/g, 'i')
+                .replace(/Ğ/g, 'G')
+                .replace(/ğ/g, 'g')
+                .replace(/Ü/g, 'U')
+                .replace(/ü/g, 'u')
+                .replace(/Ş/g, 'S')
+                .replace(/ş/g, 's')
+                .replace(/Ö/g, 'O')
+                .replace(/ö/g, 'o')
+                .replace(/Ç/g, 'C')
+                .replace(/ç/g, 'c');
+        }
+
+        // PDF oluşturma fonksiyonu
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            loadTurkishFont(doc); // Fontu yükle
+            
+            // Başlık
+            doc.setFontSize(18);
+            doc.setTextColor(30, 50, 80);
+            doc.text(convertToEnglishChars('KABLO KANALI HESAP RAPORU'), 105, 20, { align: 'center' });
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text(convertToEnglishChars(`Oluşturulma Tarihi: ${new Date().toLocaleDateString('tr-TR')}`), 105, 26, { align: 'center' });
+            
+            // Sonuçlar
+            doc.setFontSize(14);
+            doc.setTextColor(30, 50, 80);
+            doc.text(convertToEnglishChars('Hesaplama Sonuçları'), 20, 35);
+            
+            doc.setFontSize(10);
+            let y = 43; // Başlangıç Y pozisyonu
+            const results = [
+                [`Gerekli Kanal Alanı`, document.querySelectorAll('.result-value')[0].textContent],
+                [`Seçilen Kanal`, document.querySelectorAll('.result-value')[1].textContent],
+                [`Doluluk Oranı`, document.querySelectorAll('.result-value')[2].textContent],
+                [`Toplam Kablo Sayısı`, document.querySelectorAll('.result-value')[3].textContent]
+            ];
+            
+            results.forEach(([label, value]) => {
+                doc.setTextColor(0, 0, 0);
+                doc.text(convertToEnglishChars(`${label}:`), 25, y);
+                doc.setTextColor(0, 123, 255); /* Teknik mavi */
+                doc.text(convertToEnglishChars(value), 80, y); // Değerin başlangıç pozisyonunu ayarla
+                y += 7; // Her satır arasında daha fazla boşluk
+            });
+            
+            // Kablo listesi
+            doc.setFontSize(12);
+            doc.setTextColor(30, 50, 80);
+            doc.text(convertToEnglishChars('Kablo Listesi'), 20, y + 10); // Tablo başlığı ile sonuçlar arasına daha fazla boşluk
+            
+            const headers = ['Kablo Tipi', 'Cap (mm)', 'Adet', 'Alan (mm2)'].map(convertToEnglishChars); // Başlıkları da çevir
+            const rows = [];
+            
+            document.querySelectorAll('#cable-table tbody tr').forEach(row => {
+                const cells = Array.from(row.querySelectorAll('td')).slice(0, 4);
+                rows.push(cells.map(cell => convertToEnglishChars(cell.textContent.trim()))); // Hücre içeriklerini de çevir
+            });
+            
+            doc.autoTable({
+                startY: y + 14, // Tablonun başlangıç Y pozisyonunu ayarla
+                head: [headers],
+                body: rows,
+                theme: 'grid',
+                headStyles: { fillColor: [30, 50, 80], textColor: 255 },
+                styles: { font: doc.getFont().fontName, fontSize: 9, cellPadding: 2 }, // Fontu ve hücre dolgusunu ayarla
+                columnStyles: {
+                    0: { cellWidth: 60 },
+                    1: { cellWidth: 25 },
+                    2: { cellWidth: 20 },
+                    3: { cellWidth: 30 }
+                },
+                margin: { left: 15, right: 15 }
+            });
+            
+            // Görselleştirme
+            html2canvas(document.getElementById('visualization'), { scale: 2 }).then(canvas => { // scale: 2 eklendi
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = 150;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                const pageHeight = doc.internal.pageSize.getHeight();
+                
+                let imgY = doc.autoTable.previous ? doc.autoTable.previous.finalY + 10 : y + 30; // Tablo sonrası veya sonuçlar sonrası konum
+                if (imgY + imgHeight > pageHeight - 20) {
+                    doc.addPage();
+                    imgY = 20;
+                }
+                
+                doc.addImage(imgData, 'PNG', 30, imgY, imgWidth, imgHeight);
+                // Dipnot
+                doc.setFontSize(8);
+                doc.setTextColor(100, 100, 100);
+                doc.text(convertToEnglishChars('© SER Elektrik Tüm hakları saklıdır. | Mustafa Öztürk'), 105, 290, { align: 'center' });
+                
+                // PDF'i indir
+                doc.save(`kablo-kanali-raporu-${new Date().toISOString().slice(0, 10)}.pdf`);
+            });
+        }
+        
+        // Sayfa yüklendiğinde
+        document.addEventListener('DOMContentLoaded', function() {
+            // Kablo ekleme butonu
+            document.getElementById('add-cable').addEventListener('click', function() {
+                const container = document.getElementById('cable-inputs-container');
+                const div = document.createElement('div');
+                div.className = 'cable-inputs';
+                div.innerHTML = `
+                    <select class="cable-type">
+                        <option value="">-- Kablo Tipi Seçin --</option>
+                        <optgroup label="NYY Kablo">
+                            <option value="3x2.5" data-diameter="12">3x2,5mm² (Ø12mm)</option>
+                            <option value="4x2.5" data-diameter="12.6">4x2,5mm² (Ø12.6mm)</option>
+                            <option value="4x4" data-diameter="14.8">4x4mm² (Ø14.8mm)</option>
+                            <option value="4x6" data-diameter="16">4x6mm² (Ø16mm)</option>
+                            <option value="4x10" data-diameter="18">4x10mm² (Ø18mm)</option>
+                            <option value="4x16" data-diameter="21.5">4x16mm² (Ø21.5mm)</option>
+                            <option value="3x16+10" data-diameter="21.5">3x16+10mm² (Ø21.5mm)</option>
+                            <option value="3x25+16" data-diameter="25">3x25+16mm² (Ø25mm)</option>
+                            <option value="3x35+16" data-diameter="27">3x35+16mm² (Ø27mm)</option>
+                            <option value="3x50+25" data-diameter="31">3x50+25mm² (Ø31mm)</option>
+                        </optgroup>
+                        <optgroup label="YSLY Kablo">
+                            <option value="2x0.75" data-diameter="5.5">2x0,75mm² (Ø5.5mm)</option>
+                            <option value="3x0.75" data-diameter="6">3x0,75mm² (Ø6mm)</option>
+                            <option value="4x0.75" data-diameter="6.5">4x0,75mm² (Ø6.5mm)</option>
+                            <option value="5x0.75" data-diameter="7.3">5x0,75mm² (Ø7.3mm)</option>
+                            <option value="6x0.75" data-diameter="7.9">6x0,75mm² (Ø7.9mm)</option>
+                            <option value="12x0.75" data-diameter="10.5">12x0,75mm² (Ø10.5mm)</option>
+                            <option value="18x0.75" data-diameter="12.3">18x0,75mm² (Ø12.3mm)</option>
+                        </optgroup>
+                        <optgroup label="LIYCY Kablo">
+                            <option value="liyc_2x0.75" data-diameter="5.4">2x0,75mm² (Ø5.4mm)</option>
+                            <option value="liyc_4x0.75" data-diameter="6.1">4x0,75mm² (Ø6.1mm)</option>
+                            <option value="liyc_8x0.75" data-diameter="8.1">8x0,75mm² (Ø8.1mm)</option>
+                            <option value="liyc_12x0.75" data-diameter="9.4">12x0,75mm² (Ø9.4mm)</option>
+                        </optgroup>
+                    </select>
+                    <input type="number" class="cable-count" value="1" min="1" max="20" placeholder="Adet">
+                    <button class="remove-cable">×</button>
+                `;
+                container.appendChild(div);
+            });
+            
+            // Sil butonları için event delegation
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('remove-cable')) {
+                    const inputs = document.querySelectorAll('.cable-inputs');
+                    if (inputs.length > 1) {
+                        e.target.closest('.cable-inputs').remove();
+                    } else {
+                        // Özel bir modal veya mesaj kutusu kullanın, alert() kullanmayın
+                        const warningMessage = document.getElementById('warning-message');
+                        warningMessage.style.display = 'block';
+                        warningMessage.textContent = "En az bir kablo girişi olmalıdır!";
+                    }
+                }
+            });
+            
+            // Hesapla butonu
+            document.getElementById('calculate').addEventListener('click', calculate);
+            
+            // PDF oluştur butonu
+            document.getElementById('export-pdf').addEventListener('click', exportToPDF);
+            
+            // Sıfırla butonu
+            document.getElementById('reset').addEventListener('click', function() {
+                const container = document.getElementById('cable-inputs-container');
+                container.innerHTML = '';
+                
+                // İlk kablo girişini ekle
+                const div = document.createElement('div');
+                div.className = 'cable-inputs';
+                div.innerHTML = `
+                    <select class="cable-type">
+                        <option value="">-- Kablo Tipi Seçin --</option>
+                        <optgroup label="NYY Kablo">
+                            <option value="3x2.5" data-diameter="12">3x2,5mm² (Ø12mm)</option>
+                            <option value="4x2.5" data-diameter="12.6">4x2,5mm² (Ø12.6mm)</option>
+                            <option value="4x4" data-diameter="14.8">4x4mm² (Ø14.8mm)</option>
+                            <option value="4x6" data-diameter="16">4x6mm² (Ø16mm)</option>
+                            <option value="4x10" data-diameter="18">4x10mm² (Ø18mm)</option>
+                            <option value="4x16" data-diameter="21.5">4x16mm² (Ø21.5mm)</option>
+                            <option value="3x16+10" data-diameter="21.5">3x16+10mm² (Ø21.5mm)</option>
+                            <option value="3x25+16" data-diameter="25">3x25+16mm² (Ø25mm)</option>
+                            <option value="3x35+16" data-diameter="27">3x35+16mm² (Ø27mm)</option>
+                            <option value="3x50+25" data-diameter="31">3x50+25mm² (Ø31mm)</option>
+                        </optgroup>
+                        <optgroup label="YSLY Kablo">
+                            <option value="2x0.75" data-diameter="5.5">2x0,75mm² (Ø5.5mm)</option>
+                            <option value="3x0.75" data-diameter="6">3x0,75mm² (Ø6mm)</option>
+                            <option value="4x0.75" data-diameter="6.5">4x0,75mm² (Ø6.5mm)</option>
+                            <option value="5x0.75" data-diameter="7.3">5x0,75mm² (Ø7.3mm)</option>
+                            <option value="6x0.75" data-diameter="7.9">6x0,75mm² (Ø7.9mm)</option>
+                            <option value="12x0.75" data-diameter="10.5">12x0,75mm² (Ø10.5mm)</option>
+                            <option value="18x0.75" data-diameter="12.3">18x0,75mm² (Ø12.3mm)</option>
+                        </optgroup>
+                        <optgroup label="LIYCY Kablo">
+                            <option value="liyc_2x0.75" data-diameter="5.4">2x0,75mm² (Ø5.4mm)</option>
+                            <option value="liyc_4x0.75" data-diameter="6.1">4x0,75mm² (Ø6.1mm)</option>
+                            <option value="liyc_8x0.75" data-diameter="8.1">8x0,75mm² (Ø8.1mm)</option>
+                            <option value="liyc_12x0.75" data-diameter="9.4">12x0,75mm² (Ø9.4mm)</option>
+                        </optgroup>
+                    </select>
+                    <input type="number" class="cable-count" value="1" min="1" max="20" placeholder="Adet">
+                    <button class="remove-cable">×</button>
+                `;
+                container.appendChild(div);
+                
+                // Diğer alanları sıfırla
+                document.getElementById('fill-factor').value = 40;
+                document.getElementById('channel-size').value = '100x40';
+                
+                // Sonuçları sıfırla
+                document.querySelectorAll('.result-value').forEach(el => {
+                    el.textContent = '-';
+                });
+                
+                // Tabloyu sıfırla
+                document.querySelector('#cable-table tbody').innerHTML = '';
+                
+                // Mesajları kaldır
+                document.getElementById('info-message').style.display = 'none';
+                document.getElementById('warning-message').style.display = 'none';
+                
+                // Görselleştirmeyi sıfırla
+                const channel = document.querySelector('.channel');
+                channel.innerHTML = '<div class="channel-grid"></div>';
+            });
+        });
+    </script>
+</body>
+</html>

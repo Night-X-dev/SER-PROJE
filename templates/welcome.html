@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SER Elektrik Otomasyon</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            overflow: hidden;
+            background: linear-gradient(135deg, #0a0a0a 0%, #000000 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            position: relative;
+        }
+        
+        /* Elektrik efekti */
+        .electricity {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        
+        .electricity::before {
+            content: '';
+            position: absolute;
+            top: -100%;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0.1) 100%);
+            animation: electricity 8s linear infinite;
+        }
+        
+        @keyframes electricity {
+            0% { top: -100%; }
+            100% { top: 100%; }
+        }
+        
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .split {
+            flex: 1;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-decoration: none;
+            color: white;
+            background-color: #000;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .split-left {
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            position: relative;
+            z-index: 2;
+            padding: 20px;
+            max-width: 90%;
+        }
+        
+        .split h2 {
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+        
+        .split p {
+            font-size: 1.4rem;
+            margin-bottom: 2.5rem;
+            max-width: 500px;
+            font-weight: 300;
+            transition: all 0.3s ease;
+            color: #aaa;
+        }
+        
+        .btn {
+            padding: 15px 45px;
+            font-size: 1.2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+            backdrop-filter: blur(5px);
+        }
+        
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .split:hover {
+            flex: 1.2;
+        }
+        
+        .split::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+            pointer-events: none;
+            border-radius: 50%;
+            transition: all 1.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+        
+        .split-left::after {
+            background: radial-gradient(circle, rgba(255, 140, 0, 0.3) 0%, transparent 70%);
+        }
+        
+        .split-right::after {
+            background: radial-gradient(circle, rgba(0, 191, 255, 0.3) 0%, transparent 70%);
+        }
+        
+        .split:hover::after {
+            width: 600px;
+            height: 600px;
+            opacity: 1;
+        }
+        
+        .split-left:hover {
+            background: radial-gradient(circle at center, rgba(255, 140, 0, 0.1) 0%, rgba(0,0,0,0) 70%);
+        }
+        
+        .split-right:hover {
+            background: radial-gradient(circle at center, rgba(0, 191, 255, 0.1) 0%, rgba(0,0,0,0) 70%);
+        }
+        
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .split-left .icon {
+            color: #ff8c00;
+            text-shadow: 0 0 15px rgba(255, 140, 0, 0.5);
+        }
+        
+        .split-right .icon {
+            color: #00bfff;
+            text-shadow: 0 0 15px rgba(0, 191, 255, 0.5);
+        }
+        
+        .split:hover .icon {
+            transform: scale(1.2);
+        }
+        
+        .split:hover h2 {
+            text-shadow: 0 0 20px;
+        }
+        
+        .split:hover p {
+            color: #fff;
+        }
+        
+        .header {
+            position: absolute;
+            top: 40px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            z-index: 10;
+        }
+        
+        .header h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            color: #bbb;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .footer {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            z-index: 10;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .logo {
+            position: absolute;
+            top: 20px;
+            left: 30px;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo img {
+            height: 50px;
+            filter: drop-shadow(0 0 8px rgba(255, 140, 0, 0.5));
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .split {
+                height: 50vh;
+            }
+            
+            .split h2 {
+                font-size: 2.5rem;
+            }
+            
+            .split p {
+                font-size: 1.1rem;
+            }
+            
+            .btn {
+                padding: 12px 35px;
+                font-size: 1rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+                padding: 0 20px;
+            }
+            
+            .header p {
+                padding: 0 20px;
+            }
+            
+            .logo {
+                top: 15px;
+                left: 20px;
+            }
+            
+            .logo img {
+                height: 40px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.6rem;
+            }
+            
+            .split h2 {
+                font-size: 2rem;
+            }
+            
+            .logo img {
+                height: 35px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="electricity"></div>
+    
+    <div class="logo">
+        <img src="serlogo.png" alt="SER Elektrik Logo">
+    </div>
+    
+    <div class="header">
+        <p>Gitmek istediğiniz uygulamayı seçin</p>
+    </div>
+    
+    <div class="container">
+        <a href="#" class="split split-left">
+            <div class="content">
+                <div class="icon">
+                    <i class="fas fa-bolt"></i>
+                </div>
+                <h2>Kablo Hesabı</h2>
+                <p>Kesit hesaplamaları, akım taşıma kapasiteleri ve teknik özellikler</p>
+                <div class="btn">Sayfaya Git</div>
+            </div>
+        </a>
+        
+        <a href="#" class="split split-right">
+            <div class="content">
+                <div class="icon">
+                    <i class="fas fa-tasks"></i>
+                </div>
+                <h2>Proje Takip</h2>
+                <p>Devam eden projeler, ilerleme durumları ve zaman çizelgeleri</p>
+                <div class="btn">Sayfaya Git</div>
+            </div>
+        </a>
+    </div>
+    
+    <div class="footer">
+        <p>© 2023 SER Elektrik Tüm hakları saklıdır | Mustafa Öztürk</p>
+    </div>
+
+    <script>
+        document.querySelectorAll('.split').forEach(panel => {
+            panel.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Animasyon efekti
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                    
+                    // Gerçek uygulamada burada yönlendirme yapılır
+                    if(this.classList.contains('split-left')) {
+                        // Redirect to kablo_hesap.html without any alert
+                        window.location.href = "kablo_hesap.html";
+                    } else {
+                        // Keep the alert for Proje Takip as no specific change was requested
+                        window.location.href = "login.html";
+                    }
+                }, 300);
+            });
+        });
+        
+        // Dinamik elektrik efekti
+        const electricity = document.querySelector('.electricity');
+        setInterval(() => {
+            const delay = Math.random() * 5;
+            electricity.style.animationDelay = `-${delay}s`;
+        }, 8000);
+        
+        // Işık efektinin büyüyüp küçülmesi
+        document.querySelectorAll('.split').forEach(panel => {
+            const light = panel;
+            
+            panel.addEventListener('mouseenter', () => {
+                // Işık efekti büyümeye başlar
+                light.style.transition = 'all 1.5s cubic-bezier(0.165, 0.84, 0.44, 1)';
+            });
+            
+            panel.addEventListener('mouseleave', () => {
+                // Işık efekti küçülerek kaybolur
+                light.style.transition = 'all 1s cubic-bezier(0.165, 0.84, 0.44, 1)';
+            });
+        });
+    </script>
+</body>
+</html>
