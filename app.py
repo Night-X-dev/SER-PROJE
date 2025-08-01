@@ -19,10 +19,22 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex") 
 CORS(app, resources={r"/*": {"origins": ["https://37.148.213.89:8000", "http://serotomasyon.tr"]}}, supports_credentials=True)
 @app.route('/')
-@app.route('welcome.html') # Both URLs will be directed to the same function
+def serve_welcome_page():
+    """Directs root URL (/) requests to the welcome.html page."""
+    return render_template('welcome.html')
+
+@app.route('/login.html') 
 def serve_login_page():
-    """Directs root URL (/) and /login.html requests to the login.html page."""
+    """Directs /login.html requests to the login.html page."""
     return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    """
+    Clears the user session and redirects to welcome.html page.
+    """
+    session.clear()
+    return redirect(url_for('serve_welcome_page'))
 
 @app.route('/index.html')
 def serve_index_page():
@@ -37,19 +49,14 @@ def serve_ayarlar_page():
         return redirect(url_for('serve_login_page'))
     # Allow all logged-in users to access the settings page
     return render_template('ayarlar.html')
-@app.route('/logout')
-def logout():
-    """
-    Clears the user session and redirects to welcome.html page.
-    """
-    session.clear()
-    return redirect(url_for('serve_welcome_page'))
+
 @app.route('/kablo_hesap.html')
 def serve_kablo_hesap_page():
     """Directs /kablo_hesap.html requests to the kablo_hesap.html page."""
     if 'user_id' not in session:
         return redirect(url_for('serve_login_page'))
     return render_template('kablo_hesap.html')
+
 @app.route('/kayitonay.html')
 def serve_kayitonay_page():
     """Directs /kayitonay.html requests to the kayitonay.html page."""
@@ -63,6 +70,8 @@ def serve_musteriler_page():
 @app.route('/proje_ekle.html')
 def serve_proje_ekle_page():
     """Directs /proje_ekle.html requests to the proje_ekle.html page."""
+    if 'user_id' not in session:
+        return redirect(url_for('serve_login_page'))
     return render_template('proje_ekle.html')
 
 @app.route('/projeler.html')
@@ -120,7 +129,6 @@ def serve_yeni_musteri_page():
 def serve_bildirim_page():
     """Directs /bildirim.html requests to the bildirim.html page."""
     return render_template('bildirim.html')
-
 # CORS (Cross-Origin Resource Sharing) settings
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
