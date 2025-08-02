@@ -459,6 +459,163 @@
             background: #007bff; /* Dolu uçlar */
             z-index: 45;
         }
+
+        /* Mobile Responsive İyileştirmeleri */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+                align-items: flex-start;
+            }
+            
+            h1 {
+                font-size: 22px;
+            }
+            
+            .subtitle {
+                font-size: 14px;
+            }
+            
+            .panel {
+                padding: 15px;
+            }
+            
+            .panel-title {
+                font-size: 18px;
+            }
+            
+            .cable-inputs {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+            
+            .cable-inputs select, 
+            .cable-inputs input {
+                width: 100%;
+                min-width: unset;
+            }
+            
+            .param-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .result-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .result-card h3 {
+                font-size: 13px;
+            }
+            
+            .result-value {
+                font-size: 20px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .action-buttons button {
+                width: 100%;
+            }
+            
+            #visualization {
+                height: 300px;
+            }
+            
+            .legend {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            /* Tablo için mobil uyumluluk */
+            .table-container {
+                overflow-x: auto;
+            }
+            
+            table {
+                min-width: 600px;
+            }
+            
+            .footer {
+                padding: 15px;
+                font-size: 12px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .main-content {
+                padding: 15px;
+                gap: 15px;
+            }
+            
+            h1 {
+                font-size: 20px;
+            }
+            
+            .result-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            #visualization {
+                height: 250px;
+            }
+            
+            .action-buttons button {
+                padding: 10px 15px;
+                font-size: 14px;
+            }
+        }
+        
+        /* İyileştirmeler */
+        .mobile-menu-btn {
+            display: none;
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            width: 100%;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 900px) {
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            .panel {
+                margin-bottom: 15px;
+            }
+        }
+        
+        /* Kablo tipi seçimi için daha belirgin etiketler */
+        .cable-type-label {
+            font-size: 14px;
+            margin-bottom: 5px;
+            display: block;
+            color: #a0c8ff;
+        }
+        
+        /* Hesapla butonu için mobil düzenleme */
+        #calculate {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+        }
+        
+        /* Sıfırla butonu için farklı renk */
+        #reset {
+            background: #6c757d;
+        }
+        
+        #reset:hover {
+            background: #5a6268;
+        }
     </style>
 </head>
 <body>
@@ -477,6 +634,7 @@
                 <div class="input-section">
                     <div id="cable-inputs-container">
                         <div class="cable-inputs">
+                            <label class="cable-type-label">Kablo Tipi:</label>
                             <select class="cable-type">
                                 <option value="">-- Kablo Tipi Seçin --</option>
                                 <optgroup label="NYY Kablo">
@@ -507,7 +665,10 @@
                                     <option value="liyc_12x0.75" data-diameter="9.4">12x0,75mm² (Ø9.4mm)</option>
                                 </optgroup>
                             </select>
+                            
+                            <label class="cable-type-label">Adet:</label>
                             <input type="number" class="cable-count" value="1" min="1" max="20" placeholder="Adet">
+                            
                             <button class="remove-cable">×</button>
                         </div>
                     </div>
@@ -588,20 +749,22 @@
                 <i>📊</i> Detaylı Kablo Listesi
             </div>
             
-            <table id="cable-table">
-                <thead>
-                    <tr>
-                        <th>Kablo Tipi</th>
-                        <th>Çap (mm)</th>
-                        <th>Adet</th>
-                        <th>Toplam Alan (mm²)</th>
-                        <th>Renk Kodu</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Kablo listesi buraya eklenecek -->
-                </tbody>
-            </table>
+            <div class="table-container">
+                <table id="cable-table">
+                    <thead>
+                        <tr>
+                            <th>Kablo Tipi</th>
+                            <th>Çap (mm)</th>
+                            <th>Adet</th>
+                            <th>Toplam Alan (mm²)</th>
+                            <th>Renk Kodu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Kablo listesi buraya eklenecek -->
+                    </tbody>
+                </table>
+            </div>
             
             <div class="legend">
                 <div class="legend-item">
@@ -1096,6 +1259,7 @@
                 const div = document.createElement('div');
                 div.className = 'cable-inputs';
                 div.innerHTML = `
+                    <label class="cable-type-label">Kablo Tipi:</label>
                     <select class="cable-type">
                         <option value="">-- Kablo Tipi Seçin --</option>
                         <optgroup label="NYY Kablo">
@@ -1126,7 +1290,10 @@
                             <option value="liyc_12x0.75" data-diameter="9.4">12x0,75mm² (Ø9.4mm)</option>
                         </optgroup>
                     </select>
+                    
+                    <label class="cable-type-label">Adet:</label>
                     <input type="number" class="cable-count" value="1" min="1" max="20" placeholder="Adet">
+                    
                     <button class="remove-cable">×</button>
                 `;
                 container.appendChild(div);
@@ -1162,6 +1329,7 @@
                 const div = document.createElement('div');
                 div.className = 'cable-inputs';
                 div.innerHTML = `
+                    <label class="cable-type-label">Kablo Tipi:</label>
                     <select class="cable-type">
                         <option value="">-- Kablo Tipi Seçin --</option>
                         <optgroup label="NYY Kablo">
@@ -1192,7 +1360,10 @@
                             <option value="liyc_12x0.75" data-diameter="9.4">12x0,75mm² (Ø9.4mm)</option>
                         </optgroup>
                     </select>
+                    
+                    <label class="cable-type-label">Adet:</label>
                     <input type="number" class="cable-count" value="1" min="1" max="20" placeholder="Adet">
+                    
                     <button class="remove-cable">×</button>
                 `;
                 container.appendChild(div);
