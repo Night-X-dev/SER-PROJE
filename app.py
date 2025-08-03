@@ -1663,7 +1663,7 @@ def add_project():
     start_date_str = data.get('startDate') # Renamed to avoid conflict with datetime object
     end_date_str = data.get('endDate')     # Renamed to avoid conflict with datetime object
     project_location = data.get('projectLocation')
-    status = data.get('status', 'In Planning Phase') # Default status if not provided
+    status = data.get('status', 'Planlama Aşamasında') # Default status if not provided
 
     user_id = data.get('user_id') # User ID who added the project (for activity log)
 
