@@ -462,11 +462,14 @@ def add_activity():
 
 @app.route('/api/update_user_profile', methods=['POST'])
 def update_user_profile():
-    """Updates user profile information, including profile picture and visibility settings.
-    Personal details (full name, email, phone, role) are no longer updated via this endpoint,
-    as the frontend modal for these fields has been removed."""
+    """Updates user profile information including fullname, email, password, profile picture and visibility settings."""
     data = request.get_json()
+    print(f"Received data: {data}")  # Debug için
     user_id = data.get('userId')
+    fullname = data.get('fullname')
+    email = data.get('email')
+    current_password = data.get('currentPassword')
+    new_password = data.get('newPassword')
     profile_picture = data.get('profile_picture')
     hide_email = data.get('hide_email')
     hide_phone = data.get('hide_phone')
@@ -478,7 +481,8 @@ def update_user_profile():
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            cursor.execute("SELECT profile_picture, hide_email, hide_phone FROM users WHERE id = %s", (user_id,))
+            # Get current user data
+            cursor.execute("SELECT fullname, email, password, profile_picture, hide_email, hide_phone FROM users WHERE id = %s", (user_id,))
             user = cursor.fetchone()
 
             if not user:
@@ -488,6 +492,44 @@ def update_user_profile():
             params = []
             message_parts = []
 
+            print(f"Current user data: {user}")  # Debug için
+            print(f"Fullname check: {fullname} vs {user['fullname']}")  # Debug için
+            print(f"Email check: {email} vs {user['email']}")  # Debug için
+            print(f"Password change attempted: {current_password and new_password}")  # Debug için
+
+            # Check fullname update
+            if fullname is not None and fullname != user['fullname']:
+                print(f"Updating fullname from {user['fullname']} to {fullname}")  # Debug için
+                updates.append("fullname = %s")
+                params.append(fullname)
+                message_parts.append("Full Name")
+
+            # Check email update
+            if email is not None and email != user['email']:
+                print(f"Updating email from {user['email']} to {email}")  # Debug için
+                # Check if email already exists for another user
+                cursor.execute("SELECT id FROM users WHERE email = %s AND id != %s", (email, user_id))
+                if cursor.fetchone():
+                    return jsonify({'message': 'Bu email adresi başka bir kullanıcı tarafından kullanılıyor.'}), 400
+                
+                updates.append("email = %s")
+                params.append(email)
+                message_parts.append("Email")
+
+            # Check password update
+            if current_password and new_password:
+                print(f"Attempting password update")  # Debug için
+                # Verify current password
+                if not bcrypt.checkpw(current_password.encode('utf-8'), user['password'].encode('utf-8')):
+                    return jsonify({'message': 'Mevcut şifre yanlış.'}), 400
+                
+                # Hash new password
+                hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+                updates.append("password = %s")
+                params.append(hashed_password)
+                message_parts.append("Password")
+
+            # Check profile picture update
             if profile_picture is not None:
                 if profile_picture == "null":
                     updates.append("profile_picture = NULL")
@@ -497,6 +539,7 @@ def update_user_profile():
                     params.append(profile_picture)
                     message_parts.append("Profile Picture")
 
+            # Check visibility settings
             if hide_email is not None and hide_email != user['hide_email']:
                 updates.append("hide_email = %s")
                 params.append(hide_email)
@@ -508,7 +551,7 @@ def update_user_profile():
                 message_parts.append("Phone Visibility")
 
             if not updates:
-                return jsonify({'message': 'No information to update.'}), 200
+                return jsonify({'message': 'Güncellenecek bilgi bulunamadı.'}), 200
 
             sql = f"UPDATE users SET {', '.join(updates)} WHERE id = %s"
             params.append(user_id)
@@ -516,18 +559,18 @@ def update_user_profile():
             cursor.execute(sql, tuple(params))
             connection.commit()
 
-            final_message = "Successfully updated: " + ", ".join(message_parts) + "."
+            final_message = "Başarıyla güncellendi: " + ", ".join(message_parts) + "."
             if not message_parts:
-                 final_message = "No changes found to update."
+                 final_message = "Güncellenecek değişiklik bulunamadı."
 
             return jsonify({'message': final_message}), 200
 
     except pymysql.Error as e:
         print(f"Database error while updating profile: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        return jsonify({'message': f'Veritabanı hatası: {e.args[1]}'}), 500
     except Exception as e:
         print(f"General error while updating profile: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
