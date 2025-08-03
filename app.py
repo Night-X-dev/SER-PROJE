@@ -135,9 +135,6 @@ def get_db_connection():
     """Establishes and returns a database connection."""
     connection = None
     try:
-        # If a single URL environment variable like MySQL_PUBLIC_URL is used, it tries to parse it.
-        # Assuming XCloud does not provide such a URL, this part will likely not work.
-        # But keeping it as it was in your code.
         public_url = os.getenv("MYSQL_PUBLIC_URL")
         if public_url:
             try:
@@ -2137,11 +2134,87 @@ def add_user():
     finally:
         if connection:
             connection.close()
-
 @app.route('/ayarlar')
 def ayarlar_page():
     """Renders the settings page."""
     return render_template('ayarlar.html')
+@app.route('/api/user/email', methods=['PUT'])
+def update_email():
+    """Kullanıcının e-posta adresini günceller."""
+    if 'user_id' not in session:
+        return jsonify({'message': 'Lütfen giriş yapın.'}), 401
+
+    data = request.get_json()
+    new_email = data.get('email')
+    user_id = session['user_id']
+
+    if not new_email or not re.match(r'[^@]+@[^@]+\.[^@]+', new_email):
+        return jsonify({'message': 'Geçerli bir e-posta adresi girin.'}), 400
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Yeni e-postanın başka bir kullanıcı tarafından kullanılıp kullanılmadığını kontrol et
+            cursor.execute("SELECT id FROM users WHERE email = %s AND id != %s", (new_email, user_id))
+            if cursor.fetchone():
+                return jsonify({'message': 'Bu e-posta adresi zaten kullanılıyor.'}), 409
+
+            # E-postayı güncelle
+            cursor.execute("UPDATE users SET email = %s WHERE id = %s", (new_email, user_id))
+            connection.commit()
+        return jsonify({'message': 'E-posta adresiniz başarıyla güncellendi.'}), 200
+    except pymysql.Error as e:
+        print(f"E-posta güncellenirken veritabanı hatası: {e}")
+        return jsonify({'message': 'Veritabanı hatası oluştu.'}), 500
+    except Exception as e:
+        print(f"E-posta güncellenirken genel hata: {e}")
+        return jsonify({'message': 'Sunucu hatası oluştu.'}), 500
+    finally:
+        if connection:
+            connection.close()
+
+@app.route('/api/user/password', methods=['PUT'])
+def update_password():
+    """Kullanıcının şifresini günceller."""
+    if 'user_id' not in session:
+        return jsonify({'message': 'Lütfen giriş yapın.'}), 401
+
+    data = request.get_json()
+    current_password = data.get('current_password')
+    new_password = data.get('new_password')
+    user_id = session['user_id']
+
+    if not current_password or not new_password:
+        return jsonify({'message': 'Tüm alanları doldurun.'}), 400
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Mevcut şifreyi doğrula
+            cursor.execute("SELECT password FROM users WHERE id = %s", (user_id,))
+            user = cursor.fetchone()
+            if not user or not bcrypt.checkpw(current_password.encode('utf-8'), user['password'].encode('utf-8')):
+                return jsonify({'message': 'Mevcut şifreniz yanlış.'}), 403
+
+            # Yeni şifreyi hash'le
+            hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+            
+            # Yeni şifreyi veritabanında güncelle
+            cursor.execute("UPDATE users SET password = %s WHERE id = %s", (hashed_password.decode('utf-8'), user_id))
+            connection.commit()
+        
+        return jsonify({'message': 'Şifreniz başarıyla değiştirildi.'}), 200
+    except pymysql.Error as e:
+        print(f"Şifre güncellenirken veritabanı hatası: {e}")
+        return jsonify({'message': 'Veritabanı hatası oluştu.'}), 500
+    except Exception as e:
+        print(f"Şifre güncellenirken genel hata: {e}")
+        return jsonify({'message': 'Sunucu hatası oluştu.'}), 500
+    finally:
+        if connection:
+            connection.close()
 
 @app.route('/api/roles', methods=['GET'])
 def get_distinct_roles():
@@ -2450,9 +2523,7 @@ def delete_task(task_id):
         return jsonify({'message': 'Error deleting task.'}), 500
     finally:
         if connection:
-            connection.close()
-
-@app.route('/api/manager-stats')
+            connection.close()@app.route('/api/manager-stats')
 def manager_stats():
     """Retrieves statistics related to project managers' performance."""
     connection = get_db_connection()
