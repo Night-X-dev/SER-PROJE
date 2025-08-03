@@ -942,19 +942,19 @@
                     </div>
                     <div class="report-stats">
                         <div class="stat-item">
-                            <div class="stat-value" id="activeProjects">12</div>
+                            <div class="stat-value" id="activeProjects">0</div>
                             <div class="stat-label">Aktif Proje</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-value" id="delayedProjects">3</div>
+                            <div class="stat-value" id="delayedProjects">0</div>
                             <div class="stat-label">Geciken Proje</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-value" id="avgDelay">4.2</div>
+                            <div class="stat-value" id="avgDelay">0</div>
                             <div class="stat-label">Ort. Gecikme (gün)</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-value" id="completionRate">78%</div>
+                            <div class="stat-value" id="completionRate">0%</div>
                             <div class="stat-label">Tamamlanma Oranı</div>
                         </div>
                     </div>
@@ -1278,40 +1278,85 @@
         }
         
         // Grafikleri başlatma
-        function initCharts() {
-            const progressCtx = document.getElementById('progressChart').getContext('2d');
-            progressChartInstance = new Chart(progressCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Tamamlandı', 'Devam Ediyor', 'Gecikti', 'Planlama'],
-                    datasets: [{
-                        data: [8, 12, 3, 2],
-                        backgroundColor: [
-                            '#2ed573',
-                            '#0980d3',
-                            '#ff4757',
-                            '#ffc107'
-                        ],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 20,
-                                usePointStyle: true,
-                                pointStyle: 'circle',
-                                color: getComputedStyle(document.body).getPropertyValue('--text-color').trim()
+        async function initCharts() {
+            try {
+                // Proje durumu istatistiklerini API'den al
+                const response = await fetch(`${API_BASE_URL}/api/project-status-stats`);
+                const statsData = await response.json();
+                
+                if (!response.ok) {
+                    console.error('Proje istatistikleri alınamadı:', statsData.message);
+                    showToast('Proje istatistikleri yüklenirken hata oluştu.', true);
+                    return;
+                }
+                
+                const progressCtx = document.getElementById('progressChart').getContext('2d');
+                progressChartInstance = new Chart(progressCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: statsData.labels,
+                        datasets: [{
+                            data: statsData.data,
+                            backgroundColor: [
+                                '#2ed573', // Tamamlandı - Yeşil
+                                '#0980d3', // Devam Ediyor - Mavi
+                                '#ff4757', // Gecikti - Kırmızı
+                                '#ffc107'  // Planlama - Sarı
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 20,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    color: getComputedStyle(document.body).getPropertyValue('--text-color').trim()
+                                }
                             }
                         }
                     }
-                }
-            });
-            // performanceChartInstance burada oluşturulmasın, veri gelince oluşturulsun
+                });
+                
+                // İstatistik kartlarını güncelle
+                updateStatsCards(statsData.data);
+                
+            } catch (error) {
+                console.error('Grafik yüklenirken hata:', error);
+                showToast('Grafik yüklenirken bir hata oluştu.', true);
+            }
+        }
+        
+        // İstatistik kartlarını güncelleme fonksiyonu
+        function updateStatsCards(data) {
+            const totalProjects = data.reduce((sum, count) => sum + count, 0);
+            const activeProjects = data[1]; // Devam Ediyor kategorisi
+            const delayedProjects = data[2]; // Gecikti kategorisi
+            
+            // Aktif proje sayısını güncelle
+            const activeProjectsElement = document.getElementById('activeProjects');
+            if (activeProjectsElement) {
+                activeProjectsElement.textContent = activeProjects || 0;
+            }
+            
+            // Gecikmiş proje sayısını güncelle
+            const delayedProjectsElement = document.getElementById('delayedProjects');
+            if (delayedProjectsElement) {
+                delayedProjectsElement.textContent = delayedProjects || 0;
+            }
+            
+            // Tamamlanma oranını hesapla ve güncelle
+            const completedProjects = data[0]; // Tamamlandı kategorisi
+            const completionRate = totalProjects > 0 ? Math.round((completedProjects / totalProjects) * 100) : 0;
+            const completionRateElement = document.getElementById('completionRate');
+            if (completionRateElement) {
+                completionRateElement.textContent = completionRate + '%';
+            }
         }
         
         // PDF oluşturma fonksiyonu

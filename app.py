@@ -464,7 +464,6 @@ def add_activity():
 def update_user_profile():
     """Updates user profile information including fullname, email, password, profile picture and visibility settings."""
     data = request.get_json()
-    print(f"Received data: {data}")  # Debug için
     user_id = data.get('userId')
     fullname = data.get('fullname')
     email = data.get('email')
@@ -492,21 +491,14 @@ def update_user_profile():
             params = []
             message_parts = []
 
-            print(f"Current user data: {user}")  # Debug için
-            print(f"Fullname check: {fullname} vs {user['fullname']}")  # Debug için
-            print(f"Email check: {email} vs {user['email']}")  # Debug için
-            print(f"Password change attempted: {current_password and new_password}")  # Debug için
-
             # Check fullname update
             if fullname is not None and fullname != user['fullname']:
-                print(f"Updating fullname from {user['fullname']} to {fullname}")  # Debug için
                 updates.append("fullname = %s")
                 params.append(fullname)
                 message_parts.append("Full Name")
 
             # Check email update
             if email is not None and email != user['email']:
-                print(f"Updating email from {user['email']} to {email}")  # Debug için
                 # Check if email already exists for another user
                 cursor.execute("SELECT id FROM users WHERE email = %s AND id != %s", (email, user_id))
                 if cursor.fetchone():
@@ -518,7 +510,6 @@ def update_user_profile():
 
             # Check password update
             if current_password and new_password:
-                print(f"Attempting password update")  # Debug için
                 # Verify current password
                 if not bcrypt.checkpw(current_password.encode('utf-8'), user['password'].encode('utf-8')):
                     return jsonify({'message': 'Mevcut şifre yanlış.'}), 400
@@ -2613,6 +2604,67 @@ def manager_stats():
             cursor.execute(sql)
             result = cursor.fetchall()
             return jsonify(result)
+    finally:
+        if connection:
+            connection.close()
+
+@app.route('/api/project-status-stats', methods=['GET'])
+def get_project_status_stats():
+    """Get project status statistics for charts"""
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Proje durumlarına göre sayıları al
+            sql = """
+                SELECT 
+                    CASE 
+                        WHEN status = 'Tamamlandı' THEN 'Tamamlandı'
+                        WHEN status = 'Devam Ediyor' THEN 'Devam Ediyor'
+                        WHEN status = 'Gecikti' THEN 'Gecikti'
+                        WHEN status = 'Planlama' THEN 'Planlama'
+                        ELSE 'Diğer'
+                    END as status_category,
+                    COUNT(*) as count
+                FROM projects 
+                GROUP BY status_category
+                ORDER BY 
+                    CASE status_category
+                        WHEN 'Tamamlandı' THEN 1
+                        WHEN 'Devam Ediyor' THEN 2
+                        WHEN 'Gecikti' THEN 3
+                        WHEN 'Planlama' THEN 4
+                        ELSE 5
+                    END
+            """
+            cursor.execute(sql)
+            results = cursor.fetchall()
+            
+            # Sonuçları sıralı dizi olarak hazırla
+            status_counts = {
+                'Tamamlandı': 0,
+                'Devam Ediyor': 0,
+                'Gecikti': 0,
+                'Planlama': 0
+            }
+            
+            for row in results:
+                status_category = row[0]
+                count = row[1]
+                if status_category in status_counts:
+                    status_counts[status_category] = count
+            
+            return jsonify({
+                'labels': list(status_counts.keys()),
+                'data': list(status_counts.values())
+            }), 200
+            
+    except pymysql.Error as e:
+        print(f"Database error while fetching project status stats: {e}")
+        return jsonify({'message': f'Veritabanı hatası: {e.args[1]}'}), 500
+    except Exception as e:
+        print(f"General error while fetching project status stats: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
