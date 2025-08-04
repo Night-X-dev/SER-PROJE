@@ -2610,57 +2610,64 @@ def manager_stats():
 
 @app.route('/api/project-status-stats', methods=['GET'])
 def get_project_status_stats():
+    """Get project status statistics for charts"""
+    connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Aktif proje sayısı
+            # Güncellenmiş sorgu: İngilizce statüleri Türkçe kategorilere dönüştür
             sql = """
-                SELECT COUNT(*) as aktif_proje
-                FROM projects
-                WHERE status = 'aktif'
+                SELECT 
+                    CASE 
+                        WHEN status = 'Completed' THEN 'Tamamlandı'
+                        WHEN status IN ('Active', 'Active (Work Delayed)') THEN 'Devam Ediyor'
+                        WHEN status IN ('Delayed', 'Active (Work Delayed)') THEN 'Gecikti'
+                        WHEN status = 'Planning' THEN 'Planlama'
+                        ELSE 'Diğer'
+                    END as status_category,
+                    COUNT(*) as count
+                FROM projects 
+                GROUP BY status_category
+                ORDER BY 
+                    CASE status_category
+                        WHEN 'Tamamlandı' THEN 1
+                        WHEN 'Devam Ediyor' THEN 2
+                        WHEN 'Gecikti' THEN 3
+                        WHEN 'Planlama' THEN 4
+                        ELSE 5
+                    END
             """
             cursor.execute(sql)
-            aktif_proje = cursor.fetchone()['aktif_proje']
-
-            # Geciken proje sayısı
-            sql = """
-                SELECT COUNT(*) as geciken_proje
-                FROM projects
-                WHERE status = 'geciken'
-            """
-            cursor.execute(sql)
-            geciken_proje = cursor.fetchone()['geciken_proje']
-
-            # Ortalama gecikme (gün)
-            sql = """
-                SELECT AVG(gecikme_gun) as ort_gecikme
-                FROM projects
-                WHERE status = 'geciken'
-            """
-            cursor.execute(sql)
-            ort_gecikme = cursor.fetchone()['ort_gecikme']
-
-            # Tamamlanma oranı (%)
-            sql = """
-                SELECT COUNT(*) as tamamlanmis_proje
-                FROM projects
-                WHERE status = 'tamamlandi'
-            """
-            cursor.execute(sql)
-            tamamlanmis_proje = cursor.fetchone()['tamamlanmis_proje']
-
-            toplam_proje = aktif_proje + geciken_proje + tamamlanmis_proje
-            tamamlanma_orani = (tamamlanmis_proje / toplam_proje) * 100
-
+            results = cursor.fetchall()
+            
+            # Varsayılan değerlerle sözlük oluştur
+            status_counts = {
+                'Tamamlandı': 0,
+                'Devam Ediyor': 0,
+                'Gecikti': 0,
+                'Planlama': 0
+            }
+            
+            for row in results:
+                status_category = row[0]
+                count = row[1]
+                if status_category in status_counts:
+                    status_counts[status_category] = count
+            
             return jsonify({
-                'aktif_proje': aktif_proje,
-                'geciken_proje': geciken_proje,
-                'ort_gecikme': ort_gecikme,
-                'tamamlanma_orani': tamamlanma_orani
+                'labels': list(status_counts.keys()),
+                'data': list(status_counts.values())
             }), 200
+            
+    except pymysql.Error as e:
+        print(f"Database error while fetching project status stats: {e}")
+        return jsonify({'message': f'Veritabanı hatası: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"Proje istatistikleri alınamadı: {e}")
+        print(f"General error while fetching project status stats: {e}")
         return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+    finally:
+        if connection:
+            connection.close()
 @app.route('/api/worker-performance')
 def worker_performance():
     """Retrieves performance metrics for employees (project managers)."""
