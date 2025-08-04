@@ -1578,6 +1578,7 @@
             
         // --- Kullanıcı Oturum Kontrolü ve Tema ---
         document.addEventListener('DOMContentLoaded', function() {
+              fetchActiveProjectsCount();
             const userNameElement = document.getElementById('userName');
             const userRoleElement = document.getElementById('userRole');
             // userAvatarElement kaldırıldı, userAvatarContainer kullanılacak
@@ -1699,7 +1700,34 @@
                 toast.className = 'toast';
             }, 3000);
         }
+async function fetchActiveProjectsCount() {
+            try {
+                // Backend'deki API'ye istek gönderiyoruz
+                const response = await fetch('/api/project-stats');
+                
+                // İstek başarılı değilse hata fırlatıyoruz
+                if (!response.ok) {
+                    throw new Error(`HTTP Hata! Durum: ${response.status}`);
+                }
 
+                // Gelen veriyi JSON'a çeviriyoruz
+                const data = await response.json();
+                
+                // Aktif projeler için ayrılan HTML elementini buluyoruz
+                const activeProjectsElement = document.getElementById('active-projects-count');
+                
+                // Eğer element varsa, içindeki metni güncelliyoruz
+                if (activeProjectsElement) {
+                    activeProjectsElement.textContent = data.active_projects;
+                }
+
+            } catch (error) {
+                // Hata oluştuğunda konsola yazdırıyoruz ve kullanıcıya bildirim gösteriyoruz
+                console.error('Aktif proje sayısı çekilirken hata oluştu:', error);
+                // Eğer projenizde showToast fonksiyonu varsa, bu şekilde kullanabilirsiniz.
+                // showToast('Aktif proje sayısı alınamadı.', true);
+            }
+        }
         // Custom Confirm Modal (alert yerine kullanılacak) (global olarak tanımlandı)
         function showConfirmModal(title, message, onConfirm) {
             const modalHtml = `

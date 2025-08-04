@@ -198,7 +198,6 @@ def get_user_role_from_db(user_id):
         if connection:
             connection.close()
 
-# Helper function: Checks if a role has a specific permission
 def check_role_permission(role_name, permission_key):
     """Checks if a specific role has a specific permission."""
     # Admin role is always considered to have all permissions
@@ -1258,7 +1257,6 @@ def get_project_details(project_id):
             if not project:
                 return jsonify({'message': 'Project not found.'}), 404
 
-            # Convert datetime.date objects to ISO formatted strings for JSON serialization
             project['contract_date'] = project['contract_date'].isoformat() if isinstance(project['contract_date'], datetime.date) else None
             project['meeting_date'] = project['meeting_date'].isoformat() if isinstance(project['meeting_date'], datetime.date) else None
             project['start_date'] = project['start_date'].isoformat() if isinstance(project['start_date'], datetime.date) else None
@@ -1446,16 +1444,16 @@ def update_project(project_id):
             connection.close()
             print("DEBUG: Database connection closed.")
 
-# Project Delete API (DELETE)
+# Proje silme api (DELETE)
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
 def delete_project_api(project_id):
     """Deletes a project from the database."""
-    data = request.get_json() # Get user_id from DELETE request body
+    data = request.get_json() # 
     user_id = data.get('user_id')
     if not user_id:
         return jsonify({'message': 'User ID is missing.'}), 400
 
-    project_name = "Unknown Project" # Default value for logging
+    project_name = "Unknown Project" 
     connection = None
     try:
         connection = get_db_connection()
@@ -1538,22 +1536,26 @@ def get_turkey_locations():
     return jsonify(TURKEY_LOCATIONS), 200
 
 # Dashboard Statistics API
-@app.route('/api/dashboard/stats', methods=['GET'])
-def get_dashboard_stats():
-    """Retrieves various statistics for the dashboard."""
+@app.route('/api/project-stats', methods=['GET'])
+def get_project_stats():
+    """Kontrol paneli için çeşitli istatistikleri alır."""
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            cursor.execute("SELECT COUNT(project_id) AS count FROM projects WHERE status IN ('Active', 'Active (Work Delayed)')")
+            # Aktif projeler: 'Aktif' veya 'Planlama Aşamasında' olanlar
+            cursor.execute("SELECT COUNT(project_id) AS count FROM projects WHERE status IN ('Aktif', 'Planlama Aşamasında')")
             active_projects = cursor.fetchone()['count']
 
-            cursor.execute("SELECT COUNT(project_id) AS count FROM projects WHERE status = 'Completed'")
+            # Tamamlanan projeler
+            cursor.execute("SELECT COUNT(project_id) AS count FROM projects WHERE status = 'Tamamlandı'")
             completed_projects = cursor.fetchone()['count']
 
-            cursor.execute("SELECT COUNT(project_id) AS count FROM projects WHERE status IN ('Delayed', 'Active (Work Delayed)')")
+            # Geciken projeler
+            cursor.execute("SELECT COUNT(project_id) AS count FROM projects WHERE status = 'Gecikti'")
             delayed_projects = cursor.fetchone()['count']
 
+            # Toplam projeler
             cursor.execute("SELECT COUNT(project_id) AS count FROM projects")
             total_projects = cursor.fetchone()['count']
 
@@ -1565,11 +1567,11 @@ def get_dashboard_stats():
         }
         return jsonify(stats), 200
     except pymysql.Error as e:
-        print(f"Database error while fetching statistics: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"İstatistikler alınırken veritabanı hatası: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error while fetching statistics: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"İstatistikler alınırken genel hata: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
@@ -1653,21 +1655,21 @@ def log_activity(user_id, title, description, icon, is_read=0):
 def add_project():
     """Adds a new project to the database."""
     data = request.json
-    project_name = data.get('projectName') # Comes as 'projectName' from frontend
+    project_name = data.get('projectName') 
     customer_id = data.get('customerId')
     project_manager_id = data.get('projectManagerId')
-    reference_no = data.get('projectRef') # Comes as 'projectRef' from frontend
-    description = data.get('projectDescription') # Comes as 'projectDescription' from frontend
+    reference_no = data.get('projectRef') 
+    description = data.get('projectDescription') 
     contract_date = data.get('contractDate')
     meeting_date = data.get('meetingDate')
-    start_date_str = data.get('startDate') # Renamed to avoid conflict with datetime object
-    end_date_str = data.get('endDate')     # Renamed to avoid conflict with datetime object
+    start_date_str = data.get('startDate')
+    end_date_str = data.get('endDate')     
     project_location = data.get('projectLocation')
-    status = data.get('status', 'Planlama Aşamasında') # Default status if not provided
+    status = data.get('status', 'Planlama Aşamasında') 
 
-    user_id = data.get('user_id') # User ID who added the project (for activity log)
+    user_id = data.get('user_id') 
 
-    if not all([project_name, customer_id, project_manager_id, start_date_str, end_date_str]): # Date checks added
+    if not all([project_name, customer_id, project_manager_id, start_date_str, end_date_str]): 
         return jsonify({'message': 'Project name, customer, project manager, start date, and end date are required.'}), 400
 
     connection = None
@@ -1686,9 +1688,8 @@ def add_project():
             connection.commit()
             new_project_id = cursor.lastrowid
 
-            # Process and add project progress steps
             progress_steps = data.get('progressSteps', [])
-            last_step_end_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date() # Start with project start date
+            last_step_end_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date() 
 
             for step in progress_steps:
                 step_title = step.get('title')
@@ -2610,64 +2611,53 @@ def manager_stats():
 
 @app.route('/api/project-status-stats', methods=['GET'])
 def get_project_status_stats():
-    """Get project status statistics for charts"""
-    connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Güncellenmiş sorgu: İngilizce statüleri Türkçe kategorilere dönüştür
+            # Aktif projeler
             sql = """
-                SELECT 
-                    CASE 
-                        WHEN status = 'Completed' THEN 'Tamamlandı'
-                        WHEN status IN ('Active', 'Active (Work Delayed)') THEN 'Devam Ediyor'
-                        WHEN status IN ('Delayed', 'Active (Work Delayed)') THEN 'Gecikti'
-                        WHEN status = 'Planning' THEN 'Planlama'
-                        ELSE 'Diğer'
-                    END as status_category,
-                    COUNT(*) as count
-                FROM projects 
-                GROUP BY status_category
-                ORDER BY 
-                    CASE status_category
-                        WHEN 'Tamamlandı' THEN 1
-                        WHEN 'Devam Ediyor' THEN 2
-                        WHEN 'Gecikti' THEN 3
-                        WHEN 'Planlama' THEN 4
-                        ELSE 5
-                    END
+                SELECT COUNT(*) as aktif_proje
+                FROM projects
+                WHERE status NOT IN ('tamamlandı', 'planlama aşamasında')
             """
             cursor.execute(sql)
-            results = cursor.fetchall()
-            
-            # Varsayılan değerlerle sözlük oluştur
-            status_counts = {
-                'Tamamlandı': 0,
-                'Devam Ediyor': 0,
-                'Gecikti': 0,
-                'Planlama': 0
-            }
-            
-            for row in results:
-                status_category = row[0]
-                count = row[1]
-                if status_category in status_counts:
-                    status_counts[status_category] = count
-            
+            aktif_proje = cursor.fetchone()['aktif_proje']
+
+            # Geciken projeler
+            sql = """
+                SELECT COUNT(DISTINCT project_id) as geciken_proje
+                FROM project_progress
+                WHERE delay_days > 0
+            """
+            cursor.execute(sql)
+            geciken_proje = cursor.fetchone()['geciken_proje']
+
+            # Toplam proje
+            sql = """
+                SELECT COUNT(*) as toplam_proje
+                FROM projects
+            """
+            cursor.execute(sql)
+            toplam_proje = cursor.fetchone()['toplam_proje']
+
+            # Tamamlanan projeler
+            sql = """
+                SELECT COUNT(*) as tamamlanan_proje
+                FROM projects
+                WHERE status = 'tamamlandı'
+            """
+            cursor.execute(sql)
+            tamamlanan_proje = cursor.fetchone()['tamamlanan_proje']
+
             return jsonify({
-                'labels': list(status_counts.keys()),
-                'data': list(status_counts.values())
+                'aktif_proje': aktif_proje,
+                'geciken_proje': geciken_proje,
+                'toplam_proje': toplam_proje,
+                'tamamlanan_proje': tamamlanan_proje
             }), 200
-            
-    except pymysql.Error as e:
-        print(f"Database error while fetching project status stats: {e}")
-        return jsonify({'message': f'Veritabanı hatası: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error while fetching project status stats: {e}")
+        print(f"Proje istatistikleri alınamadı: {e}")
         return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
-    finally:
-        if connection:
-            connection.close()
 @app.route('/api/worker-performance')
 def worker_performance():
     """Retrieves performance metrics for employees (project managers)."""
