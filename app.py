@@ -2703,33 +2703,6 @@ def worker_performance():
     finally:
         if connection:
             connection.close()
-@app.route('/api/project-status-stats', methods=['GET'])
-def get_project_status_stats():
-    """Proje durumlarına göre istatistikleri çeker."""
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # Projeleri durumlarına göre gruplayan ve sayan SQL sorgusu
-            sql = """
-            SELECT status, COUNT(*) as count
-            FROM projects
-            GROUP BY status
-            """
-            cursor.execute(sql)
-            result = cursor.fetchall()
 
-            # Sonuçları uygun bir JSON formatına dönüştür
-            status_stats = {row['status']: row['count'] for row in result}
-            return jsonify(status_stats), 200
-    except pymysql.Error as e:
-        print(f"Database error while fetching project status stats: {e}")
-        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
-    except Exception as e:
-        print(f"General error while fetching project status stats: {e}")
-        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
-    finally:
-        if connection:
-            connection.close()
 ##if __name__ == '__main__':
   ##  app.run(host='0.0.0.0', port=3001, debug=True)
