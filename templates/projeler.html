@@ -1963,42 +1963,11 @@
         }
     }
     
-function getDynamicStatusBadge(project) {
-    const now = new Date();
-    const badge = document.createElement("span");
-    badge.classList.add("status-badge");
-
-    const startDate = project.start_date ? new Date(project.start_date) : null;
-    const gidisat = project.progress_steps || []; // Gidişatlar dizisi API'den böyle geliyorsa
-
-    if (Array.isArray(gidisat) && gidisat.length > 0) {
-        const lastStep = gidisat[gidisat.length - 1];
-        const title = lastStep.title || "-";
-        badge.textContent = title;
-
-        if (title.toLowerCase().includes("gecikme")) {
-            badge.classList.add("gecikmeli");
-        } else {
-            badge.classList.add("normal");
-        }
-    } else {
-        if (startDate && now >= startDate) {
-            badge.textContent = "Aktif";
-            badge.classList.add("normal");
-        } else {
-            badge.textContent = "Planlama Aşamasında";
-            badge.style.backgroundColor = "rgba(255,193,7,0.15)";
-            badge.style.color = "#ffc107";
-            badge.style.border = "1px dashed #ffc107";
-        }
-    }
-    return badge.outerHTML;
-}
 
     // --- Proje Listesi ve İşlemleri ---
 async function fetchProjects() {
   try {
-    const response = await fetch("/api/projects");
+    const response = await fetch("/api/projec");
     const data = await response.json();
 
     const tableBody = document.querySelector(".projects-table tbody");
@@ -2183,7 +2152,7 @@ async function fetchProjects() {
                 <td data-label="Proje Adı">${project.project_name ? project.project_name.normalize('NFC') : "-"}</td>
                 <td data-label="Referans No">${project.reference_no || "-"}</td>
                 <td data-label="Müşteri">${project.customer_name || "-"}</td>
-                <td data-label="Durum">${getDynamicStatusBadge(project)}</td>
+                <td data-label="Durum">${getStatusBadgeHtml(project.display_status || "-")}</td>
                 <td data-label="Başlangıç">${formatDateForDisplay(project.start_date || "-")}</td>
                 <td data-label="Bitiş">${formatDateForDisplay(project.end_date || "-")}</td>
                 <td data-label="Toplam Gün">${totalDays !== '-' ? totalDays + ' gün' : '-'}</td>
