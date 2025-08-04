@@ -1819,47 +1819,33 @@ async function fetchProjects() {
 
         // Eksik olan updateStatsAndChart fonksiyonu eklendi ve güncellendi
       // Eksik olan updateStatsAndChart fonksiyonu eklendi ve güncellendi
-let active = 0, completed = 0, delayed = 0, total = 0, planning = 0;
-    
+function updateStatsAndChart(projects) {
+    // İstatistikleri güncelle
+    let active = 0, completed = 0, delayed = 0, total = 0, planning = 0;
     projects.forEach(p => {
-        // Her proje için toplam sayacı artır
-        total++;
-        
-        // Önce projenin durumuna göre temel kategorileri belirle
-        if (p.status === 'Tamamlandı') {
+        // Backend'den gelen 'status' alanını kullanarak sayım yap
+        if (p.status === 'Aktif') {
+            active++;
+        } else if (p.status === 'Tamamlandı') {
             completed++;
+        } else if (p.status === 'Gecikti') {
+            delayed++;
         } else if (p.status === 'Planlama Aşamasında') {
             planning++;
-        } else {
-            // Tamamlandı veya Planlama Aşamasında değilse Aktif say
-            active++;
-            
-            // Ayrıca gecikme kontrolü
-            // Eğer delay_days > 0 ise gecikmiş olarak da say
-            if (p.last_progress_delay_days > 0 || p.total_delay_days > 0) {
-                delayed++;
-            }
         }
-        
-        // Eğer projenin kendi durumu "Gecikti" ise veya display_status'te "Gecikmeli" geçiyorsa
-        if (p.status === 'Gecikti' || (p.display_status && p.display_status.includes('Gecikmeli'))) {
-            // Bu projeyi zaten aktif saymıştık, şimdi de gecikmeli olarak sayalım
-            // Ama aktif sayısını artırmıyoruz çünkü zaten yukarıda artırdık
-            delayed++;
-        }
+        total++;
     });
-    
     document.getElementById('activeProjects').textContent = active;
     document.getElementById('completedProjects').textContent = completed;
     document.getElementById('delayedProjects').textContent = delayed;
     document.getElementById('totalProjects').textContent = total;
-    
     updateChart({
         active: active,
         planning: planning,
         completed: completed,
         delayed: delayed
     });
+}
 
 
         // Son Aktiviteleri Backend'den Çekme (Şimdi activities tablosundan çekecek)
