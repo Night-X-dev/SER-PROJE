@@ -1827,31 +1827,40 @@ function updateStatsAndChart(projects) {
         // Her proje için toplam sayacı artır
         total++;
         
-        // Projenin durumuna göre temel kategorileri belirle
-        if (p.status === 'Tamamlandı') {
-            completed++;
-        } else if (p.status === 'Planlama Aşamasında') {
+        // Görünen duruma (display_status) göre kategorize et
+        const displayStatus = p.display_status || p.status || ""; // Öncelik display_status'a
+        
+        // Test veya Planlama içeriyorsa "Planlama" kategorisine girer
+        if (displayStatus.includes('Test') || displayStatus.includes('Planlama')) {
             planning++;
-        } else {
-            // Tamamlandı veya Planlama Aşamasında değilse Aktif say
+        } 
+        // Tamamlandı içeriyorsa "Tamamlandı" kategorisine girer
+        else if (displayStatus.includes('Tamamlandı')) {
+            completed++;
+        } 
+        // Diğer tüm durumlar "Aktif" kategorisine girer
+        else {
             active++;
         }
         
-        // Gecikme kontrolü - herhangi bir gecikme varsa ve proje tamamlanmamışsa
-        if ((p.status !== 'Tamamlandı') && (
-            (p.total_delay_days && p.total_delay_days > 0) ||
-            (p.status && p.status.includes('Gecikti')) ||
-            (p.display_status && p.display_status.includes('Gecikmeli'))
+        // Görünen durumda "Gecikmeli" varsa veya total_delay_days > 0 ise Gecikmiş olarak sayılır
+        // Sadece tamamlanmamış projeler için
+        if (!displayStatus.includes('Tamamlandı') && (
+            displayStatus.includes('Gecikmeli') || 
+            displayStatus.includes('Gecikti') || 
+            (p.total_delay_days && p.total_delay_days > 0)
         )) {
             delayed++;
         }
     });
     
+    // Sayaçları HTML elementlerine yaz
     document.getElementById('activeProjects').textContent = active;
     document.getElementById('completedProjects').textContent = completed;
     document.getElementById('delayedProjects').textContent = delayed;
     document.getElementById('totalProjects').textContent = total;
     
+    // Grafik verilerini güncelle
     updateChart({
         active: active,
         planning: planning,
