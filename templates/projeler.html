@@ -2023,23 +2023,22 @@
     }
 
   // Projeleri tabloya render etme 
-function renderProjects(projects) {
-    const tbody = document.getElementById("projectsTableBody");
-    if (!tbody) {
-        console.error("RENDER_DEBUG: projectsTableBody elementi bulunamadı!");
+function renderProjectsTable(projectsToRender) {
+    const tbody = document.getElementById('projectsTableBody');
+    tbody.innerHTML = '';
+
+    if (projectsToRender.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Gösterilecek proje bulunamadı.</td></tr>';
+        updatePagination(0, 0, 0); 
         return;
     }
-    
-    tbody.innerHTML = "";
-    
-    if (projects.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" style="text-align: center;">Gösterilecek proje bulunamadı.</td></tr>';
-        return;
-    }
-    
-    // Yardımcı fonksiyonlar... 
-    
-    projects.forEach((project) => {
+
+    // Pagination için dilimleme
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedProjects = projectsToRender.slice(startIndex, endIndex);
+
+    paginatedProjects.forEach(project => {
 /*************  ✨ Windsurf Command ⭐  *************/
         /**
          * Durum rozeti ve renk sınıfı HTML'i döndürür
@@ -2070,7 +2069,7 @@ function renderProjects(projects) {
             return dateStr;
         }
 
-         const row = document.createElement("tr");
+        const row = document.createElement('tr');
         
         // İş gidişatı tarihlerini kullan (varsa)
         const displayStartDate = project.first_progress_start || project.start_date;
@@ -2078,14 +2077,13 @@ function renderProjects(projects) {
         
         row.innerHTML = `
             <td data-label="Proje Adı">${project.project_name ? project.project_name.normalize('NFC') : "-"}</td>
-            <td data-label="Referans No">${project.reference_no || "-"}</td>
-            <td data-label="Müşteri">${project.customer_name || "-"}</td>
+            <td data-label="Referans No">${project.reference_no || '-'}</td>
+            <td data-label="Müşteri">${project.customer_name}</td>
             <td data-label="Durum">${getStatusBadgeHtml(project.display_status || "-")}</td>
             <td data-label="Başlangıç">${formatDateForDisplay(displayStartDate || "-")}</td>
             <td data-label="Bitiş">${formatDateForDisplay(displayEndDate || "-")}</td>
-            <!-- diğer hücreler... -->
+            <td data-label="Yönetici">${project.project_manager_name}</td>
         `;
-        
         tbody.appendChild(row);
     });
 
@@ -2537,108 +2535,9 @@ function renderProjects(projects) {
         }
     }
 
-    // `isEditable` parametresi eklendifunction renderProgressSteps(steps, projectId, isEditable = false) {
-    const progressStepsContainer = document.getElementById("progressStepsContainer");
-    if (!progressStepsContainer) return;
-    progressStepsContainer.innerHTML = "";
-    
-    if (steps.length === 0) {
-        progressStepsContainer.innerHTML = '<p>Bu proje için henüz iş adımı eklenmemiş.</p>';
-    } else {
-        steps.forEach((step) => {
-            const stepElement = document.createElement("div");
-            stepElement.className = "progress-detail-item";
-            
-            const titleContent = isEditable ?
-            `<input type="text" id="step-${step.progress_id}-name" class="progress-step-name-input" value="${step.step_name || ''}" placeholder="Adım Adı" required>` :
-            `<span class="progress-detail-title">${step.step_name || ''}</span>`;
-            
-            const startDateContent = isEditable ?
-            `<label for="step-${step.progress_id}-start">Başlangıç:</label><input type="date" id="step-${step.progress_id}-start" class="progress-datepicker" value="${formatDateForInput(step.start_date || '')}" required>` :
-            `Başlangıç: ${formatDateForDisplay(step.start_date || '-')}`;
-            
-            const endDateContent = isEditable ?
-            `<label for="step-${step.progress_id}-end">Bitiş:</label><input type="date" id="step-${step.progress_id}-end" class="progress-datepicker" value="${formatDateForInput(step.end_date || '')}" required>` :
-            `Bitiş: ${formatDateForDisplay(step.end_date || '-')}`;
-            
-            // Erteleme Gün Sayısı alanını her iş adımı için ekleyelim (eğer düzenleme modundaysak)
-            const delayOverrideContent = isEditable ?
-            `<div class="input-group" style="margin-top: 10px;">
-                <label for="step-${step.progress_id}-delay-override">Erteleme Gün Sayısı</label>
-                <input type="number" id="step-${step.progress_id}-delay-override" class="form-input" min="0" placeholder="Manuel gecikme (gün)">
-                <small style="color: var(--light-gray); font-size: 0.85em;">Bu değer girilirse, bu ve sonraki adımlar ertelenir.</small>
-            </div>` : '';
-            
-            const delayDisplay = (step.delay_days > 0 && !isEditable) ? `<span class='pdf-delay-text'>(${step.delay_days} gün gecikmeli)</span>` : '';
-            
-            const descriptionContent = isEditable ?
-            `<textarea id="step-${step.progress_id}-desc" class="progress-description-textarea" placeholder="Açıklama">${step.description || ''}</textarea>` :
-            `<div class="progress-detail-description">Açıklama: ${step.description || 'Yok'}</div>`;
-            
-            const actionsContent = isEditable ?
-            `
-            <div class="progress-actions">
-                <button type="button" class="action-btn save-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Kaydet"><i class="fas fa-save"></i> Kaydet</button>
-                <button type="button" class="action-btn delete-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Sil"><i class="fas fa-trash"></i> Sil</button>
-            </div>
-            ` : ``;
-            
-            stepElement.innerHTML = `
-            <div class="progress-item-header">
-                <div class="input-group" style="flex: 1;">
-                    ${isEditable ? '<label for="step-' + step.progress_id + '-name">Adım Başlığı</label>' : ''}
-                    ${titleContent}
-                </div>
-                <div class="progress-dates" style="margin-left: ${isEditable ? '20px' : '0'};">
-                    <span>
-                        ${startDateContent}
-                    </span>
-                    <span>
-                        ${endDateContent}
-                    </span>
-                    ${delayDisplay}
-                </div>
-            </div>
-            <div class="input-group">
-                ${isEditable ? '<label for="step-' + step.progress_id + '-desc">Açıklama</label>' : ''}
-                ${descriptionContent}
-            </div>
-            ${delayOverrideContent}
-            ${actionsContent}
-            `;
-            
-            progressStepsContainer.appendChild(stepElement);
-        });
+    // `isEditable` parametresi eklendi
+    function renderProgressSteps(steps, projectId, isEditable = false) {
         
-        // Event listener'ları dinamik olarak atama (sadece düzenleme modunda)
-        if (isEditable) {
-            document.querySelectorAll('.save-progress-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const progressId = e.currentTarget.dataset.id;
-                    const projId = e.currentTarget.dataset.projectId;
-                    const stepName = document.getElementById(`step-${progressId}-name`).value;
-                    const startDate = document.getElementById(`step-${progressId}-start`).value;
-                    const endDate = document.getElementById(`step-${progressId}-end`).value;
-                    const description = document.getElementById(`step-${progressId}-desc`).value;
-                    const delayOverride = document.getElementById(`step-${progressId}-delay-override`) ? 
-                                           parseInt(document.getElementById(`step-${progressId}-delay-override`).value) || null : null;
-                    
-                    // Yeni parametre olarak delay_days_override eklendi
-                    editProgressStep(progressId, projId, { 
-                        step_name: stepName, 
-                        start_date: startDate, 
-                        end_date: endDate, 
-                        description: description, 
-                        delay_days_override: delayOverride 
-                    });
-                });
-            });
-            
-            // ...diğer event listener'lar...
-        }
-    }
-    
-    // ...diğer kod...
         const progressStepsContainer = document.getElementById("progressStepsContainer");
         if (!progressStepsContainer) return;
         progressStepsContainer.innerHTML = "";
@@ -2731,6 +2630,7 @@ function renderProjects(projects) {
             addProgressStepButton.onclick = null;
             addProgressStepButton.onclick = () => addNewProgressStepForm(projectId);
         }
+    }
     // MODAL İÇİNE YENİ İŞ ADIMI EKLEME FORMU OLUŞTURAN FONKSİYON
     function addNewProgressStepForm(projectId) {
         const progressStepsContainer = document.getElementById("progressStepsContainer");
@@ -2815,17 +2715,25 @@ function renderProjects(projects) {
     // renderProgressSteps içinde inline form elemanlarından veri alacak şekilde güncellendi.
     // progress_id kullanıldı
     async function editProgressStep(progressId, projectId, updatedStepData) {
+    // Erteleme Gün Sayısı girildiyse al
+    const delayDaysOverride = document.getElementById('editProgressDelayDaysOverride');
+    if (delayDaysOverride && delayDaysOverride.value) {
+        updatedStepData.delay_days_override = parseInt(delayDaysOverride.value);
+    }
+
     try {
         const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(updatedStepData),  // delay_days_override değeri burada gönderilecek
+            body: JSON.stringify(updatedStepData),
         });
         const data = await response.json();
         if (response.ok) {
             showToast("İş adımı başarıyla güncellendi.");
             fetchProjects(); // Projeler listesini de yenile (durum güncellenmiş olabilir)
             fetchProgressSteps(projectId, true); // Adımları yenile (düzenleme modunda kal)
+            // Erteleme alanını sıfırla
+            if (delayDaysOverride) delayDaysOverride.value = '';
             addActivity(
                 "İş Adımı Güncellendi",
                 `Proje ID: ${projectId} için "${updatedStepData.step_name}" iş adımı güncellendi.`,
@@ -2841,6 +2749,7 @@ function renderProjects(projects) {
         showToast("İş adımı güncellenirken bir sorun oluştu.", true);
     }
 }
+
     // progress_id kullanıldı
     async function deleteProgressStep(progressId, projectId) {
         try {
@@ -3153,45 +3062,7 @@ function renderProjects(projects) {
             showToast(`PDF oluşturulurken hata oluştu: ${error.message}`, true);
         }
     }
-function renderProjectsTable(projectsToRender) {
-    const tbody = document.getElementById('projectsTableBody');
-    tbody.innerHTML = '';
 
-    if (projectsToRender.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Gösterilecek proje bulunamadı.</td></tr>';
-        updatePagination(0, 0, 0);
-        return;
-    }
-
-    // Pagination için dilimleme
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    const paginatedProjects = projectsToRender.slice(startIndex, endIndex);
-
-    paginatedProjects.forEach(project => {
-        // ... status badge ve tarih formatı fonksiyonları ...
-        
-        const row = document.createElement('tr');
-        
-        // İş gidişatı tarihlerini kullan (varsa)
-        const displayStartDate = project.first_progress_start || project.start_date;
-        const displayEndDate = project.last_progress_end || project.end_date;
-        
-        row.innerHTML = `
-            <td data-label="Proje Adı">${project.project_name ? project.project_name.normalize('NFC') : "-"}</td>
-            <td data-label="Referans No">${project.reference_no || '-'}</td>
-            <td data-label="Müşteri">${project.customer_name}</td>
-            <td data-label="Durum">${getStatusBadgeHtml(project.display_status || "-")}</td>
-            <td data-label="Başlangıç">${formatDateForDisplay(displayStartDate || "-")}</td>
-            <td data-label="Bitiş">${formatDateForDisplay(displayEndDate || "-")}</td>
-            <td data-label="Yönetici">${project.project_manager_name}</td>
-        `;
-        
-        tbody.appendChild(row);
-    });
-
-    updatePagination(projectsToRender.length, currentPage, Math.ceil(projectsToRender.length / rowsPerPage));
-}
     // --- Sayfalandırma Fonksiyonları ---
     function updateRowsPerPage() {
         // Ekran genişliğine göre sayfa başına gösterilecek proje sayısını ayarla
