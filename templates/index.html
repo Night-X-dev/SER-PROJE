@@ -1785,35 +1785,41 @@ async function fetchActiveProjectsCount() {
 
         // Projeleri Backend'den Çekme
        // Projeleri Backend'den Çekme
+// Hata ayıklama için fetchProjects fonksiyonu
 async function fetchProjects() {
     const tbody = document.getElementById("projectsTableBody");
     if (!tbody) {
-    console.error("HATA: projectsTableBody elementi bulunamadı!");
-    return;
+        console.error("HATA: projectsTableBody elementi bulunamadı!");
+        return;
     }
 
-    tbody.innerHTML =
-    '<tr><td colspan="8" style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Projeler yükleniyor...</td></tr>';
-
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Projeler yükleniyor...</td></tr>';
+    
     try {
+        console.log("fetchProjects: API isteği başlatılıyor...");
         const response = await fetch(`${API_BASE_URL}/api/projects`);
+        
+        console.log(`fetchProjects: API yanıtı alındı. Durum: ${response.status}`);
         if (!response.ok) {
+            const error = await response.text();
+            console.error("API hatası:", error);
             throw new Error(`HTTP hatası! Durum: ${response.status}`);
         }
-        const projects = await response.json();
-        allProjectsData = projects; 
-        applyFiltersAndRenderTable(); // Filtreleri uygula ve tabloyu render et
-        updateStatsAndChart(allProjectsData); // İstatistikleri ve grafiği güncelle
-        dbStatusElement.textContent = 'Bağlantı Başarılı';
-        dbStatusElement.style.color = 'var(--success)';
+        
+        const data = await response.json();
+        console.log("fetchProjects: Veri başarıyla çekildi. Veri sayısı:", data.length);
+        console.log("Örnek veri:", data.length > 0 ? data[0] : "Veri yok");
+        
+        allProjectsData = data;
+        console.log("allProjectsData güncellenmiş boyut:", allProjectsData.length);
+        
+        applyFiltersAndRenderTable();
+        console.log("Filtreleme ve render işlemleri tamamlandı.");
     } catch (error) {
-        console.error('Projeler çekilemedi:', error);
-        dbStatusElement.textContent = 'Bağlantı Hatası!';
-        dbStatusElement.style.color = 'var(--danger)';
-        showToast(`Projeler yüklenirken hata oluştu: ${error.message}`, true);
-        if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--danger);">Projeler yüklenemedi. Lütfen sunucu bağlantısını kontrol edin.</td></tr>';
-        }
+        console.error("fetchProjects HATA:", error);
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--danger);">
+            <i class="fas fa-exclamation-triangle"></i> Projeler yüklenirken hata: ${error.message}
+        </td></tr>`;
     }
 }
 
@@ -1983,56 +1989,28 @@ function updateStatsAndChart(projects) {
 
 
         // Projeleri tabloya render etme
-        function renderProjectsTable(projectsToRender) {
+    // index.html için doğru kod - Hataları düzeltilmiş
+
+// renderProjectsTable fonksiyonu
+function renderProjectsTable(projectsToRender) {
     const tbody = document.getElementById('projectsTableBody');
+    if (!tbody) {
+        console.error("HATA: projectsTableBody elementi bulunamadı!");
+        return; // Bu return bir fonksiyonun içinde olduğu için geçerli
+    }
+    
     tbody.innerHTML = '';
 
     if (projectsToRender.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Gösterilecek proje bulunamadı.</td></tr>';
-        updatePagination(0, 0, 0); // Sayfalandırmayı güncelle
-        return;
+        updatePagination(0, 0, 0);
+        return; // Bu return bir fonksiyonun içinde olduğu için geçerli
     }
 
     // Pagination için dilimleme
     const startIndex = (currentPage - 1) * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
     const paginatedProjects = projectsToRender.slice(startIndex, endIndex);
-
-    // Yardımcı fonksiyonlar
-    // Durum rozeti ve renk sınıfı HTML'i döndürür
-    function getStatusBadgeHtml(status, delayDays) {
-        let statusClass = "normal"; // Varsayılan olarak normal (yeşil)
-        let statusText = status;
-        
-        // Eğer status değerinde "(Gecikmeli)" ifadesi varsa veya delayDays > 0 ise gecikme var demektir
-        if ((status && status.includes('(Gecikmeli)')) || 
-            (delayDays && delayDays > 0) ||
-            (status && status.includes('Gecikti'))) {
-            statusClass = "gecikmeli";
-            
-            // "(Gecikmeli)" ifadesini kaldır (eğer zaten varsa)
-            statusText = status ? status.replace(' (Gecikmeli)', '') : 'Belirsiz';
-            
-            // Eğer gecikmeli olduğu belirtilmemişse ekle
-            if (!statusText.includes('(Gecikmeli)')) {
-                statusText += ' (Gecikmeli)';
-            }
-        } else if (status === "Tamamlandı") {
-            statusClass = "tamamlandı";
-        }
-
-        return `<span class="status-badge ${statusClass}">${statusText}</span>`;
-    }
-
-    // Tarih formatlama (DD.MM.YYYY)
-    function formatDateForDisplay(dateStr) {
-        if (!dateStr) return "";
-        const parts = dateStr.split("-");
-        if (parts.length === 3) {
-            return `${parts[2]}.${parts[1]}.${parts[0]}`;
-        }
-        return dateStr;
-    }
 
     paginatedProjects.forEach(project => {
         // İlk ve son iş gidişatı tarihlerini kullan (varsa)
@@ -2055,6 +2033,29 @@ function updateStatsAndChart(projects) {
     });
 
     updatePagination(projectsToRender.length, currentPage, Math.ceil(projectsToRender.length / rowsPerPage));
+}
+
+// getStatusBadgeHtml fonksiyonu renderProjectsTable dışında tanımlanmalı
+function getStatusBadgeHtml(status, delayDays) {
+    let statusClass = "normal"; // Varsayılan olarak normal (yeşil)
+    let statusText = status;
+    
+    // Eğer status değerinde "(Gecikmeli)" ifadesi varsa veya delayDays > 0 ise gecikme var demektir
+    if ((status && status.includes('(Gecikmeli)')) || 
+        (delayDays && delayDays > 0) ||
+        (status && status.includes('Gecikti'))) {
+        statusClass = "gecikmeli";
+        // "(Gecikmeli)" ifadesini kaldır (eğer zaten varsa)
+        statusText = status ? status.replace(' (Gecikmeli)', '') : 'Belirsiz';
+        // Eğer gecikmeli olduğu belirtilmemişse ekle
+        if (!statusText.includes('(Gecikmeli)')) {
+            statusText += ' (Gecikmeli)';
+        }
+    } else if (status === "Tamamlandı") {
+        statusClass = "tamamlandı";
+    }
+
+    return `<span class="status-badge ${statusClass}">${statusText}</span>`;
 }
         // Tarih formatı dönüşümü (DD.MM.YYYY -> YYYY-MM-DD)
         function formatDateForInput(dateStr) {
