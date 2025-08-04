@@ -2023,141 +2023,109 @@
     }
 
     function renderProjectsTable(projectsToRender) {
-        let tbody = document.getElementById("projectsTableBody");
-        if (!tbody) {
-            const table = document.getElementById("projectsTable");
-            if (table) {
-                tbody = document.createElement("tbody");
-                tbody.id = "projectsTableBody";
-                table.appendChild(tbody);
-                console.warn("projectsTableBody bulunamadı, yeni tbody eklendi.");
-            } else {
-                console.error("RENDER_DEBUG: projectsTable ve projectsTableBody elementi bulunamadı!");
-                return;
-            }
-        }
-        console.log(
-            "RENDER_DEBUG: renderProjectsTable başladı. projectsToRender (gelecek veri):",
-            projectsToRender
-        );
+          let tbody = document.getElementById("projectsTableBody");
+          if (!tbody) {
+              const table = document.getElementById("projectsTable");
+              if (table) {
+                  tbody = document.createElement("tbody");
+                  tbody.id = "projectsTableBody";
+                  table.appendChild(tbody);
+                  console.warn("projectsTableBody bulunamadı, yeni tbody eklendi.");
+              } else {
+                  console.error("RENDER_DEBUG: projectsTable ve projectsTableBody elementi bulunamadı!");
+                  return;
+              }
+          }
+          console.log(
+              "RENDER_DEBUG: renderProjectsTable başladı. projectsToRender (gelecek veri):",
+              projectsToRender
+          );
 
-        tbody.innerHTML = "";
-        console.log("RENDER_DEBUG: tbody içeriği temizlendi.");
+          tbody.innerHTML = "";
+          console.log("RENDER_DEBUG: tbody içeriği temizlendi.");
 
-        if (projectsToRender.length === 0) {
-            tbody.innerHTML =
-                '<tr><td colspan="11" style="text-align: center;">Gösterilecek proje bulunamadı.</td></tr>';
-            updatePagination(0, 0, 0); // Sayfalandırmayı güncelle
-            return;
-        }
+          if (projectsToRender.length === 0) {
+              tbody.innerHTML =
+                  '<tr><td colspan="11" style="text-align: center;">Gösterilecek proje bulunamadı.</td></tr>';
+              updatePagination(0, 0, 0);
+              return;
+          }
 
-        // Pagination için dilimleme
-        const startIndex = (currentPage - 1) * rowsPerPage;
-        const endIndex = startIndex + rowsPerPage;
-        const paginatedProjects = projectsToRender.slice(startIndex, endIndex);
+          // Pagination için dilimleme
+          const startIndex = (currentPage - 1) * rowsPerPage;
+          const endIndex = startIndex + rowsPerPage;
+          const paginatedProjects = projectsToRender.slice(startIndex, endIndex);
 
-        // Yardımcı fonksiyonlar:
-        function dateDiffInDays(date1, date2) {
-            // Tarih formatı: YYYY-MM-DD veya DD.MM.YYYY
-            function parseDate(str) {
-                if (!str) return null;
-                if (str.includes('-')) {
-                    // YYYY-MM-DD
-                    const [y, m, d] = str.split('-');
-                    return new Date(Number(y), Number(m) - 1, Number(d));
-                } else if (str.includes('.')) {
-                    // DD.MM.YYYY
-                    const [d, m, y] = str.split('.');
-                    return new Date(Number(y), Number(m) - 1, Number(d));
-                }
-                return null;
-            }
-            const dt1 = parseDate(date1);
-            const dt2 = parseDate(date2);
-            if (!dt1 || !dt2) return null;
-            return Math.ceil((dt2 - dt1) / (1000 * 60 * 60 * 24));
-        }
+          paginatedProjects.forEach((project) => {
+              // Toplam Gün
+              let totalDays = dateDiffInDays(project.start_date, project.end_date);
+              totalDays = (typeof totalDays === "number" && !isNaN(totalDays)) ? (totalDays >= 0 ? totalDays : 0) : '-';
 
-        function sumDelayDays(progressArr) {
-            if (!Array.isArray(progressArr)) return 0;
-            return progressArr.reduce((sum, step) => sum + (step.delay_days || 0), 0);
-        }
+              // Geçen Gün
+              const todayStr = getTodayStr();
+              let elapsedDays = dateDiffInDays(project.start_date, todayStr);
+              elapsedDays = (typeof elapsedDays === "number" && !isNaN(elapsedDays)) ? (elapsedDays >= 0 ? elapsedDays : 0) : '-';
 
-        function getTodayStr() {
-            const today = new Date();
-            return today.toISOString().slice(0, 10); // YYYY-MM-DD
-        }
+              // Gecikme Durumu
+              let delayDays = 0;
+              if (project.total_delay_days !== undefined && project.total_delay_days !== null) {
+                  delayDays = Number(project.total_delay_days);
+                  if (isNaN(delayDays)) delayDays = 0;
+              }
+              
+              let overdue = 0;
+              if (project.end_date) {
+                  const endDateObj = (() => {
+                      if (project.end_date.includes('-')) {
+                          const [y, m, d] = project.end_date.split('-');
+                          return new Date(Number(y), Number(m) - 1, Number(d));
+                      } else if (project.end_date.includes('.')) {
+                          const [d, m, y] = project.end_date.split('.');
+                          return new Date(Number(y), Number(m) - 1, Number(d));
+                      }
+                      return null;
+                  })();
+                  const todayObj = new Date();
+                  if (endDateObj && todayObj > endDateObj && project.status !== 'Tamamlandı') { // Sadece tamamlanmamış projeler için
+                      overdue = Math.ceil((todayObj - endDateObj) / (1000 * 60 * 60 * 24));
+                  }
+              }
 
-        paginatedProjects.forEach((project) => {
-            // Toplam Gün
-            let totalDays = dateDiffInDays(project.start_date, project.end_date);
-            totalDays = (typeof totalDays === "number" && !isNaN(totalDays)) ? (totalDays >= 0 ? totalDays : 0) : '-';
+              // Gecikme günleri toplamı
+              let gecikmeDurumu = "-";
+              const combinedDelay = delayDays + overdue;
+              if (combinedDelay > 0) {
+                  gecikmeDurumu = combinedDelay + " gün";
+              } else if (typeof combinedDelay === 'number' && combinedDelay === 0) {
+                  gecikmeDurumu = "0 gün";
+              }
 
-            // Geçen Gün
-            const todayStr = getTodayStr();
-            let elapsedDays = dateDiffInDays(project.start_date, todayStr);
-            elapsedDays = (typeof elapsedDays === "number" && !isNaN(elapsedDays)) ? (elapsedDays >= 0 ? elapsedDays : 0) : '-';
-
-            // Gecikme Durumu
-            let delayDays = 0;
-            if (project.total_delay_days !== undefined && project.total_delay_days !== null) {
-                delayDays = Number(project.total_delay_days);
-                if (isNaN(delayDays)) delayDays = 0;
-            }
-            
-            let overdue = 0;
-            if (project.end_date) {
-                const endDateObj = (() => {
-                    if (project.end_date.includes('-')) {
-                        const [y, m, d] = project.end_date.split('-');
-                        return new Date(Number(y), Number(m) - 1, Number(d));
-                    } else if (project.end_date.includes('.')) {
-                        const [d, m, y] = project.end_date.split('.');
-                        return new Date(Number(y), Number(m) - 1, Number(d));
-                    }
-                    return null;
-                })();
-                const todayObj = new Date();
-                if (endDateObj && todayObj > endDateObj && project.status !== 'Tamamlandı') { // Sadece tamamlanmamış projeler için
-                    overdue = Math.ceil((todayObj - endDateObj) / (1000 * 60 * 60 * 24));
-                }
-            }
-
-            // Gecikme günleri toplamı
-            let gecikmeDurumu = "-";
-            const combinedDelay = delayDays + overdue;
-            if (combinedDelay > 0) {
-                gecikmeDurumu = combinedDelay + " gün";
-            } else if (typeof combinedDelay === 'number' && combinedDelay === 0) {
-                gecikmeDurumu = "0 gün";
-            }
-
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                <td data-label="Proje Adı">${project.project_name ? project.project_name.normalize('NFC') : "-"}</td>
-                <td data-label="Referans No">${project.reference_no || "-"}</td>
-                <td data-label="Müşteri">${project.customer_name || "-"}</td>
-                <td data-label="Durum">${getStatusBadgeHtml(project.display_status || "-")}</td>
-                <td data-label="Başlangıç">${formatDateForDisplay(project.start_date || "-")}</td>
-                <td data-label="Bitiş">${formatDateForDisplay(project.end_date || "-")}</td>
-                <td data-label="Toplam Gün">${totalDays !== '-' ? totalDays + ' gün' : '-'}</td>
-                <td data-label="Geçen Gün">${elapsedDays !== '-' ? elapsedDays + ' gün' : '-'}</td>
-                <td data-label="Gecikme Durumu">${gecikmeDurumu}</td>
-                <td data-label="Yönetici">${project.project_manager_name || "-"}</td>
-                <td data-label="İşlemler">
-                    <div style="display: flex; gap: 10px;">
-                        <button class="action-btn view-project-btn" data-id="${project.project_id}" title="Detayları Görüntüle"><i class="fas fa-eye"></i></button>
-                        <button class="action-btn edit-project-btn" data-id="${project.project_id}" title="Projeyi Düzenle"><i class="fas fa-edit"></i></button>
-                        <button class="action-btn delete-project-btn" data-id="${project.project_id}" title="Projeyi Sil"><i class="fas fa-trash"></i></button>
-                        <button class="action-btn generate-pdf-btn" data-id="${project.project_id}" title="PDF Raporu Oluştur"><i class="fas fa-file-pdf"></i></button>
-                    </div>
-                </td>
-            `;
-            tbody.appendChild(row);
-        });
-        attachProjectTableEventListeners();
-        updatePagination(projectsToRender.length, currentPage, Math.ceil(projectsToRender.length / rowsPerPage));
-    }
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                  <td data-label="Proje Adı">${project.project_name ? project.project_name.normalize('NFC') : "-"}</td>
+                  <td data-label="Referans No">${project.reference_no || "-"}</td>
+                  <td data-label="Müşteri">${project.customer_name || "-"}</td>
+                  <td data-label="Durum">${getStatusBadgeHtml(project.display_status || "-")}</td>
+                  <td data-label="Başlangıç">${formatDateForDisplay(project.start_date || "-")}</td>
+                  <td data-label="Bitiş">${formatDateForDisplay(project.end_date || "-")}</td>
+                  <td data-label="Toplam Gün">${totalDays !== '-' ? totalDays + ' gün' : '-'}</td>
+                  <td data-label="Geçen Gün">${elapsedDays !== '-' ? elapsedDays + ' gün' : '-'}</td>
+                  <td data-label="Gecikme Durumu">${gecikmeDurumu}</td>
+                  <td data-label="Yönetici">${project.project_manager_name || "-"}</td>
+                  <td data-label="İşlemler">
+                      <div style="display: flex; gap: 10px;">
+                          <button class="action-btn view-project-btn" data-id="${project.project_id}" title="Detayları Görüntüle"><i class="fas fa-eye"></i></button>
+                          <button class="action-btn edit-project-btn" data-id="${project.project_id}" title="Projeyi Düzenle"><i class="fas fa-edit"></i></button>
+                          <button class="action-btn delete-project-btn" data-id="${project.project_id}" title="Projeyi Sil"><i class="fas fa-trash"></i></button>
+                          <button class="action-btn generate-pdf-btn" data-id="${project.project_id}" title="PDF Raporu Oluştur"><i class="fas fa-file-pdf"></i></button>
+                      </div>
+                  </td>
+              `;
+              tbody.appendChild(row);
+          });
+          attachProjectTableEventListeners();
+          updatePagination(projectsToRender.length, currentPage, Math.ceil(projectsToRender.length / rowsPerPage));
+      }
 
     function attachProjectTableEventListeners() {
         document.querySelectorAll(".view-project-btn").forEach((btn) => {
