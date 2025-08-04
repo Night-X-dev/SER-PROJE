@@ -1702,31 +1702,43 @@
         }
 async function fetchActiveProjectsCount() {
             try {
-                // Backend'deki API'ye istek gönderiyoruz
-                const response = await fetch('/api/project-stats');
-                
-                // İstek başarılı değilse hata fırlatıyoruz
-                if (!response.ok) {
-                    throw new Error(`HTTP Hata! Durum: ${response.status}`);
-                }
+        // Backend'deki API'ye istek gönderiyoruz
+        const response = await fetch('/api/project-stats');
+        
+        // İstek başarılı değilse hata fırlatıyoruz
+        if (!response.ok) {
+            throw new Error(`HTTP Hata! Durum: ${response.status}`);
+        }
 
-                // Gelen veriyi JSON'a çeviriyoruz
-                const data = await response.json();
-                
-                // Aktif projeler için ayrılan HTML elementini buluyoruz
-                const activeProjectsElement = document.getElementById('active-projects-count');
-                
-                // Eğer element varsa, içindeki metni güncelliyoruz
-                if (activeProjectsElement) {
-                    activeProjectsElement.textContent = data.active_projects;
-                }
+        // Gelen veriyi JSON'a çeviriyoruz
+        const data = await response.json();
+        
+        // Aktif projeler için ayrılan HTML elementini buluyoruz
+        const activeProjectsElement = document.getElementById('activeProjects');
+        const completedProjectsElement = document.getElementById('completedProjects');
+        const delayedProjectsElement = document.getElementById('delayedProjects');
+        const totalProjectsElement = document.getElementById('totalProjects');
+        
+        // Eğer elementler varsa, içindeki metni güncelliyoruz
+        if (activeProjectsElement) {
+            activeProjectsElement.textContent = data.activeProjects;
+        }
+        if (completedProjectsElement) {
+            completedProjectsElement.textContent = data.completedProjects;
+        }
+        if (delayedProjectsElement) {
+            delayedProjectsElement.textContent = data.delayedProjects;
+        }
+        if (totalProjectsElement) {
+            totalProjectsElement.textContent = data.totalProjects;
+        }
 
-            } catch (error) {
-                // Hata oluştuğunda konsola yazdırıyoruz ve kullanıcıya bildirim gösteriyoruz
-                console.error('Aktif proje sayısı çekilirken hata oluştu:', error);
-                // Eğer projenizde showToast fonksiyonu varsa, bu şekilde kullanabilirsiniz.
-                // showToast('Aktif proje sayısı alınamadı.', true);
-            }
+    } catch (error) {
+        // Hata oluştuğunda konsola yazdırıyoruz ve kullanıcıya bildirim gösteriyoruz
+        console.error('Proje istatistikleri çekilirken hata oluştu:', error);
+        showToast('Proje istatistikleri alınamadı.', true);
+    }
+
         }
         // Custom Confirm Modal (alert yerine kullanılacak) (global olarak tanımlandı)
         function showConfirmModal(title, message, onConfirm) {
