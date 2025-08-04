@@ -1278,59 +1278,28 @@
         }
         
         // Grafikleri başlatma
-        async function initCharts() {
-            try {
-                // Proje durumu istatistiklerini API'den al
-                const response = await fetch(`${API_BASE_URL}/api/project-status-stats`);
-                const statsData = await response.json();
-                
-                if (!response.ok) {
-                    console.error('Proje istatistikleri alınamadı:', statsData.message);
-                    showToast('Proje istatistikleri yüklenirken hata oluştu.', true);
-                    return;
-                }
-                
-                const progressCtx = document.getElementById('progressChart').getContext('2d');
-                progressChartInstance = new Chart(progressCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: statsData.labels,
-                        datasets: [{
-                            data: statsData.data,
-                            backgroundColor: [
-                                '#2ed573', // Tamamlandı - Yeşil
-                                '#0980d3', // Devam Ediyor - Mavi
-                                '#ff4757', // Gecikti - Kırmızı
-                                '#ffc107'  // Planlama - Sarı
-                            ],
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: {
-                                    padding: 20,
-                                    usePointStyle: true,
-                                    pointStyle: 'circle',
-                                    color: getComputedStyle(document.body).getPropertyValue('--text-color').trim()
-                                }
-                            }
-                        }
-                    }
-                });
-                
-                // İstatistik kartlarını güncelle
-                updateStatsCards(statsData.data);
-                
-            } catch (error) {
-                console.error('Grafik yüklenirken hata:', error);
-                showToast('Grafik yüklenirken bir hata oluştu.', true);
-            }
+       async function initCharts() {
+    try {
+        const response = await fetch('/api/project-status-stats');
+        if (!response.ok) {
+            throw new Error('Sunucu hatası, lütfen daha sonra tekrar deneyin.');
         }
+        const stats = await response.json();
+        // Proje istatistiklerini HTML'e yazdır
+        const aktifProje = document.getElementById('aktif-proje');
+        const gecikenProje = document.getElementById('geciken-proje');
+        const ortGecikme = document.getElementById('ort-gecikme');
+        const tamamlanmaOrani = document.getElementById('tamamlanma-orani');
+
+        aktifProje.textContent = stats.aktif_proje;
+        gecikenProje.textContent = stats.geciken_proje;
+        ortGecikme.textContent = stats.ort_gecikme;
+        tamamlanmaOrani.textContent = stats.tamamlanma_orani + '%';
+    } catch (error) {
+        console.error(error);
+        alert('Proje istatistikleri alınamadı: ' + error.message);
+    }
+}
         
         // İstatistik kartlarını güncelleme fonksiyonu
         function updateStatsCards(data) {
