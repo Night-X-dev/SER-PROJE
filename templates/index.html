@@ -1800,12 +1800,29 @@ async function fetchProjects() {
         if (!response.ok) {
             throw new Error(`HTTP hatası! Durum: ${response.status}`);
         }
+        
         const projects = await response.json();
-        allProjectsData = projects; 
-        applyFiltersAndRenderTable(); // Filtreleri uygula ve tabloyu render et
-        updateStatsAndChart(allProjectsData); // İstatistikleri ve grafiği güncelle
-        dbStatusElement.textContent = 'Bağlantı Başarılı';
-        dbStatusElement.style.color = 'var(--success)';
+        console.log("DEBUG: Çekilen proje sayısı:", projects.length);
+        
+        // Veri yoksa erken dön
+        if (!projects || projects.length === 0) {
+            console.warn("UYARI: API'den hiç proje verisi alınamadı!");
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Hiç proje bulunamadı.</td></tr>';
+            return; // Daha fazla işlem yapma
+        }
+        
+        // Global değişkeni güncelle
+        allProjectsData = projects;
+        console.log("DEBUG: allProjectsData güncellendi, yeni boyut:", allProjectsData.length);
+        
+        // Filtreleme ve render işlemlerini yap
+        applyFiltersAndRenderTable();
+        
+        // İstatistikleri ve grafiği güncelle (allProjectsData değil, filteredProjects'i kullanarak)
+        updateStatsAndChart(filteredProjects); // <-- Değişiklik burada
+        
+        // Diğer UI güncellemeleri
+        // ... mevcut kod ...
     } catch (error) {
         console.error('Projeler çekilemedi:', error);
         dbStatusElement.textContent = 'Bağlantı Hatası!';
@@ -2325,99 +2342,97 @@ function updateStatsAndChart(projects) {
 
         // Grafik Güncelleme Fonksiyonu
         function updateChart(stats) {
-            const ctx = document.getElementById('projectChart').getContext('2d');
-            
-            if (projectChartInstance) {
-                projectChartInstance.destroy(); 
-            }
-            
-            // Tema kontrolü
-            const isDark = document.body.getAttribute('data-theme') === 'dark';
-            const legendColor = isDark ? '#fff' : '#222';
+    console.log("DEBUG: updateChart çağrıldı, stats:", stats);
+    
+    const ctx = document.getElementById('projectChart');
+    if (!ctx) {
+        console.error("ERROR: projectChart canvas elemanı bulunamadı!");
+        return;
+    }
+    
+    if (projectChartInstance) {
+        projectChartInstance.destroy();
+        console.log("DEBUG: Önceki grafik örneği silindi.");
+    }
+    
+    const isDark = document.body.getAttribute('data-theme') === 'dark';
+    const legendColor = isDark ? '#fff' : '#222';
 
-            const chartColors = [
-                '#2ed573',   // Aktif - Yeşil
-                '#ff4757',   // Gecikmeli - Kırmızı (Hem Gecikti hem de Aktif/Planlama Gecikmeli için)
-                '#ffc107',   // Planlama - Sarı
-                '#0980d3'    // Tamamlandı - Mavi
-            ];
+    const chartColors = [
+        '#2ed573',   // Aktif - Yeşil
+        '#ff4757',   // Gecikmeli - Kırmızı 
+        '#ffc107',   // Planlama - Sarı
+        '#0980d3'    // Tamamlandı - Mavi
+    ];
 
-            // Backend'den gelen 'status' alanına göre istatistikleri ayarla
-            // 'display_status' artık frontend'de kullanılacak ancak grafik için 'status' baz alınmalı
-            let activeCount = 0;
-            let completedCount = 0;
-            let delayedCount = 0; // Hem 'Gecikti' hem de 'Aktif (İş Gecikmeli)' ve 'Planlama (İş Gecikmeli)'
-            let planningCount = 0;
-
-            allProjectsData.forEach(p => {
-                if (p.status === 'Aktif') {
-                    activeCount++;
-                } else if (p.status === 'Tamamlandı') {
-                    completedCount++;
-                } else if (p.status === 'Gecikti') {
-                    delayedCount++;
-                } else if (p.status === 'Planlama Aşamasında') {
-                    planningCount++;
-                }
-                // 'Aktif (İş Gecikmeli)' ve 'Planlama (İş Gecikmeli)' durumları da 'Gecikti' kategorisine dahil edilebilir
-                // Veya ayrı bir dilim olarak gösterilebilir. Kullanıcının isteği üzerine 'Gecikmeli' altında topluyorum.
-                if (p.last_progress_delay_days > 0 || p.total_delay_days > 0) {
-                    // Eğer projenin kendisi 'Gecikti' değilse ve iş adımı gecikmesi varsa
-                    if (p.status !== 'Gecikti') {
-                        delayedCount++; // Genel gecikmeli sayısına ekle
-                    }
-                }
-            });
-
-            // Tekrar eden sayımları önlemek için düzeltme
-            // Eğer bir proje hem "Aktif" hem de "Gecikmeli" olarak işaretleniyorsa,
-            // sadece bir kategoriye dahil edilmelidir.
-            // Burada basit bir yaklaşımla, "Gecikti" durumundaki projeler ayrı,
-            // diğer durumlardaki ama iş adımı gecikmesi olanlar "Gecikmeli" olarak sayılıyor.
-            // Grafikte netlik için, "Gecikti" ve "Gecikmeli İş Adımı Olan Aktif/Planlama" ayrı gösterilebilir.
-            // Şimdilik, "Gecikti" ve "Gecikmeli" (iş adımı kaynaklı) tek bir "Gecikmeli" diliminde toplanıyor.
-
-            const dataArr = [
-                Math.max(0, activeCount),
-                Math.max(0, delayedCount),
-                Math.max(0, planningCount),
-                Math.max(0, completedCount)
-            ];
-            const labels = ['Aktif', 'Gecikmeli', 'Planlama', 'Tamamlandı'];
-            
-            // Eğer tümü 0 ise, en azından bir dilim 1 olsun ki grafik gözüksün
-            const allZero = dataArr.every(v => v === 0);
-            if (allZero) dataArr[0] = 1;
-
-            projectChartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: dataArr,
-                        backgroundColor: chartColors, 
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                color: legendColor
-                            }
-                        },
-                        tooltip: {
-                            bodyColor: legendColor,
-                            titleColor: legendColor,
-                            backgroundColor: isDark ? '#222' : '#fff',
-                        }
-                    }
-                }
-            });
+    // Veri ve etiketleri oluştur
+    const data = [
+        stats.active || 0, 
+        stats.delayed || 0, 
+        stats.planning || 0, 
+        stats.completed || 0
+    ];
+    const labels = ['Aktif', 'Gecikmeli', 'Planlama', 'Tamamlandı'];
+    
+    // Değeri 0 olan kategorileri filtrele
+    const filteredData = [];
+    const filteredLabels = [];
+    const filteredColors = [];
+    
+    for (let i = 0; i < data.length; i++) {
+        if (data[i] > 0) {
+            filteredData.push(data[i]);
+            filteredLabels.push(labels[i]);
+            filteredColors.push(chartColors[i]);
         }
+    }
+    
+    console.log("DEBUG: Filtrelenmiş grafik verileri:", {
+        labels: filteredLabels, 
+        data: filteredData
+    });
+    
+    // Hiç veri yoksa uyarı
+    if (filteredData.length === 0) {
+        console.warn("DEBUG: Grafik için hiç veri yok!");
+        return;
+    }
+    
+    // Grafik oluştur - sadece değeri olan kategorileri göster
+    try {
+        projectChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: filteredLabels,
+                datasets: [{
+                    data: filteredData,
+                    backgroundColor: filteredColors, 
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: legendColor
+                        }
+                    },
+                    tooltip: {
+                        bodyColor: legendColor,
+                        titleColor: legendColor,
+                        backgroundColor: isDark ? '#222' : '#fff',
+                    }
+                }
+            }
+        });
+        console.log("DEBUG: Yeni grafik oluşturuldu.");
+    } catch (error) {
+        console.error("ERROR: Grafik oluşturulurken hata:", error);
+    }
+}
 
         // --- Sayfalandırma Fonksiyonları ---
         function updateRowsPerPage() {
