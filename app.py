@@ -1214,7 +1214,7 @@ def get_projects():
 
                 # If there is a delay in the latest step, update the status
                 if project['last_progress_delay_days'] is not None and project['last_progress_delay_days'] > 0:
-                    display_status += ' (Delayed)'
+                    display_status += ' (Gecikmeli)'
 
                 project['display_status'] = display_status # Add as a new field
 
