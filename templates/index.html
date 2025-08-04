@@ -1887,7 +1887,28 @@
                 // showToast('Aktiviteler yüklenirken hata oluştu.', true); // Eğer showToast fonksiyonunuz varsa kullanın
             }
         }
-
+function proje_durumunu_belirle(project) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const contractDate = project.contract_date;
+          const progress = project.progress;
+          
+          if (project.status === 'Completed') {
+              return { status: 'Completed', text: 'Tamamlandı', isDelayed: false };
+          }
+          
+          if (progress.length > 0) {
+              const latestProgress = progress[progress.length - 1];
+              const isDelayed = latestProgress.delay_days > 0;
+              return { status: isDelayed ? 'Delayed' : 'On Schedule', text: latestProgress.title, isDelayed: isDelayed };
+          } else {
+              if (contractDate && contractDate > today) {
+                  return { status: 'In Planning Phase', text: 'Planlama Aşamasında', isDelayed: false };
+              } else {
+                  return { status: 'Active', text: 'Aktif', isDelayed: false };
+              }
+          }
+      }
         // Aktivite ekleme fonksiyonu (Frontend'den çağrılabilir)
         async function addActivity(title, description, user_id, icon = "fas fa-info-circle") {
             if (!user_id) {
@@ -1921,63 +1942,59 @@
 
 
         // Projeleri tabloya render etme
-        function renderProjectsTable(projectsToRender) {
-            const tbody = document.getElementById('projectsTableBody');
-            tbody.innerHTML = '';
+        function renderProjectsTable() {
+          console.log('RENDER_DEBUG: renderProjectsTable başladı. projectsToRender (gelecek veri):', filteredProjects);
+          const tbody = document.getElementById('projects-table-body');
+          console.log('RENDER_DEBUG: tbody içeriği temizlendi.');
+          tbody.innerHTML = ''; // Önceki içeriği temizle
+          
+          const start = (currentPage - 1) * projectsPerPage;
+          const end = start + projectsPerPage;
+          const projectsToRender = filteredProjects.slice(start, end);
+          
+          if (projectsToRender.length === 0) {
+              tbody.innerHTML = `<tr><td colspan="7">Henüz bir proje bulunamadı.</td></tr>`;
+              updatePagination();
+              return;
+          }
+          
+          projectsToRender.forEach(project => {
+              const projectStatusInfo = proje_durumunu_belirle(project);
+              const statusText = projectStatusInfo.text;
+              let statusClass = '';
+              
+              if (projectStatusInfo.status === 'In Planning Phase') {
+                  statusClass = 'status-planning';
+              } else if (projectStatusInfo.status === 'Active' || projectStatusInfo.status === 'On Schedule') {
+                  statusClass = 'status-active';
+              } else if (projectStatusInfo.isDelayed) {
+                  statusClass = 'status-delayed';
+              } else if (project.status === 'Completed') {
+                  statusClass = 'text-success';
+              }
 
-            if (projectsToRender.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Gösterilecek proje bulunamadı.</td></tr>';
-                updatePagination(0, 0, 0); // Sayfalandırmayı güncelle
-                return;
-            }
-
-            // Pagination için dilimleme
-            const startIndex = (currentPage - 1) * rowsPerPage;
-            const endIndex = startIndex + rowsPerPage;
-            const paginatedProjects = projectsToRender.slice(startIndex, endIndex);
-
-            paginatedProjects.forEach(project => {
-                // Durum rozeti ve renk sınıfı HTML'i döndürür
-                function getStatusBadgeHtml(status) {
-                    let statusClass = "normal"; // Varsayılan olarak normal (yeşil)
-                    let statusText = status;
-
-                    if (status && status.includes('(Gecikmeli)')) {
-                        statusClass = "gecikmeli";
-                        statusText = status.replace(' (Gecikmeli)', ''); // Metinden "(Gecikmeli)" kısmını çıkar
-                    } else if (status === "Tamamlandı") {
-                        statusClass = "tamamlandı";
-                    }
-                    // Diğer durumlar için varsayılan normal kalır
-
-                    return `<span class="status-badge ${statusClass}">${statusText}</span>`;
-                }
-
-                // Tarih formatlama (DD.MM.YYYY)
-                function formatDateForDisplay(dateStr) {
-                    if (!dateStr) return "";
-                    const parts = dateStr.split("-");
-                    if (parts.length === 3) {
-                        return `${parts[2]}.${parts[1]}.${parts[0]}`;
-                    }
-                    return dateStr;
-                }
-
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td data-label="Proje Adı">${project.project_name ? project.project_name.normalize('NFC') : "-"}</td>
-                    <td data-label="Referans No">${project.reference_no || '-'}</td>
-                    <td data-label="Müşteri">${project.customer_name}</td>
-                    <td data-label="Durum">${getStatusBadgeHtml(project.display_status || "-")}</td>
-                    <td data-label="Başlangıç">${formatDateForDisplay(project.start_date || "-")}</td>
-                    <td data-label="Bitiş">${formatDateForDisplay(project.end_date || "-")}</td>
-                    <td data-label="Yönetici">${project.project_manager_name}</td>
-                `;
-                tbody.appendChild(row);
-            });
-
-            updatePagination(projectsToRender.length, currentPage, Math.ceil(projectsToRender.length / rowsPerPage));
-        }
+              const row = document.createElement('tr');
+              row.innerHTML = `
+                  <td>${project.name}</td>
+                  <td>${project.customer_name}</td>
+                  <td>${project.manager_name}</td>
+                  <td>${project.contract_date ? project.contract_date.toLocaleDateString('tr-TR') : 'Belirtilmedi'}</td>
+                  <td>${project.end_date ? project.end_date.toLocaleDateString('tr-TR') : 'Belirtilmedi'}</td>
+                  <td>
+                      <span class="${statusClass}">${statusText}</span>
+                  </td>
+                  <td class="table-actions">
+                      <button class="edit-btn" data-id="${project.id}"><i class="fas fa-edit"></i></button>
+                      <button class="delete-btn" data-id="${project.id}"><i class="fas fa-trash-alt"></i></button>
+                      <button class="pdf-btn" data-id="${project.id}"><i class="fas fa-file-pdf"></i></button>
+                  </td>
+              `;
+              tbody.appendChild(row);
+          });
+          
+          addEventListenersToTableButtons();
+          updatePagination();
+      }
 
         // Tarih formatı dönüşümü (DD.MM.YYYY -> YYYY-MM-DD)
         function formatDateForInput(dateStr) {
