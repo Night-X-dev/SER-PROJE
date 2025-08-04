@@ -2615,14 +2615,14 @@ def get_project_status_stats():
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Proje durumlarına göre sayıları al
+            # Güncellenmiş sorgu: İngilizce statüleri Türkçe kategorilere dönüştür
             sql = """
                 SELECT 
                     CASE 
-                        WHEN status = 'Tamamlandı' THEN 'Tamamlandı'
-                        WHEN status = 'Devam Ediyor' THEN 'Devam Ediyor'
-                        WHEN status = 'Gecikti' THEN 'Gecikti'
-                        WHEN status = 'Planlama' THEN 'Planlama'
+                        WHEN status = 'Completed' THEN 'Tamamlandı'
+                        WHEN status IN ('Active', 'Active (Work Delayed)') THEN 'Devam Ediyor'
+                        WHEN status IN ('Delayed', 'Active (Work Delayed)') THEN 'Gecikti'
+                        WHEN status = 'Planning' THEN 'Planlama'
                         ELSE 'Diğer'
                     END as status_category,
                     COUNT(*) as count
@@ -2640,7 +2640,7 @@ def get_project_status_stats():
             cursor.execute(sql)
             results = cursor.fetchall()
             
-            # Sonuçları sıralı dizi olarak hazırla
+            # Varsayılan değerlerle sözlük oluştur
             status_counts = {
                 'Tamamlandı': 0,
                 'Devam Ediyor': 0,
@@ -2668,7 +2668,6 @@ def get_project_status_stats():
     finally:
         if connection:
             connection.close()
-
 @app.route('/api/worker-performance')
 def worker_performance():
     """Retrieves performance metrics for employees (project managers)."""
