@@ -2021,7 +2021,72 @@
             }
         }
     }
+function showLoading(show) {
+        const loadingSpinner = document.getElementById('loading-spinner');
+        if (loadingSpinner) {
+            loadingSpinner.style.display = show ? 'flex' : 'none';
+        }
+    }
 
+    // Toast bildirimi gösteren yardımcı fonksiyon
+    function showToast(message, isError = false) {
+        const toastElement = document.getElementById('liveToast');
+        if (!toastElement) {
+            console.error('Toast elementi bulunamadı.');
+            return;
+        }
+        const toastBody = toastElement.querySelector('.toast-body');
+        if (!toastBody) {
+            console.error('Toast body elementi bulunamadı.');
+            return;
+        }
+
+        toastBody.textContent = message;
+
+        if (isError) {
+            toastElement.classList.add('bg-danger');
+            toastElement.classList.remove('bg-success');
+        } else {
+            toastElement.classList.add('bg-success');
+            toastElement.classList.remove('bg-danger');
+        }
+
+        const toast = new bootstrap.Toast(toastElement);
+        toast.show();
+    }
+
+    async function fetchProjects() {
+        showLoading(true);
+        const projectsTableBody = document.getElementById('projects-table-body');
+        if (!projectsTableBody) {
+            console.error('projects-table-body elementi bulunamadı.');
+            showToast('Tablo yüklenirken bir sorun oluştu.', true);
+            showLoading(false);
+            return;
+        }
+
+        projectsTableBody.innerHTML = `<tr><td colspan="9" class="text-center">Yükleniyor...</td></tr>`;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/projects`, { credentials: 'include' });
+            if (!response.ok) {
+                if (response.status === 401) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                throw new Error('Projeler verisi alınamadı.');
+            }
+            const projects = await response.json();
+            renderProjectsTable(projects);
+            // Diğer fonksiyon çağrıları, örneğin: applyFiltersAndRenderTable(projects);
+        } catch (error) {
+            console.error('Projeleri getirme hatası:', error);
+            projectsTableBody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">Projeler yüklenirken bir hata oluştu.</td></tr>`;
+            showToast('Projeler yüklenirken bir hata oluştu.', true);
+        } finally {
+            showLoading(false);
+        }
+    }
     async function fetchProjects() {
         showLoading(true);
         const projectsTableBody = document.getElementById('projects-table-body');
