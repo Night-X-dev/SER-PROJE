@@ -1700,32 +1700,28 @@
                 toast.className = 'toast';
             }, 3000);
         }
-async function fetchActiveProjectsCount() {
+async function fetchProjectStats() {
             try {
-                // Backend'deki API'ye istek gönderiyoruz
-                const response = await fetch('/api/project-stats');
-                
-                // İstek başarılı değilse hata fırlatıyoruz
+                const response = await fetch(`${API_BASE_URL}/api/project-stats`);
                 if (!response.ok) {
-                    throw new Error(`HTTP Hata! Durum: ${response.status}`);
+                    throw new Error(`HTTP hatası! Durum: ${response.status}`);
                 }
+                const stats = await response.json();
 
-                // Gelen veriyi JSON'a çeviriyoruz
-                const data = await response.json();
-                
-                // Aktif projeler için ayrılan HTML elementini buluyoruz
-                const activeProjectsElement = document.getElementById('active-projects-count');
-                
-                // Eğer element varsa, içindeki metni güncelliyoruz
-                if (activeProjectsElement) {
-                    activeProjectsElement.textContent = data.active_projects;
-                }
+                // İstatistikleri ilgili kartlara yerleştir
+                document.getElementById('activeProjects').textContent = stats.activeProjects;
+                document.getElementById('completedProjects').textContent = stats.completedProjects;
+                document.getElementById('delayedProjects').textContent = stats.delayedProjects;
+                document.getElementById('totalProjects').textContent = stats.totalProjects;
 
             } catch (error) {
-                // Hata oluştuğunda konsola yazdırıyoruz ve kullanıcıya bildirim gösteriyoruz
-                console.error('Aktif proje sayısı çekilirken hata oluştu:', error);
-                // Eğer projenizde showToast fonksiyonu varsa, bu şekilde kullanabilirsiniz.
-                // showToast('Aktif proje sayısı alınamadı.', true);
+                console.error('Proje istatistikleri alınamadı:', error);
+                showToast('Proje istatistikleri alınamadı.', true);
+                // Hata durumunda kartlardaki metni güncelle
+                document.getElementById('activeProjects').textContent = 'Hata';
+                document.getElementById('completedProjects').textContent = 'Hata';
+                document.getElementById('delayedProjects').textContent = 'Hata';
+                document.getElementById('totalProjects').textContent = 'Hata';
             }
         }
         // Custom Confirm Modal (alert yerine kullanılacak) (global olarak tanımlandı)

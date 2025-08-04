@@ -1543,16 +1543,16 @@ def get_project_stats():
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Aktif projeler: 'Aktif' veya 'Planlama Aşamasında' olanlar
-            cursor.execute("SELECT COUNT(project_id) AS count FROM projects WHERE status IN ('Aktif', 'Planlama Aşamasında')")
+            # Aktif Projeler: 'Tamamlandı' veya 'Planlama Aşamasında' durumunda olmayan tüm projeler.
+            cursor.execute("SELECT COUNT(project_id) AS count FROM projects WHERE status NOT IN ('Tamamlandı', 'Planlama Aşamasında')")
             active_projects = cursor.fetchone()['count']
 
             # Tamamlanan projeler
             cursor.execute("SELECT COUNT(project_id) AS count FROM projects WHERE status = 'Tamamlandı'")
             completed_projects = cursor.fetchone()['count']
 
-            # Geciken projeler
-            cursor.execute("SELECT COUNT(project_id) AS count FROM projects WHERE status = 'Gecikti'")
+            # Geciken Projeler: Herhangi bir iş adımında gecikme olan projeler (benzersiz sayım).
+            cursor.execute("SELECT COUNT(DISTINCT project_id) AS count FROM project_progress WHERE delay_days > 0")
             delayed_projects = cursor.fetchone()['count']
 
             # Toplam projeler
@@ -2611,53 +2611,64 @@ def manager_stats():
 
 @app.route('/api/project-status-stats', methods=['GET'])
 def get_project_status_stats():
+    """Get project status statistics for charts"""
+    connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Aktif projeler
+            # Güncellenmiş sorgu: İngilizce statüleri Türkçe kategorilere dönüştür
             sql = """
-                SELECT COUNT(*) as aktif_proje
-                FROM projects
-                WHERE status NOT IN ('tamamlandı', 'planlama aşamasında')
+                SELECT 
+                    CASE 
+                        WHEN status = 'Completed' THEN 'Tamamlandı'
+                        WHEN status IN ('Active', 'Active (Work Delayed)') THEN 'Devam Ediyor'
+                        WHEN status IN ('Delayed', 'Active (Work Delayed)') THEN 'Gecikti'
+                        WHEN status = 'Planning' THEN 'Planlama'
+                        ELSE 'Diğer'
+                    END as status_category,
+                    COUNT(*) as count
+                FROM projects 
+                GROUP BY status_category
+                ORDER BY 
+                    CASE status_category
+                        WHEN 'Tamamlandı' THEN 1
+                        WHEN 'Devam Ediyor' THEN 2
+                        WHEN 'Gecikti' THEN 3
+                        WHEN 'Planlama' THEN 4
+                        ELSE 5
+                    END
             """
             cursor.execute(sql)
-            aktif_proje = cursor.fetchone()['aktif_proje']
-
-            # Geciken projeler
-            sql = """
-                SELECT COUNT(DISTINCT project_id) as geciken_proje
-                FROM project_progress
-                WHERE delay_days > 0
-            """
-            cursor.execute(sql)
-            geciken_proje = cursor.fetchone()['geciken_proje']
-
-            # Toplam proje
-            sql = """
-                SELECT COUNT(*) as toplam_proje
-                FROM projects
-            """
-            cursor.execute(sql)
-            toplam_proje = cursor.fetchone()['toplam_proje']
-
-            # Tamamlanan projeler
-            sql = """
-                SELECT COUNT(*) as tamamlanan_proje
-                FROM projects
-                WHERE status = 'tamamlandı'
-            """
-            cursor.execute(sql)
-            tamamlanan_proje = cursor.fetchone()['tamamlanan_proje']
-
+            results = cursor.fetchall()
+            
+            # Varsayılan değerlerle sözlük oluştur
+            status_counts = {
+                'Tamamlandı': 0,
+                'Devam Ediyor': 0,
+                'Gecikti': 0,
+                'Planlama': 0
+            }
+            
+            for row in results:
+                status_category = row[0]
+                count = row[1]
+                if status_category in status_counts:
+                    status_counts[status_category] = count
+            
             return jsonify({
-                'aktif_proje': aktif_proje,
-                'geciken_proje': geciken_proje,
-                'toplam_proje': toplam_proje,
-                'tamamlanan_proje': tamamlanan_proje
+                'labels': list(status_counts.keys()),
+                'data': list(status_counts.values())
             }), 200
+            
+    except pymysql.Error as e:
+        print(f"Database error while fetching project status stats: {e}")
+        return jsonify({'message': f'Veritabanı hatası: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"Proje istatistikleri alınamadı: {e}")
+        print(f"General error while fetching project status stats: {e}")
         return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+    finally:
+        if connection:
+            connection.close()
 @app.route('/api/worker-performance')
 def worker_performance():
     """Retrieves performance metrics for employees (project managers)."""
