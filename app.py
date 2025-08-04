@@ -1319,12 +1319,8 @@ def update_project(project_id):
     customer_id = clean_input_value(data.get('customer_id'))
     project_manager_id = clean_input_value(data.get('project_manager_id'))
 
-    # Validate status if present
-    if status and status not in ALLOWED_PROJECT_STATUSES:
-        return jsonify({"message": f"Geçersiz proje durumu: {status}. Sadece şu değerler kabul edilir: {', '.join(ALLOWED_PROJECT_STATUSES)}"}), 400
-
     try:
-        customer_id_new = int(customer_id_new) if customer_id_new else None
+        customer_id_new = int(customer_id) if customer_id else None
     except ValueError:
         customer_id_new = None
 
@@ -1345,10 +1341,6 @@ def add_project():
     end_date_str = data.get('endDate')     # Renamed to avoid conflict with datetime object
     project_location = data.get('projectLocation')
     status = data.get('status')
-
-    # Validate status
-    if status not in ALLOWED_PROJECT_STATUSES:
-        return jsonify({"message": f"Geçersiz proje durumu: {status}. Sadece şu değerler kabul edilir: {', '.join(ALLOWED_PROJECT_STATUSES)}"}), 400
 
     project_location = data.get('projectLocation')
     status = data.get('status', 'Planlama Aşamasında') # Default status if not provided
