@@ -1194,21 +1194,9 @@ def get_projects():
                 u.fullname AS project_manager_name,
                 c.customer_id,
                 u.id AS project_manager_user_id,
-                -- Get the latest progress title and delay days (son iş gidişatı)
-                (SELECT title FROM project_progress 
-                 WHERE project_id = p.project_id 
-                 ORDER BY start_date DESC, created_at DESC 
-                 LIMIT 1) AS last_progress_title,
-                (SELECT delay_days FROM project_progress 
-                 WHERE project_id = p.project_id 
-                 ORDER BY start_date DESC, created_at DESC 
-                 LIMIT 1) AS last_progress_delay_days,
-                -- İlk iş gidişatının başlangıç tarihi
-                (SELECT MIN(start_date) FROM project_progress 
-                 WHERE project_id = p.project_id) AS first_progress_start,
-                -- Son iş gidişatının bitiş tarihi
-                (SELECT MAX(end_date) FROM project_progress 
-                 WHERE project_id = p.project_id) AS last_progress_end,
+                -- Get the latest progress title and delay days
+                (SELECT title FROM project_progress WHERE project_id = p.project_id ORDER BY created_at DESC LIMIT 1) AS last_progress_title,
+                (SELECT delay_days FROM project_progress WHERE project_id = p.project_id ORDER BY created_at DESC LIMIT 1) AS last_progress_delay_days,
                 (SELECT IFNULL(SUM(pp.delay_days), 0) FROM project_progress pp WHERE pp.project_id = p.project_id) AS total_delay_days
             FROM projects p
             JOIN customers c ON p.customer_id = c.customer_id
@@ -1234,8 +1222,6 @@ def get_projects():
                 project['meeting_date'] = project['meeting_date'].isoformat() if isinstance(project['meeting_date'], datetime.date) else None
                 project['start_date'] = project['start_date'].isoformat() if isinstance(project['start_date'], datetime.date) else None
                 project['end_date'] = project['end_date'].isoformat() if isinstance(project['end_date'], datetime.date) else None
-                project['first_progress_start'] = project['first_progress_start'].isoformat() if isinstance(project['first_progress_start'], datetime.date) else None
-                project['last_progress_end'] = project['last_progress_end'].isoformat() if isinstance(project['last_progress_end'], datetime.date) else None
 
         return jsonify(projects_data), 200
     except pymysql.Error as e:
@@ -1916,8 +1902,7 @@ def update_project_progress_step(progress_id):
     description = data.get('description')
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
-    delay_days_override = data.get('delay_days_override')  # Manuel gecikme gün sayısı
-    user_id = session.get('user_id')  # Get user ID from session
+    user_id = session.get('user_id') # Get user ID from session
 
     if not all([step_name, start_date_str, end_date_str, user_id]):
         return jsonify({'message': 'Title, start, end date, and user ID are required.'}), 400
@@ -1933,13 +1918,14 @@ def update_project_progress_step(progress_id):
                 return jsonify({'message': 'Progress step not found.'}), 404
 
             current_project_id = existing_step['project_id']
-            old_step_name = existing_step['title'] 
+            old_step_name = existing_step['title'] # Get old step name
 
             # Get project name and manager
             cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (current_project_id,))
             project_info = cursor.fetchone()
             project_name = project_info['project_name'] if project_info else f"ID: {current_project_id}"
             project_manager_id = project_info['project_manager_id'] if project_info else None
+
 
             # Find the end date of the previous step (excluding this step)
             delay_days = 0
@@ -1955,43 +1941,8 @@ def update_project_progress_step(progress_id):
             new_step_start_dt = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
             if previous_end_date:
                 diff = (new_step_start_dt - previous_end_date).days
-                if diff > 1:  # 1 günden fazla fark varsa gecikme var demektir
-                    delay_days = diff - 1  # Düzeltildi: Artık 1 gün çıkarılıyor
-            
-            # Manuel gecikme gün sayısı verilmişse onu kullan
-            if delay_days_override is not None:
-                delay_days = int(delay_days_override)
-                
-                # Eğer manuel gecikme girildiyse ve bu bir ertelemeyse, sonraki adımları da ertele
-                if delay_days > 0:
-                    # Önce bu adımın bitiş tarihini güncelle
-                    end_dt = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
-                    new_end_date = end_dt + datetime.timedelta(days=delay_days)
-                    end_date_str = new_end_date.strftime('%Y-%m-%d')
-                    
-                    # Sonraki tüm adımları delay_days kadar ertele
-                    cursor.execute("""
-                        SELECT progress_id, start_date, end_date 
-                        FROM project_progress
-                        WHERE project_id = %s AND start_date > %s
-                        ORDER BY start_date ASC
-                    """, (current_project_id, start_date_str))
-                    next_steps = cursor.fetchall()
-                    
-                    for next_step in next_steps:
-                        next_start_dt = next_step['start_date']
-                        next_end_dt = next_step['end_date']
-                        
-                        # Yeni tarihleri hesapla
-                        new_next_start = next_start_dt + datetime.timedelta(days=delay_days)
-                        new_next_end = next_end_dt + datetime.timedelta(days=delay_days)
-                        
-                        # Veritabanını güncelle
-                        cursor.execute("""
-                            UPDATE project_progress
-                            SET start_date = %s, end_date = %s
-                            WHERE progress_id = %s
-                        """, (new_next_start, new_next_end, next_step['progress_id']))
+                if diff > 1:
+                    delay_days = diff - 1
 
             sql_update = """
             UPDATE project_progress
@@ -2004,28 +1955,12 @@ def update_project_progress_step(progress_id):
             if cursor.rowcount == 0:
                 return jsonify({'message': 'Progress step data is already up to date or no changes were made.'}), 200
 
-            # Proje tarihlerini güncelle - ilk ve son iş gidişatlarına göre
-            cursor.execute("""
-                SELECT MIN(start_date) as project_start, MAX(end_date) as project_end
-                FROM project_progress
-                WHERE project_id = %s
-            """, (current_project_id,))
-            project_dates = cursor.fetchone()
-            
-            if project_dates and project_dates['project_start'] and project_dates['project_end']:
-                cursor.execute("""
-                    UPDATE projects
-                    SET start_date = %s, end_date = %s
-                    WHERE project_id = %s
-                """, (project_dates['project_start'], project_dates['project_end'], current_project_id))
-                connection.commit()
-
             # Send notification to project manager
             if project_manager_id:
                 send_notification(
                     project_manager_id,
                     "Project Progress Step Updated",
-                    f"The work step '{step_name}' in the project '{project_name}' you managed has been updated." 
+                    f"The work step '{step_name}' in the project '{project_name}' you managed has been updated." # Message updated
                 )
 
             activity_data = {
@@ -2046,6 +1981,7 @@ def update_project_progress_step(progress_id):
     finally:
         if connection:
             connection.close()
+
 # API to delete project progress step
 @app.route('/api/progress/<int:progress_id>', methods=['DELETE'])
 def delete_project_progress_step(progress_id):
