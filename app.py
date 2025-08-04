@@ -1194,9 +1194,21 @@ def get_projects():
                 u.fullname AS project_manager_name,
                 c.customer_id,
                 u.id AS project_manager_user_id,
-                -- Get the latest progress title and delay days
-                (SELECT title FROM project_progress WHERE project_id = p.project_id ORDER BY created_at DESC LIMIT 1) AS last_progress_title,
-                (SELECT delay_days FROM project_progress WHERE project_id = p.project_id ORDER BY created_at DESC LIMIT 1) AS last_progress_delay_days,
+                -- Get the latest progress title and delay days (son iş gidişatı)
+                (SELECT title FROM project_progress 
+                 WHERE project_id = p.project_id 
+                 ORDER BY start_date DESC, created_at DESC 
+                 LIMIT 1) AS last_progress_title,
+                (SELECT delay_days FROM project_progress 
+                 WHERE project_id = p.project_id 
+                 ORDER BY start_date DESC, created_at DESC 
+                 LIMIT 1) AS last_progress_delay_days,
+                -- İlk iş gidişatının başlangıç tarihi
+                (SELECT MIN(start_date) FROM project_progress 
+                 WHERE project_id = p.project_id) AS first_progress_start,
+                -- Son iş gidişatının bitiş tarihi
+                (SELECT MAX(end_date) FROM project_progress 
+                 WHERE project_id = p.project_id) AS last_progress_end,
                 (SELECT IFNULL(SUM(pp.delay_days), 0) FROM project_progress pp WHERE pp.project_id = p.project_id) AS total_delay_days
             FROM projects p
             JOIN customers c ON p.customer_id = c.customer_id
@@ -1222,6 +1234,8 @@ def get_projects():
                 project['meeting_date'] = project['meeting_date'].isoformat() if isinstance(project['meeting_date'], datetime.date) else None
                 project['start_date'] = project['start_date'].isoformat() if isinstance(project['start_date'], datetime.date) else None
                 project['end_date'] = project['end_date'].isoformat() if isinstance(project['end_date'], datetime.date) else None
+                project['first_progress_start'] = project['first_progress_start'].isoformat() if isinstance(project['first_progress_start'], datetime.date) else None
+                project['last_progress_end'] = project['last_progress_end'].isoformat() if isinstance(project['last_progress_end'], datetime.date) else None
 
         return jsonify(projects_data), 200
     except pymysql.Error as e:
