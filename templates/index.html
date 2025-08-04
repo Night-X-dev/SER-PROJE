@@ -1836,27 +1836,28 @@ async function fetchProjects() {
 
         // Eksik olan updateStatsAndChart fonksiyonu eklendi ve güncellendi
       // Eksik olan updateStatsAndChart fonksiyonu eklendi ve güncellendi
-      function updateStatsAndChart(projects) {
-    //... mevcut kod ...
+      
+function updateStatsAndChart(projects) {
+    console.log("DEBUG: updateStatsAndChart çağrıldı");
+    console.log("DEBUG: Toplam proje sayısı:", projects.length);
     
     // Her kategori için sayacı sıfırla
-    let active = 0, completed = 0, delayed = 0, total = 0, planning = 0, testing = 0; // test kategorisi ekledik
+    let active = 0, completed = 0, delayed = 0, total = 0, planning = 0;
     
     // Tüm projeleri dolaş ve kategorileri say
     projects.forEach((p, index) => {
-        //... mevcut kod ...
+        console.log(`DEBUG: Proje ${index+1}: ID=${p.project_id}, Adı="${p.project_name}", Display Status="${p.display_status || '(boş)'}", Status="${p.status || '(boş)'}"`);
         
-        const displayStatus = (p.display_status || p.status || "").toLowerCase();
+        // Toplam sayacı artır
+        total++;
+        
+        // Görünen duruma (display_status) göre kategorize et
+        const displayStatus = (p.display_status || p.status || "").toLowerCase(); // Tüm karşılaştırmaları lowercase yaparak daha güvenli hale getir
         
         let category = "diğer";
         
-        // Kategori belirlemede öncelik display_status'a (görünen metin)
-        if (displayStatus.includes('test')) {
-            testing++; // Test kategorisi için yeni sayaç
-            category = "test";
-        }
-        // Planlama içeriyorsa "Planlama" kategorisine girer
-        else if (displayStatus.includes('planlama')) {
+        // Test veya Planlama içeriyorsa "Planlama" kategorisine girer
+        if (displayStatus.includes('test') || displayStatus.includes('planlama')) {
             planning++;
             category = "planlama";
         } 
@@ -1871,48 +1872,43 @@ async function fetchProjects() {
             category = "aktif";
         }
         
-        //... mevcut kod ...
+        // Görünen durumda "Gecikmeli" varsa veya total_delay_days > 0 ise Gecikmiş olarak sayılır
+        let isDelayed = false;
+        if (!displayStatus.includes('tamamlandı') && (
+            displayStatus.includes('gecikmeli') || 
+            displayStatus.includes('gecikti') || 
+            (p.total_delay_days && p.total_delay_days > 0)
+        )) {
+            delayed++;
+            isDelayed = true;
+        }
+        
+        console.log(`  - Kategorisi: ${category}, Gecikmeli mi: ${isDelayed}`);
     });
     
-    //... mevcut kod ...
+    console.log(`DEBUG: Kategorilendirme sonuçları: active=${active}, completed=${completed}, planning=${planning}, delayed=${delayed}, total=${total}`);
     
-    // Grafik verilerini güncelle - test kategorisini de ekleyerek
+    // Eğer toplam sayı mismatch varsa uyarı ver
+    if (active + completed + planning !== total) {
+        console.warn(`UYARI: Kategori toplamı (${active + completed + planning}) toplam proje sayısına (${total}) eşit değil!`);
+    }
+    
+    // Sayaçları HTML elementlerine yaz
+    document.getElementById('activeProjects').textContent = active;
+    document.getElementById('completedProjects').textContent = completed;
+    document.getElementById('delayedProjects').textContent = delayed;
+    document.getElementById('totalProjects').textContent = total;
+    
+    // Grafik verilerini güncelle - sadece filteredProjects'tan gelen verilerle
     updateChart({
         active: active,
         planning: planning,
-        testing: testing, // Yeni kategori
         completed: completed,
         delayed: delayed
     });
 }
 
-function updateChart(stats) {
-    //... mevcut kod ...
-    
-    // Veri ve etiketleri güncelle
-    const dataValues = [
-        stats.active || 0,     // Aktif projeler
-        stats.completed || 0,  // Tamamlanan projeler
-        stats.planning || 0,   // Planlama aşamasındaki projeler
-        stats.testing || 0     // Test aşamasındaki projeler
-    ];
-    
-    const dataLabels = [
-        'Aktif', 
-        'Tamamlandı', 
-        'Planlama',
-        'Test'          // Yeni kategori
-    ];
-    
-    const chartColors = [
-        '#2ed573',   // Aktif - Yeşil
-        '#0980d3',   // Tamamlandı - Mavi
-        '#ffc107',   // Planlama - Sarı
-        '#9c27b0'    // Test - Mor
-    ];
-    
-    //... mevcut kod ...
-}
+
         // Son Aktiviteleri Backend'den Çekme (Şimdi activities tablosundan çekecek)
         async function fetchRecentActivities() {
             const activityListContainer = document.getElementById('recentActivitiesList'); // Bu ID'nin HTML'de olduğundan emin olun
