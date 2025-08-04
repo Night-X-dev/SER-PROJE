@@ -2784,40 +2784,32 @@
     // renderProgressSteps içinde inline form elemanlarından veri alacak şekilde güncellendi.
     // progress_id kullanıldı
     async function editProgressStep(progressId, projectId, updatedStepData) {
-    // Erteleme Gün Sayısı girildiyse al
-    const delayDaysOverride = document.getElementById('editProgressDelayDaysOverride');
-    if (delayDaysOverride && delayDaysOverride.value) {
-        updatedStepData.delay_days_override = parseInt(delayDaysOverride.value);
-    }
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(updatedStepData),
-        });
-        const data = await response.json();
-        if (response.ok) {
-            showToast("İş adımı başarıyla güncellendi.");
-            fetchProjects(); // Projeler listesini de yenile (durum güncellenmiş olabilir)
-            fetchProgressSteps(projectId, true); // Adımları yenile (düzenleme modunda kal)
-            // Erteleme alanını sıfırla
-            if (delayDaysOverride) delayDaysOverride.value = '';
-            addActivity(
-                "İş Adımı Güncellendi",
-                `Proje ID: ${projectId} için "${updatedStepData.step_name}" iş adımı güncellendi.`,
-                projectId,
-                "fas fa-pen",
-                "progress_update"
-            );
-        } else {
-            showToast(`Hata: ${data.message}`, true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, { // progressId kullanılıyor
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updatedStepData),
+            });
+            const data = await response.json();
+            if (response.ok) {
+                showToast("İş adımı başarıyla güncellendi.");
+                fetchProjects(); // Projeler listesini de yenile (durum güncellenmiş olabilir)
+                fetchProgressSteps(projectId, true); // Adımları yenile (düzenleme modunda kal)
+                addActivity(
+                    "İş Adımı Güncellendi",
+                    `Proje ID: ${projectId} için "${updatedStepData.step_name}" iş adımı güncellendi.`,
+                    projectId,
+                    "fas fa-pen",
+                    "progress_update"
+                );
+            } else {
+                showToast(`Hata: ${data.message}`, true);
+            }
+        } catch (error) {
+            console.error("İş adımı güncelleme hatası:", error);
+            showToast("İş adımı güncellenirken bir sorun oluştu.", true);
         }
-    } catch (error) {
-        console.error("İş adımı güncelleme hatası:", error);
-        showToast("İş adımı güncellenirken bir sorun oluştu.", true);
     }
-}
 
     // progress_id kullanıldı
     async function deleteProgressStep(progressId, projectId) {
