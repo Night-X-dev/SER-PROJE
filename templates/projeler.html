@@ -2022,142 +2022,79 @@
         }
     }
 
-    function renderProjectsTable(projectsToRender) {
-        let tbody = document.getElementById("projectsTableBody");
-        if (!tbody) {
-            const table = document.getElementById("projectsTable");
-            if (table) {
-                tbody = document.createElement("tbody");
-                tbody.id = "projectsTableBody";
-                table.appendChild(tbody);
-                console.warn("projectsTableBody bulunamadı, yeni tbody eklendi.");
-            } else {
-                console.error("RENDER_DEBUG: projectsTable ve projectsTableBody elementi bulunamadı!");
-                return;
+    async function fetchProjects() {
+        showLoading(true);
+        const projectsTableBody = document.getElementById('projects-table-body');
+        projectsTableBody.innerHTML = `<tr><td colspan="9" class="text-center">Yükleniyor...</td></tr>`;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/projects`, { credentials: 'include' });
+            if (!response.ok) {
+                if (response.status === 401) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                throw new Error('Projeler verisi alınamadı.');
             }
+            const projects = await response.json();
+            renderProjectsTable(projects);
+            // ... (diğer fonksiyon çağrıları)
+        } catch (error) {
+            console.error('Projeleri getirme hatası:', error);
+            projectsTableBody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">Projeler yüklenirken bir hata oluştu.</td></tr>`;
+            showToast('Projeler yüklenirken bir hata oluştu.', true);
+        } finally {
+            showLoading(false);
         }
-        console.log(
-            "RENDER_DEBUG: renderProjectsTable başladı. projectsToRender (gelecek veri):",
-            projectsToRender
-        );
+    }
 
-        tbody.innerHTML = "";
-        console.log("RENDER_DEBUG: tbody içeriği temizlendi.");
-
-        if (projectsToRender.length === 0) {
-            tbody.innerHTML =
-                '<tr><td colspan="11" style="text-align: center;">Gösterilecek proje bulunamadı.</td></tr>';
-            updatePagination(0, 0, 0); // Sayfalandırmayı güncelle
+    function renderProjectsTable(projects) {
+        const projectsTableBody = document.getElementById('projects-table-body');
+        projectsTableBody.innerHTML = ''; // Tablo içeriğini temizle
+        if (projects.length === 0) {
+            projectsTableBody.innerHTML = `<tr><td colspan="9" class="text-center">Henüz proje bulunmamaktadır.</td></tr>`;
             return;
         }
 
-        // Pagination için dilimleme
-        const startIndex = (currentPage - 1) * rowsPerPage;
-        const endIndex = startIndex + rowsPerPage;
-        const paginatedProjects = projectsToRender.slice(startIndex, endIndex);
-
-        // Yardımcı fonksiyonlar:
-        function dateDiffInDays(date1, date2) {
-            // Tarih formatı: YYYY-MM-DD veya DD.MM.YYYY
-            function parseDate(str) {
-                if (!str) return null;
-                if (str.includes('-')) {
-                    // YYYY-MM-DD
-                    const [y, m, d] = str.split('-');
-                    return new Date(Number(y), Number(m) - 1, Number(d));
-                } else if (str.includes('.')) {
-                    // DD.MM.YYYY
-                    const [d, m, y] = str.split('.');
-                    return new Date(Number(y), Number(m) - 1, Number(d));
-                }
-                return null;
-            }
-            const dt1 = parseDate(date1);
-            const dt2 = parseDate(date2);
-            if (!dt1 || !dt2) return null;
-            return Math.ceil((dt2 - dt1) / (1000 * 60 * 60 * 24));
-        }
-
-        function sumDelayDays(progressArr) {
-            if (!Array.isArray(progressArr)) return 0;
-            return progressArr.reduce((sum, step) => sum + (step.delay_days || 0), 0);
-        }
-
-        function getTodayStr() {
-            const today = new Date();
-            return today.toISOString().slice(0, 10); // YYYY-MM-DD
-        }
-
-        paginatedProjects.forEach((project) => {
-            // Toplam Gün
-            let totalDays = dateDiffInDays(project.start_date, project.end_date);
-            totalDays = (typeof totalDays === "number" && !isNaN(totalDays)) ? (totalDays >= 0 ? totalDays : 0) : '-';
-
-            // Geçen Gün
-            const todayStr = getTodayStr();
-            let elapsedDays = dateDiffInDays(project.start_date, todayStr);
-            elapsedDays = (typeof elapsedDays === "number" && !isNaN(elapsedDays)) ? (elapsedDays >= 0 ? elapsedDays : 0) : '-';
-
-            // Gecikme Durumu
-            let delayDays = 0;
-            if (project.total_delay_days !== undefined && project.total_delay_days !== null) {
-                delayDays = Number(project.total_delay_days);
-                if (isNaN(delayDays)) delayDays = 0;
-            }
+        projects.forEach(project => {
+            const row = document.createElement('tr');
             
-            let overdue = 0;
-            if (project.end_date) {
-                const endDateObj = (() => {
-                    if (project.end_date.includes('-')) {
-                        const [y, m, d] = project.end_date.split('-');
-                        return new Date(Number(y), Number(m) - 1, Number(d));
-                    } else if (project.end_date.includes('.')) {
-                        const [d, m, y] = project.end_date.split('.');
-                        return new Date(Number(y), Number(m) - 1, Number(d));
-                    }
-                    return null;
-                })();
-                const todayObj = new Date();
-                if (endDateObj && todayObj > endDateObj && project.status !== 'Tamamlandı') { // Sadece tamamlanmamış projeler için
-                    overdue = Math.ceil((todayObj - endDateObj) / (1000 * 60 * 60 * 24));
-                }
+            let statusCellContent = project.last_progress_title || project.status;
+            let statusClass = '';
+            if (project.total_delay_days > 0) {
+                statusCellContent += ' (Gecikmeli)';
+                statusClass = 'status-delayed';
             }
 
-            // Gecikme günleri toplamı
-            let gecikmeDurumu = "-";
-            const combinedDelay = delayDays + overdue;
-            if (combinedDelay > 0) {
-                gecikmeDurumu = combinedDelay + " gün";
-            } else if (typeof combinedDelay === 'number' && combinedDelay === 0) {
-                gecikmeDurumu = "0 gün";
-            }
-
-            const row = document.createElement("tr");
             row.innerHTML = `
-                <td data-label="Proje Adı">${project.project_name ? project.project_name.normalize('NFC') : "-"}</td>
-                <td data-label="Referans No">${project.reference_no || "-"}</td>
-                <td data-label="Müşteri">${project.customer_name || "-"}</td>
-                <td data-label="Durum">${getStatusBadgeHtml(project.display_status || "-")}</td>
-                <td data-label="Başlangıç">${formatDateForDisplay(project.start_date || "-")}</td>
-                <td data-label="Bitiş">${formatDateForDisplay(project.end_date || "-")}</td>
-                <td data-label="Toplam Gün">${totalDays !== '-' ? totalDays + ' gün' : '-'}</td>
-                <td data-label="Geçen Gün">${elapsedDays !== '-' ? elapsedDays + ' gün' : '-'}</td>
-                <td data-label="Gecikme Durumu">${gecikmeDurumu}</td>
-                <td data-label="Yönetici">${project.project_manager_name || "-"}</td>
-                <td data-label="İşlemler">
-                    <div style="display: flex; gap: 10px;">
-                        <button class="action-btn view-project-btn" data-id="${project.project_id}" title="Detayları Görüntüle"><i class="fas fa-eye"></i></button>
-                        <button class="action-btn edit-project-btn" data-id="${project.project_id}" title="Projeyi Düzenle"><i class="fas fa-edit"></i></button>
-                        <button class="action-btn delete-project-btn" data-id="${project.project_id}" title="Projeyi Sil"><i class="fas fa-trash"></i></button>
-                        <button class="action-btn generate-pdf-btn" data-id="${project.project_id}" title="PDF Raporu Oluştur"><i class="fas fa-file-pdf"></i></button>
-                    </div>
+                <td>${project.project_id}</td>
+                <td><a href="/project_detail.html?id=${project.project_id}" class="text-decoration-none text-dark">${project.project_name}</a></td>
+                <td>${project.reference_no}</td>
+                <td>${project.customer_name}</td>
+                <td>${project.project_manager_name}</td>
+                <td>${project.contract_date ? new Date(project.contract_date).toLocaleDateString() : 'Belirtilmemiş'}</td>
+                <td>${project.end_date ? new Date(project.end_date).toLocaleDateString() : 'Belirtilmemiş'}</td>
+                <td class="${statusClass}">${statusCellContent}</td>
+                <td>
+                    <button class="btn btn-sm btn-info edit-btn" data-id="${project.project_id}" data-permission="proje_duzenle">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger delete-btn" data-id="${project.project_id}" data-permission="proje_sil">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="btn btn-sm btn-success pdf-btn" data-id="${project.project_id}" data-permission="pdf_olusturma">
+                        <i class="fas fa-file-pdf"></i>
+                    </button>
                 </td>
             `;
-            tbody.appendChild(row);
+            projectsTableBody.appendChild(row);
         });
-        attachProjectTableEventListeners();
-        updatePagination(projectsToRender.length, currentPage, Math.ceil(projectsToRender.length / rowsPerPage));
     }
+
+    // Sayfa yüklendiğinde projeleri getir
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchProjects();
+    });
 
     function attachProjectTableEventListeners() {
         document.querySelectorAll(".view-project-btn").forEach((btn) => {
