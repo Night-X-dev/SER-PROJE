@@ -1784,66 +1784,68 @@ async function fetchActiveProjectsCount() {
         }
 
         // Projeleri Backend'den Çekme
-        async function fetchProjects() {
-            const tbody = document.getElementById("projectsTableBody");
-            if (!tbody) {
-            console.error("HATA: projectsTableBody elementi bulunamadı!");
-            return;
-            }
+       // Projeleri Backend'den Çekme
+async function fetchProjects() {
+    const tbody = document.getElementById("projectsTableBody");
+    if (!tbody) {
+    console.error("HATA: projectsTableBody elementi bulunamadı!");
+    return;
+    }
 
-            tbody.innerHTML =
-            '<tr><td colspan="8" style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Projeler yükleniyor...</td></tr>';
+    tbody.innerHTML =
+    '<tr><td colspan="8" style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Projeler yükleniyor...</td></tr>';
 
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/projects`);
-                if (!response.ok) {
-                    throw new Error(`HTTP hatası! Durum: ${response.status}`);
-                }
-                const projects = await response.json();
-                allProjectsData = projects; 
-                applyFiltersAndRenderTable(); // Filtreleri uygula ve tabloyu render et
-                updateStatsAndChart(allProjectsData); // İstatistikleri ve grafiği güncelle
-                dbStatusElement.textContent = 'Bağlantı Başarılı';
-                dbStatusElement.style.color = 'var(--success)';
-            } catch (error) {
-                console.error('Projeler çekilemedi:', error);
-                dbStatusElement.textContent = 'Bağlantı Hatası!';
-                dbStatusElement.style.color = 'var(--danger)';
-                showToast(`Projeler yüklenirken hata oluştu: ${error.message}`, true);
-                if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--danger);">Projeler yüklenemedi. Lütfen sunucu bağlantısını kontrol edin.</td></tr>';
-                }
-            }
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/projects`);
+        if (!response.ok) {
+            throw new Error(`HTTP hatası! Durum: ${response.status}`);
         }
+        const projects = await response.json();
+        allProjectsData = projects; 
+        applyFiltersAndRenderTable(); // Filtreleri uygula ve tabloyu render et
+        updateStatsAndChart(allProjectsData); // İstatistikleri ve grafiği güncelle
+        dbStatusElement.textContent = 'Bağlantı Başarılı';
+        dbStatusElement.style.color = 'var(--success)';
+    } catch (error) {
+        console.error('Projeler çekilemedi:', error);
+        dbStatusElement.textContent = 'Bağlantı Hatası!';
+        dbStatusElement.style.color = 'var(--danger)';
+        showToast(`Projeler yüklenirken hata oluştu: ${error.message}`, true);
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--danger);">Projeler yüklenemedi. Lütfen sunucu bağlantısını kontrol edin.</td></tr>';
+        }
+    }
+}
 
         // Eksik olan updateStatsAndChart fonksiyonu eklendi ve güncellendi
-        function updateStatsAndChart(projects) {
-            // İstatistikleri güncelle
-            let active = 0, completed = 0, delayed = 0, total = 0, planning = 0;
-            projects.forEach(p => {
-                // Backend'den gelen 'status' alanını kullanarak sayım yap
-                if (p.status === 'Aktif') {
-                    active++;
-                } else if (p.status === 'Tamamlandı') {
-                    completed++;
-                } else if (p.status === 'Gecikti') {
-                    delayed++;
-                } else if (p.status === 'Planlama Aşamasında') {
-                    planning++;
-                }
-                total++;
-            });
-            document.getElementById('activeProjects').textContent = active;
-            document.getElementById('completedProjects').textContent = completed;
-            document.getElementById('delayedProjects').textContent = delayed;
-            document.getElementById('totalProjects').textContent = total;
-            updateChart({
-                active: active,
-                planning: planning,
-                completed: completed,
-                delayed: delayed
-            });
+      // Eksik olan updateStatsAndChart fonksiyonu eklendi ve güncellendi
+function updateStatsAndChart(projects) {
+    // İstatistikleri güncelle
+    let active = 0, completed = 0, delayed = 0, total = 0, planning = 0;
+    projects.forEach(p => {
+        // Backend'den gelen 'status' alanını kullanarak sayım yap
+        if (p.status === 'Aktif') {
+            active++;
+        } else if (p.status === 'Tamamlandı') {
+            completed++;
+        } else if (p.status === 'Gecikti') {
+            delayed++;
+        } else if (p.status === 'Planlama Aşamasında') {
+            planning++;
         }
+        total++;
+    });
+    document.getElementById('activeProjects').textContent = active;
+    document.getElementById('completedProjects').textContent = completed;
+    document.getElementById('delayedProjects').textContent = delayed;
+    document.getElementById('totalProjects').textContent = total;
+    updateChart({
+        active: active,
+        planning: planning,
+        completed: completed,
+        delayed: delayed
+    });
+}
 
 
         // Son Aktiviteleri Backend'den Çekme (Şimdi activities tablosundan çekecek)
