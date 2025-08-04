@@ -2358,31 +2358,36 @@ function updateStatsAndChart(projects) {
     const isDark = document.body.getAttribute('data-theme') === 'dark';
     const legendColor = isDark ? '#fff' : '#222';
 
+    // ÖNEMLİ DEĞİŞİKLİK: Projelerin ana kategorileri (active, completed, planning) ve
+    // gecikmeli projeleri ayrı tutmak
+    const dataValues = [
+        stats.active || 0,     // Aktif projeler
+        stats.completed || 0,  // Tamamlanan projeler 
+        stats.planning || 0    // Planlama aşamasındaki projeler
+        // Gecikmeli projeleri ayrı bir dilim olarak göstermeyi kaldırıyoruz
+    ];
+    
+    const dataLabels = [
+        'Aktif', 
+        'Tamamlandı', 
+        'Planlama'
+    ];
+    
     const chartColors = [
         '#2ed573',   // Aktif - Yeşil
-        '#ff4757',   // Gecikmeli - Kırmızı 
-        '#ffc107',   // Planlama - Sarı
-        '#0980d3'    // Tamamlandı - Mavi
+        '#0980d3',   // Tamamlandı - Mavi
+        '#ffc107'    // Planlama - Sarı
     ];
-
-    // Veri ve etiketleri oluştur
-    const data = [
-        stats.active || 0, 
-        stats.delayed || 0, 
-        stats.planning || 0, 
-        stats.completed || 0
-    ];
-    const labels = ['Aktif', 'Gecikmeli', 'Planlama', 'Tamamlandı'];
     
     // Değeri 0 olan kategorileri filtrele
     const filteredData = [];
     const filteredLabels = [];
     const filteredColors = [];
     
-    for (let i = 0; i < data.length; i++) {
-        if (data[i] > 0) {
-            filteredData.push(data[i]);
-            filteredLabels.push(labels[i]);
+    for (let i = 0; i < dataValues.length; i++) {
+        if (dataValues[i] > 0) {
+            filteredData.push(dataValues[i]);
+            filteredLabels.push(dataLabels[i]);
             filteredColors.push(chartColors[i]);
         }
     }
@@ -2424,6 +2429,18 @@ function updateStatsAndChart(projects) {
                         bodyColor: legendColor,
                         titleColor: legendColor,
                         backgroundColor: isDark ? '#222' : '#fff',
+                        callbacks: {
+                            // Tooltip gösteriminde gecikmeli proje sayısını eklemek için
+                            afterLabel: function(context) {
+                                const index = context.dataIndex;
+                                const label = context.label;
+                                
+                                if (label === 'Planlama' && stats.delayed > 0) {
+                                    return `(${stats.delayed} proje gecikmeli)`;
+                                }
+                                return null;
+                            }
+                        }
                     }
                 }
             }
