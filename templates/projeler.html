@@ -1965,62 +1965,77 @@
     
 
     // --- Proje Listesi ve İşlemleri ---
-    async function fetchProjects() {
-        const tbody = document.getElementById("projectsTableBody");
-        if (!tbody) {
-            console.error("HATA: projectsTableBody elementi bulunamadı!");
-            return;
+async function fetchProjects() {
+  try {
+    const response = await fetch("/api/projeler");
+    const data = await response.json();
+
+    const tableBody = document.querySelector(".projects-table tbody");
+    tableBody.innerHTML = "";
+
+    const now = new Date();
+
+    data.forEach(proje => {
+      const tr = document.createElement("tr");
+
+      // Proje Adı
+      const adTd = document.createElement("td");
+      adTd.textContent = proje.ad;
+      tr.appendChild(adTd);
+
+      // Başlangıç Tarihi
+      const tarihTd = document.createElement("td");
+      tarihTd.textContent = proje.baslangic_tarihi || "-";
+      tr.appendChild(tarihTd);
+
+      // Durum
+      const durumTd = document.createElement("td");
+      const durumBadge = document.createElement("span");
+      durumBadge.classList.add("status-badge");
+
+      const gidişatlar = proje.gidissatlar || []; // API'den gelen iş gidişat dizisi
+      const baslangicTarihi = new Date(proje.baslangic_tarihi);
+
+      if (gidişatlar.length > 0) {
+        const sonGidisat = gidişatlar[gidişatlar.length - 1];
+        durumBadge.textContent = sonGidisat.title;
+
+        if (sonGidisat.title.toLowerCase().includes("gecikme")) {
+          durumBadge.classList.add("gecikmeli");
+        } else {
+          durumBadge.classList.add("normal");
         }
 
-        tbody.innerHTML =
-            '<tr><td colspan="11" style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Projeler yükleniyor...</td></tr>';
-        console.log("FETCH_DEBUG: 'Projeler yükleniyor...' mesajı ayarlandı.");
-
-        try {
-            console.log(
-                "FETCH_DEBUG: API çağrısı başlatılıyor:",
-                `${API_BASE_URL}/api/projects`
-            );
-            const response = await fetch(`${API_BASE_URL}/api/projects`);
-            console.log(
-                "FETCH_DEBUG: API yanıtı alındı. Status:",
-                response.status
-            );
-
-            if (!response.ok) {
-                let errorDetails = "Bilinmeyen Hata";
-                try {
-                    const errorData = await response.json();
-                    errorDetails = errorData.message || errorDetails;
-                } catch (jsonError) {
-                    errorDetails = `Yanıt JSON olarak parse edilemedi: ${response.statusText}`;
-                }
-                console.error(
-                    "FETCH_DEBUG HATA: API yanıtı OK değil.",
-                    `Durum: ${response.status}`,
-                    `Detay: ${errorDetails}`
-                );
-                throw new Error(`HTTP hatası! Durum: ${response.status} - ${errorDetails}`);
-            }
-
-            const projects = await response.json();
-            console.log(
-                "FETCH_DEBUG: API'den çekilen ham projeler (allProjectsData'ya atanacak):",
-                projects
-            );
-
-            allProjectsData = projects;
-            console.log("FETCH_DEBUG: allProjectsData güncellendi. applyFiltersAndRenderTable çağrılıyor.");
-            applyFiltersAndRenderTable(); // Filtreleri uygula ve tabloyu render et
-            console.log("FETCH_DEBUG: Projeler yükleme tamamlandı.");
-        } catch (error) {
-            console.error("FETCH KAPSAMLI HATA: Projeler çekilemedi:", error);
-            showToast(`Projeler yüklenirken hata oluştu: ${error.message}`, true);
-            if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: var(--danger);">Projeler yüklenemedi. Hata: ${error.message} Lütfen sunucu bağlantısını ve loglarını kontrol edin.</td></tr>`;
-            }
+      } else {
+        if (now >= baslangicTarihi) {
+          durumBadge.textContent = "Aktif";
+          durumBadge.classList.add("normal");
+        } else {
+          durumBadge.textContent = "Planlama Aşamasında";
+          durumBadge.style.backgroundColor = "rgba(255,193,7,0.15)";
+          durumBadge.style.color = "#ffc107";
+          durumBadge.style.border = "1px dashed #ffc107";
         }
-    }
+      }
+
+      durumTd.appendChild(durumBadge);
+      tr.appendChild(durumTd);
+
+      // Aksiyonlar
+      const aksiyonTd = document.createElement("td");
+      aksiyonTd.innerHTML = `
+        <button class="action-btn"><i class="fa fa-eye"></i></button>
+      `;
+      tr.appendChild(aksiyonTd);
+
+      tableBody.appendChild(tr);
+    });
+
+  } catch (error) {
+    console.error("Proje verileri alınırken hata oluştu:", error);
+  }
+}
+
 
     function renderProjectsTable(projectsToRender) {
         let tbody = document.getElementById("projectsTableBody");
