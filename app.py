@@ -2123,6 +2123,7 @@ def update_project_progress_step(progress_id):
     finally:
         if connection:
             connection.close()
+
 @app.route('/api/user-info', methods=['GET'])
 def get_user_info():
     """Retrieves detailed information for a single user."""
