@@ -1243,6 +1243,32 @@
                 });
             }
 // İlk iş gidişatı eklendiğinde proje başlangıç tarihini güncelle
+// Progress adımlarını toplayan fonksiyon
+function getProgressSteps() {
+    const steps = [];
+    const progressItems = document.querySelectorAll('.progress-item');
+    
+    progressItems.forEach(item => {
+        // Önce elementleri seç
+        const titleInput = item.querySelector('input[type="text"][placeholder="İş gidişat başlığı"]');
+        const startInput = item.querySelector('input.progress-datepicker[placeholder="Başlangıç"]');
+        const endInput = item.querySelector('input.progress-datepicker[placeholder="Bitiş"]');
+        const descTextarea = item.querySelector('.progress-description-textarea');
+        
+        // Eğer gerekli alanlar doldurulmuşsa adımı ekle
+        if (titleInput && titleInput.value.trim() && startInput && startInput.value && endInput && endInput.value) {
+            steps.push({
+                title: titleInput.value.trim(),
+                description: descTextarea ? descTextarea.value.trim() : '',
+                startDate: startInput.value,
+                endDate: endInput.value
+            });
+        }
+    });
+    
+    return steps;
+}
+// Proje tarihlerini güncelleyen fonksiyon
 function updateProjectDateBasedOnSteps() {
     // Tüm iş adımlarını topla
     const progressSteps = getProgressSteps();
@@ -1273,11 +1299,11 @@ function updateProjectDateBasedOnSteps() {
     
     // Proje başlangıç ve bitiş tarihlerini güncelle
     if (firstStartDate) {
-        document.getElementById('startDate').value = firstStartDate;
+        document.getElementById('start-date').value = firstStartDate;
     }
     
     if (lastEndDate) {
-        document.getElementById('endDate').value = lastEndDate;
+        document.getElementById('end-date').value = lastEndDate;
     }
 }
 
@@ -1299,12 +1325,10 @@ document.getElementById('addProgressBtn').addEventListener('click', function() {
 });
 
 // İş gidişatı silindiğinde de proje tarihlerini güncelle
-function deleteProgressStep(index) {
-    // Adımı sil
-    progressSteps.splice(index, 1);
-    renderProgressSteps();
-    
-    // Proje tarihlerini güncelle
+// İş gidişatı silme fonksiyonu düzeltmesi
+function deleteProgressStep(element) {
+    // Silme işlemi sonrası proje tarihlerini güncelle
+    element.remove();
     updateProjectDateBasedOnSteps();
 }
 
