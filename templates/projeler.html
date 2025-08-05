@@ -2758,8 +2758,8 @@ function refreshProjectDetails(projectId) {
 }
 
     // `isEditable` parametresi eklendi
-    
-    async function fetchProgressSteps(projectId, isEditable = false) {
+let successfulProgressEndpoint = null;
+ async function fetchProgressSteps(projectId, isEditable = false) {
     try {
         console.log(`İş adımları getiriliyor: Proje ID ${projectId}`);
         
@@ -2770,10 +2770,26 @@ function refreshProjectDetails(projectId) {
             baseUrl = baseUrl.slice(0, -1);
         }
         
+        // Daha önce başarılı olan endpoint'i biliyorsak, onu kullanalım
+        if (successfulProgressEndpoint) {
+            console.log(`Daha önce çalışan endpoint kullanılıyor: ${successfulProgressEndpoint}`);
+            const apiUrl = `${baseUrl}${successfulProgressEndpoint.replace("{projectId}", projectId)}`;
+            
+            const response = await fetch(apiUrl);
+            if (response.ok) {
+                const data = await response.json();
+                processProgressData(data, projectId, isEditable);
+                return;
+            } else {
+                console.warn(`Önceki başarılı endpoint artık çalışmıyor, tüm endpointler denenecek.`);
+                successfulProgressEndpoint = null; // Sıfırla ve yeniden tüm endpointleri dene
+            }
+        }
+        
         // Farklı muhtemel API endpoint'lerini deneyelim
         const possibleEndpoints = [
-            `/api/project/${projectId}/progress`,
             `/api/projects/${projectId}/progress`,
+            `/api/project/${projectId}/progress`,
             `/api/progress?project_id=${projectId}`,
             `/api/progress/${projectId}`,
             `/api/project_progress/${projectId}`
@@ -2797,6 +2813,11 @@ function refreshProjectDetails(projectId) {
                         data = await response.json();
                         successfulEndpoint = endpoint;
                         console.log(`Başarılı endpoint: ${endpoint}`);
+                        
+                        // Başarılı endpoint'i global değişkene kaydet (sonraki kullanımlar için)
+                        successfulProgressEndpoint = endpoint.replace(projectId, "{projectId}");
+                        console.log(`Başarılı endpoint şablonu kaydedildi: ${successfulProgressEndpoint}`);
+                        
                         break;  // Başarılı olduk, döngüyü sonlandır
                     } catch (e) {
                         console.warn(`${endpoint} endpoint geçersiz JSON döndürdü:`, e);
@@ -2814,28 +2835,8 @@ function refreshProjectDetails(projectId) {
         }
         
         console.log(`Çalışan API endpoint: ${successfulEndpoint}`);
-        console.log("API'den gelen iş adımları verisi:", data);
+        processProgressData(data, projectId, isEditable);
         
-        // Veri yapısını kontrol et
-        if (data && Array.isArray(data.steps)) {
-            // Her adım için log kaydı
-            data.steps.forEach((step, index) => {
-                console.log(`Adım ${index}, ID: ${step.progress_id || step.id}, custom_delay_days: ${step.custom_delay_days}, custom_delay: ${step.custom_delay}`);
-            });
-            
-            renderProgressSteps(data.steps, projectId, isEditable);
-        } else if (data && Array.isArray(data)) {
-            // Doğrudan dizi olarak geliyorsa
-            console.log("Veri doğrudan dizi olarak geldi");
-            data.forEach((step, index) => {
-                console.log(`Adım ${index}, ID: ${step.progress_id || step.id}, custom_delay_days: ${step.custom_delay_days}, custom_delay: ${step.custom_delay}`);
-            });
-            
-            renderProgressSteps(data, projectId, isEditable);
-        } else {
-            console.error("API'den gelen veri beklenen formatta değil:", data);
-            renderProgressSteps([], projectId, isEditable);
-        }
     } catch (error) {
         console.error("İş adımlarını getirme hatası:", error);
         renderProgressSteps([], projectId, isEditable);
@@ -2844,8 +2845,59 @@ function refreshProjectDetails(projectId) {
         document.getElementById("projectModal").dataset.loading = "false";
         console.log("İş adımları yüklendi. Modal hazır.");
     }
+    
+    // Helper fonksiyon: API'den alınan veriyi işle
+    function processProgressData(data, projectId, isEditable) {
+        console.log("API'den gelen iş adımları verisi:", data);
+        
+        // Veri yapısını kontrol et
+        if (data && Array.isArray(data.steps)) {
+            // Her adım için log kaydı
+            data.steps.forEach((step, index) => {
+                console.log(`Adım ${index}, ID: ${step.progress_id || step.id}, custom_delay_days: ${step.custom_delay_days}, custom_delay: ${step.custom_delay}`);
+                
+                // API'den dönen yanıtta custom_delay_days yoksa, oluşturalım
+                if (step.custom_delay_days === undefined && step.custom_delay === undefined) {
+                    console.log(`Adım ${index} için custom_delay alanı ekleniyor`);
+                    // Eğer API yanıtında delay_days alanı varsa onu kullanalım
+                    if (step.delay_days !== undefined) {
+                        step.custom_delay_days = 0; // Default değer
+                        step.custom_delay = 0;      // Default değer
+                    } else {
+                        step.custom_delay_days = 0;
+                        step.custom_delay = 0;
+                    }
+                }
+            });
+            
+            renderProgressSteps(data.steps, projectId, isEditable);
+        } else if (data && Array.isArray(data)) {
+            // Doğrudan dizi olarak geliyorsa
+            console.log("Veri doğrudan dizi olarak geldi");
+            data.forEach((step, index) => {
+                console.log(`Adım ${index}, ID: ${step.progress_id || step.id}, custom_delay_days: ${step.custom_delay_days}, custom_delay: ${step.custom_delay}`);
+                
+                // API'den dönen yanıtta custom_delay_days yoksa, oluşturalım
+                if (step.custom_delay_days === undefined && step.custom_delay === undefined) {
+                    console.log(`Adım ${index} için custom_delay alanı ekleniyor`);
+                    // Eğer API yanıtında delay_days alanı varsa onu kullanalım
+                    if (step.delay_days !== undefined) {
+                        step.custom_delay_days = 0; // Default değer
+                        step.custom_delay = 0;      // Default değer
+                    } else {
+                        step.custom_delay_days = 0;
+                        step.custom_delay = 0;
+                    }
+                }
+            });
+            
+            renderProgressSteps(data, projectId, isEditable);
+        } else {
+            console.error("API'den gelen veri beklenen formatta değil:", data);
+            renderProgressSteps([], projectId, isEditable);
+        }
+    }
 }
- 
 async function updateProjectDatesFromSteps(projectId) {
   try {
     console.log(`updateProjectDatesFromSteps başladı, projectId: ${projectId}`);
