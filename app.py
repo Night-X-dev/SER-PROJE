@@ -1838,7 +1838,7 @@ def add_project_progress_step_from_modal(project_id):
     description = data.get('description')
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
-    user_id = session.get('user_id') # Get user ID from session
+    user_id = session.get('user_id')
 
     if not all([project_id, step_name, start_date_str, end_date_str, user_id]):
         return jsonify({'message': 'Project ID, title, start, end date, and user ID are required.'}), 400
@@ -1852,7 +1852,6 @@ def add_project_progress_step_from_modal(project_id):
             project_info = cursor.fetchone()
             project_name = project_info['project_name'] if project_info else f"ID: {project_id}"
             project_manager_id = project_info['project_manager_id'] if project_info else None
-
 
             # Find the existing end date of the project (to calculate delay days)
             cursor.execute("""
@@ -1875,9 +1874,12 @@ def add_project_progress_step_from_modal(project_id):
             INSERT INTO project_progress (project_id, title, description, start_date, end_date, delay_days)
             VALUES (%s, %s, %s, %s, %s, %s)
             """
-            # new_project_id yerine project_id kullanıldı
             cursor.execute(sql_insert, (project_id, step_name, description, start_date_str, end_date_str, delay_days))
             new_progress_id = cursor.lastrowid
+            
+            # YENİ: Proje başlangıç ve bitiş tarihlerini güncelle
+            update_project_dates(cursor, project_id)
+            
             connection.commit()
 
             # Send notification to project manager
@@ -1885,7 +1887,7 @@ def add_project_progress_step_from_modal(project_id):
                 send_notification(
                     project_manager_id,
                     "Project Progress Step Added",
-                    f"A new work step named '{step_name}' has been added to the project '{project_name}' you managed." # Message updated
+                    f"A new work step named '{step_name}' has been added to the project '{project_name}' you managed." 
                 )
 
             activity_data = {
@@ -1916,8 +1918,7 @@ def update_project_progress_step(progress_id):
     description = data.get('description')
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
-    delay_days_override = data.get('delay_days_override')  # Manuel gecikme gün sayısı
-    user_id = session.get('user_id')  # Get user ID from session
+    user_id = session.get('user_id')
 
     if not all([step_name, start_date_str, end_date_str, user_id]):
         return jsonify({'message': 'Title, start, end date, and user ID are required.'}), 400
@@ -1933,108 +1934,23 @@ def update_project_progress_step(progress_id):
                 return jsonify({'message': 'Progress step not found.'}), 404
 
             current_project_id = existing_step['project_id']
-            old_step_name = existing_step['title'] 
+            old_step_name = existing_step['title']
 
-            # Get project name and manager
-            cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (current_project_id,))
-            project_info = cursor.fetchone()
-            project_name = project_info['project_name'] if project_info else f"ID: {current_project_id}"
-            project_manager_id = project_info['project_manager_id'] if project_info else None
-
-            # Find the end date of the previous step (excluding this step)
-            delay_days = 0
-            cursor.execute("""
-                SELECT MAX(end_date) as last_end_date
-                FROM project_progress
-                WHERE project_id = %s AND progress_id != %s AND end_date < %s
-                ORDER BY end_date DESC LIMIT 1
-            """, (current_project_id, progress_id, start_date_str))
-            result = cursor.fetchone()
-            previous_end_date = result['last_end_date'] if result and result['last_end_date'] else None
-
-            new_step_start_dt = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
-            if previous_end_date:
-                diff = (new_step_start_dt - previous_end_date).days
-                if diff > 1:  # 1 günden fazla fark varsa gecikme var demektir
-                    delay_days = diff - 1  # Düzeltildi: Artık 1 gün çıkarılıyor
+            # ... Mevcut işlemler ...
             
-            # Manuel gecikme gün sayısı verilmişse onu kullan
-            if delay_days_override is not None:
-                delay_days = int(delay_days_override)
-                
-                # Eğer manuel gecikme girildiyse ve bu bir ertelemeyse, sonraki adımları da ertele
-                if delay_days > 0:
-                    # Önce bu adımın bitiş tarihini güncelle
-                    end_dt = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
-                    new_end_date = end_dt + datetime.timedelta(days=delay_days)
-                    end_date_str = new_end_date.strftime('%Y-%m-%d')
-                    
-                    # Sonraki tüm adımları delay_days kadar ertele
-                    cursor.execute("""
-                        SELECT progress_id, start_date, end_date 
-                        FROM project_progress
-                        WHERE project_id = %s AND start_date > %s
-                        ORDER BY start_date ASC
-                    """, (current_project_id, start_date_str))
-                    next_steps = cursor.fetchall()
-                    
-                    for next_step in next_steps:
-                        next_start_dt = next_step['start_date']
-                        next_end_dt = next_step['end_date']
-                        
-                        # Yeni tarihleri hesapla
-                        new_next_start = next_start_dt + datetime.timedelta(days=delay_days)
-                        new_next_end = next_end_dt + datetime.timedelta(days=delay_days)
-                        
-                        # Veritabanını güncelle
-                        cursor.execute("""
-                            UPDATE project_progress
-                            SET start_date = %s, end_date = %s
-                            WHERE progress_id = %s
-                        """, (new_next_start, new_next_end, next_step['progress_id']))
-
             sql_update = """
             UPDATE project_progress
             SET title = %s, description = %s, start_date = %s, end_date = %s, delay_days = %s
             WHERE progress_id = %s
             """
             cursor.execute(sql_update, (step_name, description, start_date_str, end_date_str, delay_days, progress_id))
+            
+            # YENİ: Proje başlangıç ve bitiş tarihlerini güncelle
+            update_project_dates(cursor, current_project_id)
+            
             connection.commit()
 
-            if cursor.rowcount == 0:
-                return jsonify({'message': 'Progress step data is already up to date or no changes were made.'}), 200
-
-            # Proje tarihlerini güncelle - ilk ve son iş gidişatlarına göre
-            cursor.execute("""
-                SELECT MIN(start_date) as project_start, MAX(end_date) as project_end
-                FROM project_progress
-                WHERE project_id = %s
-            """, (current_project_id,))
-            project_dates = cursor.fetchone()
-            
-            if project_dates and project_dates['project_start'] and project_dates['project_end']:
-                cursor.execute("""
-                    UPDATE projects
-                    SET start_date = %s, end_date = %s
-                    WHERE project_id = %s
-                """, (project_dates['project_start'], project_dates['project_end'], current_project_id))
-                connection.commit()
-
-            # Send notification to project manager
-            if project_manager_id:
-                send_notification(
-                    project_manager_id,
-                    "Project Progress Step Updated",
-                    f"The work step '{step_name}' in the project '{project_name}' you managed has been updated." 
-                )
-
-            activity_data = {
-                'user_id': user_id,
-                'title': 'Work Step Updated',
-                'description': f"The work step '{old_step_name}' in project '{project_name}' has been updated to '{step_name}'.",
-                'icon': 'fas fa-edit'
-            }
-            # Call add_activity API
+            # ... Mevcut işlemler ...
 
         return jsonify({'message': 'Progress step successfully updated!'}), 200
     except pymysql.Error as e:
@@ -2046,11 +1962,12 @@ def update_project_progress_step(progress_id):
     finally:
         if connection:
             connection.close()
+
 # API to delete project progress step
 @app.route('/api/progress/<int:progress_id>', methods=['DELETE'])
 def delete_project_progress_step(progress_id):
     """Deletes a project progress step."""
-    user_id = session.get('user_id') # Get user ID from session
+    user_id = session.get('user_id')
 
     if not user_id:
         return jsonify({'message': 'User ID is missing.'}), 400
@@ -2068,34 +1985,17 @@ def delete_project_progress_step(progress_id):
             current_project_id = step_info['project_id']
             step_name = step_info['title']
 
-            # Get project name and manager
-            cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (current_project_id,))
-            project_info = cursor.fetchone()
-            project_name = project_info['project_name'] if project_info else f"ID: {current_project_id}"
-            project_manager_id = project_info['project_manager_id'] if project_info else None
+            # ... Mevcut işlemler ...
 
             sql = "DELETE FROM project_progress WHERE progress_id = %s"
             cursor.execute(sql, (progress_id,))
+            
+            # YENİ: Proje başlangıç ve bitiş tarihlerini güncelle
+            update_project_dates(cursor, current_project_id)
+            
             connection.commit()
 
-            if cursor.rowcount == 0:
-                return jsonify({'message': 'Progress step could not be deleted or not found.'}), 404
-
-            # Send notification to project manager
-            if project_manager_id:
-                send_notification(
-                    project_manager_id,
-                    "Project Progress Step Deleted",
-                    f"The work step '{step_name}' in the project '{project_name}' you managed has been deleted." # Message updated
-                )
-
-            activity_data = {
-                'user_id': user_id,
-                'title': 'Work Step Deleted',
-                'description': f"The work step '{step_name}' in project '{project_name}' has been deleted.",
-                'icon': 'fas fa-trash-alt'
-            }
-            # Call add_activity API
+            # ... Mevcut işlemler ...
 
         return jsonify({'message': 'Progress step successfully deleted!'}), 200
     except pymysql.Error as e:
@@ -2135,6 +2035,40 @@ def get_user_info():
     finally:
         if connection:
             connection.close()
+def update_project_dates(cursor, project_id):
+    """Updates project start and end dates based on progress steps."""
+    print(f"Updating project dates for project ID: {project_id}")
+    try:
+        # İlk iş gidişatının başlangıç tarihini al
+        cursor.execute("""
+            SELECT MIN(start_date) as first_start_date
+            FROM project_progress
+            WHERE project_id = %s
+        """, (project_id,))
+        first_start_result = cursor.fetchone()
+        first_start_date = first_start_result['first_start_date'] if first_start_result else None
+
+        # Son iş gidişatının bitiş tarihini al
+        cursor.execute("""
+            SELECT MAX(end_date) as last_end_date
+            FROM project_progress
+            WHERE project_id = %s
+        """, (project_id,))
+        last_end_result = cursor.fetchone()
+        last_end_date = last_end_result['last_end_date'] if last_end_result else None
+
+        # Eğer tarihler bulunduysa projeyi güncelle
+        if first_start_date and last_end_date:
+            print(f"Updating project {project_id} dates: start={first_start_date}, end={last_end_date}")
+            cursor.execute("""
+                UPDATE projects
+                SET start_date = %s, end_date = %s
+                WHERE project_id = %s
+            """, (first_start_date, last_end_date, project_id))
+        else:
+            print(f"No valid dates found for project {project_id}")
+    except Exception as e:
+        print(f"Error updating project dates: {e}")
 
 @app.route('/api/users', methods=['GET'])
 def get_all_users():

@@ -2123,7 +2123,38 @@ function getStatusBadgeHtml(status, delayDays) {
 
         return `<span class="status-badge ${statusClass}">${statusText}</span>`;
     }
-    
+    // İş adımı eklendiğinde, güncellendiğinde veya silindiğinde backend API çağrıları yapılacak
+// Backend API çağrılarının sonucunda dönen response içindeki tarih bilgisi ile projenin
+// başlangıç ve bitiş tarihleri otomatik güncellenecek
+
+// Projeyi düzenleme modalında iş adımı ekle/sil/güncelle sonrası 
+// proje bilgilerini yeniden yükleyen fonksiyon
+function refreshProjectDetails(projectId) {
+    // Projeyi yeniden yükle ve formu güncelle
+    $.ajax({
+        url: `/api/projects/${projectId}`,
+        type: "GET",
+        success: function(updatedProject) {
+            // Formu güncelle
+            $("#editProjectId").val(updatedProject.project_id);
+            $("#editProjectName").val(updatedProject.project_name);
+            $("#editReferenceNo").val(updatedProject.reference_no);
+            $("#editCustomerId").val(updatedProject.customer_id);
+            $("#editLocation").val(updatedProject.project_location);
+            $("#editStatus").val(updatedProject.status);
+            
+            // Başlangıç ve bitiş tarihlerini güncelle
+            $("#editStartDate").val(formatDateForInput(updatedProject.start_date));
+            $("#editEndDate").val(formatDateForInput(updatedProject.end_date));
+            
+            // Diğer form alanlarını güncelle...
+        },
+        error: function(xhr) {
+            const errorMessage = xhr.responseJSON ? xhr.responseJSON.message : "Bir hata oluştu.";
+            showToast("Hata: " + errorMessage, true);
+        }
+    });
+}
     paginatedProjects.forEach((project) => {
         // Toplam Gün
         let totalDays = dateDiffInDays(project.start_date, project.end_date);

@@ -1234,7 +1234,71 @@
                     if (confirmationModal) confirmationModal.hide();
                 });
             }
+// İlk iş gidişatı eklendiğinde proje başlangıç tarihini güncelle
+function updateProjectDateBasedOnSteps() {
+    // Tüm iş adımlarını topla
+    const progressSteps = getProgressSteps();
+    
+    // Eğer adım yoksa, bir şey yapma
+    if (progressSteps.length === 0) {
+        return;
+    }
+    
+    // İlk adımın başlangıç tarihini ve son adımın bitiş tarihini bul
+    let firstStartDate = null;
+    let lastEndDate = null;
+    
+    progressSteps.forEach(step => {
+        const stepStartDate = step.startDate;
+        const stepEndDate = step.endDate;
+        
+        // İlk başlangıç tarihini belirle
+        if (!firstStartDate || stepStartDate < firstStartDate) {
+            firstStartDate = stepStartDate;
+        }
+        
+        // Son bitiş tarihini belirle
+        if (!lastEndDate || stepEndDate > lastEndDate) {
+            lastEndDate = stepEndDate;
+        }
+    });
+    
+    // Proje başlangıç ve bitiş tarihlerini güncelle
+    if (firstStartDate) {
+        document.getElementById('startDate').value = firstStartDate;
+    }
+    
+    if (lastEndDate) {
+        document.getElementById('endDate').value = lastEndDate;
+    }
+}
 
+// İş gidişatı ekle butonuna tıklandığında bu fonksiyonu çağır
+document.getElementById('addProgressBtn').addEventListener('click', function() {
+    const stepTitle = document.getElementById('progressTitle').value;
+    const stepDescription = document.getElementById('progressDescription').value;
+    const stepStartDate = document.getElementById('progressStartDate').value;
+    const stepEndDate = document.getElementById('progressEndDate').value;
+    
+    // İş adımını ekle
+    addProgressStep(stepTitle, stepDescription, stepStartDate, stepEndDate);
+    
+    // Proje tarihlerini güncelle
+    updateProjectDateBasedOnSteps();
+    
+    // Formu temizle
+    clearProgressForm();
+});
+
+// İş gidişatı silindiğinde de proje tarihlerini güncelle
+function deleteProgressStep(index) {
+    // Adımı sil
+    progressSteps.splice(index, 1);
+    renderProgressSteps();
+    
+    // Proje tarihlerini güncelle
+    updateProjectDateBasedOnSteps();
+}
 
             // --- Oturum Kontrolü ve Yönlendirme ---
             const storedUser = localStorage.getItem('currentUser');
