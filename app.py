@@ -1201,7 +1201,19 @@ def get_projects():
                  WHERE project_id = p.project_id
                    AND CURDATE() BETWEEN start_date AND end_date
                  ORDER BY start_date ASC -- Birden fazla adım aynı anda aktifse en erken başlayanı al
-                 LIMIT 1) AS current_progress_title
+                 LIMIT 1) AS current_progress_title,
+                -- Mevcut tarih aralığına uyan iş gidişatının gecikme günlerini al
+                (SELECT IFNULL(delay_days, 0) FROM project_progress
+                 WHERE project_id = p.project_id
+                   AND CURDATE() BETWEEN start_date AND end_date
+                 ORDER BY start_date ASC
+                 LIMIT 1) AS current_step_delay_days,
+                -- Mevcut tarih aralığına uyan iş gidişatının özel gecikme günlerini al
+                (SELECT IFNULL(custom_delay_days, 0) FROM project_progress
+                 WHERE project_id = p.project_id
+                   AND CURDATE() BETWEEN start_date AND end_date
+                 ORDER BY start_date ASC
+                 LIMIT 1) AS current_step_custom_delay_days
             FROM projects p
             JOIN customers c ON p.customer_id = c.customer_id
             JOIN users u ON p.project_manager_id = u.id
@@ -1214,14 +1226,19 @@ def get_projects():
                 current_project_status = project['status']
                 total_delay_days = project['total_delay_days'] if project['total_delay_days'] is not None else 0
                 current_progress_title = project['current_progress_title']
+                current_step_delay_days = project['current_step_delay_days'] if project['current_step_delay_days'] is not None else 0
+                current_step_custom_delay_days = project['current_step_custom_delay_days'] if project['current_step_custom_delay_days'] is not None else 0
+                
+                # Mevcut iş adımının toplam gecikmesini hesapla
+                current_step_total_delay = current_step_delay_days + current_step_custom_delay_days
 
                 # display_status'u belirle
                 if current_project_status == 'Tamamlandı':
                     project['display_status'] = 'Tamamlandı'
-                elif total_delay_days > 0:
-                    project['display_status'] = 'Gecikmeli'
-                elif current_progress_title:
+                elif current_progress_title and current_step_total_delay == 0: # Mevcut adım var ve gecikmesiz
                     project['display_status'] = current_progress_title # Mevcut iş gidişatının başlığı
+                elif total_delay_days > 0: # Genel projede gecikme var (geçmişten gelen veya mevcut)
+                    project['display_status'] = 'Gecikmeli'
                 else:
                     project['display_status'] = 'Aktif' # Gecikme yoksa, tamamlanmadıysa ve aktif adım yoksa Aktif
 
