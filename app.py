@@ -1319,28 +1319,34 @@ def update_project(project_id):
             return None
         return str(value)
 
-    project_name = clean_input_value(data.get('project_name'))
-    reference_no = clean_input_value(data.get('reference_no'))
-    description = clean_input_value(data.get('description'))
-    contract_date = clean_input_value(data.get('contract_date'))
-    meeting_date = clean_input_value(data.get('meeting_date'))
-    start_date = clean_input_value(data.get('start_date'))
-    end_date = clean_input_value(data.get('end_date'))
-    project_location = clean_input_value(data.get('project_location'))
+    # Frontend'den gelen camelCase verileri snake_case'e dönüştür
+    # NOT: frontend'den projectName gelirken, backend project_name bekliyor
+    project_name = clean_input_value(data.get('projectName') or data.get('project_name'))
+    reference_no = clean_input_value(data.get('referenceNo') or data.get('projectRef') or data.get('reference_no'))
+    description = clean_input_value(data.get('projectDescription') or data.get('description'))
+    
+    # Tarih alanlarını doğru şekilde al
+    contract_date = clean_input_value(data.get('contractDate') or data.get('contract_date'))
+    meeting_date = clean_input_value(data.get('meetingDate') or data.get('meeting_date'))
+    start_date = clean_input_value(data.get('startDate') or data.get('start_date'))
+    end_date = clean_input_value(data.get('endDate') or data.get('end_date'))
+    
+    project_location = clean_input_value(data.get('projectLocation') or data.get('project_location'))
     status = clean_input_value(data.get('status'))
 
     # Get customer_id here
-    customer_id_new = data.get('customer_id')
+    customer_id_new = data.get('customerId') or data.get('customer_id')
     try:
         customer_id_new = int(customer_id_new) if customer_id_new else None
     except ValueError:
         customer_id_new = None
 
-    project_manager_id_new = data.get('project_manager_id')
+    project_manager_id_new = data.get('projectManagerId') or data.get('project_manager_id')
     try:
         project_manager_id_new = int(project_manager_id_new) if project_manager_id_new else None
     except ValueError:
         project_manager_id_new = None
+
 
     user_id = clean_input_value(data.get('user_id'))
 
@@ -1348,7 +1354,10 @@ def update_project(project_id):
           f"name='{project_name}', ref='{reference_no}', description='{description}', "
           f"contract='{contract_date}', meeting='{meeting_date}', start='{start_date}', end='{end_date}', "
           f"location='{project_location}', status='{status}', customer_id='{customer_id_new}', manager_id='{project_manager_id_new}', user_id='{user_id}'")
-
+    progress_steps = data.get('progressSteps', [])
+    for step in progress_steps:
+        print(f"DEBUG: Progress step: {step}")
+        
     if not user_id:
         print("ERROR: User ID is missing.")
         return jsonify({'message': 'User ID is missing.'}), 400
@@ -1391,6 +1400,7 @@ def update_project(project_id):
             params = []
 
             # Comparison logic
+            
             if clean_input_value(project_name) != clean_input_value(old_project_name):
                 updates.append("project_name = %s")
                 params.append(project_name)
@@ -1427,11 +1437,11 @@ def update_project(project_id):
             if project_manager_id_new != old_project_manager_id:
                 updates.append("project_manager_id = %s")
                 params.append(project_manager_id_new)
-
+      
             if not updates:
                 print("DEBUG: No information to update, returning 200.")
                 return jsonify({'message': 'No information to update.'}), 200
-
+          
             sql = f"UPDATE projects SET {', '.join(updates)} WHERE project_id = %s"
             params.append(project_id)
             print(f"DEBUG: Generated SQL: {sql}")
@@ -1444,7 +1454,35 @@ def update_project(project_id):
             if cursor.rowcount == 0:
                 print("DEBUG: Project data is already up to date or no changes were made, returning 200.")
                 return jsonify({'message': 'Project data is already up to date or no changes were made.'}), 200
-
+            if progress_steps and len(progress_steps) > 0:
+                # Mevcut iş gidişatlarını güncelle veya sil
+                cursor.execute("DELETE FROM progress_steps WHERE project_id = %s", (project_id,))
+                
+                # Yeni iş gidişatlarını ekle
+                for step in progress_steps:
+                    cursor.execute("""
+                        INSERT INTO progress_steps 
+                        (project_id, title, description, start_date, end_date) 
+                        VALUES (%s, %s, %s, %s, %s)
+                    """, (
+                        project_id, 
+                        step.get('title'), 
+                        step.get('description'), 
+                        step.get('startDate'), 
+                        step.get('endDate')
+                    ))
+                
+                # İş gidişatlarından proje tarihlerini güncelle
+                # Son iş gidişatının bitiş tarihi proje bitiş tarihi olacak
+                if progress_steps and len(progress_steps) > 0:
+                    last_step = progress_steps[-1]
+                    last_end_date = last_step.get('endDate')
+                    
+                    if last_end_date and end_date != last_end_date:
+                        updates.append("end_date = %s")
+                        params.append(last_end_date)
+                        print(f"DEBUG: Updated project end_date to match last progress step: {last_end_date}")
+            
         return jsonify({'message': 'Project successfully updated!'}), 200
 
     except pymysql.Error as e:

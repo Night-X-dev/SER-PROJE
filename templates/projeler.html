@@ -2473,62 +2473,62 @@ function refreshProjectDetails(projectId) {
 
     // Düzenleme modalı fonksiyonu
     async function renderEditModal(project) {
-        // Müşterileri ve Proje Yöneticilerini çek
-        const customers = await fetchCustomersForSelect();
-        const projectManagers = await fetchProjectManagersForSelect();
-
-        let customerOptions = customers.map(c => 
-            `<option value="${c.customer_id}" ${c.customer_id === project.customer_id ? 'selected' : ''}>${c.customer_name}</option>`
-        ).join('');
-
-        let managerOptions = projectManagers.map(pm => 
-            `<option value="${pm.id}" ${pm.id === project.project_manager_user_id ? 'selected' : ''}>${pm.fullname}</option>`
-        ).join('');
-
-        modalBody.innerHTML = `
-            <input type="hidden" id="editProjectId" value="${project.project_id}">
-            <div class="form-group">
-                <label for="editProgressDelayDaysOverride" class="form-label">Erteleme Gün Sayısı</label>
-                <input type="number" class="form-input" id="editProgressDelayDaysOverride" min="0" placeholder="Manuel gecikme (gün)">
-                <small style="color: var(--light-gray); font-size: 0.85em;">Bu değer girilirse, iş adımı ve sonraki adımlar bu kadar gün ertelenir.</small>
-            </div>
-            <div class="form-group">
-                <label for="editProjectName" class="form-label">Proje Adı</label>
-                <input type="text" id="editProjectName" class="form-input" value="${project.project_name ? project.project_name.normalize('NFC') : ""}">
-            </div>
-            <div class="form-group">
-                <label for="editReferenceNo" class="form-label">Referans No</label>
-                <input type="text" id="editReferenceNo" class="form-input" value="${project.reference_no || ""}">
-            </div>
-            <div class="form-group">
-                <label for="editCustomerId" class="form-label">Müşteri</label>
-                <select id="editCustomerId" class="form-input">
-                    ${customerOptions}
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="editLocation" class="form-label">Konum</label>
-                <input type="text" id="editLocation" class="form-input" value="${project.project_location || ""}">
-            </div>
-            <div class="form-group">
-                <label for="editStatus" class="form-label">Durum</label>
-                <select id="editStatus" class="form-input">
-                    <option value="Aktif" ${project.status === "Aktif" ? "selected" : ""}>Aktif</option>
-                    <option value="Tamamlandı" ${project.status === "Tamamlandı" ? "selected" : ""}>Tamamlandı</option>
-                    <option value="Gecikti" ${project.status === "Gecikti" ? "selected" : ""}>Gecikti</option>
-                    <option value="Planlama Aşamasında" ${project.status === "Planlama Aşamasında" ? "selected" : ""}>Planlama Aşamasında</option>
-                    <option value="Aktif (İş Gecikmeli)" ${project.status === "Aktif (İş Gecikmeli)" ? "selected" : ""}>Aktif (İş Gecikmeli)</option>
-                    <option value="Planlama (İş Gecikmeli)" ${project.status === "Planlama (İş Gecikmeli)" ? "selected" : ""}>Planlama (İş Gecikmeli)</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="editStartDate" class="form-label">Başlangıç Tarihi</label>
-                <input type="date" id="editStartDate" class="form-input" value="${formatDateForInput(project.start_date || "")}">
-            </div>
-            <div class="form-group">
-                <label for="editEndDate" class="form-label">Bitiş Tarihi</label>
-                <input type="date" id="editEndDate" class="form-input" value="${formatDateForInput(project.end_date || "")}">
-            </div>
+  // ... mevcut kod ...
+  
+  modalBody.innerHTML = `
+  <input type="hidden" id="editProjectId" value="${project.project_id}">
+  <div class="form-group">
+    <label for="editProgressDelayDaysOverride" class="form-label">Erteleme Gün Sayısı</label>
+    <input type="number" class="form-input" id="editProgressDelayDaysOverride" min="0" placeholder="Manuel gecikme (gün)">
+    <small style="color: var(--light-gray); font-size: 0.85em;">Bu değer girilirse, iş adımı ve sonraki adımlar bu kadar gün ertelenir.</small>
+  </div>
+  <div class="form-group">
+    <label for="editProjectName" class="form-label">Proje Adı</label>
+    <input type="text" id="editProjectName" class="form-input" value="${project.project_name ? project.project_name.normalize('NFC') : ""}">
+  </div>
+  <div class="form-group">
+    <label for="editReferenceNo" class="form-label">Referans No</label>
+    <input type="text" id="editReferenceNo" class="form-input" value="${project.reference_no || ""}">
+  </div>
+  <div class="form-group">
+    <label for="editCustomerId" class="form-label">Müşteri</label>
+    <select id="editCustomerId" class="form-input">
+      ${customerOptions}
+    </select>
+  </div>
+  <div class="form-group">
+    <label for="editLocation" class="form-label">Konum</label>
+    <input type="text" id="editLocation" class="form-input" value="${project.project_location || ""}">
+  </div>
+  <div class="form-group">
+    <label for="editStatus" class="form-label">Durum</label>
+    <select id="editStatus" class="form-input">
+      <option value="Aktif" ${project.status === "Aktif" ? "selected" : ""}>Aktif</option>
+      <option value="Tamamlandı" ${project.status === "Tamamlandı" ? "selected" : ""}>Tamamlandı</option>
+      <option value="Gecikti" ${project.status === "Gecikti" ? "selected" : ""}>Gecikti</option>
+      <option value="Planlama Aşamasında" ${project.status === "Planlama Aşamasında" ? "selected" : ""}>Planlama Aşamasında</option>
+      <option value="Aktif (İş Gecikmeli)" ${project.status === "Aktif (İş Gecikmeli)" ? "selected" : ""}>Aktif (İş Gecikmeli)</option>
+      <option value="Planlama (İş Gecikmeli)" ${project.status === "Planlama (İş Gecikmeli)" ? "selected" : ""}>Planlama (İş Gecikmeli)</option>
+    </select>
+  </div>
+  <!-- Sözleşme Tarihi alanı (yeni) -->
+  <div class="form-group">
+    <label for="editContractDate" class="form-label">Sözleşme Tarihi</label>
+    <input type="date" id="editContractDate" class="form-input" value="${formatDateForInput(project.contract_date || "")}">
+  </div>
+  <!-- Toplantı Tarihi alanı (yeni) -->
+  <div class="form-group">
+    <label for="editMeetingDate" class="form-label">Toplantı Tarihi</label>
+    <input type="date" id="editMeetingDate" class="form-input" value="${formatDateForInput(project.meeting_date || "")}">
+  </div>
+  <div class="form-group">
+    <label for="editStartDate" class="form-label">Başlangıç Tarihi</label>
+    <input type="date" id="editStartDate" class="form-input" value="${formatDateForInput(project.start_date || "")}">
+  </div>
+  <div class="form-group">
+    <label for="editEndDate" class="form-label">Bitiş Tarihi</label>
+    <input type="date" id="editEndDate" class="form-input" value="${formatDateForInput(project.end_date || "")}">
+  </div>
             <div class="form-group">
                 <label for="editProjectManagerId" class="form-label">Proje Yöneticisi</label>
                 <select id="editProjectManagerId" class="form-input">
@@ -2585,61 +2585,81 @@ function refreshProjectDetails(projectId) {
 
 
     async function saveProjectChanges() {
-        const hasPermission = await checkPermission('proje_duzenle');
-        if (!hasPermission) return;
-        const projectId = document.getElementById("editProjectId").value;
-        const projectName = document.getElementById("editProjectName").value;
-        const referenceNo = document.getElementById("editReferenceNo").value;
-        const customerId = document.getElementById("editCustomerId").value; // Müşteri ID'si
-        const location = document.getElementById("editLocation").value;
-        const status = document.getElementById("editStatus").value;
-        const startDate = document.getElementById("editStartDate").value;
-        const endDate = document.getElementById("editEndDate").value;
-        const projectManagerId = document.getElementById("editProjectManagerId").value; // Proje Yöneticisi ID'si
-        const description = document.getElementById("editDescription").value;
-
-        const updatedProject = {
-            project_name: projectName,
-            reference_no: referenceNo,
-            customer_id: customerId, // Müşteri ID'si eklendi
-            project_location: location,
-            status: status,
-            start_date: startDate,
-            end_date: endDate,
-            project_manager_id: projectManagerId, // Proje Yöneticisi ID'si eklendi
-            description: description,
-            user_id: currentUser.id // Kullanıcı ID'si eklendi
-        };
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(updatedProject),
-            });
-
-            const data = await response.json();
-            if (response.ok) {
-                showToast("Proje başarıyla güncellendi!");
-                addActivity(
-                    "Proje Güncellendi",
-                    `${projectName} adlı proje güncellendi.`,
-                    projectId,
-                    "fas fa-pen-to-square",
-                    "project_update"
-                );
-                fetchProjects(); // Listeyi yenile
-                closeProjectModal();
-            } else {
-                showToast(`Hata: ${data.message}`, true);
-            }
-        } catch (error) {
-            console.error("Proje güncelleme hatası:", error);
-            showToast("Proje güncellenirken bir sorun oluştu.", true);
-        }
+  const hasPermission = await checkPermission('proje_duzenle');
+  if (!hasPermission) return;
+  
+  const projectId = document.getElementById("editProjectId").value;
+  const projectName = document.getElementById("editProjectName").value;
+  const referenceNo = document.getElementById("editReferenceNo").value;
+  const customerId = document.getElementById("editCustomerId").value; 
+  const location = document.getElementById("editLocation").value;
+  const status = document.getElementById("editStatus").value;
+  const startDate = document.getElementById("editStartDate").value;
+  const endDate = document.getElementById("editEndDate").value;
+  const projectManagerId = document.getElementById("editProjectManagerId").value;
+  const description = document.getElementById("editDescription").value;
+  
+  // contract_date ve meeting_date varsa alın, yoksa null gönder
+  let contractDate = null;
+  let meetingDate = null;
+  
+  // Eğer bu alanlar formda varsa değerlerini al
+  if (document.getElementById("editContractDate")) {
+    contractDate = document.getElementById("editContractDate").value;
+  }
+  
+  if (document.getElementById("editMeetingDate")) {
+    meetingDate = document.getElementById("editMeetingDate").value;
+  }
+  
+  console.log("Gönderilen contractDate:", contractDate);
+  console.log("Gönderilen meetingDate:", meetingDate);
+  
+  const updatedProject = {
+    project_name: projectName,
+    reference_no: referenceNo,
+    customer_id: customerId,
+    project_location: location,
+    status: status,
+    start_date: startDate,
+    end_date: endDate,
+    project_manager_id: projectManagerId,
+    description: description,
+    user_id: currentUser.id,
+    // Bu değerleri ekleyin
+    contract_date: contractDate,
+    meeting_date: meetingDate
+  };
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updatedProject),
+    });
+    
+    const data = await response.json();
+    if (response.ok) {
+      showToast("Proje başarıyla güncellendi!");
+      addActivity(
+        "Proje Güncellendi",
+        `${projectName} adlı proje güncellendi.`,
+        projectId,
+        "fas fa-pen-to-square",
+        "project_update"
+      );
+      fetchProjects(); // Listeyi yenile
+      closeProjectModal();
+    } else {
+      showToast(`Hata: ${data.message}`, true);
     }
+  } catch (error) {
+    console.error("Proje güncelleme hatası:", error);
+    showToast("Proje güncellenirken bir sorun oluştu.", true);
+  }
+}
 
     // `isEditable` parametresi eklendi
     async function fetchProgressSteps(projectId, isEditable = false) {
@@ -2774,115 +2794,151 @@ function refreshProjectDetails(projectId) {
         }
     }
     // MODAL İÇİNE YENİ İŞ ADIMI EKLEME FORMU OLUŞTURAN FONKSİYON
-    function addNewProgressStepForm(projectId) {
-        const progressStepsContainer = document.getElementById("progressStepsContainer");
-        // Zaten bir ekleme formu varsa yeni bir tane daha açma
-        if (document.getElementById('newProgressForm')) {
-            showToast("Zaten açık bir ekleme formu var.", false);
-            return;
-        }
+   function addNewProgressStepForm(projectId) {
+  // ... mevcut kod ...
 
-        const formElement = document.createElement('div');
-        formElement.id = 'newProgressForm';
-        formElement.className = 'progress-detail-item'; // Mevcut öğe stilini kullan
-
-        formElement.innerHTML = `
-            <div class="progress-item-header">
-                <div class="input-group" style="flex: 1;">
-                    <label for="newStepName">Adım Başlığı</label>
-                    <input type="text" id="newStepName" class="progress-step-name-input" placeholder="İş gidişat başlığı" required>
-                </div>
-                <div class="progress-dates" style="margin-left: 20px;">
-                    <span>
-                        <label for="newStepStartDate">Başlangıç:</label>
-                        <input type="date" id="newStepStartDate" class="progress-datepicker" required>
-                    </span>
-                    <span>
-                        <label for="newStepEndDate">Bitiş:</label>
-                        <input type="date" id="newStepEndDate" class="progress-datepicker" required>
-                    </span>
-                </div>
-            </div>
-            <div class="input-group">
-                <label for="newStepDescription">Açıklama</label>
-                <textarea id="newStepDescription" class="progress-description-textarea" placeholder="İş gidişat açıklaması"></textarea>
-            </div>
-            <div class="progress-actions">
-                <button type="button" class="action-btn modal-btn-cancel" id="cancelAddProgressBtn"><i class="fas fa-times"></i> İptal</button>
-                <button type="button" class="action-btn modal-btn-save" id="saveNewProgressBtn"><i class="fas fa-plus"></i> Ekle</button>
-            </div>
-        `;
-        progressStepsContainer.appendChild(formElement);
-
-        // Yeni form için olay dinleyicileri
-        document.getElementById('saveNewProgressBtn').addEventListener('click', async () => {
-            const stepName = document.getElementById('newStepName').value;
-            const startDate = document.getElementById('newStepStartDate').value;
-            const endDate = document.getElementById('newStepEndDate').value;
-            const description = document.getElementById('newStepDescription').value;
-
-            if (!stepName || !startDate || !endDate) {
-                showToast("Lütfen tüm zorunlu alanları doldurun.", true);
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ step_name: stepName, start_date: startDate, end_date: endDate, description: description })
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    showToast("İş adımı başarıyla eklendi.");
-                    formElement.remove(); // Formu kapat
-                    fetchProgressSteps(projectId, true); // Adımları yeniden yükle (düzenleme modunda kal)
-                    addActivity('İş Adımı Eklendi', `Proje ID: ${projectId} için "${stepName}" iş adımı eklendi.`, projectId, 'fas fa-tasks', 'progress_add');
-                } else {
-                    showToast(`Hata: ${data.message}`, true);
-                }
-            } catch (error) {
-                console.error("Yeni iş adımı ekleme hatası:", error);
-                showToast("İş adımı eklenirken bir sorun oluştu.", true);
-            }
-        });
-
-        document.getElementById('cancelAddProgressBtn').addEventListener('click', () => {
-            formElement.remove(); // Formu kaldır
-            showToast("İş adımı ekleme iptal edildi.", false);
-        });
+  document.getElementById('saveNewProgressBtn').addEventListener('click', async () => {
+    const stepName = document.getElementById('newStepName').value;
+    const startDate = document.getElementById('newStepStartDate').value;
+    const endDate = document.getElementById('newStepEndDate').value;
+    const description = document.getElementById('newStepDescription').value;
+    if (!stepName || !startDate || !endDate) {
+      showToast("Lütfen tüm zorunlu alanları doldurun.", true);
+      return;
     }
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ step_name: stepName, start_date: startDate, end_date: endDate, description: description })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        showToast("İş adımı başarıyla eklendi.");
+        formElement.remove(); // Formu kapat
+        
+        // İş adımları güncellendikten sonra tüm adımları çekmek için
+        const stepsResponse = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`);
+        const steps = await stepsResponse.json();
+        
+        // Proje detaylarını çek
+        const projectResponse = await fetch(`${API_BASE_URL}/api/projects/${projectId}`);
+        const project = await projectResponse.json();
+        
+        // Eğer eklenen adım son adımsa (veya sadece bir adım varsa), proje bitiş tarihini güncelle
+        if (steps.length > 0) {
+          // En son eklenen adımın bitiş tarihi proje bitiş tarihi olarak ayarlanır
+          const lastEndDate = endDate;
+          
+          // Proje bitiş tarihini güncelle
+          const updateProjectResponse = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_id: currentUser.id,
+              end_date: lastEndDate,
+              // Contract ve meeting tarihleri, proje güncellenirken kaybolmasın diye eklendi
+              contract_date: project.contract_date,
+              meeting_date: project.meeting_date
+            })
+          });
+          
+          if (!updateProjectResponse.ok) {
+            console.error("Proje bitiş tarihi güncellenirken hata:", await updateProjectResponse.text());
+          } else {
+            console.log("Proje bitiş tarihi başarıyla güncellendi.");
+          }
+        }
+        
+        fetchProgressSteps(projectId, true); // Adımları yeniden yükle
+        fetchProjects(); // Projeler listesini de güncelle
+        addActivity('İş Adımı Eklendi', `Proje ID: ${projectId} için "${stepName}" iş adımı eklendi.`, projectId, 'fas fa-tasks', 'progress_add');
+      } else {
+        showToast(`Hata: ${data.message}`, true);
+      }
+    } catch (error) {
+      console.error("Yeni iş adımı ekleme hatası:", error);
+      showToast("İş adımı eklenirken bir sorun oluştu.", true);
+    }
+  });
+  
+  // ... mevcut kod devamı ...
+}
 
     // editProgressStep fonksiyonu doğrudan SweetAlert2 kullanmak yerine
     // renderProgressSteps içinde inline form elemanlarından veri alacak şekilde güncellendi.
     // progress_id kullanıldı
-    async function editProgressStep(progressId, projectId, updatedStepData) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, { // progressId kullanılıyor
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(updatedStepData),
+   async function editProgressStep(progressId, projectId, updatedStepData) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, { // progressId kullanılıyor
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatedStepData),
+    });
+    const data = await response.json();
+    if (response.ok) {
+      showToast("İş adımı başarıyla güncellendi.");
+      
+      // Eğer bu, projenin son iş adımıysa, proje bitiş tarihini de güncelle
+      if (updatedStepData.end_date) {
+        // İlgili projeyi getir
+        const projectResponse = await fetch(`${API_BASE_URL}/api/projects/${projectId}`);
+        const project = await projectResponse.json();
+        
+        // Tüm iş adımlarını getir
+        const stepsResponse = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`);
+        const steps = await stepsResponse.json();
+        
+        // Bu güncellemede iş adımı son iş adımıysa
+        if (steps.length > 0) {
+          // API'den gelen steps dizisini idlerine göre sıralayalım ki son adımı doğru bulalım
+          steps.sort((a, b) => a.progress_id - b.progress_id);
+          
+          const isLastStep = steps[steps.length - 1].progress_id == progressId;
+          
+          if (isLastStep) {
+            console.log("Son iş adımı güncellendi. Proje bitiş tarihini güncelliyorum:", updatedStepData.end_date);
+            
+            // Proje bitiş tarihini güncelle
+            const updateProjectResponse = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                user_id: currentUser.id,
+                end_date: updatedStepData.end_date,
+                // Contract ve meeting tarihleri, proje güncellenirken kaybolmasın diye eklendi
+                contract_date: project.contract_date,
+                meeting_date: project.meeting_date
+              })
             });
-            const data = await response.json();
-            if (response.ok) {
-                showToast("İş adımı başarıyla güncellendi.");
-                fetchProjects(); // Projeler listesini de yenile (durum güncellenmiş olabilir)
-                fetchProgressSteps(projectId, true); // Adımları yenile (düzenleme modunda kal)
-                addActivity(
-                    "İş Adımı Güncellendi",
-                    `Proje ID: ${projectId} için "${updatedStepData.step_name}" iş adımı güncellendi.`,
-                    projectId,
-                    "fas fa-pen",
-                    "progress_update"
-                );
+            
+            if (!updateProjectResponse.ok) {
+              console.error("Proje bitiş tarihi güncellenirken hata:", await updateProjectResponse.text());
             } else {
-                showToast(`Hata: ${data.message}`, true);
+              console.log("Proje bitiş tarihi başarıyla güncellendi.");
             }
-        } catch (error) {
-            console.error("İş adımı güncelleme hatası:", error);
-            showToast("İş adımı güncellenirken bir sorun oluştu.", true);
+          }
         }
+      }
+      
+      fetchProjects(); // Projeler listesini güncelle
+      fetchProgressSteps(projectId, true); // İş adımlarını yeniden yükle
+      
+      addActivity(
+        "İş Adımı Güncellendi",
+        `Proje ID: ${projectId} için "${updatedStepData.step_name}" iş adımı güncellendi.`,
+        projectId,
+        "fas fa-pen",
+        "progress_update"
+      );
+    } else {
+      showToast(`Hata: ${data.message}`, true);
     }
+  } catch (error) {
+    console.error("İş adımı güncelleme hatası:", error);
+    showToast("İş adımı güncellenirken bir sorun oluştu.", true);
+  }
+}
 
     // progress_id kullanıldı
     async function deleteProgressStep(progressId, projectId) {
