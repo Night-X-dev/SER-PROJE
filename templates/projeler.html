@@ -2795,6 +2795,7 @@ function refreshProjectDetails(projectId) {
     }
     // Projenin başlangıç ve bitiş tarihlerini iş adımlarına göre güncelleme
 // Projenin başlangıç ve bitiş tarihlerini iş adımlarına göre güncelleme
+// Projenin başlangıç ve bitiş tarihlerini iş adımlarına göre güncelleme
 async function updateProjectDatesFromSteps(projectId) {
   try {
     console.log(`updateProjectDatesFromSteps başladı, projectId: ${projectId}`);
@@ -2808,6 +2809,15 @@ async function updateProjectDatesFromSteps(projectId) {
     
     const project = await projectResponse.json();
     console.log("Mevcut proje detayları alındı:", project);
+    
+    // Projeden önemli değerleri al
+    const projectManagerId = project.project_manager_id || project.project_manager_user_id;
+    
+    if (!projectManagerId) {
+      console.error("Proje yöneticisi bulunamadı. Güncelleme yapılamıyor.");
+      showToast("Proje yöneticisi bulunamadı. Güncelleme yapılamıyor.", true);
+      return;
+    }
     
     // Tüm iş adımlarını getir
     const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`);
@@ -2859,32 +2869,14 @@ async function updateProjectDatesFromSteps(projectId) {
     if (earliestStartDate || latestEndDate) {
       console.log("Proje tarihlerini güncelliyorum...");
       
+      // Bu kısımda sadece gerekli alanları gönderiyoruz
       const updateData = {
         user_id: currentUser.id,
-        // ÖNEMLİ: Projenin adını ve diğer temel özelliklerini de gönderiyoruz
-        project_name: project.project_name,
-        reference_no: project.reference_no || "",
-        description: project.description || "", 
-        customer_id: project.customer_id,
-        project_location: project.project_location || "",
-        status: project.status || "Aktif",
-        project_manager_id: project.project_manager_id,
-        // Tarihler
-        contract_date: project.contract_date,
-        meeting_date: project.meeting_date
+        // Sadece tarih güncellemesi için minimum zorunlu alanlar
+        project_manager_id: projectManagerId,
+        start_date: earliestStartDate || project.start_date,
+        end_date: latestEndDate || project.end_date
       };
-      
-      if (earliestStartDate) {
-        updateData.start_date = earliestStartDate;
-      } else {
-        updateData.start_date = project.start_date;  // Mevcut tarihi koru
-      }
-      
-      if (latestEndDate) {
-        updateData.end_date = latestEndDate;
-      } else {
-        updateData.end_date = project.end_date;  // Mevcut tarihi koru
-      }
       
       console.log("Proje güncellemek için gönderilen veriler:", updateData);
       
@@ -2895,10 +2887,11 @@ async function updateProjectDatesFromSteps(projectId) {
       });
       
       if (!updateResponse.ok) {
+        console.log("Yanıt:", updateResponse.status);
         const errorText = await updateResponse.json();
         console.error("Proje tarihleri güncellenirken hata:", errorText);
       } else {
-        console.log("Proje tarihleri başarıyla güncellendi:", updateData);
+        console.log("Proje tarihleri başarıyla güncellendi");
         
         // Proje formundaki tarihleri güncelle
         if (earliestStartDate && document.getElementById("editStartDate")) {
@@ -2917,10 +2910,6 @@ async function updateProjectDatesFromSteps(projectId) {
     showToast("Proje tarihleri güncellenirken bir hata oluştu", true);
   }
 }
-// İş adımının ve sonraki adımların BİTİŞ TARİHLERİNİ erteleme fonksiyonu (başlangıç tarihi değişmeyecek)
-// İş adımının bitiş tarihini ve sonraki adımların başlangıç ve bitiş tarihlerini erteleme fonksiyonu
-// İş adımının bitiş tarihini ve sonraki adımların başlangıç ve bitiş tarihlerini erteleme fonksiyonu
-// İş adımının bitiş tarihini ve sonraki adımların başlangıç ve bitiş tarihlerini erteleme fonksiyonu
 // İş adımının bitiş tarihini ve sonraki adımların başlangıç ve bitiş tarihlerini erteleme fonksiyonu
 async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
   if (delayDays <= 0) {
@@ -2955,6 +2944,12 @@ async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
     
     console.log("Mevcut adım güncelleniyor, progressId:", currentProgressId, "custom_delay:", delayDays);
     
+    // Mevcut özel gecikme değeri
+    let existingCustomDelay = currentStep.custom_delay_days || 0;
+    let newCustomDelay = existingCustomDelay + delayDays;
+    
+    console.log("Önceki özel gecikme:", existingCustomDelay, "Yeni toplam özel gecikme:", newCustomDelay);
+    
     // Mevcut adım için güncelleme kuyruğuna ekle
     stepsToUpdate.push({
       progressId: currentProgressId,
@@ -2966,7 +2961,7 @@ async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
         // Sadece bitiş tarihi ertelenir
         end_date: formattedEndDate,
         // Gecikme gün sayısını da gönderiyoruz - Bu API'nin beklediği parametre adını kontrol edin
-        custom_delay: delayDays  // Bu adın app.py'deki ile aynı olduğundan emin olun
+        custom_delay: newCustomDelay  // Yeni toplam gecikmeyi gönder
       }
     });
     
@@ -3000,6 +2995,9 @@ async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
       
       console.log("Sonraki adım güncelleniyor, progressId:", progressId, "tarihler:", formattedStartDate, formattedEndDate);
       
+      // Özel gecikme eklemeyin 
+      const existingCustomDelay = step.custom_delay_days || 0;
+      
       // Güncelleme için kuyruğa ekle
       stepsToUpdate.push({
         progressId: progressId,
@@ -3008,8 +3006,8 @@ async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
           description: document.getElementById(`step-${progressId}-desc`).value,
           start_date: formattedStartDate,
           end_date: formattedEndDate,
-          // Sonraki adımlar için custom_delay değil sadece otomatik hesaplanan delay_days gönderilir
-          custom_delay: 0
+          // Sonraki adımların mevcut özel gecikmesini koru
+          custom_delay: existingCustomDelay 
         }
       });
     }
@@ -3040,11 +3038,6 @@ async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
       }
     }
     
-    // Proje tarihlerini de güncelle
-    if (stepsToUpdate.length > 0) {
-      await updateProjectDatesFromSteps(projectId);
-    }
-    
     showToast(`${successCount} adımın tarihleri başarıyla güncellendi.`);
     
     // Adımları yeniden yükle
@@ -3064,7 +3057,13 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
   progressStepsContainer.innerHTML = "";
   
   console.log("Render progress steps:", steps);
-  
+   steps.forEach(step => {
+    console.log(`İş adımı (progress_id: ${step.progress_id}):`, {
+      title: step.title || step.step_name,
+      custom_delay_days: step.custom_delay_days,
+      delay_days: step.delay_days
+    });
+  });
   if (steps.length === 0) {
     progressStepsContainer.innerHTML = '<p>Bu proje için henüz iş adımı eklenmemiş.</p>';
   } else {

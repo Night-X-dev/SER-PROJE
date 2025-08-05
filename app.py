@@ -1310,191 +1310,66 @@ def send_notification(user_id, title, message):
 
 @app.route('/api/projects/<int:project_id>', methods=['PUT'])
 def update_project(project_id):
+    """Updates a project."""
     data = request.get_json()
-    print(f"DEBUG: Raw JSON data received by update_project: {data}")
-    print(f"DEBUG: Project ID to be updated: {project_id}")
-
-    def clean_input_value(value):
-        if value is None or value == '':
-            return None
-        return str(value)
-
-    # Frontend'den gelen camelCase verileri snake_case'e dönüştür
-    # NOT: frontend'den projectName gelirken, backend project_name bekliyor
-    project_name = clean_input_value(data.get('projectName') or data.get('project_name'))
-    reference_no = clean_input_value(data.get('referenceNo') or data.get('projectRef') or data.get('reference_no'))
-    description = clean_input_value(data.get('projectDescription') or data.get('description'))
-    
-    # Tarih alanlarını doğru şekilde al
-    contract_date = clean_input_value(data.get('contractDate') or data.get('contract_date'))
-    meeting_date = clean_input_value(data.get('meetingDate') or data.get('meeting_date'))
-    start_date = clean_input_value(data.get('startDate') or data.get('start_date'))
-    end_date = clean_input_value(data.get('endDate') or data.get('end_date'))
-    
-    project_location = clean_input_value(data.get('projectLocation') or data.get('project_location'))
-    status = clean_input_value(data.get('status'))
-
-    # Get customer_id here
-    customer_id_new = data.get('customerId') or data.get('customer_id')
-    try:
-        customer_id_new = int(customer_id_new) if customer_id_new else None
-    except ValueError:
-        customer_id_new = None
-
-    project_manager_id_new = data.get('projectManagerId') or data.get('project_manager_id')
-    try:
-        project_manager_id_new = int(project_manager_id_new) if project_manager_id_new else None
-    except ValueError:
-        project_manager_id_new = None
-
-
-    user_id = clean_input_value(data.get('user_id'))
-
-    print(f"DEBUG: Processed values: "
-          f"name='{project_name}', ref='{reference_no}', description='{description}', "
-          f"contract='{contract_date}', meeting='{meeting_date}', start='{start_date}', end='{end_date}', "
-          f"location='{project_location}', status='{status}', customer_id='{customer_id_new}', manager_id='{project_manager_id_new}', user_id='{user_id}'")
-    progress_steps = data.get('progressSteps', [])
-    for step in progress_steps:
-        print(f"DEBUG: Progress step: {step}")
-        
+    user_id = data.get('user_id')
     if not user_id:
-        print("ERROR: User ID is missing.")
-        return jsonify({'message': 'User ID is missing.'}), 400
-
+        return jsonify({'message': 'User ID is required.'}), 400
+    
+    # Tüm olası sütunlar
+    possible_columns = [
+        'project_name', 'reference_no', 'description', 'customer_id', 
+        'project_location', 'status', 'project_manager_id', 'contract_date',
+        'meeting_date', 'start_date', 'end_date'
+    ]
+    
+    # Hangi sütunların güncellendiğini takip et
+    updates = []
+    params = []
+    
+    # Mevcut projeyi getir
     connection = None
     try:
         connection = get_db_connection()
-        print("DEBUG: Database connection established.")
         with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT project_name, reference_no, description, contract_date, meeting_date,
-                       start_date, end_date, project_location, status, customer_id, project_manager_id
-                FROM projects WHERE project_id = %s
-            """, (project_id,))
-            existing_project_info = cursor.fetchone()
-            print(f"DEBUG: Existing project information: {existing_project_info}")
-
-            if not existing_project_info:
-                print("ERROR: Project not found.")
+            cursor.execute("SELECT * FROM projects WHERE project_id = %s", (project_id,))
+            existing_project = cursor.fetchone()
+            if not existing_project:
                 return jsonify({'message': 'Project not found.'}), 404
-
-            old_project_name = existing_project_info['project_name']
-            old_reference_no = existing_project_info['reference_no']
-            old_description = existing_project_info['description']
-            old_contract_date = existing_project_info['contract_date'].isoformat() if isinstance(existing_project_info['contract_date'], datetime.date) else None
-            old_meeting_date = existing_project_info['meeting_date'].isoformat() if isinstance(existing_project_info['meeting_date'], datetime.date) else None
-            old_start_date = existing_project_info['start_date'].isoformat() if isinstance(existing_project_info['start_date'], datetime.date) else None
-            old_end_date = existing_project_info['end_date'].isoformat() if isinstance(existing_project_info['end_date'], datetime.date) else None
-            old_project_location = existing_project_info['project_location']
-            old_status = existing_project_info['status']
-            old_customer_id = existing_project_info['customer_id'] # Old customer ID
-            old_project_manager_id = existing_project_info['project_manager_id']
-
-            print(f"DEBUG: Old values: "
-                  f"name='{old_project_name}', ref='{old_reference_no}', description='{old_description}', "
-                  f"contract='{old_contract_date}', meeting='{old_meeting_date}', start='{old_start_date}', end='{old_end_date}', "
-                  f"location='{old_project_location}', status='{old_status}', customer_id='{old_customer_id}', manager_id='{old_project_manager_id}'")
-
-            updates = []
-            params = []
-
-            # Comparison logic
             
-            if clean_input_value(project_name) != clean_input_value(old_project_name):
-                updates.append("project_name = %s")
-                params.append(project_name)
-            if clean_input_value(reference_no) != clean_input_value(old_reference_no):
-                updates.append("reference_no = %s")
-                params.append(reference_no)
-            if clean_input_value(description) != clean_input_value(old_description):
-                updates.append("description = %s")
-                params.append(description)
-            if clean_input_value(contract_date) != clean_input_value(old_contract_date):
-                updates.append("contract_date = %s")
-                params.append(contract_date)
-            if clean_input_value(meeting_date) != clean_input_value(old_meeting_date):
-                updates.append("meeting_date = %s")
-                params.append(meeting_date)
-            if clean_input_value(start_date) != clean_input_value(old_start_date):
-                updates.append("start_date = %s")
-                params.append(start_date)
-            if clean_input_value(end_date) != clean_input_value(old_end_date):
-                updates.append("end_date = %s")
-                params.append(end_date)
-            if clean_input_value(project_location) != clean_input_value(old_project_location):
-                updates.append("project_location = %s")
-                params.append(project_location)
-            if clean_input_value(status) != clean_input_value(old_status):
-                updates.append("status = %s")
-                params.append(status)
-
-            # Customer ID update added
-            if customer_id_new != old_customer_id:
-                updates.append("customer_id = %s")
-                params.append(customer_id_new)
-
-            if project_manager_id_new != old_project_manager_id:
-                updates.append("project_manager_id = %s")
-                params.append(project_manager_id_new)
-      
+            # Güncellenecek değerleri belirle
+            for column in possible_columns:
+                # Eğer veri mevcut ve eski değerden farklıysa veya zorunlu bir alan ise güncelle
+                if column in data and data[column] is not None:
+                    updates.append(f"{column} = %s")
+                    params.append(data[column])
+            
+            # Hiçbir güncelleme yoksa
             if not updates:
-                print("DEBUG: No information to update, returning 200.")
                 return jsonify({'message': 'No information to update.'}), 200
-          
+            
+            # SQL sorgusunu oluştur
             sql = f"UPDATE projects SET {', '.join(updates)} WHERE project_id = %s"
             params.append(project_id)
-            print(f"DEBUG: Generated SQL: {sql}")
-            print(f"DEBUG: SQL parameters: {tuple(params)}")
-
-            cursor.execute(sql, tuple(params))
-            connection.commit()
-            print(f"DEBUG: Database update completed. Rows affected: {cursor.rowcount}")
-
-            if cursor.rowcount == 0:
-                print("DEBUG: Project data is already up to date or no changes were made, returning 200.")
-                return jsonify({'message': 'Project data is already up to date or no changes were made.'}), 200
-            if progress_steps and len(progress_steps) > 0:
-                # Mevcut iş gidişatlarını güncelle veya sil
-                cursor.execute("DELETE FROM progress_steps WHERE project_id = %s", (project_id,))
-                
-                # Yeni iş gidişatlarını ekle
-                for step in progress_steps:
-                    cursor.execute("""
-                        INSERT INTO progress_steps 
-                        (project_id, title, description, start_date, end_date) 
-                        VALUES (%s, %s, %s, %s, %s)
-                    """, (
-                        project_id, 
-                        step.get('title'), 
-                        step.get('description'), 
-                        step.get('startDate'), 
-                        step.get('endDate')
-                    ))
-                
-                # İş gidişatlarından proje tarihlerini güncelle
-                # Son iş gidişatının bitiş tarihi proje bitiş tarihi olacak
-                if progress_steps and len(progress_steps) > 0:
-                    last_step = progress_steps[-1]
-                    last_end_date = last_step.get('endDate')
-                    
-                    if last_end_date and end_date != last_end_date:
-                        updates.append("end_date = %s")
-                        params.append(last_end_date)
-                        print(f"DEBUG: Updated project end_date to match last progress step: {last_end_date}")
             
-        return jsonify({'message': 'Project successfully updated!'}), 200
-
-    except pymysql.Error as e:
-        print(f"DATABASE ERROR (update_project): {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+            print(f"Güncelleme sorgusu: {sql}")
+            print(f"Parametre değerleri: {params}")
+            
+            # Sorguyu çalıştır
+            cursor.execute(sql, params)
+            connection.commit()
+            
+            return jsonify({'message': 'Project successfully updated!'}), 200
+    
     except Exception as e:
-        print(f"GENERAL ERROR (update_project): {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Proje güncelleme hatası: {str(e)}")
+        if connection:
+            connection.rollback()
+        return jsonify({'message': f'Server error: {str(e)}'}), 500
+    
     finally:
         if connection:
             connection.close()
-            print("DEBUG: Database connection closed.")
 
 # Proje silme api (DELETE)
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
@@ -1995,6 +1870,10 @@ def update_project_progress_step(progress_id):
     delay_days = data.get('delay_days')  # Mevcut delay_days (hesaplanan gecikme)
     custom_delay = data.get('custom_delay', 0)  # Yeni: Kullanıcının eklediği özel gecikme
     
+    print(f"custom_delay değeri: {custom_delay}")
+    
+    final_custom_delay = custom_delay if custom_delay is not None else old_custom_delay
+    print(f"final_custom_delay: {final_custom_delay}")
     # Session'dan user_id'yi al ama yoksa JSON'dan da kullan
     user_id = session.get('user_id')
     if not user_id and 'user_id' in data:
