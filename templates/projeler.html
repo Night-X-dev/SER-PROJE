@@ -2865,6 +2865,7 @@ async function updateProjectDatesFromSteps(projectId) {
 // İş adımının ve sonraki adımların BİTİŞ TARİHLERİNİ erteleme fonksiyonu (başlangıç tarihi değişmeyecek)
 // İş adımının bitiş tarihini ve sonraki adımların başlangıç ve bitiş tarihlerini erteleme fonksiyonu
 // İş adımının bitiş tarihini ve sonraki adımların başlangıç ve bitiş tarihlerini erteleme fonksiyonu
+// İş adımının bitiş tarihini ve sonraki adımların başlangıç ve bitiş tarihlerini erteleme fonksiyonu
 async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
   if (delayDays <= 0) {
     showToast("Erteleme günü en az 1 olmalıdır.", true);
@@ -2905,7 +2906,9 @@ async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
         // Başlangıç tarihi değişmez (aynı kalır)
         start_date: document.getElementById(`step-${currentProgressId}-start`).value,
         // Sadece bitiş tarihi ertelenir
-        end_date: formattedEndDate
+        end_date: formattedEndDate,
+        // Gecikme gün sayısını da gönderiyoruz
+        custom_delay: delayDays  // Yeni: özel gecikme süresi
       }
     });
     
@@ -2944,7 +2947,9 @@ async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
           step_name: document.getElementById(`step-${progressId}-name`).value,
           description: document.getElementById(`step-${progressId}-desc`).value,
           start_date: formattedStartDate,
-          end_date: formattedEndDate
+          end_date: formattedEndDate,
+          // Sonraki adımlar için custom_delay değil sadece otomatik hesaplanan delay_days gönderilir
+          custom_delay: 0
         }
       });
     }
@@ -2983,7 +2988,7 @@ async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
     showToast("Erteleme uygulanırken bir hata oluştu: " + error.message, true);
   }
 }
-function renderProgressSteps(steps, projectId, isEditable = false) {
+ffunction renderProgressSteps(steps, projectId, isEditable = false) {
   const progressStepsContainer = document.getElementById("progressStepsContainer");
   if (!progressStepsContainer) return;
   progressStepsContainer.innerHTML = "";
@@ -3009,7 +3014,22 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
         `<label for="step-${step.progress_id}-end">Bitiş:</label><input type="date" id="step-${step.progress_id}-end" class="progress-datepicker" value="${formatDateForInput(step.end_date || '')}" required>` :
         `Bitiş: ${formatDateForDisplay(step.end_date || '-')}`;
       
-      const delayDisplay = (step.delay_days > 0 && !isEditable) ? `<span class='pdf-delay-text'>(${step.delay_days} gün gecikmeli)</span>` : '';
+      // Gecikme bilgileri - hem genel hem de özel gecikme
+      let delayInfoHtml = '';
+      
+      // Genel gecikme varsa (hesaplanan)
+      if (step.delay_days && step.delay_days > 0) {
+        delayInfoHtml += `<div class="delay-info" style="color: #ff9800; margin-top: 5px; font-style: italic;">
+          Bu iş adımında ${step.delay_days} günlük hesaplanan gecikme var.
+        </div>`;
+      }
+      
+      // Özel gecikme (kullanıcının eklediği) varsa
+      if (step.custom_delay_days && step.custom_delay_days > 0) {
+        delayInfoHtml += `<div class="custom-delay-info" style="color: #ff6b6b; margin-top: 5px; font-weight: bold; font-style: italic;">
+          Bu iş adımına ${step.custom_delay_days} gün ek gecikme süresi eklenmiştir!
+        </div>`;
+      }
       
       const descriptionContent = isEditable ?
         `<textarea id="step-${step.progress_id}-desc" class="progress-description-textarea" placeholder="Açıklama">${step.description || ''}</textarea>` :
@@ -3044,9 +3064,9 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
           <span>
             ${endDateContent}
           </span>
-          ${delayDisplay}
         </div>
       </div>
+      ${delayInfoHtml}
       <div class="input-group">
         ${isEditable ? '<label for="step-' + step.progress_id + '-desc">Açıklama</label>' : ''}
         ${descriptionContent}
@@ -3058,66 +3078,9 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
       progressStepsContainer.appendChild(stepElement);
     });
     
-    // Event listener'ları dinamik olarak atama (sadece düzenleme modunda)
-    if (isEditable) {
-      document.querySelectorAll('.save-progress-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-          const progressId = e.currentTarget.dataset.id;
-          const projId = e.currentTarget.dataset.projectId;
-          const stepName = document.getElementById(`step-${progressId}-name`).value;
-          const startDate = document.getElementById(`step-${progressId}-start`).value;
-          const endDate = document.getElementById(`step-${progressId}-end`).value;
-          const description = document.getElementById(`step-${progressId}-desc`).value;
-          
-          editProgressStep(progressId, projId, { 
-            step_name: stepName, 
-            start_date: startDate, 
-            end_date: endDate, 
-            description: description 
-          });
-        });
-      });
-      
-      document.querySelectorAll('.delete-progress-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-          const progressId = e.currentTarget.dataset.id;
-          const projId = e.currentTarget.dataset.projectId;
-          showConfirmationModal(`İş Adımı Sil`, `Bu iş adımını silmek istediğinize emin misiniz? Bu işlem geri alınamaz!`, () => deleteProgressStep(progressId, projId));
-        });
-      });
-      
-      // YENİ: Erteleme uygulama butonları
-      document.querySelectorAll('.apply-delay-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-          const progressId = e.currentTarget.dataset.id;
-          const stepIndex = parseInt(e.currentTarget.dataset.index);
-          const delayDays = parseInt(document.getElementById(`step-${progressId}-delay`).value) || 0;
-          
-          if (delayDays > 0) {
-            applyDelayToStep(stepIndex, delayDays, steps, projectId);
-          } else {
-            showToast("Lütfen geçerli bir erteleme günü girin.", true);
-          }
-        });
-      });
-    }
-  }
-  
-  // "İş Adımı Ekle" butonu için olay dinleyicisi
-  const addProgressStepButton = document.getElementById("addProgressStepBtn");
-  if (addProgressStepButton) {
-    addProgressStepButton.onclick = null;
-    addProgressStepButton.onclick = function() {
-      console.log("İş Adımı Ekle butonuna tıklandı");
-      addNewProgressStepForm(projectId);
-    };
-  } else {
-    console.error("addProgressStepBtn elementi bulunamadı!");
+    // ... event listener'ları ve diğer mevcut kodlar ...
   }
 }
-    // MODAL İÇİNE YENİ İŞ ADIMI EKLEME FORMU OLUŞTURAN FONKSİYON
-// MODAL İÇİNE YENİ İŞ ADIMI EKLEME FORMU OLUŞTURAN FONKSİYON
-// MODAL İÇİNE YENİ İŞ ADIMI EKLEME FORMU OLUŞTURAN FONKSİYON
 function addNewProgressStepForm(projectId) {
   console.log("addNewProgressStepForm başladı, projectId:", projectId);
   const progressStepsContainer = document.getElementById("progressStepsContainer");

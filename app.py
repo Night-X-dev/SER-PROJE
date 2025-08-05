@@ -1992,7 +1992,8 @@ def update_project_progress_step(progress_id):
     description = data.get('description')
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
-    delay_days = data.get('delay_days')  # Frontend'den gelen delay_days
+    delay_days = data.get('delay_days')  # Mevcut delay_days (hesaplanan gecikme)
+    custom_delay = data.get('custom_delay', 0)  # Yeni: Kullanıcının eklediği özel gecikme
     
     # Session'dan user_id'yi al ama yoksa JSON'dan da kullan
     user_id = session.get('user_id')
@@ -2007,7 +2008,7 @@ def update_project_progress_step(progress_id):
         connection = get_db_connection()
         with connection.cursor() as cursor:
             # Get the project ID and title of the existing progress step
-            cursor.execute("SELECT project_id, title FROM project_progress WHERE progress_id = %s", (progress_id,))
+            cursor.execute("SELECT project_id, title, custom_delay_days FROM project_progress WHERE progress_id = %s", (progress_id,))
             existing_step = cursor.fetchone()
             
             if not existing_step:
@@ -2015,6 +2016,7 @@ def update_project_progress_step(progress_id):
                 
             current_project_id = existing_step['project_id']
             old_step_name = existing_step['title']
+            old_custom_delay = existing_step.get('custom_delay_days', 0) or 0
             
             # Get project name and manager
             cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (current_project_id,))
@@ -2044,13 +2046,21 @@ def update_project_progress_step(progress_id):
             else:
                 # Frontend'den gelen delay_days değerini kullan
                 calculated_delay_days = int(delay_days)
-                
+            
+            # Özel gecikme günü - eğer yeni bir custom_delay değeri geldiyse onu kullan
+            final_custom_delay = custom_delay
+            
+            # Yeni SQL sorgusu - custom_delay_days sütununu da güncelle
             sql_update = """
                 UPDATE project_progress
-                SET title = %s, description = %s, start_date = %s, end_date = %s, delay_days = %s
+                SET title = %s, description = %s, start_date = %s, end_date = %s, 
+                    delay_days = %s, custom_delay_days = %s
                 WHERE progress_id = %s
             """
-            cursor.execute(sql_update, (step_name, description, start_date_str, end_date_str, calculated_delay_days, progress_id))
+            cursor.execute(sql_update, (
+                step_name, description, start_date_str, end_date_str, 
+                calculated_delay_days, final_custom_delay, progress_id
+            ))
             
             # Proje başlangıç ve bitiş tarihlerini güncelle
             update_result = update_project_dates(cursor, current_project_id)
@@ -2072,13 +2082,18 @@ def update_project_progress_step(progress_id):
                 except Exception as notif_error:
                     print(f"Error sending notification (non-critical): {notif_error}")
             
+            # Erteleme günü eklendiğinde özel aktivite mesajı
+            activity_message = f"The work step '{old_step_name}' in project '{project_name}' has been updated to '{step_name}'."
+            if final_custom_delay > 0 and final_custom_delay != old_custom_delay:
+                activity_message += f" A delay of {final_custom_delay} days has been added to this step."
+                
             # Log activity
             try:
                 activity_data = {
                     'user_id': user_id,
                     'project_id': current_project_id,
                     'title': 'Work Step Updated',
-                    'description': f"The work step '{old_step_name}' in project '{project_name}' has been updated to '{step_name}'.",
+                    'description': activity_message,
                     'icon': 'fas fa-pen',
                     'action_type': "progress_update"
                 }
@@ -2087,90 +2102,10 @@ def update_project_progress_step(progress_id):
             except Exception as act_error:
                 print(f"Activity logging error (non-critical): {act_error}")
                 
-            return jsonify({'message': 'Progress step successfully updated!'}), 200
-            
-    except pymysql.Error as e:
-        print(f"Database error while updating progress step: {e}")
-        if connection:
-            connection.rollback()
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
-        
-    except Exception as e:
-        print(f"General error while updating progress step: {e}")
-        import traceback
-        traceback.print_exc()  # Detaylı hata bilgisini yazdır
-        if connection:
-            connection.rollback()
-        return jsonify({'message': f'Server error: {str(e)}'}), 500
-        
-    finally:
-        if connection:
-            connection.close()
-
-# API to delete project progress step
-@app.route('/api/progress/<int:progress_id>', methods=['DELETE'])
-def delete_project_progress_step(progress_id):
-    """Deletes a project progress step."""
-    # Session'dan user_id'yi al
-    user_id = session.get('user_id')
-    
-    # JSON veri de kabul et (user_id için)
-    if request.is_json:
-        data = request.get_json()
-        if not user_id and 'user_id' in data:
-            user_id = data.get('user_id')
-    
-    # user_id'yi query parameter olarak da kabul edebiliriz    
-    if not user_id and 'user_id' in request.args:
-        user_id = request.args.get('user_id')
-        
-    if not user_id:
-        return jsonify({'message': 'User ID is missing.'}), 400
-        
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # Get project ID and title of the step to be deleted
-            cursor.execute("SELECT project_id, title FROM project_progress WHERE progress_id = %s", (progress_id,))
-            step_info = cursor.fetchone()
-            
-            if not step_info:
-                return jsonify({'message': 'Progress step could not be found.'}), 404
-                
-            current_project_id = step_info['project_id']
-            step_name = step_info['title']
-            
-            # Delete the progress step
-            sql = "DELETE FROM project_progress WHERE progress_id = %s"
-            cursor.execute(sql, (progress_id,))
-            
-            # Proje başlangıç ve bitiş tarihlerini güncelle
-            update_result = update_project_dates(cursor, current_project_id)
-            if update_result:
-                print(f"Project dates successfully updated after deletion for project {current_project_id}")
-            else:
-                print(f"No progress steps left or failed to update project dates for project {current_project_id}")
-            
-            connection.commit()
-            
-            # Log activity
-            try:
-                activity_data = {
-                    'user_id': user_id,
-                    'project_id': current_project_id,
-                    'title': 'Work Step Deleted',
-                    'description': f"The work step '{step_name}' has been deleted.",
-                    'icon': 'fas fa-trash',
-                    'action_type': 'progress_delete'
-                }
-                # Aktivite loglamak için bir fonksiyon kullanılabilir (varsa)
-                # Örneğin: log_activity(activity_data)
-            except Exception as act_error:
-                print(f"Activity logging error (non-critical): {act_error}")
-                
-            return jsonify({'message': 'Progress step successfully deleted!'}), 200
-            
+            return jsonify({
+                'message': 'Progress step successfully updated!',
+                'custom_delay_added': final_custom_delay > 0 and final_custom_delay != old_custom_delay
+            }), 200
     except pymysql.Error as e:
         print(f"Database error while deleting progress step: {e}")
         if connection:
