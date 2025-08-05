@@ -142,8 +142,8 @@ def get_db_connection():
                 host = parsed_url.hostname
                 port = parsed_url.port if parsed_url.port else 3306
                 user = parsed_url.username
-                password = parsed.password
-                database = parsed.path.lstrip('/')
+                password = parsed_url.password
+                database = parsed_url.path.lstrip('/')
                 print(f"DEBUG: Using parsed public URL. Host={host}, Port={port}, User={user}, DB={database}")
             except Exception as url_parse_e:
                 print(f"ERROR: Could not parse MYSQL_PUBLIC_URL: {url_parse_e}. Falling back to fixed values or individual environment variables.")
@@ -2004,6 +2004,66 @@ def update_project_progress_step(progress_id):
         if connection:
             connection.close()
 
+@app.route('/api/progress/<int:progress_id>', methods=['DELETE'])
+def delete_project_progress_step(progress_id):
+    """Deletes a project progress step."""
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # İş adımının ait olduğu projeyi bul
+            cursor.execute("SELECT project_id, title FROM project_progress WHERE progress_id = %s", (progress_id,))
+            step_info = cursor.fetchone()
+            
+            if not step_info:
+                return jsonify({'message': 'İş adımı bulunamadı.'}), 404
+            
+            project_id = step_info['project_id']
+            step_title = step_info['title']
+
+            # İş adımını sil
+            sql_delete = "DELETE FROM project_progress WHERE progress_id = %s"
+            cursor.execute(sql_delete, (progress_id,))
+            
+            # Proje başlangıç ve bitiş tarihlerini güncelle
+            update_result = update_project_dates(cursor, project_id)
+            if update_result:
+                print(f"Project dates successfully updated after step deletion for project {project_id}")
+            else:
+                print(f"Failed to update project dates after step deletion for project {project_id}")
+            
+            connection.commit()
+            
+            # Aktivite kaydı
+            # user_id'yi session'dan al
+            user_id = session.get('user_id')
+            if user_id:
+                log_activity(
+                    user_id=user_id,
+                    title="İş Adımı Silindi",
+                    description=f"Proje ID: {project_id} için '{step_title}' iş adımı silindi.",
+                    icon="fas fa-trash",
+                    is_read=0
+                )
+
+        return jsonify({'message': 'İş adımı başarıyla silindi!'}), 200
+    except pymysql.Error as e:
+        print(f"Database error while deleting progress step: {e}")
+        if connection:
+            connection.rollback()
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
+    except Exception as e:
+        print(f"General error while deleting progress step: {e}")
+        import traceback
+        traceback.print_exc()
+        if connection:
+            connection.rollback()
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+    finally:
+        if connection:
+            connection.close()
+
+
 @app.route('/api/user-info', methods=['GET'])
 def get_user_info():
     """Retrieves detailed information for a single user."""
@@ -2046,7 +2106,15 @@ def update_project_dates(cursor, project_id):
         
         if not date_range or (not date_range['earliest_start'] and not date_range['latest_end']):
             print(f"No progress steps found for project {project_id}")
-            return False
+            
+            # Eğer hiç iş adımı kalmadıysa, projenin başlangıç ve bitiş tarihlerini sıfırla
+            cursor.execute("""
+                UPDATE projects 
+                SET start_date = NULL, end_date = NULL
+                WHERE project_id = %s
+            """, (project_id,))
+            print(f"Project dates set to NULL for project {project_id} as no progress steps remain.")
+            return True
             
         earliest_start = date_range['earliest_start']
         latest_end = date_range['latest_end']
