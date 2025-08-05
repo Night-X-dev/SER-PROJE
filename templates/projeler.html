@@ -2760,17 +2760,69 @@ function refreshProjectDetails(projectId) {
     // `isEditable` parametresi eklendi
     async function fetchProgressSteps(projectId, isEditable = false) {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/project/${projectId}/progress`);
-        const data = await response.json();
-        console.log("API'den gelen iş adımları verisi:", data);  // Tüm veriyi görelim
+        console.log(`İş adımları getiriliyor: Proje ID ${projectId}`);
         
-        if (data && data.steps) {
-            // Her adım için custom_delay_days kontrolü
-            data.steps.forEach(step => {
-                console.log(`Adım ID ${step.progress_id}, custom_delay_days: ${step.custom_delay_days}, custom_delay: ${step.custom_delay}`);
+        // API_BASE_URL doğru şekilde tanımlanmış olmalı
+        let apiUrl = `${API_BASE_URL}/api/project/${projectId}/progress`;
+        
+        // URL'in doğruluğunu kontrol et ve log'a yaz
+        console.log("Kullanılan API URL:", apiUrl);
+        
+        const response = await fetch(apiUrl);
+        
+        // Yanıt durumunu ve içeriğini kontrol et
+        console.log("API yanıt durumu:", response.status, response.statusText);
+        
+        // 404 hatası veya diğer hatalar için kontrol
+        if (!response.ok) {
+            console.error(`API hatası: ${response.status} ${response.statusText}`);
+            
+            // 404 hatası için özel işleme
+            if (response.status === 404) {
+                console.warn("İş adımları bulunamadı (404). Proje için iş adımı oluşturulmamış olabilir.");
+                renderProgressSteps([], projectId, isEditable);
+                return;
+            }
+            
+            throw new Error(`API hatası: ${response.status} ${response.statusText}`);
+        }
+        
+        // Yanıtın içeriğini kontrol et
+        const contentType = response.headers.get("content-type");
+        console.log("Yanıt içerik türü:", contentType);
+        
+        // JSON içeriği kontrolü
+        if (!contentType || !contentType.includes("application/json")) {
+            console.error("API geçersiz yanıt türü döndürdü:", contentType);
+            
+            // Yanıtı metin olarak al ve incele
+            const textResponse = await response.text();
+            console.error("Alınan yanıt (JSON değil):", textResponse.substring(0, 200) + "...");
+            
+            renderProgressSteps([], projectId, isEditable);
+            return;
+        }
+        
+        // JSON yanıtını al
+        const data = await response.json();
+        console.log("API'den gelen iş adımları verisi:", data);
+        
+        // Veri yapısını kontrol et
+        if (data && Array.isArray(data.steps)) {
+            // Her adım için log kaydı
+            data.steps.forEach((step, index) => {
+                console.log(`Adım ${index}, ID: ${step.progress_id}, custom_delay_days: ${step.custom_delay_days}, custom_delay: ${step.custom_delay}`);
             });
             
             renderProgressSteps(data.steps, projectId, isEditable);
+        } else if (data && Array.isArray(data)) {
+            // Doğrudan dizi olarak geliyorsa
+            console.log("Veri doğrudan dizi olarak geldi");
+            data.forEach((step, index) => {
+                console.log(`Adım ${index}, ID: ${step.progress_id}, custom_delay_days: ${step.custom_delay_days}, custom_delay: ${step.custom_delay}`);
+            });
+            
+            renderProgressSteps(data, projectId, isEditable);
         } else {
             console.error("API'den gelen veri beklenen formatta değil:", data);
             renderProgressSteps([], projectId, isEditable);
@@ -2778,11 +2830,13 @@ function refreshProjectDetails(projectId) {
     } catch (error) {
         console.error("İş adımlarını getirme hatası:", error);
         renderProgressSteps([], projectId, isEditable);
+    } finally {
+        // Modal güncelleme işlemi
+        document.getElementById("projectModal").dataset.loading = "false";
+        console.log("İş adımları yüklendi. Modal hazır.");
     }
 }
-    // Projenin başlangıç ve bitiş tarihlerini iş adımlarına göre güncelleme
-// Projenin başlangıç ve bitiş tarihlerini iş adımlarına göre güncelleme
-// Projenin başlangıç ve bitiş tarihlerini iş adımlarına göre güncelleme
+ 
 async function updateProjectDatesFromSteps(projectId) {
   try {
     console.log(`updateProjectDatesFromSteps başladı, projectId: ${projectId}`);
