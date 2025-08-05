@@ -2910,7 +2910,6 @@ async function updateProjectDatesFromSteps(projectId) {
     showToast("Proje tarihleri güncellenirken bir hata oluştu", true);
   }
 }
-// İş adımının bitiş tarihini ve sonraki adımların başlangıç ve bitiş tarihlerini erteleme fonksiyonu
 async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
     if (delayDays <= 0) {
         showToast("Erteleme günü en az 1 olmalıdır.", true);
@@ -2940,12 +2939,20 @@ async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
         
         // Bitiş tarihini güncelle
         currentEndDateInput.value = formattedEndDate;
-        console.log("Mevcut adım güncelleniyor, progressId:", currentProgressId, "custom_delay:", delayDays);
         
-        // Mevcut özel gecikme değeri
-        let existingCustomDelay = currentStep.custom_delay_days || 0;
+        // Mevcut özel gecikme değerini doğru şekilde al (birçok olası alan adını kontrol et)
+        let existingCustomDelay = 0;
+        if (typeof currentStep.custom_delay_days === 'number' && !isNaN(currentStep.custom_delay_days)) {
+            existingCustomDelay = currentStep.custom_delay_days;
+        } else if (typeof currentStep.custom_delay === 'number' && !isNaN(currentStep.custom_delay)) {
+            existingCustomDelay = currentStep.custom_delay;
+        }
+        
+        // Yeni toplam gecikmeyi hesapla
         let newCustomDelay = existingCustomDelay + delayDays;
-        console.log("Önceki özel gecikme:", existingCustomDelay, "Yeni toplam özel gecikme:", newCustomDelay);
+        
+        console.log("Mevcut adım güncelleniyor, progressId:", currentProgressId);
+        console.log("Önceki özel gecikme:", existingCustomDelay, "Eklenen gecikme:", delayDays, "Yeni toplam özel gecikme:", newCustomDelay);
         
         // Mevcut adım için güncelleme kuyruğuna ekle
         stepsToUpdate.push({
@@ -2957,9 +2964,15 @@ async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
                 start_date: document.getElementById(`step-${currentProgressId}-start`).value,
                 // Sadece bitiş tarihi ertelenir
                 end_date: formattedEndDate,
-                // Gecikme gün sayısını da gönderiyoruz - Bu API'nin beklediği parametre adını kontrol edin
-                custom_delay_days: newCustomDelay, // Yeni toplam gecikmeyi gönder
-                custom_delay: newCustomDelay  // Yedek olarak bu alanı da gönderelim (API hangi alanı bekliyorsa)
+                // Her iki alanı da gönder
+                custom_delay_days: newCustomDelay,
+                custom_delay: newCustomDelay
+            },
+            isTargetStep: true, // Hedef adım olduğunu belirtelim (mesaj için)
+            delayInfo: {
+                previous: existingCustomDelay,
+                added: delayDays,
+                new: newCustomDelay
             }
         });
         
@@ -2988,10 +3001,14 @@ async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
             // Input değerlerini güncelle
             startDateInput.value = formattedStartDate;
             endDateInput.value = formattedEndDate;
-            console.log("Sonraki adım güncelleniyor, progressId:", progressId, "tarihler:", formattedStartDate, formattedEndDate);
             
-            // Özel gecikme eklemeyin
-            const existingCustomDelay = step.custom_delay_days || 0;
+            // Özel gecikme - mevcut değeri aynen koru (birikimli değil)
+            let existingDelay = 0;
+            if (typeof step.custom_delay_days === 'number' && !isNaN(step.custom_delay_days)) {
+                existingDelay = step.custom_delay_days;
+            } else if (typeof step.custom_delay === 'number' && !isNaN(step.custom_delay)) {
+                existingDelay = step.custom_delay;
+            }
             
             // Güncelleme için kuyruğa ekle
             stepsToUpdate.push({
@@ -3002,14 +3019,16 @@ async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
                     start_date: formattedStartDate,
                     end_date: formattedEndDate,
                     // Sonraki adımların mevcut özel gecikmesini koru
-                    custom_delay_days: existingCustomDelay,
-                    custom_delay: existingCustomDelay
+                    custom_delay_days: existingDelay,
+                    custom_delay: existingDelay
                 }
             });
         }
         
         // API güncellemeleri
         let successCount = 0;
+        let targetStepInfo = null;
+        
         for (const updateItem of stepsToUpdate) {
             try {
                 console.log(`API isteği gönderiliyor: ${API_BASE_URL}/api/progress/${updateItem.progressId}`);
@@ -3026,6 +3045,9 @@ async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
                 
                 if (response.ok) {
                     successCount++;
+                    if (updateItem.isTargetStep) {
+                        targetStepInfo = updateItem.delayInfo;
+                    }
                 } else {
                     console.error("API hatası:", responseData.message);
                 }
@@ -3034,7 +3056,11 @@ async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
             }
         }
         
-        showToast(`${successCount} adımın tarihleri başarıyla güncellendi. İlk adıma ${delayDays} gün ek erteleme uygulandı.`);
+        if (targetStepInfo) {
+            showToast(`${successCount} adım güncellendi. İş adımındaki toplam erteleme: ${targetStepInfo.previous} + ${targetStepInfo.added} = ${targetStepInfo.new} gün.`);
+        } else {
+            showToast(`${successCount} adımın tarihleri başarıyla güncellendi.`);
+        }
         
         // Adımları yeniden yükle
         fetchProgressSteps(projectId, true);
@@ -3247,7 +3273,11 @@ function addNewProgressStepForm(projectId) {
     <button type="button" class="action-btn modal-btn-save" id="saveNewProgressBtn"><i class="fas fa-plus"></i> Ekle</button>
   </div>
   `;
-  
+  if (customDelayValue > 0) {
+    delayInfoHtml += `<div class="custom-delay-info" style="color: #ff6b6b; margin-top: 8px; font-weight: bold; font-style: italic; padding: 8px; background-color: rgba(255, 107, 107, 0.1); border-left: 3px solid #ff6b6b; border-radius: 3px;">
+        Bu iş gidişatı ${customDelayValue} gün ertelenmiştir!
+    </div>`;
+}
   progressStepsContainer.appendChild(formElement);
   console.log("Form elementi DOM'a eklendi");
   
@@ -3339,9 +3369,6 @@ function addNewProgressStepForm(projectId) {
   console.log("addNewProgressStepForm tamamlandı");
 }
 
-    // editProgressStep fonksiyonu doğrudan SweetAlert2 kullanmak yerine
-    // renderProgressSteps içinde inline form elemanlarından veri alacak şekilde güncellendi.
-    // progress_id kullanıldı
    async function editProgressStep(progressId, projectId, updatedStepData) {
   try {
     const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, {
