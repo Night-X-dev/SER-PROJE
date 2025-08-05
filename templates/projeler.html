@@ -2973,9 +2973,54 @@ async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
             }
         });
         
-        // Sonraki adımlar için kod aynı...
-        
-        // ... (sonraki adımlarla ilgili kod)
+        // Sonraki adımların başlangıç ve bitiş tarihlerini güncelle
+        for (let i = stepIndex + 1; i < allSteps.length; i++) {
+            const step = allSteps[i];
+            const progressId = step.progress_id;
+            
+            // Tarihleri al
+            const startDateInput = document.getElementById(`step-${progressId}-start`);
+            const endDateInput = document.getElementById(`step-${progressId}-end`);
+            
+            if (!startDateInput || !endDateInput) {
+                console.error(`${i}. adım için gerekli inputlar bulunamadı`);
+                continue;
+            }
+            
+            // Sonraki adımların hem başlangıç hem bitiş tarihlerini ertele
+            const currentStartDate = new Date(startDateInput.value);
+            const currentEndDate = new Date(endDateInput.value);
+            const newStartDate = new Date(currentStartDate.setDate(currentStartDate.getDate() + delayDays));
+            const newEndDate = new Date(currentEndDate.setDate(currentEndDate.getDate() + delayDays));
+            const formattedStartDate = newStartDate.toISOString().split('T')[0];
+            const formattedEndDate = newEndDate.toISOString().split('T')[0];
+            
+            // Input değerlerini güncelle
+            startDateInput.value = formattedStartDate;
+            endDateInput.value = formattedEndDate;
+            
+            // Özel gecikme - mevcut değeri aynen koru (birikimli değil)
+            let existingDelay = 0;
+            if (step.custom_delay_days !== undefined && step.custom_delay_days !== null) {
+                existingDelay = parseInt(step.custom_delay_days) || 0;
+            } else if (step.custom_delay !== undefined && step.custom_delay !== null) {
+                existingDelay = parseInt(step.custom_delay) || 0;
+            }
+            
+            // Güncelleme için kuyruğa ekle
+            stepsToUpdate.push({
+                progressId: progressId,
+                newData: {
+                    step_name: document.getElementById(`step-${progressId}-name`).value,
+                    description: document.getElementById(`step-${progressId}-desc`).value,
+                    start_date: formattedStartDate,
+                    end_date: formattedEndDate,
+                    // Sonraki adımların mevcut özel gecikmesini koru
+                    custom_delay_days: existingDelay,
+                    custom_delay: existingDelay
+                }
+            });
+        }
         
         // API güncellemeleri
         let successCount = 0;
@@ -3199,11 +3244,7 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
                         
                         console.log("Mevcut gecikme:", currentDelayDays, "Eklenecek gecikme:", newDelayDays);
                         
-                        // Yeni erteleme günlerini hesapla
-                        // const totalDelayDays = currentDelayDays + newDelayDays;
-                        // Toplama değil, sadece yeni değeri gönder - bu applyDelayToStep içinde toplanacak
                         
-                        // Güncelleme fonksiyonunu çağır
                         applyDelayToStep(stepIndex, newDelayDays, steps, projectId);
                     } else {
                         showToast("Lütfen geçerli bir erteleme günü girin.", true);
