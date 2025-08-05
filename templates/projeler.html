@@ -3064,27 +3064,33 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
       delay_days: step.delay_days
     });
   });
+   const customDelayValue = 
+      step.custom_delay_days !== undefined ? step.custom_delay_days :
+      step.custom_delay !== undefined ? step.custom_delay : 
+      0;
+          console.log(`İş adımı ${step.progress_id} için custom_delay_days değeri:`, customDelayValue);
+
   if (steps.length === 0) {
     progressStepsContainer.innerHTML = '<p>Bu proje için henüz iş adımı eklenmemiş.</p>';
   } else {
     steps.forEach((step, index) => {
       const stepElement = document.createElement("div");
       stepElement.className = "progress-detail-item";
-      stepElement.dataset.stepIndex = index; // Adımın indeksini data attribute olarak sakla
+      stepElement.dataset.stepIndex = index;
       
       // Her adım için başlık, başlangıç/bitiş tarihi ve açıklama içeriği
-      const titleContent = isEditable ?
+       const titleContent = isEditable ?
         `<input type="text" id="step-${step.progress_id}-name" class="progress-step-name-input" value="${step.step_name || step.title || ''}" placeholder="Adım Adı" required>` :
         `<span class="progress-detail-title">${step.step_name || step.title || ''}</span>`;
-      
-      const startDateContent = isEditable ?
+            
+       const startDateContent = isEditable ?
         `<label for="step-${step.progress_id}-start">Başlangıç:</label><input type="date" id="step-${step.progress_id}-start" class="progress-datepicker" value="${formatDateForInput(step.start_date || '')}" required>` :
         `Başlangıç: ${formatDateForDisplay(step.start_date || '-')}`;
-      
-      const endDateContent = isEditable ?
+
+       const endDateContent = isEditable ?
         `<label for="step-${step.progress_id}-end">Bitiş:</label><input type="date" id="step-${step.progress_id}-end" class="progress-datepicker" value="${formatDateForInput(step.end_date || '')}" required>` :
         `Bitiş: ${formatDateForDisplay(step.end_date || '-')}`;
-      
+
       // Gecikme bilgileri - hem genel hem de özel gecikme
       let delayInfoHtml = '';
       
@@ -3094,7 +3100,24 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
           Bu iş adımında ${step.delay_days} günlük hesaplanan gecikme var.
         </div>`;
       }
+       if (step.delay_days && step.delay_days > 0) {
+        delayInfoHtml += `<div class="delay-info" style="color: #ff9800; margin-top: 5px; font-style: italic;">
+          Bu iş adımında ${step.delay_days} günlük hesaplanan gecikme var.
+        </div>`;
+      }
       
+      // Özel gecikme için farklı alanları kontrol et
+      const customDelayValue = 
+        step.custom_delay_days !== undefined ? step.custom_delay_days :
+        step.custom_delay !== undefined ? step.custom_delay : 
+        0;
+      
+      // Özel gecikme (kullanıcının eklediği) varsa
+      if (customDelayValue > 0) {
+        delayInfoHtml += `<div class="custom-delay-info" style="color: #ff6b6b; margin-top: 5px; font-weight: bold; font-style: italic;">
+          Bu iş adımına ${customDelayValue} gün ek erteleme süresi eklenmiştir!
+        </div>`;
+      }
       // Özel gecikme (kullanıcının eklediği) varsa
       if (step.custom_delay_days && step.custom_delay_days > 0) {
         delayInfoHtml += `<div class="custom-delay-info" style="color: #ff6b6b; margin-top: 5px; font-weight: bold; font-style: italic;">
