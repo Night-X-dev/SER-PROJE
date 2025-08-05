@@ -1470,16 +1470,23 @@ def get_project_stats():
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Aktif Projeler: 'Tamamlandı' veya 'Planlama Aşamasında' durumunda olmayan tüm projeler.
-            cursor.execute("SELECT COUNT(project_id) AS count FROM projects WHERE status NOT IN ('Tamamlandı', 'Planlama Aşamasında')")
+            # Aktif Projeler: 'Tamamlandı' durumunda olmayan tüm projeler.
+            # Kullanıcının isteğine göre güncellendi.
+            cursor.execute("SELECT COUNT(project_id) AS count FROM projects WHERE status != 'Tamamlandı'")
             active_projects = cursor.fetchone()['count']
 
             # Tamamlanan projeler
             cursor.execute("SELECT COUNT(project_id) AS count FROM projects WHERE status = 'Tamamlandı'")
             completed_projects = cursor.fetchone()['count']
 
-            # Geciken Projeler: Herhangi bir iş adımında gecikme olan projeler (benzersiz sayım).
-            cursor.execute("SELECT COUNT(DISTINCT project_id) AS count FROM project_progress WHERE delay_days > 0 OR custom_delay_days > 0")
+            # Geciken Projeler: total_delay_days > 0 olan projeler (herhangi bir iş adımında gecikme olan projeler)
+            # Kullanıcının isteğine göre güncellendi.
+            cursor.execute("""
+                SELECT COUNT(DISTINCT p.project_id) AS count
+                FROM projects p
+                JOIN project_progress pp ON p.project_id = pp.project_id
+                WHERE pp.delay_days > 0 OR pp.custom_delay_days > 0
+            """)
             delayed_projects = cursor.fetchone()['count']
 
             # Toplam projeler
