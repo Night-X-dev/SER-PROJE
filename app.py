@@ -142,8 +142,8 @@ def get_db_connection():
                 host = parsed_url.hostname
                 port = parsed_url.port if parsed_url.port else 3306
                 user = parsed_url.username
-                password = parsed_url.password
-                database = parsed_url.path.lstrip('/')
+                password = parsed.password
+                database = parsed.path.lstrip('/')
                 print(f"DEBUG: Using parsed public URL. Host={host}, Port={port}, User={user}, DB={database}")
             except Exception as url_parse_e:
                 print(f"ERROR: Could not parse MYSQL_PUBLIC_URL: {url_parse_e}. Falling back to fixed values or individual environment variables.")
@@ -1209,7 +1209,7 @@ def get_projects():
                 -- Son iş gidişatının bitiş tarihi
                 (SELECT MAX(end_date) FROM project_progress 
                  WHERE project_id = p.project_id) AS last_progress_end,
-                (SELECT IFNULL(SUM(pp.delay_days), 0) FROM project_progress pp WHERE pp.project_id = p.project_id) AS total_delay_days
+                (SELECT IFNULL(SUM(pp.delay_days), 0) + IFNULL(SUM(pp.custom_delay_days), 0) FROM project_progress pp WHERE pp.project_id = p.project_id) AS total_delay_days
             FROM projects p
             JOIN customers c ON p.customer_id = c.customer_id
             JOIN users u ON p.project_manager_id = u.id
@@ -1224,7 +1224,7 @@ def get_projects():
                 display_status = project['last_progress_title'] if project['last_progress_title'] else project['status']
 
                 # If there is a delay in the latest step, update the status
-                if project['last_progress_delay_days'] is not None and project['last_progress_delay_days'] > 0:
+                if project['total_delay_days'] is not None and project['total_delay_days'] > 0:
                     display_status += ' (Gecikmeli)'
 
                 project['display_status'] = display_status # Add as a new field
@@ -1479,7 +1479,7 @@ def get_project_stats():
             completed_projects = cursor.fetchone()['count']
 
             # Geciken Projeler: Herhangi bir iş adımında gecikme olan projeler (benzersiz sayım).
-            cursor.execute("SELECT COUNT(DISTINCT project_id) AS count FROM project_progress WHERE delay_days > 0")
+            cursor.execute("SELECT COUNT(DISTINCT project_id) AS count FROM project_progress WHERE delay_days > 0 OR custom_delay_days > 0")
             delayed_projects = cursor.fetchone()['count']
 
             # Toplam projeler
@@ -1711,6 +1711,14 @@ def get_project_progress_steps(project_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # Check if 'custom_delay_days' column exists and add if not
+            cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'custom_delay_days'")
+            column_exists = cursor.fetchone() is not None
+            if not column_exists:
+                print("custom_delay_days sütunu bulunamadı, ekleniyor...")
+                cursor.execute("ALTER TABLE project_progress ADD COLUMN custom_delay_days INT DEFAULT 0")
+                connection.commit() # Commit the ALTER TABLE statement
+
             sql = """
             SELECT
                 progress_id,
@@ -1720,6 +1728,7 @@ def get_project_progress_steps(project_id):
                 start_date,
                 end_date,
                 delay_days,
+                custom_delay_days, -- Yeni eklenen sütun
                 created_at
             FROM project_progress
             WHERE project_id = %s
@@ -1732,6 +1741,9 @@ def get_project_progress_steps(project_id):
                 step['start_date'] = step['start_date'].isoformat() if isinstance(step['start_date'], datetime.date) else None
                 step['end_date'] = step['end_date'].isoformat() if isinstance(step['end_date'], datetime.date) else None
                 step['created_at'] = step['created_at'].isoformat() if isinstance(step['created_at'], datetime.datetime) else None
+                # Ensure custom_delay_days is an integer, default to 0 if None
+                step['custom_delay_days'] = int(step['custom_delay_days']) if step['custom_delay_days'] is not None else 0
+
 
         return jsonify(steps), 200
     except pymysql.Error as e:
@@ -1751,7 +1763,7 @@ def add_project_progress_step_from_modal(project_id):
     description = data.get('description')
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
-    update_project_dates_flag = data.get('update_project_dates', True)  # Varsayılan olarak True
+    # custom_delay_days for a new step will be 0 by default, no need to get from frontend here.
     
     # Session'dan user_id'yi al ama yoksa JSON'dan da kullan
     user_id = session.get('user_id')
@@ -1793,11 +1805,19 @@ def add_project_progress_step_from_modal(project_id):
                 if time_diff > 1:
                     delay_days = time_diff - 1
                     
+            # Check if 'custom_delay_days' column exists and add if not
+            cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'custom_delay_days'")
+            column_exists = cursor.fetchone() is not None
+            if not column_exists:
+                print("custom_delay_days sütunu bulunamadı, ekleniyor...")
+                cursor.execute("ALTER TABLE project_progress ADD COLUMN custom_delay_days INT DEFAULT 0")
+                connection.commit() # Commit the ALTER TABLE statement
+            
             sql_insert = """
-                INSERT INTO project_progress (project_id, title, description, start_date, end_date, delay_days)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO project_progress (project_id, title, description, start_date, end_date, delay_days, custom_delay_days)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
-            cursor.execute(sql_insert, (project_id, step_name, description, start_date_str, end_date_str, delay_days))
+            cursor.execute(sql_insert, (project_id, step_name, description, start_date_str, end_date_str, delay_days, 0)) # New steps start with 0 custom_delay_days
             new_progress_id = cursor.lastrowid
             
             # Proje başlangıç ve bitiş tarihlerini her zaman güncelle
@@ -1870,12 +1890,12 @@ def update_project_progress_step(progress_id):
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
     
-    # ÖNEMLİ: Burada frontend'den gelen parametre adını değiştirdik
-    # Frontend'den gelen custom_delay değerini alıyoruz
-    custom_delay = data.get('custom_delay', 0)  # Özel gecikme değeri
-    
-    # Debug için yazdır
-    print(f"Frontend'den gelen custom_delay değeri: {custom_delay}, tipi: {type(custom_delay)}")
+    # Frontend'den gelen yeni eklenen custom_delay_days değerini alıyoruz (bu, mevcut değere eklenecek olan miktar)
+    # Eğer yoksa veya null ise 0 olarak kabul et
+    newly_added_custom_delay = data.get('newly_added_custom_delay', 0)
+    if newly_added_custom_delay is None:
+        newly_added_custom_delay = 0
+    newly_added_custom_delay = int(newly_added_custom_delay) # Gelen değeri int'e çevir
     
     # Kullanıcı ID kontrolü
     user_id = session.get('user_id')
@@ -1889,17 +1909,7 @@ def update_project_progress_step(progress_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Mevcut adımı getir
-            cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'custom_delay_days'")
-            column_exists = cursor.fetchone() is not None
-            
-            if not column_exists:
-                # Sütun yoksa ekle
-                print("custom_delay_days sütunu bulunamadı, ekleniyor...")
-                cursor.execute("ALTER TABLE project_progress ADD COLUMN IF NOT EXISTS custom_delay_days INT DEFAULT 0")
-                connection.commit()
-            
-            # Get the project ID and title of the existing progress step
+            # Mevcut adımı getir ve custom_delay_days değerini al
             cursor.execute("SELECT project_id, title, custom_delay_days FROM project_progress WHERE progress_id = %s", (progress_id,))
             existing_step = cursor.fetchone()
             
@@ -1908,7 +1918,15 @@ def update_project_progress_step(progress_id):
                 
             current_project_id = existing_step['project_id']
             old_step_name = existing_step['title']
-            old_custom_delay = existing_step.get('custom_delay_days', 0) or 0
+            # Mevcut custom_delay_days değerini al, yoksa 0 kabul et
+            current_custom_delay_from_db = existing_step.get('custom_delay_days', 0) or 0
+            current_custom_delay_from_db = int(current_custom_delay_from_db) # Integer'a çevir
+            
+            # Yeni toplam custom_delay_days değerini hesapla
+            final_custom_delay_for_db = current_custom_delay_from_db + newly_added_custom_delay
+            print(f"Mevcut custom_delay_days (DB'den): {current_custom_delay_from_db}")
+            print(f"Yeni eklenen custom_delay: {newly_added_custom_delay}")
+            print(f"Veritabanına kaydedilecek toplam custom_delay_days: {final_custom_delay_for_db}")
             
             # Get project name and manager
             cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (current_project_id,))
@@ -1916,21 +1934,34 @@ def update_project_progress_step(progress_id):
             project_name = project_info['project_name'] if project_info else f"ID: {current_project_id}"
             project_manager_id = project_info['project_manager_id'] if project_info else None
             
-            # delay_days belirtilmemişse hesapla
+            # delay_days'i yeniden hesapla (önceki adımın bitiş tarihi ile bu adımın başlangıç tarihi arasındaki fark)
             calculated_delay_days = 0
-            if 'delay_days' in data:
-                calculated_delay_days = int(data.get('delay_days', 0)) 
-            else:
-                # Otomatik hesaplama mantığı (değişmedi)
-                # ...
-                pass
+            # Önceki adımın bitiş tarihini bul
+            cursor.execute("""
+                SELECT end_date FROM project_progress
+                WHERE project_id = %s AND progress_id < %s
+                ORDER BY end_date DESC
+                LIMIT 1
+            """, (current_project_id, progress_id))
+            previous_step = cursor.fetchone()
+            if previous_step and previous_step['end_date']:
+                prev_end_date = previous_step['end_date']
+                current_start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                time_diff = (current_start_date - prev_end_date).days
+                if time_diff > 1:
+                    calculated_delay_days = time_diff - 1
+            # Eğer bu ilk adım ise veya önceki adım yoksa, projenin başlangıç tarihi ile karşılaştır
+            elif not previous_step:
+                cursor.execute("SELECT start_date FROM projects WHERE project_id = %s", (current_project_id,))
+                project_start_info = cursor.fetchone()
+                if project_start_info and project_start_info['start_date']:
+                    project_start_date = project_start_info['start_date']
+                    current_start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    time_diff = (current_start_date - project_start_date).days
+                    if time_diff > 1:
+                        calculated_delay_days = time_diff - 1
             
-            # Özel gecikme günü - frontend'den gelen custom_delay değerini kullan
-            # frontend'den gelen custom_delay değerini int'e çevir ve kullan
-            final_custom_delay = int(custom_delay) if custom_delay is not None else old_custom_delay  
-            print(f"Veritabanına kaydedilecek custom_delay_days: {final_custom_delay}")
-            
-            # Yeni SQL sorgusu - custom_delay_days sütununu da güncelle
+            # SQL sorgusu - custom_delay_days ve delay_days sütunlarını da güncelle
             sql_update = """
                 UPDATE project_progress
                 SET title = %s, description = %s, start_date = %s, end_date = %s,
@@ -1939,7 +1970,7 @@ def update_project_progress_step(progress_id):
             """
             cursor.execute(sql_update, (
                 step_name, description, start_date_str, end_date_str,
-                calculated_delay_days, final_custom_delay, progress_id
+                calculated_delay_days, final_custom_delay_for_db, progress_id
             ))
             
             print(f"SQL query executed. Rows affected: {cursor.rowcount}")
@@ -1957,8 +1988,8 @@ def update_project_progress_step(progress_id):
                 
             return jsonify({
                 'message': 'Progress step successfully updated!',
-                'custom_delay_added': final_custom_delay > 0 and final_custom_delay != old_custom_delay,
-                'custom_delay_days': final_custom_delay  # Güncel değeri frontend'e geri döndür
+                'custom_delay_days': final_custom_delay_for_db,  # Güncel değeri frontend'e geri döndür
+                'delay_days': calculated_delay_days # Güncel calculated_delay_days değerini de döndür
             }), 200
             
     except Exception as e:
@@ -2536,11 +2567,11 @@ def manager_stats():
                 COUNT(DISTINCT p.project_id) AS total_projects,
                 SUM(CASE
                         WHEN p.status = 'Completed' AND (
-                            SELECT SUM(pr.delay_days)
+                            SELECT SUM(pr.delay_days) + SUM(pr.custom_delay_days)
                             FROM project_progress pr
                             WHERE pr.project_id = p.project_id
                         ) IS NULL OR (
-                            SELECT SUM(pr.delay_days)
+                            SELECT SUM(pr.delay_days) + SUM(pr.custom_delay_days)
                             FROM project_progress pr
                             WHERE pr.project_id = p.project_id
                         ) = 0
@@ -2549,14 +2580,14 @@ def manager_stats():
                 END) AS on_time_projects,
                 SUM(CASE
                         WHEN (
-                            SELECT SUM(pr.delay_days)
+                            SELECT SUM(pr.delay_days) + SUM(pr.custom_delay_days)
                             FROM project_progress pr
                             WHERE pr.project_id = p.project_id
                         ) > 0
                     THEN 1
                     ELSE 0
                 END) AS delayed_projects,
-                (SELECT IFNULL(SUM(pr.delay_days), 0)
+                (SELECT IFNULL(SUM(pr.delay_days), 0) + IFNULL(SUM(pr.custom_delay_days), 0)
                  FROM project_progress pr
                  WHERE pr.project_id IN (
                      SELECT project_id FROM projects WHERE project_manager_id = p.project_manager_id
@@ -2646,11 +2677,11 @@ def worker_performance():
                 COUNT(DISTINCT p.project_id) AS total_projects,
                 SUM(CASE
                         WHEN p.status = 'Completed' AND (\
-                            SELECT SUM(pr.delay_days)
+                            SELECT SUM(pr.delay_days) + SUM(pr.custom_delay_days)
                             FROM project_progress pr
                             WHERE pr.project_id = p.project_id
                         ) IS NULL OR (\
-                            SELECT SUM(pr.delay_days)
+                            SELECT SUM(pr.delay_days) + SUM(pr.custom_delay_days)
                             FROM project_progress pr
                             WHERE pr.project_id = p.project_id
                         ) = 0

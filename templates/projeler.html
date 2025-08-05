@@ -1560,6 +1560,7 @@
     </div>
     <script src="{{ url_for('static', filename='config.js') }}"></script>
 <script>
+    
     let currentUser = null; // Mevcut kullanıcı bilgisi
     let allProjectsData = [];
     let filteredProjects = []; // Filtrelenmiş projeleri tutacak
@@ -2031,208 +2032,119 @@ function getStatusBadgeHtml(status, delayDays) {
             }
         }
     }
+function renderProjectsTable(projectsToRender) {
+        let tbody = document.getElementById("projectsTableBody");
+        if (!tbody) {
+            const table = document.getElementById("projectsTable");
+            if (table) {
+                tbody = document.createElement("tbody");
+                tbody.id = "projectsTableBody";
+                table.appendChild(tbody);
+                console.warn("projectsTableBody bulunamadı, yeni tbody eklendi.");
+            } else {
+                console.error("RENDER_DEBUG: projectsTable ve projectsTableBody elementi bulunamadı!");
+                return;
+            }
+        }
 
-    function renderProjectsTable(projectsToRender) {
-    let tbody = document.getElementById("projectsTableBody");
-    if (!tbody) {
-        const table = document.getElementById("projectsTable");
-        if (table) {
-            tbody = document.createElement("tbody");
-            tbody.id = "projectsTableBody";
-            table.appendChild(tbody);
-            console.warn("projectsTableBody bulunamadı, yeni tbody eklendi.");
-        } else {
-            console.error("RENDER_DEBUG: projectsTable ve projectsTableBody elementi bulunamadı!");
+        console.log(
+            "RENDER_DEBUG: renderProjectsTable başladı. projectsToRender (gelecek veri):",
+            projectsToRender
+        );
+
+        tbody.innerHTML = "";
+        console.log("RENDER_DEBUG: tbody içeriği temizlendi.");
+
+        if (projectsToRender.length === 0) {
+            tbody.innerHTML =
+                '<tr><td colspan="11" style="text-align: center;">Gösterilecek proje bulunamadı.</td></tr>';
+            updatePagination(0, 0, 0); // Sayfalandırmayı güncelle
             return;
         }
-    }
-    
-    console.log(
-        "RENDER_DEBUG: renderProjectsTable başladı. projectsToRender (gelecek veri):",
-        projectsToRender
-    );
-    
-    tbody.innerHTML = "";
-    console.log("RENDER_DEBUG: tbody içeriği temizlendi.");
-    
-    if (projectsToRender.length === 0) {
-        tbody.innerHTML =
-            '<tr><td colspan="11" style="text-align: center;">Gösterilecek proje bulunamadı.</td></tr>';
-        updatePagination(0, 0, 0); // Sayfalandırmayı güncelle
-        return;
-    }
-    
-    // Pagination için dilimleme
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    const paginatedProjects = projectsToRender.slice(startIndex, endIndex);
-    
-    // Yardımcı fonksiyonlar:
-    function dateDiffInDays(date1, date2) {
-        // Tarih formatı: YYYY-MM-DD veya DD.MM.YYYY
-        function parseDate(str) {
-            if (!str) return null;
-            if (str.includes('-')) {
-                // YYYY-MM-DD
-                const [y, m, d] = str.split('-');
-                return new Date(Number(y), Number(m) - 1, Number(d));
-            } else if (str.includes('.')) {
-                // DD.MM.YYYY
-                const [d, m, y] = str.split('.');
-                return new Date(Number(y), Number(m) - 1, Number(d));
-            }
-            return null;
-        }
-        const dt1 = parseDate(date1);
-        const dt2 = parseDate(date2);
-        if (!dt1 || !dt2) return null;
-        return Math.ceil((dt2 - dt1) / (1000 * 60 * 60 * 24));
-    }
-    
-    function sumDelayDays(progressArr) {
-        if (!Array.isArray(progressArr)) return 0;
-        return progressArr.reduce((sum, step) => sum + (step.delay_days || 0), 0);
-    }
-    
-    function getTodayStr() {
-        const today = new Date();
-        return today.toISOString().slice(0, 10); // YYYY-MM-DD
-    }
-    
-    // Durum rozeti ve renk sınıfı HTML'i döndürür
-    function getStatusBadgeHtml(status, delayDays) {
-        let statusClass = "normal"; // Varsayılan olarak normal (yeşil)
-        let statusText = status;
-        
-        // Gecikme koşulları: ya status içinde "Gecikmeli" geçiyordur, ya da delay gün sayısı > 0 dır
-        if ((status && status.includes('(Gecikmeli)')) || 
-            (delayDays && delayDays > 0) ||
-            (status && status.includes('Gecikti'))) {
-            statusClass = "gecikmeli";
-            
-            // "(Gecikmeli)" ifadesini kaldır (eğer zaten varsa)
-            statusText = status.replace(' (Gecikmeli)', '');
-            
-            // Eğer gecikmeli olduğu belirtilmemişse ekle
-            if (!statusText.includes('(Gecikmeli)')) {
-                statusText += ' (Gecikmeli)';
-            }
-        } else if (status === "Tamamlandı") {
-            statusClass = "tamamlandı";
-        }
 
-        return `<span class="status-badge ${statusClass}">${statusText}</span>`;
-    }
-    // İş adımı eklendiğinde, güncellendiğinde veya silindiğinde backend API çağrıları yapılacak
-// Backend API çağrılarının sonucunda dönen response içindeki tarih bilgisi ile projenin
-// başlangıç ve bitiş tarihleri otomatik güncellenecek
+        // Pagination için dilimleme
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        const paginatedProjects = projectsToRender.slice(startIndex, endIndex);
 
-// Projeyi düzenleme modalında iş adımı ekle/sil/güncelle sonrası 
-// proje bilgilerini yeniden yükleyen fonksiyon
-// Projeyi düzenleme modalında iş adımı ekle/sil/güncelle sonrası 
-// proje bilgilerini yeniden yükleyen fonksiyon
-function refreshProjectDetails(projectId) {
-    // Projeyi yeniden yükle ve formu güncelle
-    $.ajax({
-        url: `/api/projects/${projectId}`,
-        type: "GET",
-        success: function(updatedProject) {
-            // Formu güncelle
-            $("#editProjectId").val(updatedProject.project_id);
-            $("#editProjectName").val(updatedProject.project_name);
-            $("#editReferenceNo").val(updatedProject.reference_no);
-            $("#editCustomerId").val(updatedProject.customer_id);
-            $("#editLocation").val(updatedProject.project_location);
-            $("#editStatus").val(updatedProject.status);
-            
-            // Başlangıç ve bitiş tarihlerini güncelle
-            $("#editStartDate").val(formatDateForInput(updatedProject.start_date));
-            $("#editEndDate").val(formatDateForInput(updatedProject.end_date));
-            
-            // Diğer form alanlarını güncelle...
-        },
-        error: function(xhr) {
-            const errorMessage = xhr.responseJSON ? xhr.responseJSON.message : "Bir hata oluştu.";
-            showToast("Hata: " + errorMessage, true);
-        }
-    });
-}
-    paginatedProjects.forEach((project) => {
-        // Toplam Gün
-        let totalDays = dateDiffInDays(project.start_date, project.end_date);
-        totalDays = (typeof totalDays === "number" && !isNaN(totalDays)) ? (totalDays >= 0 ? totalDays : 0) : '-';
-        
-        // Geçen Gün
-        const todayStr = getTodayStr();
-        let elapsedDays = dateDiffInDays(project.start_date, todayStr);
-        elapsedDays = (typeof elapsedDays === "number" && !isNaN(elapsedDays)) ? (elapsedDays >= 0 ? elapsedDays : 0) : '-';
-        
-        // Gecikme Durumu
-        let delayDays = 0;
-        if (project.total_delay_days !== undefined && project.total_delay_days !== null) {
-            delayDays = Number(project.total_delay_days);
-            if (isNaN(delayDays)) delayDays = 0;
-        }
-        
-        let overdue = 0;
-        if (project.end_date) {
-            const endDateObj = (() => {
-                if (project.end_date.includes('-')) {
-                    const [y, m, d] = project.end_date.split('-');
+        // Yardımcı fonksiyonlar:
+        function dateDiffInDays(date1, date2) {
+            // Tarih formatı: YYYY-MM-DD veya DD.MM.YYYY
+            function parseDate(str) {
+                if (!str) return null;
+                if (str.includes('-')) {
+                    // YYYY-MM-DD
+                    const [y, m, d] = str.split('-');
                     return new Date(Number(y), Number(m) - 1, Number(d));
-                } else if (project.end_date.includes('.')) {
-                    const [d, m, y] = project.end_date.split('.');
+                } else if (str.includes('.')) {
+                    // DD.MM.YYYY
+                    const [d, m, y] = str.split('.');
                     return new Date(Number(y), Number(m) - 1, Number(d));
                 }
                 return null;
-            })();
-            const todayObj = new Date();
-            if (endDateObj && todayObj > endDateObj && project.status !== 'Tamamlandı') { // Sadece tamamlanmamış projeler için
-                overdue = Math.ceil((todayObj - endDateObj) / (1000 * 60 * 60 * 24));
             }
+            const dt1 = parseDate(date1);
+            const dt2 = parseDate(date2);
+            if (!dt1 || !dt2) return null;
+            return Math.ceil((dt2 - dt1) / (1000 * 60 * 60 * 24));
         }
-        
-        // Gecikme günleri toplamı
-        let gecikmeDurumu = "-";
-        const combinedDelay = delayDays + overdue;
-        if (combinedDelay > 0) {
-            gecikmeDurumu = combinedDelay + " gün";
-        } else if (typeof combinedDelay === 'number' && combinedDelay === 0) {
-            gecikmeDurumu = "0 gün";
+
+        function getTodayStr() {
+            const today = new Date();
+            return today.toISOString().slice(0, 10); // YYYY-MM-DD
         }
-        
-        // İlk ve son iş gidişatı tarihlerini kullan (varsa)
-        const displayStartDate = project.first_progress_start || project.start_date;
-        const displayEndDate = project.last_progress_end || project.end_date;
-        
-        const row = document.createElement("tr");
-        row.innerHTML = `
-            <td data-label="Proje Adı">${project.project_name ? project.project_name.normalize('NFC') : "-"}</td>
-            <td data-label="Referans No">${project.reference_no || "-"}</td>
-            <td data-label="Müşteri">${project.customer_name || "-"}</td>
-            <td data-label="Durum">${getStatusBadgeHtml(project.display_status || "-", combinedDelay)}</td>
-            <td data-label="Başlangıç">${formatDateForDisplay(displayStartDate || "-")}</td>
-            <td data-label="Bitiş">${formatDateForDisplay(displayEndDate || "-")}</td>
-            <td data-label="Toplam Gün">${totalDays !== '-' ? totalDays + ' gün' : '-'}</td>
-            <td data-label="Geçen Gün">${elapsedDays !== '-' ? elapsedDays + ' gün' : '-'}</td>
-            <td data-label="Gecikme Durumu">${gecikmeDurumu}</td>
-            <td data-label="Yönetici">${project.project_manager_name || "-"}</td>
-            <td data-label="İşlemler">
-                <div style="display: flex; gap: 10px;">
-                    <button class="action-btn view-project-btn" data-id="${project.project_id}" title="Detayları Görüntüle"><i class="fas fa-eye"></i></button>
-                    <button class="action-btn edit-project-btn" data-id="${project.project_id}" title="Projeyi Düzenle"><i class="fas fa-edit"></i></button>
-                    <button class="action-btn delete-project-btn" data-id="${project.project_id}" title="Projeyi Sil"><i class="fas fa-trash"></i></button>
-                    <button class="action-btn generate-pdf-btn" data-id="${project.project_id}" title="PDF Raporu Oluştur"><i class="fas fa-file-pdf"></i></button>
-                </div>
-            </td>
-        `;
-        tbody.appendChild(row);
-    });
-    
-    attachProjectTableEventListeners();
-    updatePagination(projectsToRender.length, currentPage, Math.ceil(projectsToRender.length / rowsPerPage));
-}
-    function attachProjectTableEventListeners() {
+
+        paginatedProjects.forEach((project) => {
+            // Toplam Gün
+            let totalDays = dateDiffInDays(project.start_date, project.end_date);
+            totalDays = (typeof totalDays === "number" && !isNaN(totalDays)) ? (totalDays >= 0 ? totalDays : 0) : '-';
+
+            // Geçen Gün
+            const todayStr = getTodayStr();
+            let elapsedDays = dateDiffInDays(project.start_date, todayStr);
+            elapsedDays = (typeof elapsedDays === "number" && !isNaN(elapsedDays)) ? (elapsedDays >= 0 ? elapsedDays : 0) : '-';
+
+            // Gecikme Durumu (total_delay_days zaten backend'den geliyor)
+            let combinedDelay = project.total_delay_days || 0;
+            let gecikmeDurumu = "-";
+            if (combinedDelay > 0) {
+                gecikmeDurumu = combinedDelay + " gün";
+            } else if (typeof combinedDelay === 'number' && combinedDelay === 0) {
+                gecikmeDurumu = "0 gün";
+            }
+
+            // İlk ve son iş gidişatı tarihlerini kullan (varsa)
+            const displayStartDate = project.first_progress_start || project.start_date;
+            const displayEndDate = project.last_progress_end || project.end_date;
+
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td data-label="Proje Adı">${project.project_name ? project.project_name.normalize('NFC') : "-"}</td>
+                <td data-label="Referans No">${project.reference_no || "-"}</td>
+                <td data-label="Müşteri">${project.customer_name || "-"}</td>
+                <td data-label="Durum">${getStatusBadgeHtml(project.display_status || "-", combinedDelay)}</td>
+                <td data-label="Başlangıç">${formatDateForDisplay(displayStartDate || "-")}</td>
+                <td data-label="Bitiş">${formatDateForDisplay(displayEndDate || "-")}</td>
+                <td data-label="Toplam Gün">${totalDays !== '-' ? totalDays + ' gün' : '-'}</td>
+                <td data-label="Geçen Gün">${elapsedDays !== '-' ? elapsedDays + ' gün' : '-'}</td>
+                <td data-label="Gecikme Durumu">${gecikmeDurumu}</td>
+                <td data-label="Yönetici">${project.project_manager_name || "-"}</td>
+                <td data-label="İşlemler">
+                    <div style="display: flex; gap: 10px;">
+                        <button class="action-btn view-project-btn" data-id="${project.project_id}" title="Detayları Görüntüle"><i class="fas fa-eye"></i></button>
+                        <button class="action-btn edit-project-btn" data-id="${project.project_id}" title="Projeyi Düzenle"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn delete-project-btn" data-id="${project.project_id}" title="Projeyi Sil"><i class="fas fa-trash"></i></button>
+                        <button class="action-btn generate-pdf-btn" data-id="${project.project_id}" title="PDF Raporu Oluştur"><i class="fas fa-file-pdf"></i></button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        attachProjectTableEventListeners();
+        updatePagination(projectsToRender.length, currentPage, Math.ceil(projectsToRender.length / rowsPerPage));
+    }
+function attachProjectTableEventListeners() {
         document.querySelectorAll(".view-project-btn").forEach((btn) => {
             btn.onclick = (e) => {
                 e.preventDefault();
@@ -2919,352 +2831,245 @@ async function updateProjectDatesFromSteps(projectId) {
     showToast("Proje tarihleri güncellenirken bir hata oluştu", true);
   }
 }
-async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
-    if (delayDays <= 0) {
-        showToast("Erteleme günü en az 1 olmalıdır.", true);
-        return;
-    }
-    
-    try {
-        console.log(`${stepIndex}. adıma ${delayDays} gün erteleme uygulanıyor`);
-        // Etkilenecek adımları al
-        const stepsToUpdate = [];
-        
-        // Önce belirtilen adımın bitiş tarihini ertele
-        const currentStep = allSteps[stepIndex];
-        const currentProgressId = currentStep.progress_id;
-        const currentEndDateInput = document.getElementById(`step-${currentProgressId}-end`);
-        
-        if (!currentEndDateInput) {
-            console.error(`${stepIndex}. adım için bitiş tarihi input'u bulunamadı`);
-            showToast("İş adımı için bitiş tarihi bulunamadı", true);
+async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projectId) {
+        if (newlyAddedDelayDays <= 0) {
+            showToast("Erteleme günü en az 1 olmalıdır.", true);
             return;
         }
-        
-        // Mevcut adımın bitiş tarihini ertele
-        const currentEndDate = new Date(currentEndDateInput.value);
-        const newEndDate = new Date(currentEndDate.setDate(currentEndDate.getDate() + delayDays));
-        const formattedEndDate = newEndDate.toISOString().split('T')[0];
-        
-        // Bitiş tarihini güncelle
-        currentEndDateInput.value = formattedEndDate;
-        
-        // Adımın mevcut custom_delay_days değerini al
-        let existingCustomDelay = 0;
-        if (currentStep.custom_delay_days !== undefined && currentStep.custom_delay_days !== null) {
-            existingCustomDelay = parseInt(currentStep.custom_delay_days) || 0;
-        } else if (currentStep.custom_delay !== undefined && currentStep.custom_delay !== null) {
-            existingCustomDelay = parseInt(currentStep.custom_delay) || 0;
-        }
-        
-        console.log("Mevcut custom_delay_days:", existingCustomDelay);
-        
-        // Yeni toplam gecikmeyi hesapla
-        let newCustomDelay = existingCustomDelay + delayDays;
-        
-        console.log(`TOPLAM HESAPLAMA: ${existingCustomDelay} + ${delayDays} = ${newCustomDelay}`);
-        
-        // Mevcut adım için güncelleme kuyruğuna ekle
-        stepsToUpdate.push({
-            progressId: currentProgressId,
-            newData: {
+
+        try {
+            console.log(`${stepIndex}. adıma ${newlyAddedDelayDays} gün erteleme uygulanıyor.`);
+
+            // İlk olarak, hedef adımın kendi custom_delay_days değerini güncelle
+            const currentStep = allSteps[stepIndex];
+            const currentProgressId = currentStep.progress_id;
+
+            const targetStepData = {
                 step_name: document.getElementById(`step-${currentProgressId}-name`).value,
                 description: document.getElementById(`step-${currentProgressId}-desc`).value,
-                // Başlangıç tarihi değişmez (aynı kalır)
                 start_date: document.getElementById(`step-${currentProgressId}-start`).value,
-                // Sadece bitiş tarihi ertelenir
-                end_date: formattedEndDate,
-                // Her iki alanı da gönder (API'nin beklediği alan adına göre)
-                custom_delay_days: newCustomDelay,
-                custom_delay: newCustomDelay
-            },
-            isTargetStep: true,
-            delayInfo: {
-                previous: existingCustomDelay,
-                added: delayDays,
-                new: newCustomDelay
-            }
-        });
-        
-        // Sonraki adımların başlangıç ve bitiş tarihlerini güncelle
-        for (let i = stepIndex + 1; i < allSteps.length; i++) {
-            const step = allSteps[i];
-            const progressId = step.progress_id;
-            
-            // Tarihleri al
-            const startDateInput = document.getElementById(`step-${progressId}-start`);
-            const endDateInput = document.getElementById(`step-${progressId}-end`);
-            
-            if (!startDateInput || !endDateInput) {
-                console.error(`${i}. adım için gerekli inputlar bulunamadı`);
-                continue;
-            }
-            
-            // Sonraki adımların hem başlangıç hem bitiş tarihlerini ertele
-            const currentStartDate = new Date(startDateInput.value);
-            const currentEndDate = new Date(endDateInput.value);
-            const newStartDate = new Date(currentStartDate.setDate(currentStartDate.getDate() + delayDays));
-            const newEndDate = new Date(currentEndDate.setDate(currentEndDate.getDate() + delayDays));
-            const formattedStartDate = newStartDate.toISOString().split('T')[0];
-            const formattedEndDate = newEndDate.toISOString().split('T')[0];
-            
-            // Input değerlerini güncelle
-            startDateInput.value = formattedStartDate;
-            endDateInput.value = formattedEndDate;
-            
-            // Özel gecikme - mevcut değeri aynen koru (birikimli değil)
-            let existingDelay = 0;
-            if (step.custom_delay_days !== undefined && step.custom_delay_days !== null) {
-                existingDelay = parseInt(step.custom_delay_days) || 0;
-            } else if (step.custom_delay !== undefined && step.custom_delay !== null) {
-                existingDelay = parseInt(step.custom_delay) || 0;
-            }
-            
-            // Güncelleme için kuyruğa ekle
-            stepsToUpdate.push({
-                progressId: progressId,
-                newData: {
-                    step_name: document.getElementById(`step-${progressId}-name`).value,
-                    description: document.getElementById(`step-${progressId}-desc`).value,
-                    start_date: formattedStartDate,
-                    end_date: formattedEndDate,
-                    // Sonraki adımların mevcut özel gecikmesini koru
-                    custom_delay_days: existingDelay,
-                    custom_delay: existingDelay
-                }
+                end_date: document.getElementById(`step-${currentProgressId}-end`).value,
+                newly_added_custom_delay: newlyAddedDelayDays // Bu, backend'de mevcut custom_delay_days'e eklenecek
+            };
+
+            // Hedef adımı backend'de güncelle
+            const targetStepResponse = await fetch(`${API_BASE_URL}/api/progress/${currentProgressId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(targetStepData)
             });
-        }
-        
-        // API güncellemeleri
-        let successCount = 0;
-        let targetStepInfo = null;
-        
-        for (const updateItem of stepsToUpdate) {
-            try {
-                const apiUrl = `${API_BASE_URL}/api/progress/${updateItem.progressId}`;
-                // URL'deki çift slash kontrolü
-                const cleanApiUrl = apiUrl.replace("//api", "/api");
-                
-                console.log(`API isteği gönderiliyor: ${cleanApiUrl}`);
-                console.log("Gönderilen veri:", updateItem.newData);
-                
-                const response = await fetch(cleanApiUrl, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(updateItem.newData)
-                });
-                
-                const responseData = await response.json();
-                console.log("API yanıtı:", response.status, responseData);
-                
-                if (response.ok) {
-                    successCount++;
-                    
-                    // Güncellemede hedef adımsa ve API yanıtında custom_delay_days varsa
-                    if (updateItem.isTargetStep) {
-                        targetStepInfo = updateItem.delayInfo;
-                        
-                        // Yanıtta custom_delay_days varsa, adımın değerini güncelle
-                        if (responseData.custom_delay_days !== undefined) {
-                            // allSteps dizisindeki ilgili adımın custom_delay_days değerini güncelle
-                            const stepIndex = allSteps.findIndex(s => s.progress_id === updateItem.progressId);
-                            if (stepIndex !== -1) {
-                                allSteps[stepIndex].custom_delay_days = responseData.custom_delay_days;
-                                allSteps[stepIndex].custom_delay = responseData.custom_delay_days;
-                                console.log(`Adımın custom_delay_days değeri API yanıtına göre güncellendi: ${responseData.custom_delay_days}`);
-                            }
-                        }
-                    }
-                } else {
-                    console.error("API hatası:", responseData.message);
+
+            const targetStepResponseData = await targetStepResponse.json();
+            if (!targetStepResponse.ok) {
+                throw new Error(targetStepResponseData.message || 'Hedef iş adımı güncellenemedi.');
+            }
+            showToast(`"${targetStepData.step_name}" iş adımına ${newlyAddedDelayDays} gün erteleme eklendi.`);
+
+            // Şimdi, sonraki adımların tarihlerini güncelle
+            // Bu, sadece frontend'deki input değerlerini güncelleyecek.
+            // Kaydet butonuna basıldığında bu değişiklikler backend'e gönderilecek.
+            for (let i = stepIndex + 1; i < allSteps.length; i++) {
+                const step = allSteps[i];
+                const progressId = step.progress_id;
+
+                const startDateInput = document.getElementById(`step-${progressId}-start`);
+                const endDateInput = document.getElementById(`step-${progressId}-end`);
+
+                if (!startDateInput || !endDateInput) {
+                    console.error(`${i}. adım için gerekli inputlar bulunamadı`);
+                    continue;
                 }
-            } catch (error) {
-                console.error(`Adım güncelleme hatası (ID: ${updateItem.progressId}):`, error);
+
+                const currentStartDate = new Date(startDateInput.value);
+                const currentEndDate = new Date(endDateInput.value);
+
+                const newStartDate = new Date(currentStartDate.setDate(currentStartDate.getDate() + newlyAddedDelayDays));
+                const newEndDate = new Date(currentEndDate.setDate(currentEndDate.getDate() + newlyAddedDelayDays));
+
+                startDateInput.value = newStartDate.toISOString().split('T')[0];
+                endDateInput.value = newEndDate.toISOString().split('T')[0];
             }
+
+            // İş adımlarını ve projeyi yeniden yükle
+            await fetchProgressSteps(projectId, true);
+            await fetchProjects();
+
+        } catch (error) {
+            console.error("Erteleme uygulama hatası:", error);
+            showToast("Erteleme uygulanırken bir hata oluştu: " + error.message, true);
         }
-        
-        if (targetStepInfo) {
-            showToast(`${successCount} adım güncellendi. İş adımındaki toplam erteleme: ${targetStepInfo.previous} + ${targetStepInfo.added} = ${targetStepInfo.new} gün.`);
-        } else {
-            showToast(`${successCount} adımın tarihleri başarıyla güncellendi.`);
-        }
-        
-        // Adımları yeniden yükle
-        fetchProgressSteps(projectId, true);
-        // Projeler listesini de güncelle
-        fetchProjects();
-    } catch (error) {
-        console.error("Erteleme uygulama hatası:", error);
-        showToast("Erteleme uygulanırken bir hata oluştu: " + error.message, true);
     }
-}
-function renderProgressSteps(steps, projectId, isEditable = false) {
-    // Steps parametresi için güvenlik kontrolü
-    if (!steps || !Array.isArray(steps)) {
-        console.error("Geçersiz steps parametresi:", steps);
+ function renderProgressSteps(steps, projectId, isEditable = false) {
+        // Steps parametresi için güvenlik kontrolü
+        if (!steps || !Array.isArray(steps)) {
+            console.error("Geçersiz steps parametresi:", steps);
+            const progressStepsContainer = document.getElementById("progressStepsContainer");
+            if (progressStepsContainer) {
+                progressStepsContainer.innerHTML = '<p>İş adımlarını yüklerken bir hata oluştu.</p>';
+            }
+            return;
+        }
+
         const progressStepsContainer = document.getElementById("progressStepsContainer");
-        if (progressStepsContainer) {
-            progressStepsContainer.innerHTML = '<p>İş adımlarını yüklerken bir hata oluştu.</p>';
-        }
-        return;
-    }
+        if (!progressStepsContainer) return;
+        progressStepsContainer.innerHTML = "";
+        console.log("Render progress steps (tüm array):", steps);
 
-    const progressStepsContainer = document.getElementById("progressStepsContainer");
-    if (!progressStepsContainer) return;
-    progressStepsContainer.innerHTML = "";
-    console.log("Render progress steps (tüm array):", steps);
-    
-    if (steps.length === 0) {
-        progressStepsContainer.innerHTML = '<p>Bu proje için henüz iş adımı eklenmemiş.</p>';
-    } else {
-        steps.forEach((step, index) => {
-            console.log(`İş adımı ${index} (ID: ${step.progress_id || step.id || 'bilinmiyor'}):`, step);
-            const stepElement = document.createElement("div");
-            stepElement.className = "progress-detail-item";
-            stepElement.dataset.stepIndex = index; // Adımın indeksini data attribute olarak sakla
-            
-            // Her adım için başlık, başlangıç/bitiş tarihi ve açıklama içeriği
-            const titleContent = isEditable ?
-                `<input type="text" id="step-${step.progress_id}-name" class="progress-step-name-input" value="${step.step_name || step.title || ''}" placeholder="Adım Adı" required>` :
-                `<span class="progress-detail-title">${step.step_name || step.title || ''}</span>`;
-                
-            const startDateContent = isEditable ?
-                `<label for="step-${step.progress_id}-start">Başlangıç:</label><input type="date" id="step-${step.progress_id}-start" class="progress-datepicker" value="${formatDateForInput(step.start_date || '')}" required>` :
-                `Başlangıç: ${formatDateForDisplay(step.start_date || '-')}`;
-                
-            const endDateContent = isEditable ?
-                `<label for="step-${step.progress_id}-end">Bitiş:</label><input type="date" id="step-${step.progress_id}-end" class="progress-datepicker" value="${formatDateForInput(step.end_date || '')}" required>` :
-                `Bitiş: ${formatDateForDisplay(step.end_date || '-')}`;
-            
-            // Gecikme bilgileri - hem genel hem de özel gecikme
-            let delayInfoHtml = '';
-            
-            // delay_days (otomatik hesaplanan) gecikme varsa
-            const delayDays = parseInt(step.delay_days) || 0;
-            if (delayDays > 0) {
-                delayInfoHtml += `<div class="delay-info" style="color: #ff9800; margin-top: 5px; font-style: italic; padding: 5px; background-color: rgba(255, 152, 0, 0.1); border-left: 3px solid #ff9800; border-radius: 3px;">
-                    Bu iş adımında ${delayDays} günlük hesaplanan gecikme var.
-                </div>`;
-            }
-            
-            // custom_delay_days (manuel eklenen) gecikme varsa
-            // Önce değeri güvenli bir şekilde al
-            let customDelayDays = 0;
-            if (step.custom_delay_days !== undefined && step.custom_delay_days !== null) {
-                customDelayDays = parseInt(step.custom_delay_days) || 0;
-            } else if (step.custom_delay !== undefined && step.custom_delay !== null) {
-                customDelayDays = parseInt(step.custom_delay) || 0;
-            }
-            
-            if (customDelayDays > 0) {
-                delayInfoHtml += `<div class="custom-delay-info" style="color: #ff6b6b; margin-top: 8px; font-weight: bold; font-style: italic; padding: 8px; background-color: rgba(255, 107, 107, 0.1); border-left: 3px solid #ff6b6b; border-radius: 3px;">
-                    Bu iş gidişatı ${customDelayDays} gün ertelenmiştir!
-                </div>`;
-            }
+        if (steps.length === 0) {
+            progressStepsContainer.innerHTML = '<p>Bu proje için henüz iş adımı eklenmemiş.</p>';
+        } else {
+            steps.forEach((step, index) => {
+                console.log(`İş adımı ${index} (ID: ${step.progress_id || step.id || 'bilinmiyor'}):`, step);
+                const stepElement = document.createElement("div");
+                stepElement.className = "progress-detail-item";
+                stepElement.dataset.stepIndex = index; // Adımın indeksini data attribute olarak sakla
 
-            const descriptionContent = isEditable ?
-                `<textarea id="step-${step.progress_id}-desc" class="progress-description-textarea" placeholder="Açıklama">${step.description || ''}</textarea>` :
-                `<div class="progress-detail-description">Açıklama: ${step.description || 'Yok'}</div>`;
-            
-            // BURADA YENİ ERTELEME GÜNÜ INPUTUNU EKLİYORUZ (sadece düzenleme modunda)
-            const delayDaysContent = isEditable ?
-                `<div class="delay-days-container" style="margin-top: 10px;">
-                    <label for="step-${step.progress_id}-delay">Erteleme (gün):</label>
-                    <input type="number" id="step-${step.progress_id}-delay" class="delay-days-input" min="0" value="0" style="width: 70px; padding: 5px; margin-left: 5px;">
-                    <button type="button" class="action-btn apply-delay-btn" data-id="${step.progress_id}" data-index="${index}" style="margin-left: 5px;"><i class="fas fa-check"></i> Uygula</button>
-                </div>` : '';
-                
-            const actionsContent = isEditable ?
-                `
-                <div class="progress-actions">
-                    <button type="button" class="action-btn save-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Kaydet"><i class="fas fa-save"></i> Kaydet</button>
-                    <button type="button" class="action-btn delete-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Sil"><i class="fas fa-trash"></i> Sil</button>
-                </div>
-                ` : ``;
-                
-            stepElement.innerHTML = `
-                <div class="progress-item-header">
-                    <div class="input-group" style="flex: 1;">
-                        ${isEditable ? '<label for="step-' + step.progress_id + '-name">Adım Başlığı</label>' : ''}
-                        ${titleContent}
+                // Her adım için başlık, başlangıç/bitiş tarihi ve açıklama içeriği
+                const titleContent = isEditable ?
+                    `<input type="text" id="step-${step.progress_id}-name" class="progress-step-name-input" value="${step.step_name || step.title || ''}" placeholder="Adım Adı" required>` :
+                    `<span class="progress-detail-title">${step.step_name || step.title || ''}</span>`;
+
+                const startDateContent = isEditable ?
+                    `<label for="step-${step.progress_id}-start">Başlangıç:</label><input type="date" id="step-${step.progress_id}-start" class="progress-datepicker" value="${formatDateForInput(step.start_date || '')}" required>` :
+                    `Başlangıç: ${formatDateForDisplay(step.start_date || '-')}`;
+
+                const endDateContent = isEditable ?
+                    `<label for="step-${step.progress_id}-end">Bitiş:</label><input type="date" id="step-${step.progress_id}-end" class="progress-datepicker" value="${formatDateForInput(step.end_date || '')}" required>` :
+                    `Bitiş: ${formatDateForDisplay(step.end_date || '-')}`;
+
+                // Gecikme bilgileri - hem genel hem de özel gecikme
+                let delayInfoHtml = '';
+
+                // delay_days (otomatik hesaplanan) gecikme varsa
+                const delayDays = parseInt(step.delay_days) || 0;
+                if (delayDays > 0) {
+                    delayInfoHtml += `<div class="delay-info" style="color: #ff9800; margin-top: 5px; font-style: italic; padding: 5px; background-color: rgba(255, 152, 0, 0.1); border-left: 3px solid #ff9800; border-radius: 3px;">
+                        Bu iş adımında ${delayDays} günlük hesaplanan gecikme var.
+                    </div>`;
+                }
+
+                // custom_delay_days (manuel eklenen) gecikme varsa
+                let customDelayDays = 0;
+                if (step.custom_delay_days !== undefined && step.custom_delay_days !== null) {
+                    customDelayDays = parseInt(step.custom_delay_days) || 0;
+                } else if (step.custom_delay !== undefined && step.custom_delay !== null) {
+                    customDelayDays = parseInt(step.custom_delay) || 0;
+                }
+
+                if (customDelayDays > 0) {
+                    delayInfoHtml += `<div class="custom-delay-info" style="color: #ff6b6b; margin-top: 8px; font-weight: bold; font-style: italic; padding: 8px; background-color: rgba(255, 107, 107, 0.1); border-left: 3px solid #ff6b6b; border-radius: 3px;">
+                        Bu iş gidişatı ${customDelayDays} gün ertelenmiştir!
+                    </div>`;
+                }
+
+                const descriptionContent = isEditable ?
+                    `<textarea id="step-${step.progress_id}-desc" class="progress-description-textarea" placeholder="Açıklama">${step.description || ''}</textarea>` :
+                    `<div class="progress-detail-description">Açıklama: ${step.description || 'Yok'}</div>`;
+
+                // BURADA YENİ ERTELEME GÜNÜ INPUTUNU EKLİYORUZ (sadece düzenleme modunda)
+                const delayDaysContent = isEditable ?
+                    `<div class="delay-days-container" style="margin-top: 10px;">
+                        <label for="step-${step.progress_id}-delay">Erteleme Ekle (gün):</label>
+                        <input type="number" id="step-${step.progress_id}-delay" class="delay-days-input" min="0" value="0" style="width: 70px; padding: 5px; margin-left: 5px;">
+                        <button type="button" class="action-btn apply-delay-btn" data-id="${step.progress_id}" data-index="${index}" style="margin-left: 5px;"><i class="fas fa-check"></i> Uygula</button>
+                    </div>` : '';
+
+                const actionsContent = isEditable ?
+                    `
+                    <div class="progress-actions">
+                        <button type="button" class="action-btn save-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Kaydet"><i class="fas fa-save"></i> Kaydet</button>
+                        <button type="button" class="action-btn delete-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Sil"><i class="fas fa-trash"></i> Sil</button>
                     </div>
-                    <div class="progress-dates" style="margin-left: ${isEditable ? '20px' : '0'};">
-                        <span>
-                            ${startDateContent}
-                        </span>
-                        <span>
-                            ${endDateContent}
-                        </span>
+                    ` : ``;
+
+                stepElement.innerHTML = `
+                    <div class="progress-item-header">
+                        <div class="input-group" style="flex: 1;">
+                            ${isEditable ? '<label for="step-' + step.progress_id + '-name">Adım Başlığı</label>' : ''}
+                            ${titleContent}
+                        </div>
+                        <div class="progress-dates" style="margin-left: ${isEditable ? '20px' : '0'};">
+                            <span>
+                                ${startDateContent}
+                            </span>
+                            <span>
+                                ${endDateContent}
+                            </span>
+                        </div>
                     </div>
-                </div>
-                ${delayInfoHtml}
-                <div class="input-group">
-                    ${isEditable ? '<label for="step-' + step.progress_id + '-desc">Açıklama</label>' : ''}
-                    ${descriptionContent}
-                </div>
-                ${delayDaysContent}
-                ${actionsContent}
-            `;
-            progressStepsContainer.appendChild(stepElement);
-        });
-        
-        // Event listener'ları dinamik olarak atama (sadece düzenleme modunda)
-        if (isEditable) {
-            document.querySelectorAll('.save-progress-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const progressId = e.currentTarget.dataset.id;
-                    const projId = e.currentTarget.dataset.projectId;
-                    const stepName = document.getElementById(`step-${progressId}-name`).value;
-                    const startDate = document.getElementById(`step-${progressId}-start`).value;
-                    const endDate = document.getElementById(`step-${progressId}-end`).value;
-                    const description = document.getElementById(`step-${progressId}-desc`).value;
-                    editProgressStep(progressId, projId, {
-                        step_name: stepName,
-                        start_date: startDate,
-                        end_date: endDate,
-                        description: description
+                    ${delayInfoHtml}
+                    <div class="input-group">
+                        ${isEditable ? '<label for="step-' + step.progress_id + '-desc">Açıklama</label>' : ''}
+                        ${descriptionContent}
+                    </div>
+                    ${delayDaysContent}
+                    ${actionsContent}
+                `;
+                progressStepsContainer.appendChild(stepElement);
+            });
+
+            // Event listener'ları dinamik olarak atama (sadece düzenleme modunda)
+            if (isEditable) {
+                document.querySelectorAll('.save-progress-btn').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const progressId = e.currentTarget.dataset.id;
+                        const projId = e.currentTarget.dataset.projectId;
+                        const stepName = document.getElementById(`step-${progressId}-name`).value;
+                        const startDate = document.getElementById(`step-${progressId}-start`).value;
+                        const endDate = document.getElementById(`step-${progressId}-end`).value;
+                        const description = document.getElementById(`step-${progressId}-desc`).value;
+
+                        // Kaydetme sırasında newly_added_custom_delay'i 0 olarak gönderiyoruz,
+                        // çünkü bu butona basıldığında sadece formdaki mevcut değerler kaydedilmeli,
+                        // erteleme butonu ayrı bir işlem.
+                        await editProgressStep(progressId, projId, {
+                            step_name: stepName,
+                            start_date: startDate,
+                            end_date: endDate,
+                            description: description,
+                            newly_added_custom_delay: 0 // Bu önemli: Kaydetme sırasında ek bir gecikme eklemiyoruz
+                        });
                     });
                 });
-            });
-            
-            document.querySelectorAll('.delete-progress-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const progressId = e.currentTarget.dataset.id;
-                    const projId = e.currentTarget.dataset.projectId;
-                    showConfirmationModal(`İş Adımı Sil`, `Bu iş adımını silmek istediğinize emin misiniz? Bu işlem geri alınamaz!`, () => deleteProgressStep(progressId, projId));
+
+                document.querySelectorAll('.delete-progress-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const progressId = e.currentTarget.dataset.id;
+                        const projId = e.currentTarget.dataset.projectId;
+                        showConfirmationModal(`İş Adımı Sil`, `Bu iş adımını silmek istediğinize emin misiniz? Bu işlem geri alınamaz!`, () => deleteProgressStep(progressId, projId));
+                    });
                 });
-            });
-            
-            // Erteleme uygulama butonları
-            document.querySelectorAll('.apply-delay-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const progressId = e.currentTarget.dataset.id;
-                    const stepIndex = parseInt(e.currentTarget.dataset.index);
-                    const newDelayDays = parseInt(document.getElementById(`step-${progressId}-delay`).value) || 0;
-                    
-                    if (newDelayDays > 0) {
-                        // Erteleme fonksiyonunu çağır
-                        applyDelayToStep(stepIndex, newDelayDays, steps, projectId);
-                    } else {
-                        showToast("Lütfen geçerli bir erteleme günü girin.", true);
-                    }
+
+                // Erteleme uygulama butonları
+                document.querySelectorAll('.apply-delay-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const progressId = e.currentTarget.dataset.id;
+                        const stepIndex = parseInt(e.currentTarget.dataset.index);
+                        const newDelayDays = parseInt(document.getElementById(`step-${progressId}-delay`).value) || 0;
+
+                        if (newDelayDays > 0) {
+                            // Erteleme fonksiyonunu çağır
+                            applyDelayToStep(stepIndex, newDelayDays, steps, projectId);
+                        } else {
+                            showToast("Lütfen geçerli bir erteleme günü girin.", true);
+                        }
+                    });
                 });
-            });
+            }
+        }
+
+        // "İş Adımı Ekle" butonu için olay dinleyicisi
+        const addProgressStepButton = document.getElementById("addProgressStepBtn");
+        if (addProgressStepButton) {
+            addProgressStepButton.onclick = null;
+            addProgressStepButton.onclick = function() {
+                console.log("İş Adımı Ekle butonuna tıklandı");
+                addNewProgressStepForm(projectId);
+            };
+        } else {
+            console.error("addProgressStepBtn elementi bulunamadı!");
         }
     }
-    
-    // "İş Adımı Ekle" butonu için olay dinleyicisi
-    const addProgressStepButton = document.getElementById("addProgressStepBtn");
-    if (addProgressStepButton) {
-        addProgressStepButton.onclick = null;
-        addProgressStepButton.onclick = function() {
-            console.log("İş Adımı Ekle butonuna tıklandı");
-            addNewProgressStepForm(projectId);
-        };
-    } else {
-        console.error("addProgressStepBtn elementi bulunamadı!");
-    }
-}
 function addNewProgressStepForm(projectId) {
   console.log("addNewProgressStepForm başladı, projectId:", projectId);
   const progressStepsContainer = document.getElementById("progressStepsContainer");
@@ -3403,41 +3208,47 @@ function addNewProgressStepForm(projectId) {
   console.log("addNewProgressStepForm tamamlandı");
 }
 
-   async function editProgressStep(progressId, projectId, updatedStepData) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updatedStepData),
-    });
-    
-    const data = await response.json();
-    
-    if (response.ok) {
-      showToast("İş adımı başarıyla güncellendi.");
-      
-      // İş adımı güncellemesi başarılı olduktan sonra proje tarihlerini güncelle
-      await updateProjectDatesFromSteps(projectId);
-      
-      // Listeyi güncelle
-      fetchProjects(); 
-      fetchProgressSteps(projectId, true);
-      
-      addActivity(
-        "İş Adımı Güncellendi",
-        `Proje ID: ${projectId} için "${updatedStepData.step_name}" iş adımı güncellendi.`,
-        projectId,
-        "fas fa-pen",
-        "progress_update"
-      );
-    } else {
-      showToast(`Hata: ${data.message}`, true);
+  async function editProgressStep(progressId, projectId, updatedStepData) {
+        try {
+            // newly_added_custom_delay'i varsayılan olarak 0 ayarla eğer gelmiyorsa
+            const payload = {
+                ...updatedStepData,
+                newly_added_custom_delay: updatedStepData.newly_added_custom_delay || 0
+            };
+
+            const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showToast("İş adımı başarıyla güncellendi.");
+
+                // İş adımı güncellemesi başarılı olduktan sonra proje tarihlerini güncelle
+                await updateProjectDatesFromSteps(projectId);
+
+                // Listeyi güncelle
+                fetchProjects();
+                fetchProgressSteps(projectId, true);
+
+                addActivity(
+                    "İş Adımı Güncellendi",
+                    `Proje ID: ${projectId} için "${updatedStepData.step_name}" iş adımı güncellendi.`,
+                    projectId,
+                    "fas fa-pen",
+                    "progress_update"
+                );
+            } else {
+                showToast(`Hata: ${data.message}`, true);
+            }
+        } catch (error) {
+            console.error("İş adımı güncelleme hatası:", error);
+            showToast("İş adımı güncellenirken bir sorun oluştu.", true);
+        }
     }
-  } catch (error) {
-    console.error("İş adımı güncelleme hatası:", error);
-    showToast("İş adımı güncellenirken bir sorun oluştu.", true);
-  }
-}
 
     // progress_id kullanıldı
     async function deleteProgressStep(progressId, projectId) {
