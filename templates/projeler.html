@@ -3171,14 +3171,23 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
                     showConfirmationModal(`İş Adımı Sil`, `Bu iş adımını silmek istediğinize emin misiniz? Bu işlem geri alınamaz!`, () => deleteProgressStep(progressId, projId));
                 });
             });
-            // YENİ: Erteleme uygulama butonları
+            // YENİ: Erteleme uygulama butonları - birikimli olarak ekleme yapacak şekilde değiştirildi
             document.querySelectorAll('.apply-delay-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const progressId = e.currentTarget.dataset.id;
                     const stepIndex = parseInt(e.currentTarget.dataset.index);
-                    const delayDays = parseInt(document.getElementById(`step-${progressId}-delay`).value) || 0;
-                    if (delayDays > 0) {
-                        applyDelayToStep(stepIndex, delayDays, steps, projectId);
+                    const newDelayDays = parseInt(document.getElementById(`step-${progressId}-delay`).value) || 0;
+                    
+                    if (newDelayDays > 0) {
+                        // Mevcut erteleme günlerini al
+                        const currentStep = steps[stepIndex];
+                        const currentDelayDays = currentStep.custom_delay_days || 0;
+                        
+                        // Yeni toplam erteleme gününü hesapla
+                        const totalDelayDays = currentDelayDays + newDelayDays;
+                        
+                        // Güncelleme fonksiyonunu çağır
+                        applyDelayToStep(stepIndex, totalDelayDays, steps, projectId, true);
                     } else {
                         showToast("Lütfen geçerli bir erteleme günü girin.", true);
                     }
