@@ -1191,14 +1191,6 @@
 
         // Tarih seçicileri başlat
         document.addEventListener('DOMContentLoaded', function() {
-             const addProgressBtn = document.getElementById('addProgressBtn');
-    if (addProgressBtn) {
-        addProgressBtn.addEventListener('click', function() {
-            // Tıklama işlemi burada...
-        });
-    } else {
-        console.error("'addProgressBtn' ID'li element bulunamadı!");
-    }
             const dateOptions = {
                 dateFormat: "Y-m-d", // Veritabanı için ISO 8601 (YYYY-MM-DD) formatı daha uygun
                 locale: "tr",
@@ -1242,95 +1234,7 @@
                     if (confirmationModal) confirmationModal.hide();
                 });
             }
-// İlk iş gidişatı eklendiğinde proje başlangıç tarihini güncelle
-// Progress adımlarını toplayan fonksiyon
-function getProgressSteps() {
-    const steps = [];
-    const progressItems = document.querySelectorAll('.progress-item');
-    
-    progressItems.forEach(item => {
-        // Önce elementleri seç
-        const titleInput = item.querySelector('input[type="text"][placeholder="İş gidişat başlığı"]');
-        const startInput = item.querySelector('input.progress-datepicker[placeholder="Başlangıç"]');
-        const endInput = item.querySelector('input.progress-datepicker[placeholder="Bitiş"]');
-        const descTextarea = item.querySelector('.progress-description-textarea');
-        
-        // Eğer gerekli alanlar doldurulmuşsa adımı ekle
-        if (titleInput && titleInput.value.trim() && startInput && startInput.value && endInput && endInput.value) {
-            steps.push({
-                title: titleInput.value.trim(),
-                description: descTextarea ? descTextarea.value.trim() : '',
-                startDate: startInput.value,
-                endDate: endInput.value
-            });
-        }
-    });
-    
-    return steps;
-}
-// Proje tarihlerini güncelleyen fonksiyon
-function updateProjectDateBasedOnSteps() {
-    // Tüm iş adımlarını topla
-    const progressSteps = getProgressSteps();
-    
-    // Eğer adım yoksa, bir şey yapma
-    if (progressSteps.length === 0) {
-        return;
-    }
-    
-    // İlk adımın başlangıç tarihini ve son adımın bitiş tarihini bul
-    let firstStartDate = null;
-    let lastEndDate = null;
-    
-    progressSteps.forEach(step => {
-        const stepStartDate = step.startDate;
-        const stepEndDate = step.endDate;
-        
-        // İlk başlangıç tarihini belirle
-        if (!firstStartDate || stepStartDate < firstStartDate) {
-            firstStartDate = stepStartDate;
-        }
-        
-        // Son bitiş tarihini belirle
-        if (!lastEndDate || stepEndDate > lastEndDate) {
-            lastEndDate = stepEndDate;
-        }
-    });
-    
-    // Proje başlangıç ve bitiş tarihlerini güncelle
-    if (firstStartDate) {
-        document.getElementById('start-date').value = firstStartDate;
-    }
-    
-    if (lastEndDate) {
-        document.getElementById('end-date').value = lastEndDate;
-    }
-}
 
-// İş gidişatı ekle butonuna tıklandığında bu fonksiyonu çağır
-document.getElementById('addProgressBtn').addEventListener('click', function() {
-    const stepTitle = document.getElementById('progressTitle').value;
-    const stepDescription = document.getElementById('progressDescription').value;
-    const stepStartDate = document.getElementById('progressStartDate').value;
-    const stepEndDate = document.getElementById('progressEndDate').value;
-    
-    // İş adımını ekle
-    addProgressStep(stepTitle, stepDescription, stepStartDate, stepEndDate);
-    
-    // Proje tarihlerini güncelle
-    updateProjectDateBasedOnSteps();
-    
-    // Formu temizle
-    clearProgressForm();
-});
-
-// İş gidişatı silindiğinde de proje tarihlerini güncelle
-// İş gidişatı silme fonksiyonu düzeltmesi
-function deleteProgressStep(element) {
-    // Silme işlemi sonrası proje tarihlerini güncelle
-    element.remove();
-    updateProjectDateBasedOnSteps();
-}
 
             // --- Oturum Kontrolü ve Yönlendirme ---
             const storedUser = localStorage.getItem('currentUser');
