@@ -2460,17 +2460,6 @@ function attachProjectTableEventListeners() {
             console.log("Select options hazırlandı");
             console.log("Form HTML hazırlanıyor");
 
-            // Durum combobox'ı için seçenekler
-            // Eğer projenin mevcut durumu "Tamamlandı" ise, sadece "Tamamlandı" seçeneği seçili gelir.
-            // Aksi takdirde, varsayılan olarak boş gelir ve "Tamamlandı" seçeneği de sunulur.
-            let statusOptionsHtml = `<option value="">Durum Seçiniz</option>`;
-            statusOptionsHtml += `<option value="Tamamlandı" ${project.status === "Tamamlandı" ? "selected" : ""}>Tamamlandı</option>`;
-            // Diğer durumları isterseniz buraya ekleyebilirsiniz, ancak "Tamamlandı" dışındaki durumlar backend tarafından yönetilecek.
-            // Örneğin:
-            // statusOptionsHtml += `<option value="Aktif" ${project.status === "Aktif" ? "selected" : ""}>Aktif</option>`;
-            // statusOptionsHtml += `<option value="Planlama Aşamasında" ${project.status === "Planlama Aşamasında" ? "selected" : ""}>Planlama Aşamasında</option>`;
-
-
             modalBody.innerHTML = `
                 <input type="hidden" id="editProjectId" value="${project.project_id}">
                 <div class="form-group">
@@ -2494,7 +2483,8 @@ function attachProjectTableEventListeners() {
                 <div class="form-group">
                     <label for="editStatus" class="form-label">Durum</label>
                     <select id="editStatus" class="form-input">
-                        ${statusOptionsHtml}
+                        <option value="">Durum Seçiniz (Opsiyonel)</option> <!-- Boş seçenek eklendi -->
+                        <option value="Tamamlandı">Tamamlandı</option>
                     </select>
                 </div>
                 <!-- Sözleşme Tarihi alanı -->
@@ -2541,7 +2531,7 @@ function attachProjectTableEventListeners() {
 
         } catch (error) {
             console.error("renderEditModal ile ilgili bir hata oluştu:", error);
-            modalBody.innerHTML = `<p style="text-align: center; color: red;">Form yüklenirken bir hata oluştu: ${error.message}</p> <button class="btn" onclick="closeProjectModal()">Modali Kapat</button>`;
+            modalBody.innerHTML = `<p style="text-align: center; color: red;">Form yüklenirken bir hata oluştu: ${error.message}</p>`;
         }
     }
 
@@ -2592,13 +2582,13 @@ function attachProjectTableEventListeners() {
 }
 
 
- async function saveProjectChanges() {
+  async function saveProjectChanges() {
         const projectId = document.getElementById("editProjectId").value;
         const projectName = document.getElementById("editProjectName").value;
         const referenceNo = document.getElementById("editReferenceNo").value;
         const customerId = document.getElementById("editCustomerId").value;
-        const location = document.getElementById("editLocation").value;
-        const status = document.getElementById("editStatus").value; // Yeni durum değeri
+        const projectLocation = document.getElementById("editLocation").value;
+        const selectedStatus = document.getElementById("editStatus").value; // Kullanıcının seçtiği durum
         const contractDate = document.getElementById("editContractDate").value;
         const meetingDate = document.getElementById("editMeetingDate").value;
         const startDate = document.getElementById("editStartDate").value;
@@ -2607,29 +2597,30 @@ function attachProjectTableEventListeners() {
         const description = document.getElementById("editDescription").value;
 
         if (!projectName || !customerId || !projectManagerId || !startDate || !endDate) {
-            showToast("Lütfen tüm zorunlu alanları doldurun (Proje Adı, Müşteri, Proje Yöneticisi, Başlangıç Tarihi, Bitiş Tarihi).", true);
-            return;
-        }
-
-        if (status === "") {
-            showToast("Lütfen projenin durumunu seçiniz.", true);
+            showToast("Lütfen tüm zorunlu alanları doldurun: Proje Adı, Müşteri, Proje Yöneticisi, Başlangıç Tarihi, Bitiş Tarihi.", true);
             return;
         }
 
         const projectData = {
-            project_name: projectName,
-            reference_no: referenceNo,
-            customer_id: customerId,
-            project_location: location,
-            status: status, // Durum bilgisini gönder
-            contract_date: contractDate || null,
-            meeting_date: meetingDate || null,
-            start_date: startDate,
-            end_date: endDate,
-            project_manager_id: projectManagerId,
-            description: description,
-            user_id: currentUser.id // Aktivite kaydı için kullanıcı ID'si
+            user_id: currentUser.id, // Aktivite kaydı için kullanıcı ID'si
+            projectName: projectName,
+            referenceNo: referenceNo,
+            customerId: customerId,
+            projectLocation: projectLocation,
+            contractDate: contractDate,
+            meetingDate: meetingDate,
+            startDate: startDate,
+            endDate: endDate,
+            projectManagerId: projectManagerId,
+            description: description
+            // Status, backend tarafından otomatik belirlenecek, sadece 'Tamamlandı' seçilirse gönderilecek
         };
+
+        // Eğer kullanıcı "Tamamlandı" seçeneğini seçtiyse, bu durumu backend'e gönder
+        if (selectedStatus === "Tamamlandı") {
+            projectData.status = "Tamamlandı";
+        }
+        // Diğer durumlarda status alanı gönderilmeyecek, backend otomatik belirleyecek
 
         try {
             const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
@@ -2648,7 +2639,7 @@ function attachProjectTableEventListeners() {
                 fetchProjects(); // Proje listesini yenile
                 addActivity(
                     "Proje Güncellendi",
-                    `"${projectName}" projesi güncellendi. Yeni Durum: ${status}`,
+                    `"${projectName}" projesi güncellendi.`,
                     projectId,
                     "fas fa-edit",
                     "project_update"
