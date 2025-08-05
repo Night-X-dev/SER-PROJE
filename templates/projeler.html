@@ -3117,10 +3117,10 @@ function renderProgressSteps(steps, projectId, isEditable = false) {
 }
     // MODAL İÇİNE YENİ İŞ ADIMI EKLEME FORMU OLUŞTURAN FONKSİYON
 // MODAL İÇİNE YENİ İŞ ADIMI EKLEME FORMU OLUŞTURAN FONKSİYON
+// MODAL İÇİNE YENİ İŞ ADIMI EKLEME FORMU OLUŞTURAN FONKSİYON
 function addNewProgressStepForm(projectId) {
   console.log("addNewProgressStepForm başladı, projectId:", projectId);
   const progressStepsContainer = document.getElementById("progressStepsContainer");
-  
   if (!progressStepsContainer) {
     console.error("progressStepsContainer elementi bulunamadı!");
     showToast("İş adımı eklenemiyor: Form container bulunamadı", true);
@@ -3204,7 +3204,13 @@ function addNewProgressStepForm(projectId) {
       const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ step_name: stepName, start_date: startDate, end_date: endDate, description: description })
+        body: JSON.stringify({ 
+          step_name: stepName, 
+          start_date: startDate, 
+          end_date: endDate, 
+          description: description,
+          update_project_dates: true // Yeni bir flag ekliyoruz
+        })
       });
       
       console.log("API yanıtı alındı:", response.status);
@@ -3215,51 +3221,21 @@ function addNewProgressStepForm(projectId) {
         formElement.remove(); // Formu kapat
         console.log("Form kapatıldı, iş adımları yenileniyor");
         
-        try {
-          // İş adımları güncellendikten sonra tüm adımları çekmek için
-          console.log("Güncel iş adımları çekiliyor");
-          const stepsResponse = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`);
-          const steps = await stepsResponse.json();
-          console.log("Güncel iş adımları:", steps);
-          
-          // Proje detaylarını çek
-          console.log("Proje detayları çekiliyor");
-          const projectResponse = await fetch(`${API_BASE_URL}/api/projects/${projectId}`);
-          const project = await projectResponse.json();
-          console.log("Proje detayları:", project);
-          
-          // Eğer eklenen adım son adımsa (veya sadece bir adım varsa), proje bitiş tarihini güncelle
-          if (steps.length > 0) {
-            // En son eklenen adımın bitiş tarihi proje bitiş tarihi olarak ayarlanır
-            const lastEndDate = endDate;
-            
-            console.log("Son iş adımının bitiş tarihi kullanılarak proje güncelleniyor");
-            // Proje bitiş tarihini güncelle
-            const updateProjectResponse = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                user_id: currentUser.id,
-                end_date: lastEndDate,
-                // Contract ve meeting tarihleri, proje güncellenirken kaybolmasın diye eklendi
-                contract_date: project.contract_date,
-                meeting_date: project.meeting_date
-              })
-            });
-            
-            if (!updateProjectResponse.ok) {
-              const errorText = await updateProjectResponse.text();
-              console.error("Proje bitiş tarihi güncellenirken hata:", errorText);
-            } else {
-              console.log("Proje bitiş tarihi başarıyla güncellendi.");
-            }
-          }
-        } catch (innerError) {
-          console.error("İş adımı eklerken ek işlemlerde hata:", innerError);
-        }
+        // İş adımları ekledikten sonra proje tarihlerini manuel olarak güncelle
+        await updateProjectDatesFromSteps(projectId);
         
         fetchProgressSteps(projectId, true); // Adımları yeniden yükle
         fetchProjects(); // Projeler listesini de güncelle
+        
+        // Proje formundaki bitiş tarihini güncelle (eğer son eklenen adımın tarihi daha sonraysa)
+        // UI'yi hemen güncellemek için
+        const editEndDateInput = document.getElementById('editEndDate');
+        if (editEndDateInput) {
+          const currentEndDate = editEndDateInput.value;
+          if (!currentEndDate || new Date(endDate) > new Date(currentEndDate)) {
+            editEndDateInput.value = endDate;
+          }
+        }
         
         addActivity('İş Adımı Eklendi', `Proje ID: ${projectId} için "${stepName}" iş adımı eklendi.`, projectId, 'fas fa-tasks', 'progress_add');
       } else {
