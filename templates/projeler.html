@@ -2794,57 +2794,99 @@ function refreshProjectDetails(projectId) {
         }
     }
     // Projenin başlangıç ve bitiş tarihlerini iş adımlarına göre güncelleme
+// Projenin başlangıç ve bitiş tarihlerini iş adımlarına göre güncelleme
 async function updateProjectDatesFromSteps(projectId) {
   try {
-    // Tüm iş adımlarını getir
-    const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`);
-    if (!response.ok) throw new Error("İş adımları getirilemedi");
+    console.log(`updateProjectDatesFromSteps başladı, projectId: ${projectId}`);
     
-    const steps = await response.json();
-    if (!steps || steps.length === 0) return; // İş adımı yoksa işlem yapma
-    
-    // Projenin mevcut detaylarını getir
+    // İlk olarak projenin mevcut detaylarını getir
     const projectResponse = await fetch(`${API_BASE_URL}/api/projects/${projectId}`);
-    if (!projectResponse.ok) throw new Error("Proje detayları getirilemedi");
+    if (!projectResponse.ok) {
+      console.error("Proje detayları getirilemedi:", projectResponse.status);
+      throw new Error("Proje detayları getirilemedi");
+    }
     
     const project = await projectResponse.json();
+    console.log("Mevcut proje detayları alındı:", project);
     
-    // İş adımlarından en erken başlangıç ve en geç bitiş tarihlerini bul
-    const sortedSteps = [...steps].sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+    // Tüm iş adımlarını getir
+    const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`);
+    if (!response.ok) {
+      console.error("İş adımları getirilemedi:", response.status);
+      throw new Error("İş adımları getirilemedi");
+    }
     
-    if (sortedSteps.length === 0) return;
+    const steps = await response.json();
+    console.log(`${steps.length} iş adımı bulundu.`);
+    
+    if (!steps || steps.length === 0) {
+      console.log("İş adımı bulunamadı, güncelleme yapılmıyor.");
+      return; // İş adımı yoksa işlem yapma
+    }
+    
+    // İlk olarak adımları tarihe göre sırala
+    // Başlangıç tarihine göre artan sırada
+    const startDateSortedSteps = [...steps].sort((a, b) => {
+      const dateA = new Date(a.start_date || "9999-12-31");
+      const dateB = new Date(b.start_date || "9999-12-31");
+      return dateA - dateB;
+    });
+    
+    // Bitiş tarihine göre azalan sırada (en son bitenler önce)
+    const endDateSortedSteps = [...steps].sort((a, b) => {
+      const dateA = new Date(a.end_date || "0000-01-01");
+      const dateB = new Date(b.end_date || "0000-01-01");
+      return dateB - dateA;
+    });
     
     // İlk iş adımının başlangıç tarihi ve son iş adımının bitiş tarihi
     let earliestStartDate = null;
     let latestEndDate = null;
     
-    // İlk iş adımını bul (en erken başlangıç tarihi olan)
-    if (sortedSteps[0].start_date) {
-      earliestStartDate = sortedSteps[0].start_date;
+    // En erken başlangıç tarihi (ilk adım)
+    if (startDateSortedSteps.length > 0 && startDateSortedSteps[0].start_date) {
+      earliestStartDate = startDateSortedSteps[0].start_date;
+      console.log("En erken başlangıç tarihi:", earliestStartDate);
     }
     
-    // En son biten iş adımını bul (bitiş tarihine göre sırala)
-    const endDateSortedSteps = [...steps].sort((a, b) => new Date(b.end_date) - new Date(a.end_date));
-    if (endDateSortedSteps[0].end_date) {
+    // En geç bitiş tarihi (son adım)
+    if (endDateSortedSteps.length > 0 && endDateSortedSteps[0].end_date) {
       latestEndDate = endDateSortedSteps[0].end_date;
+      console.log("En geç bitiş tarihi:", latestEndDate);
     }
     
     // Projeyi güncelle
     if (earliestStartDate || latestEndDate) {
+      console.log("Proje tarihlerini güncelliyorum...");
+      
       const updateData = {
         user_id: currentUser.id,
-        // Diğer alanlar korunacak şekilde
+        // ÖNEMLİ: Projenin adını ve diğer temel özelliklerini de gönderiyoruz
+        project_name: project.project_name,
+        reference_no: project.reference_no || "",
+        description: project.description || "", 
+        customer_id: project.customer_id,
+        project_location: project.project_location || "",
+        status: project.status || "Aktif",
+        project_manager_id: project.project_manager_id,
+        // Tarihler
         contract_date: project.contract_date,
         meeting_date: project.meeting_date
       };
       
       if (earliestStartDate) {
         updateData.start_date = earliestStartDate;
+      } else {
+        updateData.start_date = project.start_date;  // Mevcut tarihi koru
       }
       
       if (latestEndDate) {
         updateData.end_date = latestEndDate;
+      } else {
+        updateData.end_date = project.end_date;  // Mevcut tarihi koru
       }
+      
+      console.log("Proje güncellemek için gönderilen veriler:", updateData);
       
       const updateResponse = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
         method: "PUT",
@@ -2853,13 +2895,26 @@ async function updateProjectDatesFromSteps(projectId) {
       });
       
       if (!updateResponse.ok) {
-        console.error("Proje tarihleri güncellenirken hata:", await updateResponse.text());
+        const errorText = await updateResponse.json();
+        console.error("Proje tarihleri güncellenirken hata:", errorText);
       } else {
         console.log("Proje tarihleri başarıyla güncellendi:", updateData);
+        
+        // Proje formundaki tarihleri güncelle
+        if (earliestStartDate && document.getElementById("editStartDate")) {
+          document.getElementById("editStartDate").value = formatDateForInput(earliestStartDate);
+        }
+        
+        if (latestEndDate && document.getElementById("editEndDate")) {
+          document.getElementById("editEndDate").value = formatDateForInput(latestEndDate);
+        }
       }
+    } else {
+      console.log("Proje tarihleri için güncellenecek değer bulunamadı.");
     }
   } catch (error) {
     console.error("updateProjectDatesFromSteps hatası:", error);
+    showToast("Proje tarihleri güncellenirken bir hata oluştu", true);
   }
 }
 // İş adımının ve sonraki adımların BİTİŞ TARİHLERİNİ erteleme fonksiyonu (başlangıç tarihi değişmeyecek)
