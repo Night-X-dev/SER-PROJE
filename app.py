@@ -1189,27 +1189,19 @@ def get_projects():
                 p.start_date,
                 p.end_date,
                 p.project_location,
-                p.status,
+                p.status, -- Projenin ana durumunu da çekiyoruz
                 c.customer_name,
                 u.fullname AS project_manager_name,
                 c.customer_id,
                 u.id AS project_manager_user_id,
-                -- Get the latest progress title and delay days (son iş gidişatı)
-                (SELECT title FROM project_progress 
-                 WHERE project_id = p.project_id 
-                 ORDER BY start_date DESC, created_at DESC 
-                 LIMIT 1) AS last_progress_title,
-                (SELECT delay_days FROM project_progress 
-                 WHERE project_id = p.project_id 
-                 ORDER BY start_date DESC, created_at DESC 
-                 LIMIT 1) AS last_progress_delay_days,
-                -- İlk iş gidişatının başlangıç tarihi
-                (SELECT MIN(start_date) FROM project_progress 
-                 WHERE project_id = p.project_id) AS first_progress_start,
-                -- Son iş gidişatının bitiş tarihi
-                (SELECT MAX(end_date) FROM project_progress 
-                 WHERE project_id = p.project_id) AS last_progress_end,
-                (SELECT IFNULL(SUM(pp.delay_days), 0) + IFNULL(SUM(pp.custom_delay_days), 0) FROM project_progress pp WHERE pp.project_id = p.project_id) AS total_delay_days
+                -- Toplam gecikme günlerini doğrudan projeler tablosundan alıyoruz
+                (SELECT IFNULL(SUM(pp.delay_days), 0) + IFNULL(SUM(pp.custom_delay_days), 0) FROM project_progress pp WHERE pp.project_id = p.project_id) AS total_delay_days,
+                -- Mevcut tarih aralığına uyan iş gidişatının başlığını al
+                (SELECT title FROM project_progress
+                 WHERE project_id = p.project_id
+                   AND CURDATE() BETWEEN start_date AND end_date
+                 ORDER BY start_date ASC -- Birden fazla adım aynı anda aktifse en erken başlayanı al
+                 LIMIT 1) AS current_progress_title
             FROM projects p
             JOIN customers c ON p.customer_id = c.customer_id
             JOIN users u ON p.project_manager_id = u.id
@@ -1219,23 +1211,28 @@ def get_projects():
             projects_data = cursor.fetchall()
 
             for project in projects_data:
-                # Set project status based on the latest progress title
-                # If there is no latest progress, use the project's own status
-                display_status = project['last_progress_title'] if project['last_progress_title'] else project['status']
+                current_project_status = project['status']
+                total_delay_days = project['total_delay_days'] if project['total_delay_days'] is not None else 0
+                current_progress_title = project['current_progress_title']
 
-                # If there is a delay in the latest step, update the status
-                if project['total_delay_days'] is not None and project['total_delay_days'] > 0:
-                    display_status += ' (Gecikmeli)'
-
-                project['display_status'] = display_status # Add as a new field
+                # display_status'u belirle
+                if current_project_status == 'Tamamlandı':
+                    project['display_status'] = 'Tamamlandı'
+                elif total_delay_days > 0:
+                    project['display_status'] = 'Gecikmeli'
+                elif current_progress_title:
+                    project['display_status'] = current_progress_title # Mevcut iş gidişatının başlığı
+                else:
+                    project['display_status'] = 'Aktif' # Gecikme yoksa, tamamlanmadıysa ve aktif adım yoksa Aktif
 
                 # Convert datetime.date objects to ISO formatted strings for JSON serialization
                 project['contract_date'] = project['contract_date'].isoformat() if isinstance(project['contract_date'], datetime.date) else None
                 project['meeting_date'] = project['meeting_date'].isoformat() if isinstance(project['meeting_date'], datetime.date) else None
                 project['start_date'] = project['start_date'].isoformat() if isinstance(project['start_date'], datetime.date) else None
                 project['end_date'] = project['end_date'].isoformat() if isinstance(project['end_date'], datetime.date) else None
-                project['first_progress_start'] = project['first_progress_start'].isoformat() if isinstance(project['first_progress_start'], datetime.date) else None
-                project['last_progress_end'] = project['last_progress_end'].isoformat() if isinstance(project['last_progress_end'], datetime.date) else None
+                # first_progress_start ve last_progress_end artık burada hesaplanmıyor, frontend'de hesaplanabilir veya gerekirse ayrı bir sorgu ile alınabilir.
+                # project['first_progress_start'] = project['first_progress_start'].isoformat() if isinstance(project['first_progress_start'], datetime.date) else None
+                # project['last_progress_end'] = project['last_progress_end'].isoformat() if isinstance(project['last_progress_end'], datetime.date) else None
 
         return jsonify(projects_data), 200
     except pymysql.Error as e:
