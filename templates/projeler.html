@@ -2250,91 +2250,91 @@ function attachProjectTableEventListeners() {
 
     // Modal açma fonksiyonu
     async function openProjectModal(projectId, mode) {
-  try {
-    console.log("openProjectModal başladı, projectId:", projectId, "mode:", mode);
-    const project = allProjectsData.find((p) => p.project_id == projectId);
-    if (!project) {
-      showToast("Proje bulunamadı!", true);
-      return;
+        try {
+            console.log("openProjectModal başladı, projectId:", projectId, "mode:", mode);
+            const project = allProjectsData.find((p) => p.project_id == projectId);
+            if (!project) {
+                showToast("Proje bulunamadı!", true);
+                return;
+            }
+
+            projectModal.style.display = "flex";
+            modalBody.innerHTML =
+                '<p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</p>';
+
+            if (mode === "view") {
+                console.log("View modu için modal yükleniyor");
+                modalTitle.innerHTML = `<i class="fas fa-info-circle"></i> Proje Detayları: ${project.project_name}`;
+                await renderViewModal(project);
+                modalActions.innerHTML = `<button class="modal-btn modal-btn-cancel" id="cancelModalBtn">Kapat</button>`;
+
+                if (!modalBodyClickListener) {
+                    modalBodyClickListener = function(e) {
+                        if (e.target.closest('.open-location-btn')) {
+                            const btn = e.target.closest('.open-location-btn');
+                            const location = btn.dataset.location;
+                            openLocationInGoogleMaps(location);
+                        }
+                    };
+                    modalBody.addEventListener('click', modalBodyClickListener);
+                }
+                console.log("View modu modal hazır");
+            } else if (mode === "edit") {
+                console.log("Edit modu için modal yükleniyor");
+                modalTitle.innerHTML = `<i class="fas fa-edit"></i> Projeyi Düzenle: ${project.project_name}`;
+                await renderEditModal(project); // Burası güncellendi
+                modalActions.innerHTML = `
+                    <button class="modal-btn modal-btn-save" id="saveProjectBtn"><i class="fas fa-save"></i> Kaydet</button>
+                    <button class="modal-btn modal-btn-cancel" id="cancelModalBtn">İptal</button>
+                `;
+
+                // Event listener'lar ekleniyor
+                const saveProjectBtn = document.getElementById("saveProjectBtn");
+                if (saveProjectBtn) {
+                    saveProjectBtn.addEventListener("click", saveProjectChanges);
+                } else {
+                    console.error("saveProjectBtn bulunamadı!");
+                }
+
+                const cancelModalBtn = document.getElementById("cancelModalBtn");
+                if (cancelModalBtn) {
+                    cancelModalBtn.addEventListener("click", closeProjectModal);
+                } else {
+                    console.error("cancelModalBtn bulunamadı!");
+                }
+                console.log("Edit modu modal hazır");
+            }
+
+            // Her zaman güncel kapatma butonlarına olay dinleyicisi ekle
+            const cancelBtn = document.getElementById("cancelModalBtn");
+            if (cancelBtn) {
+                cancelBtn.addEventListener("click", closeProjectModal);
+            } else {
+                console.warn("cancelModalBtn bulunamadı, olay dinleyici eklenemedi");
+            }
+
+            if (closeModalBtn) {
+                closeModalBtn.addEventListener("click", closeProjectModal);
+            } else {
+                console.warn("closeModalBtn bulunamadı, olay dinleyici eklenemedi");
+            }
+
+            // Modalın dışına tıklayarak kapatma
+            projectModal.onclick = (e) => {
+                if (e.target === projectModal) {
+                    closeProjectModal();
+                }
+            };
+
+            // Esc tuşu ile kapatma
+            document.addEventListener("keydown", handleEscapeKey);
+            console.log("openProjectModal tamamlandı");
+        } catch (error) {
+            console.error("openProjectModal hatası:", error);
+            modalBody.innerHTML = `<p style="text-align: center; color: red;">Modal yüklenirken bir hata oluştu: ${error.message}</p>
+            <button class="btn" onclick="closeProjectModal()">Modali Kapat</button>`;
+        }
     }
-    
-    projectModal.style.display = "flex";
-    modalBody.innerHTML =
-    '<p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</p>';
-    
-    if (mode === "view") {
-      console.log("View modu için modal yükleniyor");
-      modalTitle.innerHTML = `<i class="fas fa-info-circle"></i> Proje Detayları: ${project.project_name}`;
-      await renderViewModal(project);
-      modalActions.innerHTML = `<button class="modal-btn modal-btn-cancel" id="cancelModalBtn">Kapat</button>`;
-      
-      if (!modalBodyClickListener) {
-        modalBodyClickListener = function(e) {
-          if (e.target.closest('.open-location-btn')) {
-            const btn = e.target.closest('.open-location-btn');
-            const location = btn.dataset.location;
-            openLocationInGoogleMaps(location);
-          }
-        };
-        modalBody.addEventListener('click', modalBodyClickListener);
-      }
-      console.log("View modu modal hazır");
-    } else if (mode === "edit") {
-      console.log("Edit modu için modal yükleniyor");
-      modalTitle.innerHTML = `<i class="fas fa-edit"></i> Projeyi Düzenle: ${project.project_name}`;
-      await renderEditModal(project);
-      modalActions.innerHTML = `
-      <button class="modal-btn modal-btn-save" id="saveProjectBtn"><i class="fas fa-save"></i> Kaydet</button>
-      <button class="modal-btn modal-btn-cancel" id="cancelModalBtn">İptal</button>
-      `;
-      
-      // Event listener'lar ekleniyor
-      const saveProjectBtn = document.getElementById("saveProjectBtn");
-      if (saveProjectBtn) {
-        saveProjectBtn.addEventListener("click", saveProjectChanges);
-      } else {
-        console.error("saveProjectBtn bulunamadı!");
-      }
-      
-      const cancelModalBtn = document.getElementById("cancelModalBtn");
-      if (cancelModalBtn) {
-        cancelModalBtn.addEventListener("click", closeProjectModal);
-      } else {
-        console.error("cancelModalBtn bulunamadı!");
-      }
-      console.log("Edit modu modal hazır");
-    }
-    
-    // Her zaman güncel kapatma butonlarına olay dinleyicisi ekle
-    const cancelBtn = document.getElementById("cancelModalBtn");
-    if (cancelBtn) {
-      cancelBtn.addEventListener("click", closeProjectModal);
-    } else {
-      console.warn("cancelModalBtn bulunamadı, olay dinleyici eklenemedi");
-    }
-    
-    if (closeModalBtn) {
-      closeModalBtn.addEventListener("click", closeProjectModal);
-    } else {
-      console.warn("closeModalBtn bulunamadı, olay dinleyici eklenemedi");
-    }
-    
-    // Modalın dışına tıklayarak kapatma
-    projectModal.onclick = (e) => {
-      if (e.target === projectModal) {
-        closeProjectModal();
-      }
-    };
-    
-    // Esc tuşu ile kapatma
-    document.addEventListener("keydown", handleEscapeKey);
-    console.log("openProjectModal tamamlandı");
-  } catch (error) {
-    console.error("openProjectModal hatası:", error);
-    modalBody.innerHTML = `<p style="text-align: center; color: red;">Modal yüklenirken bir hata oluştu: ${error.message}</p>
-    <button class="btn" onclick="closeProjectModal()">Modali Kapat</button>`;
-  }
-}
 
 
     function handleEscapeKey(e) {
@@ -2344,7 +2344,7 @@ function attachProjectTableEventListeners() {
     }
 
     // Google Haritalar'da konum açma fonksiyonu
-    function openLocationInGoogleMaps(location) {
+function openLocationInGoogleMaps(location) {
         if (!location) {
             showToast("Konum bilgisi bulunamadı!", true);
             return;
@@ -2354,7 +2354,7 @@ function attachProjectTableEventListeners() {
         window.open(url, '_blank');
     }
 
-    async function renderViewModal(project) {
+     async function renderViewModal(project) {
         let locationHtml = project.project_location || "-";
         if (project.project_location) {
             locationHtml += ` <button class="action-btn open-location-btn" data-location="${project.project_location}" title="Haritada Aç"><i class="fas fa-map-marker-alt"></i></button>`;
@@ -2398,14 +2398,17 @@ function attachProjectTableEventListeners() {
             </div>
             <div class="progress-detail-section">
                 <h3 class="modal-title" style="margin-bottom: 15px;"><i class="fas fa-tasks"></i> İş Gidişatı</h3>
-                <div id="progressStepsContainer"></div>
+                <div id="progressStepsContainer">
+                    <p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> İş adımları yükleniyor...</p>
+                </div>
                 <button class="btn" style="margin-top: 15px;" id="addProgressStepBtn">
                     <i class="fas fa-plus"></i> İş Adımı Ekle
                 </button>
             </div>
         `;
         try {
-            await fetchProgressSteps(project.project_id);
+            const progressSteps = await fetchProgressStepsData(project.project_id); // Yeni fonksiyon çağrıldı
+            renderProgressSteps(progressSteps, project.project_id, false); // View mode, not editable
         } catch (err) {
             const progressStepsContainer = document.getElementById("progressStepsContainer");
             if (progressStepsContainer) {
@@ -2413,133 +2416,144 @@ function attachProjectTableEventListeners() {
             }
         }
     }
+function fetchProgressSteps(projectId, isEditable = false) {
+        // Bu fonksiyon artık doğrudan API'den veri çekmeyecek,
+        // bunun yerine `fetchProgressStepsData` tarafından çekilen veriyi kullanacak.
+        // Ancak mevcut çağrıları bozmamak için bu şekilde bırakılabilir veya kaldırılabilir.
+        // Eğer bu fonksiyon hala API çağrısı yapıyorsa, yukarıdaki `fetchProgressStepsData` ile çakışır.
+        // En iyisi, `renderProgressSteps` olarak yeniden adlandırmak ve sadece render işlemini yapmak.
+        // Şimdilik, mevcut çağrıları bozmamak adına, sadece render işlemini yapacak şekilde bırakıyorum.
+        // Ancak, `renderEditModal` ve `renderViewModal` içinde `fetchProgressStepsData` çağrıldığından,
+        // bu fonksiyonun doğrudan çağrılmasına gerek kalmayabilir.
 
+        // Eğer bu fonksiyon hala bir yerden çağrılıyorsa ve veri çekmesi gerekiyorsa:
+        // Lütfen bu fonksiyonun adını `renderProgressSteps` olarak değiştirin
+        // ve çağrıldığı yerlerde `await fetchProgressStepsData(projectId)` yapıp
+        // gelen veriyi `renderProgressSteps(data, projectId, isEditable)` şeklinde kullanın.
+        console.warn("fetchProgressSteps fonksiyonu doğrudan çağrıldı. Bunun yerine fetchProgressStepsData ve renderProgressSteps kullanılması önerilir.");
+        // Geriye dönük uyumluluk için, yine de veriyi çekip render edelim:
+        fetchProgressStepsData(projectId).then(steps => {
+            renderProgressSteps(steps, projectId, isEditable);
+        }).catch(error => {
+            console.error("fetchProgressSteps (uyumluluk modu) hatası:", error);
+            const progressStepsContainer = document.getElementById("progressStepsContainer");
+            if (progressStepsContainer) {
+                progressStepsContainer.innerHTML = `<p style="color: var(--danger);">İş adımları yüklenemedi. Sunucuya ulaşılamıyor veya API hatası.</p>`;
+            }
+        });
+    }
     // Düzenleme modalı fonksiyonu
  async function renderEditModal(project) {
-  try {
-    console.log("renderEditModal başladı, proje:", project.project_id);
-    
-    // Modalı "Yükleniyor" mesajıyla güncelle
-    modalBody.innerHTML = '<p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Form yükleniyor...</p>';
-    
-    // Müşterileri ve Proje Yöneticilerini çek
-    console.log("Müşteriler ve yöneticiler fetch edilecek");
-    let customers = [];
-    let projectManagers = [];
-    
-    try {
-      console.log("fetchCustomersForSelect çağrılıyor");
-      customers = await fetchCustomersForSelect();
-      console.log("Müşteriler çekildi:", customers.length);
-    } catch (error) {
-      console.error("Müşteri verilerini çekerken hata:", error);
-      customers = [];
-    }
-    
-    try {
-      console.log("fetchProjectManagersForSelect çağrılıyor");
-      projectManagers = await fetchProjectManagersForSelect();
-      console.log("Proje yöneticileri çekildi:", projectManagers.length);
-    } catch (error) {
-      console.error("Proje yöneticisi verilerini çekerken hata:", error);
-      projectManagers = [];
-    }
-    
-    // Değişkenleri burada oluşturun
-    let customerOptions = customers.map(c => 
-      `<option value="${c.customer_id}" ${c.customer_id === project.customer_id ? 'selected' : ''}>${c.customer_name}</option>`
-    ).join('');
-    
-    if (customers.length === 0) {
-      customerOptions = `<option value="">Müşteri bulunamadı</option>`;
-    }
-    
-    let managerOptions = projectManagers.map(pm => 
-      `<option value="${pm.id}" ${pm.id === project.project_manager_user_id ? 'selected' : ''}>${pm.fullname}</option>`
-    ).join('');
-    
-    if (projectManagers.length === 0) {
-      managerOptions = `<option value="">Proje yöneticisi bulunamadı</option>`;
-    }
-    
-    console.log("Select options hazırlandı");
+        try {
+            console.log("renderEditModal başladı, proje:", project.project_id);
 
-    console.log("Form HTML hazırlanıyor");
-    modalBody.innerHTML = `
-    <input type="hidden" id="editProjectId" value="${project.project_id}">
-    <div class="form-group">
-      <label for="editProjectName" class="form-label">Proje Adı</label>
-      <input type="text" id="editProjectName" class="form-input" value="${project.project_name ? project.project_name.normalize('NFC') : ""}">
-    </div>
-    <div class="form-group">
-      <label for="editReferenceNo" class="form-label">Referans No</label>
-      <input type="text" id="editReferenceNo" class="form-input" value="${project.reference_no || ""}">
-    </div>
-    <div class="form-group">
-      <label for="editCustomerId" class="form-label">Müşteri</label>
-      <select id="editCustomerId" class="form-input">
-        ${customerOptions}
-      </select>
-    </div>
-    <div class="form-group">
-      <label for="editLocation" class="form-label">Konum</label>
-      <input type="text" id="editLocation" class="form-input" value="${project.project_location || ""}">
-    </div>
-    <div class="form-group">
-      <label for="editStatus" class="form-label">Durum</label>
-      <select id="editStatus" class="form-input">
-        <option value="Tamamlandı" ${project.status === "Tamamlandı" ? "selected" : ""}>Tamamlandı</option>
-      </select>
-    </div>
-    <!-- Sözleşme Tarihi alanı -->
-    <div class="form-group">
-      <label for="editContractDate" class="form-label">Sözleşme Tarihi</label>
-      <input type="date" id="editContractDate" class="form-input" value="${formatDateForInput(project.contract_date || "")}">
-    </div>
-    <!-- Toplantı Tarihi alanı -->
-    <div class="form-group">
-      <label for="editMeetingDate" class="form-label">Toplantı Tarihi</label>
-      <input type="date" id="editMeetingDate" class="form-input" value="${formatDateForInput(project.meeting_date || "")}">
-    </div>
-    <div class="form-group">
-      <label for="editStartDate" class="form-label">Başlangıç Tarihi</label>
-      <input type="date" id="editStartDate" class="form-input" value="${formatDateForInput(project.start_date || "")}">
-    </div>
-    <div class="form-group">
-      <label for="editEndDate" class="form-label">Bitiş Tarihi</label>
-      <input type="date" id="editEndDate" class="form-input" value="${formatDateForInput(project.end_date || "")}">
-    </div>
-    <div class="form-group">
-      <label for="editProjectManagerId" class="form-label">Proje Yöneticisi</label>
-      <select id="editProjectManagerId" class="form-input">
-        ${managerOptions}
-      </select>
-    </div>
-    <div class="form-group">
-      <label for="editDescription" class="form-label">Açıklama</label>
-      <textarea id="editDescription" class="form-input" rows="4">${project.description || ""}</textarea>
-    </div>
-    <div class="progress-detail-section">
-      <h3 class="modal-title" style="margin-bottom: 15px;"><i class="fas fa-tasks"></i> İş Gidişatı</h3>
-      <div id="progressStepsContainer"></div>
-      <button class="btn" style="margin-top: 15px;" id="addProgressStepBtn">
-        <i class="fas fa-plus"></i> İş Adımı Ekle
-      </button>
-    </div>
-    `;
-    
-    console.log("Form HTML hazırlandı. İş adımları yükleniyor...");
-    
-    // İş adımlarını yükle - fetchProgressSteps
-    await fetchProgressSteps(project.project_id, true);
-    
-    console.log("İş adımları yüklendi. Modal hazır.");
-  } catch (error) {
-    console.error("renderEditModal ile ilgili bir hata oluştu:", error);
-    modalBody.innerHTML = `<p style="text-align: center; color: red;">Form yüklenirken bir hata oluştu: ${error.message}</p>
-    <button class="btn" onclick="closeProjectModal()">Modali Kapat</button>`;
-  }
-}
+            // Modalı "Yükleniyor" mesajıyla güncelle
+            modalBody.innerHTML = '<p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Form verileri yükleniyor...</p>';
+
+            // Müşterileri, Proje Yöneticilerini ve İş Adımlarını paralel olarak çek
+            console.log("Müşteriler, yöneticiler ve iş adımları paralel olarak fetch edilecek");
+
+            const [customers, projectManagers, progressSteps] = await Promise.all([
+                fetchCustomersForSelect(),
+                fetchProjectManagersForSelect(),
+                fetchProgressStepsData(project.project_id) // Yeni yardımcı fonksiyon
+            ]);
+
+            console.log("Tüm veriler çekildi. Müşteriler:", customers.length, "Yöneticiler:", projectManagers.length, "İş Adımları:", progressSteps.length);
+
+            // Değişkenleri burada oluşturun
+            let customerOptions = customers.map(c =>
+                `<option value="${c.customer_id}" ${c.customer_id === project.customer_id ? 'selected' : ''}>${c.customer_name}</option>`
+            ).join('');
+
+            if (customers.length === 0) {
+                customerOptions = `<option value="">Müşteri bulunamadı</option>`;
+            }
+
+            let managerOptions = projectManagers.map(pm =>
+                `<option value="${pm.id}" ${pm.id === project.project_manager_user_id ? 'selected' : ''}>${pm.fullname}</option>`
+            ).join('');
+
+            if (projectManagers.length === 0) {
+                managerOptions = `<option value="">Proje yöneticisi bulunamadı</option>`;
+            }
+
+            console.log("Select options hazırlandı");
+
+            console.log("Form HTML hazırlanıyor");
+            modalBody.innerHTML = `
+                <input type="hidden" id="editProjectId" value="${project.project_id}">
+                <div class="form-group">
+                    <label for="editProjectName" class="form-label">Proje Adı</label>
+                    <input type="text" id="editProjectName" class="form-input" value="${project.project_name ? project.project_name.normalize('NFC') : ""}">
+                </div>
+                <div class="form-group">
+                    <label for="editReferenceNo" class="form-label">Referans No</label>
+                    <input type="text" id="editReferenceNo" class="form-input" value="${project.reference_no || ""}">
+                </div>
+                <div class="form-group">
+                    <label for="editCustomerId" class="form-label">Müşteri</label>
+                    <select id="editCustomerId" class="form-input">
+                        ${customerOptions}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editLocation" class="form-label">Konum</label>
+                    <input type="text" id="editLocation" class="form-input" value="${project.project_location || ""}">
+                </div>
+                <div class="form-group">
+                    <label for="editStatus" class="form-label">Durum</label>
+                    <select id="editStatus" class="form-input">
+                        <option value="Tamamlandı" ${project.status === "Tamamlandı" ? "selected" : ""}>Tamamlandı</option>
+                    </select>
+                </div>
+                <!-- Sözleşme Tarihi alanı -->
+                <div class="form-group">
+                    <label for="editContractDate" class="form-label">Sözleşme Tarihi</label>
+                    <input type="date" id="editContractDate" class="form-input" value="${formatDateForInput(project.contract_date || "")}">
+                </div>
+                <!-- Toplantı Tarihi alanı -->
+                <div class="form-group">
+                    <label for="editMeetingDate" class="form-label">Toplantı Tarihi</label>
+                    <input type="date" id="editMeetingDate" class="form-input" value="${formatDateForInput(project.meeting_date || "")}">
+                </div>
+                <div class="form-group">
+                    <label for="editStartDate" class="form-label">Başlangıç Tarihi</label>
+                    <input type="date" id="editStartDate" class="form-input" value="${formatDateForInput(project.start_date || "")}">
+                </div>
+                <div class="form-group">
+                    <label for="editEndDate" class="form-label">Bitiş Tarihi</label>
+                    <input type="date" id="editEndDate" class="form-input" value="${formatDateForInput(project.end_date || "")}">
+                </div>
+                <div class="form-group">
+                    <label for="editProjectManagerId" class="form-label">Proje Yöneticisi</label>
+                    <select id="editProjectManagerId" class="form-input">
+                        ${managerOptions}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editDescription" class="form-label">Açıklama</label>
+                    <textarea id="editDescription" class="form-input" rows="4">${project.description || ""}</textarea>
+                </div>
+                <div class="progress-detail-section">
+                    <h3 class="modal-title" style="margin-bottom: 15px;"><i class="fas fa-tasks"></i> İş Gidişatı</h3>
+                    <div id="progressStepsContainer"></div>
+                    <button class="btn" style="margin-top: 15px;" id="addProgressStepBtn">
+                        <i class="fas fa-plus"></i> İş Adımı Ekle
+                    </button>
+                </div>
+            `;
+
+            // İş adımlarını render et (zaten çekilmiş veriyi kullan)
+            renderProgressSteps(progressSteps, project.project_id, true);
+
+            console.log("İş adımları yüklendi. Modal hazır.");
+        } catch (error) {
+            console.error("renderEditModal ile ilgili bir hata oluştu:", error);
+            modalBody.innerHTML = `<p style="text-align: center; color: red;">Form yüklenirken bir hata oluştu: ${error.message}</p>
+                <button class="btn" onclick="closeProjectModal()">Modali Kapat</button>`;
+        }
+    }
 
     // Müşterileri API'den çeken fonksiyon
     async function fetchCustomersForSelect() {
