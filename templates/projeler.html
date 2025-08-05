@@ -2354,84 +2354,9 @@ function openLocationInGoogleMaps(location) {
         window.open(url, '_blank');
     }
 
-     async function renderViewModal(project) {
-        let locationHtml = project.project_location || "-";
-        if (project.project_location) {
-            locationHtml += ` <button class="action-btn open-location-btn" data-location="${project.project_location}" title="Haritada Aç"><i class="fas fa-map-marker-alt"></i></button>`;
-        }
-        modalBody.innerHTML = `
-            <div class="detail-item">
-                <span class="detail-label">Proje Adı:</span>
-                <span class="detail-value">${project.project_name ? project.project_name.normalize('NFC') : "-"}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Referans No:</span>
-                <span class="detail-value">${project.reference_no || "-"}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Müşteri:</span>
-                <span class="detail-value">${project.customer_name || "-"}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Konum:</span>
-                <span class="detail-value">${locationHtml}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Durum:</span>
-                <span class="detail-value">${getStatusBadgeHtml(project.display_status || "-")}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Başlangıç Tarihi:</span>
-                <span class="detail-value">${formatDateForDisplay(project.start_date || "-")}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Bitiş Tarihi:</span>
-                <span class="detail-value">${formatDateForDisplay(project.end_date || "-")}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Yönetici:</span>
-                <span class="detail-value">${project.project_manager_name || "-"}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Açıklama:</span>
-                <span class="detail-value">${project.description || "-"}</span>
-            </div>
-            <div class="progress-detail-section">
-                <h3 class="modal-title" style="margin-bottom: 15px;"><i class="fas fa-tasks"></i> İş Gidişatı</h3>
-                <div id="progressStepsContainer">
-                    <p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> İş adımları yükleniyor...</p>
-                </div>
-                <button class="btn" style="margin-top: 15px;" id="addProgressStepBtn">
-                    <i class="fas fa-plus"></i> İş Adımı Ekle
-                </button>
-            </div>
-        `;
-        try {
-            const progressSteps = await fetchProgressStepsData(project.project_id); // Yeni fonksiyon çağrıldı
-            renderProgressSteps(progressSteps, project.project_id, false); // View mode, not editable
-        } catch (err) {
-            const progressStepsContainer = document.getElementById("progressStepsContainer");
-            if (progressStepsContainer) {
-                progressStepsContainer.innerHTML = `<p style="color: var(--danger);">İş adımları yüklenemedi. Sunucuya ulaşılamıyor veya API hatası.</p>`;
-            }
-        }
-    }
+    
 function fetchProgressSteps(projectId, isEditable = false) {
-        // Bu fonksiyon artık doğrudan API'den veri çekmeyecek,
-        // bunun yerine `fetchProgressStepsData` tarafından çekilen veriyi kullanacak.
-        // Ancak mevcut çağrıları bozmamak için bu şekilde bırakılabilir veya kaldırılabilir.
-        // Eğer bu fonksiyon hala API çağrısı yapıyorsa, yukarıdaki `fetchProgressStepsData` ile çakışır.
-        // En iyisi, `renderProgressSteps` olarak yeniden adlandırmak ve sadece render işlemini yapmak.
-        // Şimdilik, mevcut çağrıları bozmamak adına, sadece render işlemini yapacak şekilde bırakıyorum.
-        // Ancak, `renderEditModal` ve `renderViewModal` içinde `fetchProgressStepsData` çağrıldığından,
-        // bu fonksiyonun doğrudan çağrılmasına gerek kalmayabilir.
-
-        // Eğer bu fonksiyon hala bir yerden çağrılıyorsa ve veri çekmesi gerekiyorsa:
-        // Lütfen bu fonksiyonun adını `renderProgressSteps` olarak değiştirin
-        // ve çağrıldığı yerlerde `await fetchProgressStepsData(projectId)` yapıp
-        // gelen veriyi `renderProgressSteps(data, projectId, isEditable)` şeklinde kullanın.
         console.warn("fetchProgressSteps fonksiyonu doğrudan çağrıldı. Bunun yerine fetchProgressStepsData ve renderProgressSteps kullanılması önerilir.");
-        // Geriye dönük uyumluluk için, yine de veriyi çekip render edelim:
         fetchProgressStepsData(projectId).then(steps => {
             renderProgressSteps(steps, projectId, isEditable);
         }).catch(error => {
@@ -2555,6 +2480,68 @@ function fetchProgressSteps(projectId, isEditable = false) {
         }
     }
 
+     async function renderViewModal(project) {
+        let locationHtml = project.project_location || "-";
+        if (project.project_location) {
+            locationHtml += ` <button class="action-btn open-location-btn" data-location="${project.project_location}" title="Haritada Aç"><i class="fas fa-map-marker-alt"></i></button>`;
+        }
+        modalBody.innerHTML = `
+            <div class="detail-item">
+                <span class="detail-label">Proje Adı:</span>
+                <span class="detail-value">${project.project_name ? project.project_name.normalize('NFC') : "-"}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Referans No:</span>
+                <span class="detail-value">${project.reference_no || "-"}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Müşteri:</span>
+                <span class="detail-value">${project.customer_name || "-"}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Konum:</span>
+                <span class="detail-value">${locationHtml}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Durum:</span>
+                <span class="detail-value">${getStatusBadgeHtml(project.display_status || "-")}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Başlangıç Tarihi:</span>
+                <span class="detail-value">${formatDateForDisplay(project.start_date || "-")}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Bitiş Tarihi:</span>
+                <span class="detail-value">${formatDateForDisplay(project.end_date || "-")}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Yönetici:</span>
+                <span class="detail-value">${project.project_manager_name || "-"}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Açıklama:</span>
+                <span class="detail-value">${project.description || "-"}</span>
+            </div>
+            <div class="progress-detail-section">
+                <h3 class="modal-title" style="margin-bottom: 15px;"><i class="fas fa-tasks"></i> İş Gidişatı</h3>
+                <div id="progressStepsContainer">
+                    <p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> İş adımları yükleniyor...</p>
+                </div>
+                <button class="btn" style="margin-top: 15px;" id="addProgressStepBtn">
+                    <i class="fas fa-plus"></i> İş Adımı Ekle
+                </button>
+            </div>
+        `;
+        try {
+            const progressSteps = await fetchProgressStepsData(project.project_id); // Yeni fonksiyon çağrıldı
+            renderProgressSteps(progressSteps, project.project_id, false); // View mode, not editable
+        } catch (err) {
+            const progressStepsContainer = document.getElementById("progressStepsContainer");
+            if (progressStepsContainer) {
+                progressStepsContainer.innerHTML = `<p style="color: var(--danger);">İş adımları yüklenemedi. Sunucuya ulaşılamıyor veya API hatası.</p>`;
+            }
+        }
+    }
     // Müşterileri API'den çeken fonksiyon
     async function fetchCustomersForSelect() {
   try {
