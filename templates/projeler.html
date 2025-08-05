@@ -2680,7 +2680,11 @@ function refreshProjectDetails(projectId) {
   const hasPermission = await checkPermission('proje_duzenle');
   if (!hasPermission) return;
   
+  // Önce proje tarihlerini iş adımlarından güncelleyin
   const projectId = document.getElementById("editProjectId").value;
+  await updateProjectDatesFromSteps(projectId);
+  
+  // Şimdi güncellenmiş form değerlerini al
   const projectName = document.getElementById("editProjectName").value;
   const referenceNo = document.getElementById("editReferenceNo").value;
   const customerId = document.getElementById("editCustomerId").value; 
@@ -2695,7 +2699,6 @@ function refreshProjectDetails(projectId) {
   let contractDate = null;
   let meetingDate = null;
   
-  // Eğer bu alanlar formda varsa değerlerini al
   if (document.getElementById("editContractDate")) {
     contractDate = document.getElementById("editContractDate").value;
   }
@@ -2706,6 +2709,8 @@ function refreshProjectDetails(projectId) {
   
   console.log("Gönderilen contractDate:", contractDate);
   console.log("Gönderilen meetingDate:", meetingDate);
+  console.log("Gönderilen startDate:", startDate);
+  console.log("Gönderilen endDate:", endDate);
   
   const updatedProject = {
     project_name: projectName,
@@ -2718,7 +2723,6 @@ function refreshProjectDetails(projectId) {
     project_manager_id: projectManagerId,
     description: description,
     user_id: currentUser.id,
-    // Bu değerleri ekleyin
     contract_date: contractDate,
     meeting_date: meetingDate
   };
