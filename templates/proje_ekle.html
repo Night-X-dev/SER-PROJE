@@ -1424,70 +1424,95 @@
 
             // --- Projeyi Kaydet ---
             saveProjectButton.addEventListener('click', async () => {
-                const projectName = document.getElementById('project-name').value.trim();
-                const projectRef = document.getElementById('project-ref').value.trim();
-                const projectDescription = document.getElementById('project-description').value.trim();
-                let customerId = customerNameSelect.value;
-                const projectManagerId = projectManagerSelect.value;
-                const contractDate = document.getElementById('contract-date').value;
-                const meetingDate = document.getElementById('meeting-date').value;
-                const startDate = document.getElementById('start-date').value;
-                const endDate = document.getElementById('end-date').value;
-                const projectLocation = document.getElementById('project-location').value.trim();
+  const projectName = document.getElementById('project-name').value.trim();
+  const projectRef = document.getElementById('project-ref').value.trim();
+  const projectDescription = document.getElementById('project-description').value.trim();
+  let customerId = customerNameSelect.value;
+  const projectManagerId = projectManagerSelect.value;
+  const contractDate = document.getElementById('contract-date').value;
+  const meetingDate = document.getElementById('meeting-date').value;
+  // Artık startDate ve endDate manuel olarak alınmayacak
+  // const startDate = document.getElementById('start-date').value;
+  // const endDate = document.getElementById('end-date').value;
+  const projectLocation = document.getElementById('project-location').value.trim();
 
-                // Temel validasyon
-                if (!projectName || !customerId || !projectManagerId || !startDate || !endDate) {
-                    showToast('Lütfen Proje Adı, Müşteri, Proje Yöneticisi, Planlı Başlangıç ve Bitiş Tarihi alanlarını doldurun.', true);
-                    return;
-                }
-                
-                if (customerId === "") {
-                    showToast("Lütfen bir müşteri seçin.", true);
-                    return;
-                }
-                if (projectManagerId === "") {
-                    showToast("Lütfen bir proje yöneticisi seçin.", true);
-                    return;
-                }
+  // Temel validasyon
+  if (!projectName || !customerId || !projectManagerId) {
+    showToast('Lütfen Proje Adı, Müşteri ve Proje Yöneticisi alanlarını doldurun.', true);
+    return;
+  }
+  if (customerId === "") {
+    showToast("Lütfen bir müşteri seçin.", true);
+    return;
+  }
+  if (projectManagerId === "") {
+    showToast("Lütfen bir proje yöneticisi seçin.", true);
+    return;
+  }
 
-                const progressSteps = [];
-                const progressItems = progressList.querySelectorAll('.progress-item');
-                let progressValidationFailed = false;
-                progressItems.forEach(item => {
-                    const titleInput = item.querySelector('input[type="text"][placeholder="İş gidişat başlığı"]');
-                    const descTextarea = item.querySelector('.progress-description-textarea');
-                    const startInput = item.querySelector('input.progress-datepicker[placeholder="Başlangıç"]');
-                    const endInput = item.querySelector('input.progress-datepicker[placeholder="Bitiş"]');
+  const progressSteps = [];
+  const progressItems = progressList.querySelectorAll('.progress-item');
+  let progressValidationFailed = false;
+  
+  // İş gidişatı adımı hiç yoksa hata göster
+  if (progressItems.length === 0) {
+    showToast('Lütfen en az bir iş gidişatı adımı ekleyin.', true);
+    return;
+  }
 
-                    if (!titleInput.value.trim() || !startInput.value || !endInput.value) {
-                        showToast('Lütfen tüm iş gidişatı adımlarının başlık ve tarihlerini doldurun.', true);
-                        progressValidationFailed = true;
-                        return;
-                    }
-                    progressSteps.push({
-                        title: titleInput.value.trim(),
-                        description: descTextarea.value.trim(),
-                        startDate: startInput.value,
-                        endDate: endInput.value
-                    });
-                });
+  progressItems.forEach(item => {
+    const titleInput = item.querySelector('input[type="text"][placeholder="İş gidişat başlığı"]');
+    const descTextarea = item.querySelector('.progress-description-textarea');
+    const startInput = item.querySelector('input.progress-datepicker[placeholder="Başlangıç"]');
+    const endInput = item.querySelector('input.progress-datepicker[placeholder="Bitiş"]');
 
-                if (progressValidationFailed) return;
+    if (!titleInput.value.trim() || !startInput.value || !endInput.value) {
+      showToast('Lütfen tüm iş gidişatı adımlarının başlık ve tarihlerini doldurun.', true);
+      progressValidationFailed = true;
+      return;
+    }
 
+    progressSteps.push({
+      title: titleInput.value.trim(),
+      description: descTextarea.value.trim(),
+      startDate: startInput.value,
+      endDate: endInput.value
+    });
+  });
 
-                const projectData = {
-                    projectName,
-                    projectRef: projectRef || null,
-                    projectDescription: projectDescription || null,
-                    customerId: parseInt(customerId),
-                    projectManagerId: parseInt(projectManagerId),
-                    contractDate: contractDate || null,
-                    meetingDate: meetingDate || null,
-                    startDate: startDate,
-                    endDate: endDate,
-                    projectLocation: projectLocation || null,
-                    progressSteps: progressSteps
-                };
+  if (progressValidationFailed) return;
+  
+  // İş gidişatlarından projenin planlı başlangıç ve bitiş tarihlerini belirle
+  let startDate = null;
+  let endDate = null;
+  
+  if (progressSteps.length > 0) {
+    // İlk iş gidişatının başlangıç tarihi, projenin planlı başlangıç tarihi olur
+    startDate = progressSteps[0].startDate;
+    
+    // Son iş gidişatının bitiş tarihi, projenin planlı bitiş tarihi olur
+    endDate = progressSteps[progressSteps.length - 1].endDate;
+  }
+  
+  // Tarihlerin belirlenip belirlenmediğini kontrol et
+  if (!startDate || !endDate) {
+    showToast('İş gidişatı tarihlerinden proje başlangıç ve bitiş tarihleri belirlenemedi.', true);
+    return;
+  }
+
+  const projectData = {
+    projectName,
+    projectRef: projectRef || null,
+    projectDescription: projectDescription || null,
+    customerId: parseInt(customerId),
+    projectManagerId: parseInt(projectManagerId),
+    contractDate: contractDate || null,
+    meetingDate: meetingDate || null,
+    startDate: startDate,  // İş gidişatından otomatik alınan tarih
+    endDate: endDate,      // İş gidişatından otomatik alınan tarih
+    projectLocation: projectLocation || null,
+    progressSteps: progressSteps
+  };
 
                 try {
                     const projectResponse = await fetch(`${API_BASE_URL}/api/projects`, {
@@ -1598,8 +1623,6 @@
                 showToast(`Bildirim sayısı yüklenirken hata oluştu: ${error.message}`, true);
             }
         }
-</script>
-<script>
 function getCurrentUserRole() {
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
