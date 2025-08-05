@@ -2848,16 +2848,24 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
             const currentStepName = document.getElementById(`step-${currentProgressId}-name`).value;
             const currentStepDescription = document.getElementById(`step-${currentProgressId}-desc`).value;
             const currentStepStartDate = document.getElementById(`step-${currentProgressId}-start`).value;
-            const currentStepEndDate = document.getElementById(`step-${currentProgressId}-end`).value;
+            const originalCurrentStepEndDate = document.getElementById(`step-${currentProgressId}-end`).value; // Orijinal bitiş tarihini al
 
+            // Gecikme eklenen adımın kendi bitiş tarihini güncelle
+            const newCurrentStepEndDate = new Date(originalCurrentStepEndDate);
+            newCurrentStepEndDate.setDate(newCurrentStepEndDate.getDate() + newlyAddedDelayDays);
 
             const targetStepData = {
                 step_name: currentStepName,
                 description: currentStepDescription,
                 start_date: currentStepStartDate,
-                end_date: currentStepEndDate,
-                newly_added_custom_delay: newlyAddedDelayDays // Bu, backend'de mevcut custom_delay_days'e eklenecek
+                // Güncellenmiş bitiş tarihini kullan
+                end_date: newCurrentStepEndDate.toISOString().split('T')[0], 
+                // Bu, backend'de mevcut custom_delay_days'e eklenecek
+                newly_added_custom_delay: newlyAddedDelayDays 
             };
+
+            // Frontend input'unu da hemen güncelle
+            document.getElementById(`step-${currentProgressId}-end`).value = newCurrentStepEndDate.toISOString().split('T')[0];
 
             // Hedef adımı backend'de güncelle
             const targetStepResponse = await fetch(`${API_BASE_URL}/api/progress/${currentProgressId}`, {
@@ -2873,10 +2881,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
             showToast(`"${targetStepData.step_name}" iş adımına ${newlyAddedDelayDays} gün erteleme eklendi.`);
 
             // Şimdi, sonraki adımların tarihlerini güncelle ve backend'e gönder
-            let previousEndDateForNextStep = new Date(currentStepEndDate);
-            previousEndDateForNextStep.setDate(previousEndDateForNextStep.getDate() + newlyAddedDelayDays);
-
-
+            // Bu döngü, gecikme uygulanan adımdan sonraki her adımı etkileyecek
             for (let i = stepIndex + 1; i < allSteps.length; i++) {
                 const step = allSteps[i];
                 const progressId = step.progress_id;
@@ -2886,17 +2891,22 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 const stepNameInput = document.getElementById(`step-${progressId}-name`);
                 const descriptionInput = document.getElementById(`step-${progressId}-desc`);
 
-
                 if (!startDateInput || !endDateInput || !stepNameInput || !descriptionInput) {
                     console.error(`${i}. adım için gerekli inputlar bulunamadı`);
                     continue;
                 }
 
+                // Mevcut başlangıç ve bitiş tarihlerini Date objelerine çevir
                 const currentStartDate = new Date(startDateInput.value);
                 const currentEndDate = new Date(endDateInput.value);
 
-                const newStartDate = new Date(currentStartDate.setDate(currentStartDate.getDate() + newlyAddedDelayDays));
-                const newEndDate = new Date(currentEndDate.setDate(currentEndDate.getDate() + newlyAddedDelayDays));
+                // Yeni başlangıç ve bitiş tarihlerini hesapla (gecikme günlerini ekle)
+                // setDate metodu, tarihi doğrudan değiştirir, bu yüzden yeni bir Date objesi oluşturmak önemlidir.
+                const newStartDate = new Date(currentStartDate);
+                newStartDate.setDate(newStartDate.getDate() + newlyAddedDelayDays);
+
+                const newEndDate = new Date(currentEndDate);
+                newEndDate.setDate(newEndDate.getDate() + newlyAddedDelayDays);
 
                 // Frontend inputlarını güncelle
                 startDateInput.value = newStartDate.toISOString().split('T')[0];
@@ -2908,7 +2918,8 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     description: descriptionInput.value,
                     start_date: newStartDate.toISOString().split('T')[0],
                     end_date: newEndDate.toISOString().split('T')[0],
-                    newly_added_custom_delay: 0 // Bu adımlara yeni bir custom delay eklemiyoruz, sadece tarihlerini kaydırıyoruz.
+                    // Bu adımlara yeni bir custom delay eklemiyoruz, sadece tarihlerini kaydırıyoruz.
+                    newly_added_custom_delay: 0 
                 };
 
                 // Sonraki adımı backend'de güncelle
@@ -2921,8 +2932,6 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 const subsequentStepResponseData = await subsequentStepResponse.json();
                 if (!subsequentStepResponse.ok) {
                     console.error(`Sonraki iş adımı (${stepNameInput.value}) güncellenemedi:`, subsequentStepResponseData.message);
-                    // Hata durumunda işlemi durdurabilir veya devam edebilirsiniz.
-                    // Şimdilik, hata mesajını gösterip devam ediyoruz.
                     showToast(`"${stepNameInput.value}" iş adımı güncellenirken hata: ${subsequentStepResponseData.message}`, true);
                 } else {
                     console.log(`"${stepNameInput.value}" iş adımı başarıyla güncellendi.`);
