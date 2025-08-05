@@ -1918,26 +1918,22 @@
 
     // Durum rozeti ve renk sınıfı HTML'i döndürür
     // projeler.html ve index.html için geçerli
-function getStatusBadgeHtml(status, delayDays) {
-    let statusClass = "normal"; // Varsayılan olarak normal (yeşil)
-    let statusText = status;
-    
-    // Eğer status değerinde "(Gecikmeli)" ifadesi varsa veya delayDays > 0 ise gecikme var demektir
-    if ((status && status.includes('(Gecikmeli)')) || 
-        (delayDays && delayDays > 0)) {
-        statusClass = "gecikmeli";
-        // "(Gecikmeli)" ifadesini kaldır (eğer zaten varsa)
-        statusText = status.replace(' (Gecikmeli)', '');
-        // Eğer gecikmeli olduğu belirtilmemişse ekle
-        if (!statusText.includes('(Gecikmeli)')) {
-            statusText += ' (Gecikmeli)';
+function getStatusBadgeHtml(status) { // delayDays parametresi kaldırıldı
+        let statusClass = "normal"; // Varsayılan olarak normal (yeşil)
+        let statusText = status;
+        
+        if (status === "Tamamlandı") {
+            statusClass = "tamamlandı";
+        } else if (status === "Gecikmeli") {
+            statusClass = "gecikmeli";
+            statusText = "Gecikmeli"; // Backend'den 'Gecikmeli' geliyorsa, doğrudan kullan
+        } else { 
+            // 'Aktif' veya herhangi bir iş gidişatı başlığı (örn. 'Montaj', 'Test') için
+            statusClass = "normal"; // Aktif adımlar veya 'Aktif' için varsayılan normal (yeşil) rozet
         }
-    } else if (status === "Tamamlandı") {
-        statusClass = "tamamlandı";
-    }
 
-    return `<span class="status-badge ${statusClass}">${statusText}</span>`;
-}
+        return `<span class="status-badge ${statusClass}">${statusText}</span>`;
+    }
 
 // Tabloda kullanırken şöyle çağırın:
 // getStatusBadgeHtml(project.display_status, project.total_delay_days)
