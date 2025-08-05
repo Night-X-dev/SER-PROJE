@@ -2869,6 +2869,7 @@ async function updateProjectDatesFromSteps(projectId) {
   }
 }
 // İş adımının ve sonraki adımların BİTİŞ TARİHLERİNİ erteleme fonksiyonu (başlangıç tarihi değişmeyecek)
+// İş adımının bitiş tarihini ve sonraki adımların başlangıç ve bitiş tarihlerini erteleme fonksiyonu
 async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
   if (delayDays <= 0) {
     showToast("Erteleme günü en az 1 olmalıdır.", true);
@@ -2876,7 +2877,7 @@ async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
   }
   
   try {
-    console.log(`${stepIndex}. adıma ${delayDays} gün erteleme uygulanıyor (sadece bitiş tarihi)`);
+    console.log(`${stepIndex}. adım ve sonraki adımlar için ${delayDays} gün erteleme uygulanıyor`);
     
     // Etkilenecek adımları al (şu anki ve sonrakiler)
     const stepsToUpdate = [];
@@ -2885,35 +2886,61 @@ async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
       const step = allSteps[i];
       const progressId = step.progress_id;
       
-      // Sadece bitiş tarihini al
+      // Mevcut tarihleri al
+      const startDateInput = document.getElementById(`step-${progressId}-start`);
       const endDateInput = document.getElementById(`step-${progressId}-end`);
       
-      if (!endDateInput) {
-        console.error(`${i}. adım için bitiş tarihi input'u bulunamadı`);
+      if (!startDateInput || !endDateInput) {
+        console.error(`${i}. adım için gerekli inputlar bulunamadı`);
         continue;
       }
       
-      const currentEndDate = new Date(endDateInput.value);
-      
-      // Sadece bitiş tarihini ertele
-      const newEndDate = new Date(currentEndDate.setDate(currentEndDate.getDate() + delayDays));
-      
-      // Formatla
-      const formattedEndDate = newEndDate.toISOString().split('T')[0];
-      
-      // Sadece bitiş tarihi input değerini güncelle
-      endDateInput.value = formattedEndDate;
-      
-      // Güncelleme için kuyruğa ekle (başlangıç tarihini değiştirme)
-      stepsToUpdate.push({
-        progressId: progressId,
-        newData: {
-          step_name: document.getElementById(`step-${progressId}-name`).value,
-          description: document.getElementById(`step-${progressId}-desc`).value,
-          start_date: document.getElementById(`step-${progressId}-start`).value, // Mevcut başlangıç tarihini kullan
-          end_date: formattedEndDate // Sadece bitiş tarihi güncelleniyor
-        }
-      });
+      // İlk adım (üzerinde erteleme yapılan adım) ise sadece bitiş tarihini değiştir
+      if (i === stepIndex) {
+        const currentEndDate = new Date(endDateInput.value);
+        const newEndDate = new Date(currentEndDate.setDate(currentEndDate.getDate() + delayDays));
+        const formattedEndDate = newEndDate.toISOString().split('T')[0];
+        
+        // Sadece bitiş tarihi değişecek
+        endDateInput.value = formattedEndDate;
+        
+        stepsToUpdate.push({
+          progressId: progressId,
+          newData: {
+            step_name: document.getElementById(`step-${progressId}-name`).value,
+            description: document.getElementById(`step-${progressId}-desc`).value,
+            start_date: startDateInput.value, // Başlangıç değişmeyecek
+            end_date: formattedEndDate // Sadece bitiş erteleniyor
+          }
+        });
+      } 
+      // Sonraki adımlar ise hem başlangıç hem bitiş tarihlerini kaydır
+      else {
+        const currentStartDate = new Date(startDateInput.value);
+        const currentEndDate = new Date(endDateInput.value);
+        
+        // Hem başlangıç hem bitiş tarihini ertele
+        const newStartDate = new Date(currentStartDate.setDate(currentStartDate.getDate() + delayDays));
+        const newEndDate = new Date(currentEndDate.setDate(currentEndDate.getDate() + delayDays));
+        
+        // Formatla
+        const formattedStartDate = newStartDate.toISOString().split('T')[0];
+        const formattedEndDate = newEndDate.toISOString().split('T')[0];
+        
+        // Input değerlerini güncelle
+        startDateInput.value = formattedStartDate;
+        endDateInput.value = formattedEndDate;
+        
+        stepsToUpdate.push({
+          progressId: progressId,
+          newData: {
+            step_name: document.getElementById(`step-${progressId}-name`).value,
+            description: document.getElementById(`step-${progressId}-desc`).value,
+            start_date: formattedStartDate, // Başlangıç ve bitiş
+            end_date: formattedEndDate     // tarihlerinin ikisi de değişecek
+          }
+        });
+      }
     }
     
     // API güncellemeleri
@@ -2932,12 +2959,12 @@ async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
       }
     }
     
-    // Proje tarihlerini de güncelle, sadece son adımın bitiş tarihi değişecek
+    // Proje tarihlerini de güncelle
     if (stepsToUpdate.length > 0) {
       await updateProjectDatesFromSteps(projectId);
     }
     
-    showToast(`${successCount} adımın bitiş tarihi başarıyla ${delayDays} gün ertelendi.`);
+    showToast(`${successCount} adımın tarihleri başarıyla güncellendi.`);
     
     // Adımları yeniden yükle
     fetchProgressSteps(projectId, true);
@@ -2950,7 +2977,6 @@ async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
     showToast("Erteleme uygulanırken bir hata oluştu: " + error.message, true);
   }
 }
-
 function renderProgressSteps(steps, projectId, isEditable = false) {
   const progressStepsContainer = document.getElementById("progressStepsContainer");
   if (!progressStepsContainer) return;
