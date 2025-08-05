@@ -2758,60 +2758,69 @@ function refreshProjectDetails(projectId) {
 }
 
     // `isEditable` parametresi eklendi
+    
     async function fetchProgressSteps(projectId, isEditable = false) {
     try {
         console.log(`İş adımları getiriliyor: Proje ID ${projectId}`);
         
-        // API_BASE_URL doğru şekilde tanımlanmış olmalı
-        let apiUrl = `${API_BASE_URL}/api/project/${projectId}/progress`;
-        
-        // URL'in doğruluğunu kontrol et ve log'a yaz
-        console.log("Kullanılan API URL:", apiUrl);
-        
-        const response = await fetch(apiUrl);
-        
-        // Yanıt durumunu ve içeriğini kontrol et
-        console.log("API yanıt durumu:", response.status, response.statusText);
-        
-        // 404 hatası veya diğer hatalar için kontrol
-        if (!response.ok) {
-            console.error(`API hatası: ${response.status} ${response.statusText}`);
-            
-            // 404 hatası için özel işleme
-            if (response.status === 404) {
-                console.warn("İş adımları bulunamadı (404). Proje için iş adımı oluşturulmamış olabilir.");
-                renderProgressSteps([], projectId, isEditable);
-                return;
-            }
-            
-            throw new Error(`API hatası: ${response.status} ${response.statusText}`);
+        // API_BASE_URL'de sorun olabilir, doğru URL'yi kullanmak için kontrol edelim
+        let baseUrl = API_BASE_URL;
+        // Eğer URL çift slash içeriyorsa düzeltelim
+        if (baseUrl.endsWith('/')) {
+            baseUrl = baseUrl.slice(0, -1);
         }
         
-        // Yanıtın içeriğini kontrol et
-        const contentType = response.headers.get("content-type");
-        console.log("Yanıt içerik türü:", contentType);
+        // Farklı muhtemel API endpoint'lerini deneyelim
+        const possibleEndpoints = [
+            `/api/project/${projectId}/progress`,
+            `/api/projects/${projectId}/progress`,
+            `/api/progress?project_id=${projectId}`,
+            `/api/progress/${projectId}`,
+            `/api/project_progress/${projectId}`
+        ];
         
-        // JSON içeriği kontrolü
-        if (!contentType || !contentType.includes("application/json")) {
-            console.error("API geçersiz yanıt türü döndürdü:", contentType);
+        let data = null;
+        let successfulEndpoint = null;
+        
+        // Her endpoint'i sırayla deneyelim
+        for (const endpoint of possibleEndpoints) {
+            const apiUrl = `${baseUrl}${endpoint}`;
+            console.log(`Denenen API URL: ${apiUrl}`);
             
-            // Yanıtı metin olarak al ve incele
-            const textResponse = await response.text();
-            console.error("Alınan yanıt (JSON değil):", textResponse.substring(0, 200) + "...");
-            
+            try {
+                const response = await fetch(apiUrl);
+                console.log(`${endpoint} endpoint yanıtı:`, response.status);
+                
+                if (response.ok) {
+                    // JSON yanıtını almayı deneyelim
+                    try {
+                        data = await response.json();
+                        successfulEndpoint = endpoint;
+                        console.log(`Başarılı endpoint: ${endpoint}`);
+                        break;  // Başarılı olduk, döngüyü sonlandır
+                    } catch (e) {
+                        console.warn(`${endpoint} endpoint geçersiz JSON döndürdü:`, e);
+                    }
+                }
+            } catch (e) {
+                console.warn(`${endpoint} endpoint denemesi başarısız:`, e);
+            }
+        }
+        
+        if (!successfulEndpoint) {
+            console.error("Hiçbir API endpoint çalışmadı. İş adımları getirilemedi.");
             renderProgressSteps([], projectId, isEditable);
             return;
         }
         
-        // JSON yanıtını al
-        const data = await response.json();
+        console.log(`Çalışan API endpoint: ${successfulEndpoint}`);
         console.log("API'den gelen iş adımları verisi:", data);
         
         // Veri yapısını kontrol et
         if (data && Array.isArray(data.steps)) {
             // Her adım için log kaydı
             data.steps.forEach((step, index) => {
-                console.log(`Adım ${index}, ID: ${step.progress_id}, custom_delay_days: ${step.custom_delay_days}, custom_delay: ${step.custom_delay}`);
+                console.log(`Adım ${index}, ID: ${step.progress_id || step.id}, custom_delay_days: ${step.custom_delay_days}, custom_delay: ${step.custom_delay}`);
             });
             
             renderProgressSteps(data.steps, projectId, isEditable);
@@ -2819,7 +2828,7 @@ function refreshProjectDetails(projectId) {
             // Doğrudan dizi olarak geliyorsa
             console.log("Veri doğrudan dizi olarak geldi");
             data.forEach((step, index) => {
-                console.log(`Adım ${index}, ID: ${step.progress_id}, custom_delay_days: ${step.custom_delay_days}, custom_delay: ${step.custom_delay}`);
+                console.log(`Adım ${index}, ID: ${step.progress_id || step.id}, custom_delay_days: ${step.custom_delay_days}, custom_delay: ${step.custom_delay}`);
             });
             
             renderProgressSteps(data, projectId, isEditable);
