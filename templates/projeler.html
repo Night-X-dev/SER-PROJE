@@ -2844,11 +2844,18 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
             const currentStep = allSteps[stepIndex];
             const currentProgressId = currentStep.progress_id;
 
+            // Mevcut step'in güncel değerlerini al
+            const currentStepName = document.getElementById(`step-${currentProgressId}-name`).value;
+            const currentStepDescription = document.getElementById(`step-${currentProgressId}-desc`).value;
+            const currentStepStartDate = document.getElementById(`step-${currentProgressId}-start`).value;
+            const currentStepEndDate = document.getElementById(`step-${currentProgressId}-end`).value;
+
+
             const targetStepData = {
-                step_name: document.getElementById(`step-${currentProgressId}-name`).value,
-                description: document.getElementById(`step-${currentProgressId}-desc`).value,
-                start_date: document.getElementById(`step-${currentProgressId}-start`).value,
-                end_date: document.getElementById(`step-${currentProgressId}-end`).value,
+                step_name: currentStepName,
+                description: currentStepDescription,
+                start_date: currentStepStartDate,
+                end_date: currentStepEndDate,
                 newly_added_custom_delay: newlyAddedDelayDays // Bu, backend'de mevcut custom_delay_days'e eklenecek
             };
 
@@ -2865,17 +2872,22 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
             }
             showToast(`"${targetStepData.step_name}" iş adımına ${newlyAddedDelayDays} gün erteleme eklendi.`);
 
-            // Şimdi, sonraki adımların tarihlerini güncelle
-            // Bu, sadece frontend'deki input değerlerini güncelleyecek.
-            // Kaydet butonuna basıldığında bu değişiklikler backend'e gönderilecek.
+            // Şimdi, sonraki adımların tarihlerini güncelle ve backend'e gönder
+            let previousEndDateForNextStep = new Date(currentStepEndDate);
+            previousEndDateForNextStep.setDate(previousEndDateForNextStep.getDate() + newlyAddedDelayDays);
+
+
             for (let i = stepIndex + 1; i < allSteps.length; i++) {
                 const step = allSteps[i];
                 const progressId = step.progress_id;
 
                 const startDateInput = document.getElementById(`step-${progressId}-start`);
                 const endDateInput = document.getElementById(`step-${progressId}-end`);
+                const stepNameInput = document.getElementById(`step-${progressId}-name`);
+                const descriptionInput = document.getElementById(`step-${progressId}-desc`);
 
-                if (!startDateInput || !endDateInput) {
+
+                if (!startDateInput || !endDateInput || !stepNameInput || !descriptionInput) {
                     console.error(`${i}. adım için gerekli inputlar bulunamadı`);
                     continue;
                 }
@@ -2886,8 +2898,35 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 const newStartDate = new Date(currentStartDate.setDate(currentStartDate.getDate() + newlyAddedDelayDays));
                 const newEndDate = new Date(currentEndDate.setDate(currentEndDate.getDate() + newlyAddedDelayDays));
 
+                // Frontend inputlarını güncelle
                 startDateInput.value = newStartDate.toISOString().split('T')[0];
                 endDateInput.value = newEndDate.toISOString().split('T')[0];
+
+                // Backend'e göndermek için payload oluştur
+                const subsequentStepData = {
+                    step_name: stepNameInput.value,
+                    description: descriptionInput.value,
+                    start_date: newStartDate.toISOString().split('T')[0],
+                    end_date: newEndDate.toISOString().split('T')[0],
+                    newly_added_custom_delay: 0 // Bu adımlara yeni bir custom delay eklemiyoruz, sadece tarihlerini kaydırıyoruz.
+                };
+
+                // Sonraki adımı backend'de güncelle
+                const subsequentStepResponse = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(subsequentStepData)
+                });
+
+                const subsequentStepResponseData = await subsequentStepResponse.json();
+                if (!subsequentStepResponse.ok) {
+                    console.error(`Sonraki iş adımı (${stepNameInput.value}) güncellenemedi:`, subsequentStepResponseData.message);
+                    // Hata durumunda işlemi durdurabilir veya devam edebilirsiniz.
+                    // Şimdilik, hata mesajını gösterip devam ediyoruz.
+                    showToast(`"${stepNameInput.value}" iş adımı güncellenirken hata: ${subsequentStepResponseData.message}`, true);
+                } else {
+                    console.log(`"${stepNameInput.value}" iş adımı başarıyla güncellendi.`);
+                }
             }
 
             // İş adımlarını ve projeyi yeniden yükle
@@ -3070,6 +3109,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
             console.error("addProgressStepBtn elementi bulunamadı!");
         }
     }
+
 function addNewProgressStepForm(projectId) {
   console.log("addNewProgressStepForm başladı, projectId:", projectId);
   const progressStepsContainer = document.getElementById("progressStepsContainer");
