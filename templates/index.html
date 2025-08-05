@@ -2043,25 +2043,21 @@ function updateStatsAndChart(projects) {
 
     // Yardımcı fonksiyonlar
     // Durum rozeti ve renk sınıfı HTML'i döndürür
-    function getStatusBadgeHtml(status, delayDays) {
-        let statusClass = "normal"; // Varsayılan olarak normal (yeşil)
-        let statusText = status;
-        
-        // Eğer status değerinde "(Gecikmeli)" ifadesi varsa veya delayDays > 0 ise gecikme var demektir
-        if ((status && status.includes('(Gecikmeli)')) || 
-            (delayDays && delayDays > 0) ||
-            (status && status.includes('Gecikti'))) {
-            statusClass = "gecikmeli";
-            
-            // "(Gecikmeli)" ifadesini kaldır (eğer zaten varsa)
-            statusText = status ? status.replace(' (Gecikmeli)', '') : 'Belirsiz';
-            
-            // Eğer gecikmeli olduğu belirtilmemişse ekle
-            if (!statusText.includes('(Gecikmeli)')) {
-                statusText += ' (Gecikmeli)';
-            }
-        } else if (status === "Tamamlandı") {
+   function getStatusBadgeHtml(displayStatus, totalDelayDays) {
+        let statusClass = "normal"; // Varsayılan olarak normal (yeşil/mavi)
+        let statusText = displayStatus; // Backend'den gelen display_status'u doğrudan kullan
+
+        if (displayStatus === "Tamamlandı") {
             statusClass = "tamamlandı";
+        } else if (displayStatus === "Gecikmeli") {
+            statusClass = "gecikmeli";
+        } else if (displayStatus === "Aktif") {
+            statusClass = "normal"; // Aktif projeler için varsayılan renk
+        } else {
+            // Eğer displayStatus bir iş gidişat başlığı ise veya başka bir durumsa
+            // ve gecikmeli değilse, normal (aktif) olarak kabul edebiliriz.
+            // Bu durumda statusText zaten iş gidişatının başlığı olacaktır.
+            statusClass = "normal";
         }
 
         return `<span class="status-badge ${statusClass}">${statusText}</span>`;
