@@ -2799,102 +2799,296 @@ function refreshProjectDetails(projectId) {
             showToast("İş adımları yüklenirken bir sorun oluştu.", true);
         }
     }
-
-    // `isEditable` parametresi eklendi
-    function renderProgressSteps(steps, projectId, isEditable = false) {
-        const progressStepsContainer = document.getElementById("progressStepsContainer");
-        if (!progressStepsContainer) return;
-        progressStepsContainer.innerHTML = "";
-
-        if (steps.length === 0) {
-            progressStepsContainer.innerHTML = '<p>Bu proje için henüz iş adımı eklenmemiş.</p>';
-        } else {
-            steps.forEach((step) => {
-                const stepElement = document.createElement("div");
-                stepElement.className = "progress-detail-item";
-
-                const titleContent = isEditable ?
-                    `<input type="text" id="step-${step.progress_id}-name" class="progress-step-name-input" value="${step.step_name || ''}" placeholder="Adım Adı" required>` :
-                    `<span class="progress-detail-title">${step.step_name || ''}</span>`;
-
-                const startDateContent = isEditable ?
-                    `<label for="step-${step.progress_id}-start">Başlangıç:</label><input type="date" id="step-${step.progress_id}-start" class="progress-datepicker" value="${formatDateForInput(step.start_date || '')}" required>` :
-                    `Başlangıç: ${formatDateForDisplay(step.start_date || '-')}`;
-
-                const endDateContent = isEditable ?
-                    `<label for="step-${step.progress_id}-end">Bitiş:</label><input type="date" id="step-${step.progress_id}-end" class="progress-datepicker" value="${formatDateForInput(step.end_date || '')}" required>` :
-                    `Bitiş: ${formatDateForDisplay(step.end_date || '-')}`;
-
-                const delayDisplay = (step.delay_days > 0 && !isEditable) ? `<span class='pdf-delay-text'>(${step.delay_days} gün gecikmeli)</span>` : '';
-
-                const descriptionContent = isEditable ?
-                    `<textarea id="step-${step.progress_id}-desc" class="progress-description-textarea" placeholder="Açıklama">${step.description || ''}</textarea>` :
-                    `<div class="progress-detail-description">Açıklama: ${step.description || 'Yok'}</div>`;
-
-                const actionsContent = isEditable ?
-                
-                    `
-                    <div class="progress-actions">
-                        <button type="button" class="action-btn save-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Kaydet"><i class="fas fa-save"></i> Kaydet</button>
-                        <button type="button" class="action-btn delete-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Sil"><i class="fas fa-trash"></i> Sil</button>
-                    </div>
-                        ` : ``;
-
-                stepElement.innerHTML = `
-                    <div class="progress-item-header">
-                        <div class="input-group" style="flex: 1;">
-                            ${isEditable ? '<label for="step-' + step.progress_id + '-name">Adım Başlığı</label>' : ''}
-                            ${titleContent}
-                        </div>
-                        <div class="progress-dates" style="margin-left: ${isEditable ? '20px' : '0'};">
-                            <span>
-                                ${startDateContent}
-                            </span>
-                            <span>
-                                ${endDateContent}
-                            </span>
-                            ${delayDisplay}
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        ${isEditable ? '<label for="step-' + step.progress_id + '-desc">Açıklama</label>' : ''}
-                        ${descriptionContent}
-                    </div>
-                    ${actionsContent}
-                `;
-                progressStepsContainer.appendChild(stepElement);
-            });
-
-            // Event listener'ları dinamik olarak atama (sadece düzenleme modunda)
-            if (isEditable) {
-                document.querySelectorAll('.save-progress-btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const progressId = e.currentTarget.dataset.id;
-                        const projId = e.currentTarget.dataset.projectId;
-                        const stepName = document.getElementById(`step-${progressId}-name`).value;
-                        const startDate = document.getElementById(`step-${progressId}-start`).value;
-                        const endDate = document.getElementById(`step-${progressId}-end`).value;
-                        const description = document.getElementById(`step-${progressId}-desc`).value;
-                        editProgressStep(progressId, projId, { step_name: stepName, start_date: startDate, end_date: endDate, description: description });
-                    });
-                });
-                document.querySelectorAll('.delete-progress-btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const progressId = e.currentTarget.dataset.id;
-                        const projId = e.currentTarget.dataset.projectId;
-                        showConfirmationModal(`İş Adımı Sil`, `Bu iş adımını silmek istediğinize emin misiniz? Bu işlem geri alınamaz!`, () => deleteProgressStep(progressId, projId));
-                    });
-                });
-            }
-        }
-
-        // "İş Adımı Ekle" butonu için olay dinleyicisi
-        const addProgressStepButton = document.getElementById("addProgressStepBtn");
-        if (addProgressStepButton) {
-            addProgressStepButton.onclick = null;
-            addProgressStepButton.onclick = () => addNewProgressStepForm(projectId);
-        }
+    // Projenin başlangıç ve bitiş tarihlerini iş adımlarına göre güncelleme
+async function updateProjectDatesFromSteps(projectId) {
+  try {
+    // Tüm iş adımlarını getir
+    const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`);
+    if (!response.ok) throw new Error("İş adımları getirilemedi");
+    
+    const steps = await response.json();
+    if (!steps || steps.length === 0) return; // İş adımı yoksa işlem yapma
+    
+    // Projenin mevcut detaylarını getir
+    const projectResponse = await fetch(`${API_BASE_URL}/api/projects/${projectId}`);
+    if (!projectResponse.ok) throw new Error("Proje detayları getirilemedi");
+    
+    const project = await projectResponse.json();
+    
+    // İş adımlarından en erken başlangıç ve en geç bitiş tarihlerini bul
+    const sortedSteps = [...steps].sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+    
+    if (sortedSteps.length === 0) return;
+    
+    // İlk iş adımının başlangıç tarihi ve son iş adımının bitiş tarihi
+    let earliestStartDate = null;
+    let latestEndDate = null;
+    
+    // İlk iş adımını bul (en erken başlangıç tarihi olan)
+    if (sortedSteps[0].start_date) {
+      earliestStartDate = sortedSteps[0].start_date;
     }
+    
+    // En son biten iş adımını bul (bitiş tarihine göre sırala)
+    const endDateSortedSteps = [...steps].sort((a, b) => new Date(b.end_date) - new Date(a.end_date));
+    if (endDateSortedSteps[0].end_date) {
+      latestEndDate = endDateSortedSteps[0].end_date;
+    }
+    
+    // Projeyi güncelle
+    if (earliestStartDate || latestEndDate) {
+      const updateData = {
+        user_id: currentUser.id,
+        // Diğer alanlar korunacak şekilde
+        contract_date: project.contract_date,
+        meeting_date: project.meeting_date
+      };
+      
+      if (earliestStartDate) {
+        updateData.start_date = earliestStartDate;
+      }
+      
+      if (latestEndDate) {
+        updateData.end_date = latestEndDate;
+      }
+      
+      const updateResponse = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateData)
+      });
+      
+      if (!updateResponse.ok) {
+        console.error("Proje tarihleri güncellenirken hata:", await updateResponse.text());
+      } else {
+        console.log("Proje tarihleri başarıyla güncellendi:", updateData);
+      }
+    }
+  } catch (error) {
+    console.error("updateProjectDatesFromSteps hatası:", error);
+  }
+}
+// İş adımının ve sonraki adımların tarihlerini erteleme fonksiyonu
+async function applyDelayToStep(stepIndex, delayDays, allSteps, projectId) {
+  if (delayDays <= 0) {
+    showToast("Erteleme günü en az 1 olmalıdır.", true);
+    return;
+  }
+  
+  try {
+    console.log(`${stepIndex}. adıma ${delayDays} gün erteleme uygulanıyor`);
+    
+    // Etkilenecek adımları al (şu anki ve sonrakiler)
+    const stepsToUpdate = [];
+    
+    for (let i = stepIndex; i < allSteps.length; i++) {
+      const step = allSteps[i];
+      const progressId = step.progress_id;
+      
+      // Tarihleri al
+      const startDateInput = document.getElementById(`step-${progressId}-start`);
+      const endDateInput = document.getElementById(`step-${progressId}-end`);
+      
+      if (!startDateInput || !endDateInput) {
+        console.error(`${i}. adım için gerekli inputlar bulunamadı`);
+        continue;
+      }
+      
+      const currentStartDate = new Date(startDateInput.value);
+      const currentEndDate = new Date(endDateInput.value);
+      
+      // Tarihleri ertele
+      const newStartDate = new Date(currentStartDate.setDate(currentStartDate.getDate() + delayDays));
+      const newEndDate = new Date(currentEndDate.setDate(currentEndDate.getDate() + delayDays));
+      
+      // Formatla
+      const formattedStartDate = newStartDate.toISOString().split('T')[0];
+      const formattedEndDate = newEndDate.toISOString().split('T')[0];
+      
+      // Input değerlerini güncelle
+      startDateInput.value = formattedStartDate;
+      endDateInput.value = formattedEndDate;
+      
+      // Güncelleme için kuyruğa ekle
+      stepsToUpdate.push({
+        progressId: progressId,
+        newData: {
+          step_name: document.getElementById(`step-${progressId}-name`).value,
+          description: document.getElementById(`step-${progressId}-desc`).value,
+          start_date: formattedStartDate,
+          end_date: formattedEndDate
+        }
+      });
+    }
+    
+    // API güncellemeleri
+    let successCount = 0;
+    for (const updateItem of stepsToUpdate) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/progress/${updateItem.progressId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updateItem.newData)
+        });
+        
+        if (response.ok) successCount++;
+      } catch (error) {
+        console.error(`Adım güncelleme hatası (ID: ${updateItem.progressId}):`, error);
+      }
+    }
+    
+    // Proje tarihlerini de güncelle
+    if (stepsToUpdate.length > 0) {
+      await updateProjectDatesFromSteps(projectId);
+    }
+    
+    showToast(`${successCount} adım başarıyla ertelendi.`);
+    
+    // Adımları yeniden yükle
+    fetchProgressSteps(projectId, true);
+    
+    // Projeler listesini de güncelle
+    fetchProjects();
+    
+  } catch (error) {
+    console.error("Erteleme uygulama hatası:", error);
+    showToast("Erteleme uygulanırken bir hata oluştu: " + error.message, true);
+  }
+}
+    // `isEditable` parametresi eklendi
+    // `isEditable` parametresi eklendi
+function renderProgressSteps(steps, projectId, isEditable = false) {
+  const progressStepsContainer = document.getElementById("progressStepsContainer");
+  if (!progressStepsContainer) return;
+  progressStepsContainer.innerHTML = "";
+  
+  if (steps.length === 0) {
+    progressStepsContainer.innerHTML = '<p>Bu proje için henüz iş adımı eklenmemiş.</p>';
+  } else {
+    steps.forEach((step, index) => {
+      const stepElement = document.createElement("div");
+      stepElement.className = "progress-detail-item";
+      stepElement.dataset.stepIndex = index; // Adımın indeksini data attribute olarak sakla
+      
+      // Her adım için başlık, başlangıç/bitiş tarihi ve açıklama içeriği
+      const titleContent = isEditable ?
+        `<input type="text" id="step-${step.progress_id}-name" class="progress-step-name-input" value="${step.step_name || ''}" placeholder="Adım Adı" required>` :
+        `<span class="progress-detail-title">${step.step_name || ''}</span>`;
+      
+      const startDateContent = isEditable ?
+        `<label for="step-${step.progress_id}-start">Başlangıç:</label><input type="date" id="step-${step.progress_id}-start" class="progress-datepicker" value="${formatDateForInput(step.start_date || '')}" required>` :
+        `Başlangıç: ${formatDateForDisplay(step.start_date || '-')}`;
+      
+      const endDateContent = isEditable ?
+        `<label for="step-${step.progress_id}-end">Bitiş:</label><input type="date" id="step-${step.progress_id}-end" class="progress-datepicker" value="${formatDateForInput(step.end_date || '')}" required>` :
+        `Bitiş: ${formatDateForDisplay(step.end_date || '-')}`;
+      
+      const delayDisplay = (step.delay_days > 0 && !isEditable) ? `<span class='pdf-delay-text'>(${step.delay_days} gün gecikmeli)</span>` : '';
+      
+      const descriptionContent = isEditable ?
+        `<textarea id="step-${step.progress_id}-desc" class="progress-description-textarea" placeholder="Açıklama">${step.description || ''}</textarea>` :
+        `<div class="progress-detail-description">Açıklama: ${step.description || 'Yok'}</div>`;
+      
+      // BURADA YENİ ERTELEME GÜNÜ INPUTUNU EKLİYORUZ (sadece düzenleme modunda)
+      const delayDaysContent = isEditable ? 
+        `<div class="delay-days-container" style="margin-top: 10px;">
+          <label for="step-${step.progress_id}-delay">Erteleme (gün):</label>
+          <input type="number" id="step-${step.progress_id}-delay" class="delay-days-input" min="0" value="0" style="width: 70px; padding: 5px; margin-left: 5px;">
+          <button type="button" class="action-btn apply-delay-btn" data-id="${step.progress_id}" data-index="${index}" style="margin-left: 5px;"><i class="fas fa-check"></i> Uygula</button>
+        </div>` : '';
+      
+      const actionsContent = isEditable ?
+        `
+        <div class="progress-actions">
+          <button type="button" class="action-btn save-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Kaydet"><i class="fas fa-save"></i> Kaydet</button>
+          <button type="button" class="action-btn delete-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Sil"><i class="fas fa-trash"></i> Sil</button>
+        </div>
+        ` : ``;
+      
+      stepElement.innerHTML = `
+      <div class="progress-item-header">
+        <div class="input-group" style="flex: 1;">
+          ${isEditable ? '<label for="step-' + step.progress_id + '-name">Adım Başlığı</label>' : ''}
+          ${titleContent}
+        </div>
+        <div class="progress-dates" style="margin-left: ${isEditable ? '20px' : '0'};">
+          <span>
+            ${startDateContent}
+          </span>
+          <span>
+            ${endDateContent}
+          </span>
+          ${delayDisplay}
+        </div>
+      </div>
+      <div class="input-group">
+        ${isEditable ? '<label for="step-' + step.progress_id + '-desc">Açıklama</label>' : ''}
+        ${descriptionContent}
+      </div>
+      ${delayDaysContent}
+      ${actionsContent}
+      `;
+      
+      progressStepsContainer.appendChild(stepElement);
+    });
+    
+    // Event listener'ları dinamik olarak atama (sadece düzenleme modunda)
+    if (isEditable) {
+      document.querySelectorAll('.save-progress-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+          const progressId = e.currentTarget.dataset.id;
+          const projId = e.currentTarget.dataset.projectId;
+          const stepName = document.getElementById(`step-${progressId}-name`).value;
+          const startDate = document.getElementById(`step-${progressId}-start`).value;
+          const endDate = document.getElementById(`step-${progressId}-end`).value;
+          const description = document.getElementById(`step-${progressId}-desc`).value;
+          
+          editProgressStep(progressId, projId, { 
+            step_name: stepName, 
+            start_date: startDate, 
+            end_date: endDate, 
+            description: description 
+          });
+        });
+      });
+      
+      document.querySelectorAll('.delete-progress-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+          const progressId = e.currentTarget.dataset.id;
+          const projId = e.currentTarget.dataset.projectId;
+          showConfirmationModal(`İş Adımı Sil`, `Bu iş adımını silmek istediğinize emin misiniz? Bu işlem geri alınamaz!`, () => deleteProgressStep(progressId, projId));
+        });
+      });
+      
+      // YENİ: Erteleme uygulama butonları
+      document.querySelectorAll('.apply-delay-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+          const progressId = e.currentTarget.dataset.id;
+          const stepIndex = parseInt(e.currentTarget.dataset.index);
+          const delayDays = parseInt(document.getElementById(`step-${progressId}-delay`).value) || 0;
+          
+          if (delayDays > 0) {
+            applyDelayToStep(stepIndex, delayDays, steps, projectId);
+          } else {
+            showToast("Lütfen geçerli bir erteleme günü girin.", true);
+          }
+        });
+      });
+    }
+  }
+  
+  // "İş Adımı Ekle" butonu için olay dinleyicisi
+  const addProgressStepButton = document.getElementById("addProgressStepBtn");
+  if (addProgressStepButton) {
+    addProgressStepButton.onclick = null;
+    addProgressStepButton.onclick = function() {
+      console.log("İş Adımı Ekle butonuna tıklandı");
+      addNewProgressStepForm(projectId);
+    };
+  } else {
+    console.error("addProgressStepBtn elementi bulunamadı!");
+  }
+}
     // MODAL İÇİNE YENİ İŞ ADIMI EKLEME FORMU OLUŞTURAN FONKSİYON
 // MODAL İÇİNE YENİ İŞ ADIMI EKLEME FORMU OLUŞTURAN FONKSİYON
 function addNewProgressStepForm(projectId) {
@@ -3065,59 +3259,23 @@ function addNewProgressStepForm(projectId) {
     // progress_id kullanıldı
    async function editProgressStep(progressId, projectId, updatedStepData) {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, { // progressId kullanılıyor
+    const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updatedStepData),
     });
+    
     const data = await response.json();
+    
     if (response.ok) {
       showToast("İş adımı başarıyla güncellendi.");
       
-      // Eğer bu, projenin son iş adımıysa, proje bitiş tarihini de güncelle
-      if (updatedStepData.end_date) {
-        // İlgili projeyi getir
-        const projectResponse = await fetch(`${API_BASE_URL}/api/projects/${projectId}`);
-        const project = await projectResponse.json();
-        
-        // Tüm iş adımlarını getir
-        const stepsResponse = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`);
-        const steps = await stepsResponse.json();
-        
-        // Bu güncellemede iş adımı son iş adımıysa
-        if (steps.length > 0) {
-          // API'den gelen steps dizisini idlerine göre sıralayalım ki son adımı doğru bulalım
-          steps.sort((a, b) => a.progress_id - b.progress_id);
-          
-          const isLastStep = steps[steps.length - 1].progress_id == progressId;
-          
-          if (isLastStep) {
-            console.log("Son iş adımı güncellendi. Proje bitiş tarihini güncelliyorum:", updatedStepData.end_date);
-            
-            // Proje bitiş tarihini güncelle
-            const updateProjectResponse = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                user_id: currentUser.id,
-                end_date: updatedStepData.end_date,
-                // Contract ve meeting tarihleri, proje güncellenirken kaybolmasın diye eklendi
-                contract_date: project.contract_date,
-                meeting_date: project.meeting_date
-              })
-            });
-            
-            if (!updateProjectResponse.ok) {
-              console.error("Proje bitiş tarihi güncellenirken hata:", await updateProjectResponse.text());
-            } else {
-              console.log("Proje bitiş tarihi başarıyla güncellendi.");
-            }
-          }
-        }
-      }
+      // İş adımı güncellemesi başarılı olduktan sonra proje tarihlerini güncelle
+      await updateProjectDatesFromSteps(projectId);
       
-      fetchProjects(); // Projeler listesini güncelle
-      fetchProgressSteps(projectId, true); // İş adımlarını yeniden yükle
+      // Listeyi güncelle
+      fetchProjects(); 
+      fetchProgressSteps(projectId, true);
       
       addActivity(
         "İş Adımı Güncellendi",
