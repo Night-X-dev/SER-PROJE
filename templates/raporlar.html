@@ -1598,8 +1598,20 @@
                 const projectId = getUrlParameter('project_id'); // URL'den proje ID'sini al
                 if (!projectId) {
                     console.error("Proje ID'si URL'de bulunamadı.");
-                    document.getElementById('reportProjectName').textContent = "Proje Bulunamadı";
-                    return;
+                    document.getElementById('reportProjectName').textContent = "Proje Bulunamadı veya Geçersiz ID"; // Hata mesajını güncelledik
+                    document.getElementById('reportProjectRef').textContent = "Lütfen geçerli bir proje ID'si ile sayfaya erişin.";
+                    document.getElementById('reportCustomerName').textContent = "-";
+                    document.getElementById('reportProjectManager').textContent = "-";
+                    document.getElementById('reportProjectStatus').textContent = "-";
+                    document.getElementById('reportTotalDelay').textContent = "-";
+                    document.getElementById('reportContractDate').textContent = "-";
+                    document.getElementById('reportMeetingDate').textContent = "-";
+                    document.getElementById('reportStartDate').textContent = "-";
+                    document.getElementById('reportEndDate').textContent = "-";
+                    document.getElementById('reportProjectLocation').textContent = "-";
+                    document.getElementById('reportProjectDescription').textContent = "Gösterilecek veri bulunmamaktadır.";
+                    document.getElementById('reportDelayWarning').style.display = 'none';
+                    return; // Fonksiyonu burada sonlandır
                 }
 
                 try {
@@ -1662,7 +1674,8 @@
                 } catch (error) {
                     console.error("Rapor verileri çekilirken hata oluştu:", error);
                     document.getElementById('reportProjectName').textContent = "Hata: Rapor Yüklenemedi";
-                    // Hata mesajı gösterebilirsiniz
+                    document.getElementById('reportProjectRef').textContent = "Veri çekilirken bir sorun oluştu.";
+                    // Diğer alanları da boşaltabilir veya hata durumuna göre ayarlayabilirsiniz.
                 }
             }
 
