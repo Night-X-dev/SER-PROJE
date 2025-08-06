@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- jsPDF-AutoTable plugin'i eklendi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.0/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
@@ -1406,10 +1408,13 @@
             // Google Haritalar API'sini yükleme fonksiyonu
             function loadGoogleMapsScript() {
                 const script = document.createElement('script');
-                // API anahtarınızı buraya ekleyin
+                // API anahtarınızı buraya ekleyin. Bu anahtar, Google Cloud Console'dan alınmalıdır.
+                // Haritalar JavaScript API'si ve Geocoding API'si için etkinleştirildiğinden emin olun.
                 script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap`;
                 script.async = true;
                 script.defer = true;
+                // Güvenlik için referrerpolicy eklenmesi önerilir
+                script.referrerpolicy = "no-referrer-when-downgrade"; 
                 document.head.appendChild(script);
             }
 
@@ -1419,7 +1424,8 @@
                 map = new google.maps.Map(document.getElementById('map'), {
                     zoom: 6,
                     center: defaultLocation,
-                    mapId: 'DEMO_MAP_ID' // Kendi harita kimliğinizi buraya ekleyebilirsiniz
+                    // Kendi harita kimliğinizi buraya ekleyebilirsiniz. Opsiyoneldir ancak performans ve stil için önerilir.
+                    mapId: 'DEMO_MAP_ID' 
                 });
                 // Başlangıçta marker eklemeyin, proje konumu geldiğinde eklenecek
             };
@@ -1571,12 +1577,12 @@
                     taskBarDiv.style.gridColumn = `${startColumn} / span ${spanColumns}`;
 
                     // Duruma göre sınıf ekle
-                    if (step.status === 'Tamamlandı' || step.status === 'Gecikmeli Bitti' || step.status === 'Ertelenmiş Bitti') {
-                        taskBarDiv.classList.add('completed');
-                    } else if (step.status === 'Gecikmeli' || step.status === 'Ertelenmiş') {
-                        taskBarDiv.classList.add('delayed');
+                    if (step.status === 'Tamamlandı' || step.status === 'Aktif') {
+                        taskBarDiv.classList.add('completed'); // Yeşil
+                    } else if (step.status === 'Gecikmeli Bitti' || step.status === 'Ertelenmiş Bitti' || step.status === 'Gecikmeli' || step.status === 'Ertelenmiş') {
+                        taskBarDiv.classList.add('delayed'); // Kırmızı
                     } else {
-                        taskBarDiv.classList.add('active'); 
+                        taskBarDiv.classList.add('active'); // Varsayılan (mavi)
                     }
 
                     // Tooltip verilerini sakla
@@ -1654,8 +1660,9 @@
                         <td data-label="Gerçek Bitiş">${formatDate(step.real_end_date)}</td>
                         <td data-label="Durum">
                             <span class="status-badge ${
-                                step.status === 'Tamamlandı' || step.status === 'Gecikmeli Bitti' || step.status === 'Ertelenmiş Bitti' ? 'normal' :
-                                step.status === 'Gecikmeli' || step.status === 'Ertelenmiş' ? 'gecikmeli' :
+                                // Yeni durum renk mantığı
+                                step.status === 'Tamamlandı' || step.status === 'Aktif' || step.status === 'Başlamadı' ? 'normal' : // Yeşil veya varsayılan
+                                ['Gecikmeli Bitti', 'Ertelenmiş Bitti', 'Gecikmeli', 'Ertelenmiş'].includes(step.status) ? 'gecikmeli' : // Kırmızı
                                 ''
                             }">${step.status}</span>
                         </td>
@@ -1951,7 +1958,7 @@
                     y += lineHeight;
                     doc.text(`Planlanan Başlangıç: ${formatDate(currentProjectData.project.start_date)}`, margin, y);
                     y += lineHeight;
-                    doc.text(`Planlanan Bitiş: ${formatDate(currentProjectData.project.end_date)}`, margin, y);
+                    doc.text(`Planlanan Bitiş: ${formatProjectEndDate(currentProjectData.project.end_date)}`, margin, y);
                     y += lineHeight;
                     doc.text(`Proje Konumu: ${currentProjectData.project.project_location}`, margin, y);
                     y += lineHeight;
@@ -1964,7 +1971,7 @@
                         doc.text("Proje Konumu Haritası", margin, y);
                         y += lineHeight;
                         try {
-                            const canvas = await html2canvas(mapElement, { scale: 2 }); // Daha yüksek çözünürlük için scale
+                            const canvas = await html2canvas(mapElement, { scale: 2, willReadFrequently: true }); // willReadFrequently eklendi
                             const imgData = canvas.toDataURL('image/png');
                             const imgWidth = doc.internal.pageSize.width - 2 * margin;
                             const imgHeight = (canvas.height * imgWidth) / canvas.width;
