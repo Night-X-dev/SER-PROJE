@@ -1074,6 +1074,36 @@
             border-top: 1px solid var(--border-color);
             margin-top: 30px;
         }
+
+        /* Proje Seçim Alanı Stilleri */
+        .project-selection-container {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .project-selection-container label {
+            font-weight: 600;
+            color: var(--text-color);
+            font-size: 18px;
+        }
+
+        .project-selection-container select {
+            flex-grow: 1;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            font-size: 16px;
+            max-width: 400px; /* Limit dropdown width */
+        }
     </style>
 </head>
 <body data-theme="light">
@@ -1153,10 +1183,19 @@
                 <i class="fas fa-chart-line"></i>
                 Proje Raporları
             </h1>
+
+            <!-- Proje Seçim Alanı -->
+            <div class="project-selection-container">
+                <label for="projectSelect">Proje Seçin:</label>
+                <select id="projectSelect" class="form-select">
+                    <option value="">-- Proje Seçiniz --</option>
+                    <!-- Projeler buraya JavaScript ile yüklenecek -->
+                </select>
+            </div>
             
             <!-- Genel Proje Özeti -->
-            <div class="project-summary">
-                <h2 class="project-title" id="reportProjectName">Proje Yükleniyor...</h2>
+            <div class="project-summary" id="projectReportContent" style="display: none;">
+                <h2 class="project-title" id="reportProjectName"></h2>
                 <span class="project-ref" id="reportProjectRef"></span>
                 
                 <div class="summary-grid">
@@ -1227,7 +1266,7 @@
             </div>
             
             <!-- İş Adımları Zaman Çizelgesi -->
-            <div class="gantt-container">
+            <div class="gantt-container" id="ganttContainerWrapper" style="display: none;">
                 <div class="card-header">
                     <div class="card-title">İş Adımları Zaman Çizelgesi</div>
                     <div class="today-line-indicator">
@@ -1281,7 +1320,7 @@
             </div>
             
             <!-- Detaylı İş Adımları Listesi -->
-            <div class="projects-container">
+            <div class="projects-container" id="progressStepsContainer" style="display: none;">
                 <div class="projects-header">
                     <div class="card-title">İş Adımları Detayları</div>
                     <div class="projects-actions">
@@ -1314,7 +1353,7 @@
             </div>
             
             <!-- Performans Metrikleri -->
-            <div class="metrics-container">
+            <div class="metrics-container" id="metricsContainer" style="display: none;">
                 <div class="metric-card">
                     <div class="card-title">Gecikme Analizi</div>
                     <div class="chart-container">
@@ -1363,6 +1402,11 @@
                 if (!dateString) return '-';
                 const date = new Date(dateString);
                 return date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            }
+
+            // PDF için tarih formatlama yardımcı fonksiyonu (formatDate ile aynı işlevi görecek)
+            function formatProjectEndDate(dateString) {
+                return formatDate(dateString);
             }
 
             // Gantt şeması başlıklarını oluşturma
@@ -1594,25 +1638,46 @@
             }
 
             // Rapor verilerini API'den çekme ve sayfayı doldurma
-            async function fetchAndRenderReportData() {
-                const projectId = getUrlParameter('project_id'); // URL'den proje ID'sini al
+            async function fetchAndRenderReportData(projectId) {
+                const projectReportContent = document.getElementById('projectReportContent');
+                const ganttContainerWrapper = document.getElementById('ganttContainerWrapper');
+                const progressStepsContainer = document.getElementById('progressStepsContainer');
+                const metricsContainer = document.getElementById('metricsContainer');
+
                 if (!projectId) {
-                    console.error("Proje ID'si URL'de bulunamadı.");
-                    document.getElementById('reportProjectName').textContent = "Proje Bulunamadı veya Geçersiz ID"; // Hata mesajını güncelledik
-                    document.getElementById('reportProjectRef').textContent = "Lütfen geçerli bir proje ID'si ile sayfaya erişin.";
-                    document.getElementById('reportCustomerName').textContent = "-";
-                    document.getElementById('reportProjectManager').textContent = "-";
-                    document.getElementById('reportProjectStatus').textContent = "-";
-                    document.getElementById('reportTotalDelay').textContent = "-";
-                    document.getElementById('reportContractDate').textContent = "-";
-                    document.getElementById('reportMeetingDate').textContent = "-";
-                    document.getElementById('reportStartDate').textContent = "-";
-                    document.getElementById('reportEndDate').textContent = "-";
-                    document.getElementById('reportProjectLocation').textContent = "-";
-                    document.getElementById('reportProjectDescription').textContent = "Gösterilecek veri bulunmamaktadır.";
+                    console.log("Proje ID'si seçilmedi. Rapor içeriği gizleniyor.");
+                    projectReportContent.style.display = 'none';
+                    ganttContainerWrapper.style.display = 'none';
+                    progressStepsContainer.style.display = 'none';
+                    metricsContainer.style.display = 'none';
+                    // Clear previous data
+                    document.getElementById('reportProjectName').textContent = "";
+                    document.getElementById('reportProjectRef').textContent = "";
+                    document.getElementById('reportCustomerName').textContent = "";
+                    document.getElementById('reportProjectManager').textContent = "";
+                    document.getElementById('reportProjectStatus').textContent = "";
+                    document.getElementById('reportTotalDelay').textContent = "";
+                    document.getElementById('reportContractDate').textContent = "";
+                    document.getElementById('reportMeetingDate').textContent = "";
+                    document.getElementById('reportStartDate').textContent = "";
+                    document.getElementById('reportEndDate').textContent = "";
+                    document.getElementById('reportProjectLocation').textContent = "";
+                    document.getElementById('reportProjectDescription').textContent = "";
                     document.getElementById('reportDelayWarning').style.display = 'none';
-                    return; // Fonksiyonu burada sonlandır
+                    document.getElementById('ganttTasksContainer').innerHTML = '';
+                    document.getElementById('progressStepsTableBody').innerHTML = '';
+                    if (delayChartInstance) {
+                        delayChartInstance.destroy();
+                        delayChartInstance = null;
+                    }
+                    updateCompletionMetrics(0, 0, 0);
+                    return;
                 }
+
+                projectReportContent.style.display = 'block';
+                ganttContainerWrapper.style.display = 'block';
+                progressStepsContainer.style.display = 'block';
+                metricsContainer.style.display = 'grid'; // Display as grid
 
                 try {
                     const response = await fetch(`/api/reports/project/${projectId}`);
@@ -1675,7 +1740,43 @@
                     console.error("Rapor verileri çekilirken hata oluştu:", error);
                     document.getElementById('reportProjectName').textContent = "Hata: Rapor Yüklenemedi";
                     document.getElementById('reportProjectRef').textContent = "Veri çekilirken bir sorun oluştu.";
-                    // Diğer alanları da boşaltabilir veya hata durumuna göre ayarlayabilirsiniz.
+                    projectReportContent.style.display = 'block'; // Hata durumunda da görünür olsun
+                    ganttContainerWrapper.style.display = 'none';
+                    progressStepsContainer.style.display = 'none';
+                    metricsContainer.style.display = 'none';
+                }
+            }
+
+            // Tüm projeleri çekip dropdown'a doldurma
+            async function populateProjectSelect() {
+                const projectSelect = document.getElementById('projectSelect');
+                try {
+                    const response = await fetch('/api/projects');
+                    if (!response.ok) {
+                        throw new Error('Projeler çekilemedi.');
+                    }
+                    const projects = await response.json();
+
+                    projects.forEach(project => {
+                        const option = document.createElement('option');
+                        option.value = project.project_id;
+                        option.textContent = `${project.project_name} (${project.reference_no})`;
+                        projectSelect.appendChild(option);
+                    });
+
+                    // URL'de bir proje ID'si varsa otomatik seç ve raporu yükle
+                    const initialProjectId = getUrlParameter('project_id');
+                    if (initialProjectId) {
+                        projectSelect.value = initialProjectId;
+                        fetchAndRenderReportData(initialProjectId);
+                    } else {
+                        // Eğer URL'de ID yoksa ve ilk seçenek boşsa, rapor içeriğini gizle
+                        fetchAndRenderReportData(null); 
+                    }
+
+                } catch (error) {
+                    console.error("Projeler yüklenirken hata oluştu:", error);
+                    // Kullanıcıya hata mesajı gösterebilirsiniz
                 }
             }
 
@@ -1713,13 +1814,19 @@
                     mainContent.classList.toggle('expanded');
                 });
                 
-                // Rapor verilerini çek ve render et
-                fetchAndRenderReportData();
+                // Proje seçim dropdown'ını doldur
+                populateProjectSelect();
+
+                // Proje seçim dropdown'ı değiştiğinde raporu güncelle
+                document.getElementById('projectSelect').addEventListener('change', function() {
+                    const selectedProjectId = this.value;
+                    fetchAndRenderReportData(selectedProjectId);
+                });
 
                 // PDF Oluştur butonu
                 document.getElementById('exportPdfBtn').addEventListener('click', async () => {
                     if (!currentProjectData) {
-                        alert('Önce proje verilerinin yüklenmesini bekleyin.');
+                        alert('Lütfen önce bir proje seçin ve rapor verilerinin yüklenmesini bekleyin.');
                         return;
                     }
 
