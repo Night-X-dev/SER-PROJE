@@ -2036,10 +2036,20 @@ def update_project_progress_step(progress_id):
             # Toplam custom_delay_days'i hesapla
             final_custom_delay_for_db = current_custom_delay_from_db + newly_added_custom_delay
             
-            # Gerçek bitiş tarihini hesapla: end_date + final_custom_delay_for_db
-            base_end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
-            real_end_date_calculated = base_end_date + datetime.timedelta(days=final_custom_delay_for_db)
+            # Gerçek bitiş tarihini hesapla: real_end_date, erteleme günlerinden etkilenmemeli, 
+            # sadece end_date'in ilk girildiği hali olmalı.
+            # Dolayısıyla, eğer bu bir erteleme işlemi değilse, mevcut real_end_date'i koru.
+            # Eğer yeni bir adım ekleniyorsa, end_date ile aynı olsun.
+            # Mevcut real_end_date'i veritabanından çekelim.
+            cursor.execute("SELECT real_end_date FROM project_progress WHERE progress_id = %s", (progress_id,))
+            current_real_end_date_from_db = cursor.fetchone()['real_end_date']
             
+            # Eğer veritabanında zaten bir real_end_date varsa onu kullan, yoksa end_date'i kullan
+            if current_real_end_date_from_db:
+                real_end_date_to_save = current_real_end_date_from_db.isoformat()
+            else:
+                real_end_date_to_save = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date().isoformat()
+
             # Proje adını ve yöneticisini al (bildirimler için)
             cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (current_project_id,))
             project_info = cursor.fetchone()
@@ -2080,7 +2090,7 @@ def update_project_progress_step(progress_id):
             """
             cursor.execute(sql_update, (
                 step_name, description, start_date_str, end_date_str,
-                calculated_delay_days, final_custom_delay_for_db, real_end_date_calculated.isoformat(), progress_id
+                calculated_delay_days, final_custom_delay_for_db, real_end_date_to_save, progress_id
             ))
             
             print(f"SQL query executed. Rows affected: {cursor.rowcount}")
@@ -2088,7 +2098,7 @@ def update_project_progress_step(progress_id):
             # Sonraki adımların delay_days'ini yeniden hesapla ve güncelle
             # Bu, güncel adımı takip eden tüm adımların gecikme durumunu doğru yansıtır
             cursor.execute("""
-                SELECT progress_id, start_date, end_date, custom_delay_days
+                SELECT progress_id, start_date, end_date, custom_delay_days, real_end_date
                 FROM project_progress
                 WHERE project_id = %s AND progress_id > %s
                 ORDER BY start_date ASC, created_at ASC
@@ -2102,20 +2112,24 @@ def update_project_progress_step(progress_id):
                 sub_start_date = sub_step['start_date'] # Bu, DB'den gelen tarih objesidir
                 sub_end_date = sub_step['end_date'] # Bu, DB'den gelen tarih objesidir
                 sub_custom_delay_days = sub_step['custom_delay_days'] or 0
+                sub_real_end_date_from_db = sub_step['real_end_date']
 
                 recalculated_sub_delay_days = 0
                 time_diff_sub = (sub_start_date - last_end_date_for_recalc).days
                 if time_diff_sub > 1:
                     recalculated_sub_delay_days = time_diff_sub - 1
                 
-                # Sonraki adımın gerçek bitiş tarihini de güncelle
-                sub_real_end_date_calculated = sub_end_date + datetime.timedelta(days=sub_custom_delay_days)
+                # Sonraki adımın gerçek bitiş tarihini de güncelle (mevcut real_end_date'i koru)
+                if sub_real_end_date_from_db:
+                    sub_real_end_date_to_save = sub_real_end_date_from_db.isoformat()
+                else:
+                    sub_real_end_date_to_save = sub_end_date.isoformat() # Eğer yoksa end_date'i kullan
 
                 cursor.execute("""
                     UPDATE project_progress
                     SET delay_days = %s, real_end_date = %s
                     WHERE progress_id = %s
-                """, (recalculated_sub_delay_days, sub_real_end_date_calculated.isoformat(), sub_progress_id))
+                """, (recalculated_sub_delay_days, sub_real_end_date_to_save, sub_progress_id))
                 connection.commit()
 
                 last_end_date_for_recalc = sub_end_date # Bir sonraki adım için bitiş tarihini güncelle
@@ -2130,7 +2144,7 @@ def update_project_progress_step(progress_id):
                 'message': 'Progress step successfully updated!',
                 'custom_delay_days': final_custom_delay_for_db,
                 'delay_days': calculated_delay_days,
-                'real_end_date': real_end_date_calculated.isoformat()
+                'real_end_date': real_end_date_to_save
             }), 200
             
     except Exception as e:
