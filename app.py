@@ -955,6 +955,10 @@ def login_user():
             session['user_id'] = user['id']
             del user['password'] # Remove password from response for security
 
+            # BAŞARILI GİRİŞTEN SONRA BİLDİRİM KONTROLÜNÜ ÇALIŞTIR
+            _check_and_notify_completed_steps(cursor)
+            connection.commit() # _check_and_notify_completed_steps içinde yapılan güncellemeleri kaydet
+
             return jsonify({
                 'message': 'Login successful!',
                 'user': user
@@ -962,9 +966,13 @@ def login_user():
 
     except pymysql.Error as e:
         print(f"Database login error: {e}")
+        if connection:
+            connection.rollback() # Hata durumunda değişiklikleri geri al
         return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
     except Exception as e:
         print(f"General login error: {e}")
+        if connection:
+            connection.rollback() # Hata durumunda değişiklikleri geri al
         return jsonify({'message': 'Server error, please try again later.'}), 500
     finally:
         if connection:
@@ -2931,6 +2939,87 @@ def worker_performance():
     finally:
         if connection:
             connection.close()
+def _check_and_notify_completed_steps(cursor):
+    """
+    Checks for project progress steps whose end_date is today or in the past,
+    and sends notifications to the admin and project manager if not already notified.
+    This function expects an active cursor and does not manage connection.
+    """
+    try:
+        today = datetime.date.today()
+
+        # Admin kullanıcısının ID'sini al (bildirim göndermek için)
+        cursor.execute("SELECT id FROM users WHERE role = 'Admin' LIMIT 1")
+        admin_user = cursor.fetchone()
+        admin_id = admin_user['id'] if admin_user else None
+        
+        if not admin_id:
+            print("UYARI: Yönetici (Admin) kullanıcısı bulunamadı. Yöneticiye bildirim gönderilemeyecek.")
+
+        # Bitiş tarihi bugün veya geçmiş olan ve henüz bildirim gönderilmemiş iş adımlarını bul
+        sql = """
+        SELECT
+            pp.progress_id,
+            pp.title AS step_name,
+            pp.end_date,
+            p.project_name,
+            p.project_id,
+            p.project_manager_id
+        FROM
+            project_progress pp
+        JOIN
+            projects p ON pp.project_id = p.project_id
+        WHERE
+            pp.end_date <= %s AND pp.completion_notified = 0
+        """
+        cursor.execute(sql, (today,))
+        completed_steps = cursor.fetchall()
+
+        if not completed_steps:
+            print("Giriş sırasında biten ve bildirim bekleyen iş adımı bulunamadı.")
+            return
+
+        print(f"Giriş sırasında biten iş adımları bulunuyor: {len(completed_steps)}")
+
+        for step in completed_steps:
+            progress_id = step['progress_id']
+            step_name = step['step_name']
+            project_name = step['project_name']
+            project_manager_id = step['project_manager_id']
+            step_end_date = step['end_date'].strftime('%d.%m.%Y')
+
+            notification_title = "İş Adımı Tamamlandı"
+            notification_message = f"'{project_name}' projesindeki '{step_name}' iş adımı planlanan bitiş tarihine ({step_end_date}) ulaştı."
+
+            # Proje yöneticisine bildirim gönder
+            if project_manager_id:
+                send_notification(cursor, project_manager_id, notification_title, notification_message)
+            else:
+                print(f"UYARI: Proje '{project_name}' için proje yöneticisi bulunamadı. Proje yöneticisine bildirim gönderilemedi.")
+
+            # Yöneticiye bildirim gönder
+            if admin_id:
+                send_notification(cursor, admin_id, notification_title, notification_message)
+            else:
+                print(f"UYARI: Yöneticiye bildirim gönderilemedi (Admin ID bulunamadı).")
+
+            # İş adımının completion_notified durumunu güncelle
+            cursor.execute(
+                "UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s",
+                (progress_id,)
+            )
+            print(f"İş adımı {progress_id} için bildirim gönderildi ve 'completion_notified' güncellendi.")
+
+        # Not: Bu fonksiyonun çağrıldığı yerde (login_user) commit işlemi yapılacaktır.
+        # Burada ayrı bir commit yapmaya gerek yok.
+
+    except pymysql.Error as e:
+        print(f"Veritabanı hatası (_check_and_notify_completed_steps): {e}")
+        # Hata durumunda rollback, çağıran fonksiyonda ele alınmalı
+    except Exception as e:
+        print(f"Genel hata (_check_and_notify_completed_steps): {e}")
+        traceback.print_exc()
+
 
 ##if __name__ == '__main__':
   ##  app.run(host='0.0.0.0', port=3001, debug=True)
