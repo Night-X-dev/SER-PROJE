@@ -25,6 +25,12 @@ app = Flask(__name__)
 # Session management secret key
 # THIS SHOULD BE A SECURE AND UNPREDICTABLE STRING!
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex")
+
+PRIORITY_TRANSLATIONS = {
+    "low": "Düşük Öncelik",
+    "medium": "Orta Öncelik",
+    "high": "Yüksek Öncelik"
+}
 CORS(app, resources={r"/*": {"origins": ["https://37.148.213.89:8000", "http://serotomasyon.tr"]}}, supports_credentials=True)
 @app.route('/')
 def serve_welcome_page():
@@ -204,6 +210,25 @@ def get_db_connection():
         if connection:
             connection.close()
         raise # Hatanın yukarıya iletilmesini sağla
+
+def format_datetime_for_email(dt_str):
+    """
+    Tarih/saat stringini e-posta için daha okunaklı bir formata dönüştürür.
+    'YYYY-MM-DDTHH:MM' veya 'YYYY-MM-DD' formatlarını destekler.
+    """
+    if not dt_str:
+        return "Belirtilmemiş"
+    try:
+        if 'T' in dt_str:
+            # Hem tarih hem saat içeren format
+            dt_obj = datetime.datetime.fromisoformat(dt_str)
+            return dt_obj.strftime('%d.%m.%Y %H:%M')
+        else:
+            # Sadece tarih içeren format
+            dt_obj = datetime.datetime.strptime(dt_str, '%Y-%m-%d').date()
+            return dt_obj.strftime('%d.%m.%Y')
+    except ValueError:
+        return dt_str # Ayrıştırma başarısız olursa orijinal stringi döndür
 
 @app.route('/api/reports/project/<int:project_id>', methods=['GET'])
 def get_project_report_data(project_id):
@@ -1622,7 +1647,7 @@ def send_email_notification(recipient_email, subject, body):
     message["To"] = recipient_email
 
     # HTML içeriği olarak e-posta gövdesi
-    # "Merhaba," tekrarını kaldırdık ve daha düzenli bir HTML yapısı oluşturduk.
+    # 'body' değişkeninin içinde "Merhaba," olmamasına dikkat edin.
     html_body = f"""\
     <html>
       <head>
@@ -1653,7 +1678,7 @@ def send_email_notification(recipient_email, subject, body):
     </html>
     """
     # Düz metin içeriği, HTML'nin bir yedeği olarak kalır.
-    part1 = MIMEText(body, "plain")
+    part1 = MIMEText(body.replace('<p>','').replace('</p>','').replace('<table>','').replace('</table>','').replace('<tr>','').replace('</tr>','').replace('<th>','').replace('</th>','').replace('<td>','').replace('</td>',''), "plain")
     part2 = MIMEText(html_body, "html")
 
     message.attach(part1)
@@ -1670,7 +1695,6 @@ def send_email_notification(recipient_email, subject, body):
         print(f"E-posta başarıyla gönderildi: {recipient_email}")
     except Exception as e:
         print(f"E-posta gönderme hatası ({recipient_email}): {e}")
-        # Hata durumunda traceback'i yazdır
         traceback.print_exc()
 def get_user_fullname_by_id(cursor, user_id):
     """Retrieves the full name of a user by their ID."""
@@ -2969,6 +2993,8 @@ def add_task():
 
             # Atayan kullanıcının adını al
             created_by_fullname = get_user_fullname_by_id(cursor, created_by)
+            # Öncelik çevirisini al
+            translated_priority = PRIORITY_TRANSLATIONS.get(priority.lower(), priority.capitalize())
 
             # Send notification to the newly assigned user
             send_notification(
@@ -2987,12 +3013,12 @@ def add_task():
                     f"<table>"
                     f"<tr><th>Görev Adı</th><td>{title}</td></tr>"
                     f"<tr><th>Açıklama</th><td>{description or 'Yok'}</td></tr>"
-                    f"<tr><th>Başlangıç Tarihi</th><td>{start}</td></tr>"
-                    f"<tr><th>Bitiş Tarihi</th><td>{end or 'Belirtilmemiş'}</td></tr>"
-                    f"<tr><th>Öncelik</th><td>{priority.capitalize()}</td></tr>"
+                    f"<tr><th>Başlangıç Tarihi</th><td>{format_datetime_for_email(start)}</td></tr>"
+                    f"<tr><th>Bitiş Tarihi</th><td>{format_datetime_for_email(end)}</td></tr>"
+                    f"<tr><th>Öncelik</th><td>{translated_priority}</td></tr>"
                     f"<tr><th>Görevi Atayan</th><td>{created_by_fullname}</td></tr>"
                     f"</table>"
-                    f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SERProjeTakip uygulamasını</a> kontrol edin.</p>"
+                    f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SER Proje Takip Uygulaması</a>nı kontrol edin.</p>"
                 )
                 send_email_notification(
                     assigned_user_email_info['email'],
@@ -3010,7 +3036,6 @@ def add_task():
     finally:
         if connection:
             connection.close()
-
 # API to update an existing task - Güncellendi
 @app.route('/api/tasks/<int:task_id>', methods=['PUT'])
 def update_task(task_id):
@@ -3052,6 +3077,8 @@ def update_task(task_id):
 
             # Görevi güncelleyen kişinin adını al
             updated_by_fullname = get_user_fullname_by_id(cursor, updated_by_user_id)
+            # Öncelik çevirisini al
+            translated_priority = PRIORITY_TRANSLATIONS.get(priority.lower(), priority.capitalize())
 
             # If the assigned user changed, send notifications to old and new users
             if old_assigned_user_id and old_assigned_user_id != new_assigned_user_id:
@@ -3066,12 +3093,11 @@ def update_task(task_id):
                 old_assigned_user_email_info = cursor.fetchone()
                 if old_assigned_user_email_info and old_assigned_user_email_info['email']:
                     old_assignee_email_body = (
-                        f"<p>Merhaba,</p>"
                         f"<p>'{title}' başlıklı görev artık size atanmamıştır.</p>"
                         f"<table>"
                         f"<tr><th>Görevi Güncelleyen</th><td>{updated_by_fullname}</td></tr>"
                         f"</table>"
-                        f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SERProjeTakip uygulamasını</a> kontrol edin.</p>"
+                        f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SER Proje Takip Uygulaması</a>nı kontrol edin.</p>"
                     )
                     send_email_notification(
                         old_assigned_user_email_info['email'],
@@ -3096,12 +3122,12 @@ def update_task(task_id):
                     f"<p>Size '{title}' başlıklı görev atandı ve güncellendi:</p>"
                     f"<table>"
                     f"<tr><th>Açıklama</th><td>{description or 'Yok'}</td></tr>"
-                    f"<tr><th>Başlangıç Tarihi</th><td>{start}</td></tr>"
-                    f"<tr><th>Bitiş Tarihi</th><td>{end or 'Belirtilmemiş'}</td></tr>"
-                    f"<tr><th>Öncelik</th><td>{priority.capitalize()}</td></tr>"
+                    f"<tr><th>Başlangıç Tarihi</th><td>{format_datetime_for_email(start)}</td></tr>"
+                    f"<tr><th>Bitiş Tarihi</th><td>{format_datetime_for_email(end)}</td></tr>"
+                    f"<tr><th>Öncelik</th><td>{translated_priority}</td></tr>"
                     f"<tr><th>Görevi Güncelleyen</th><td>{updated_by_fullname}</td></tr>"
                     f"</table>"
-                    f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SERProjeTakip uygulamasını</a> kontrol edin.</p>"
+                    f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SER Proje Takip Uygulaması</a>nı kontrol edin.</p>"
                 )
                 send_email_notification(
                     new_assigned_user_email_info['email'],
@@ -3165,12 +3191,11 @@ def delete_task(task_id):
                 assigned_user_email_info = cursor.fetchone()
                 if assigned_user_email_info and assigned_user_email_info['email']:
                     assigned_user_email_body = (
-                        f"<p>Merhaba,</p>"
                         f"<p>'{task_info['title']}' başlıklı görev size atanmıştı ve silindi.</p>"
                         f"<table>"
                         f"<tr><th>Görevi Silen</th><td>{deleted_by_fullname}</td></tr>"
                         f"</table>"
-                        f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SERProjeTakip uygulamasını</a> kontrol edin.</p>"
+                        f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SER Proje Takip Uygulaması</a>nı kontrol edin.</p>"
                     )
                     send_email_notification(
                         assigned_user_email_info['email'],
@@ -3193,12 +3218,11 @@ def delete_task(task_id):
                  creator_user_email_info = cursor.fetchone()
                  if creator_user_email_info and creator_user_email_info['email']:
                      creator_email_body = (
-                         f"<p>Merhaba,</p>"
                          f"<p>Yönettiğiniz '{task_info['title']}' başlıklı görev silindi.</p>"
                          f"<table>"
                          f"<tr><th>Görevi Silen</th><td>{deleted_by_fullname}</td></tr>"
                          f"</table>"
-                         f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SERProjeTakip uygulamasını</a> kontrol edin.</p>"
+                         f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SER Proje Takip Uygulaması</a>nı kontrol edin.</p>"
                      )
                      send_email_notification(
                          creator_user_email_info['email'],
@@ -3393,9 +3417,8 @@ def _check_and_notify_completed_steps(cursor):
                 manager_email_info = cursor.fetchone()
                 if manager_email_info and manager_email_info['email']:
                     email_body = (
-                        f"<p>Merhaba,</p>"
                         f"<p>'{project_name}' projesindeki '{step_name}' iş adımı planlanan bitiş tarihine ({step_end_date}) ulaştı.</p>"
-                        f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SERProjeTakip uygulamasını</a> kontrol edin.</p>"
+                        f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SER Proje Takip Uygulaması</a>nı kontrol edin.</p>"
                     )
                     send_email_notification(
                         manager_email_info['email'],
@@ -3413,9 +3436,8 @@ def _check_and_notify_completed_steps(cursor):
                     send_notification(cursor, admin_id, notification_title, notification_message)
                 for admin_email in admin_emails:
                     email_body = (
-                        f"<p>Merhaba,</p>"
                         f"<p>'{project_name}' projesindeki '{step_name}' iş adımı planlanan bitiş tarihine ({step_end_date}) ulaştı.</p>"
-                        f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SERProjeTakip uygulamasını</a> kontrol edin.</p>"
+                        f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SER Proje Takip Uygulaması</a>nı kontrol edin.</p>"
                     )
                     send_email_notification(
                         admin_email,
