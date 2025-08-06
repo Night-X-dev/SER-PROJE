@@ -2959,19 +2959,19 @@ def _check_and_notify_completed_steps(cursor):
     try:
         today = datetime.date.today()
 
-        # Admin kullanıcısının ID'sini al (bildirim göndermek için)
-        cursor.execute("SELECT id FROM users WHERE role = 'Admin' LIMIT 1")
-        admin_user = cursor.fetchone()
+        # Tüm Admin kullanıcılarının ID'lerini al (bildirim göndermek için)
+        cursor.execute("SELECT id FROM users WHERE role = 'Admin'")
+        admin_users = cursor.fetchall() # fetchall() ile tüm adminleri çekiyoruz
         
-        # DEBUG: Admin kullanıcısı bilgisini yazdır
-        print(f"DEBUG: Admin kullanıcı sorgusu sonucu: {admin_user}")
+        # DEBUG: Admin kullanıcıları bilgisini yazdır
+        print(f"DEBUG: Admin kullanıcıları sorgu sonucu: {admin_users}")
 
-        admin_id = admin_user['id'] if admin_user else None
+        admin_ids = [user['id'] for user in admin_users] # ID'leri bir listeye topluyoruz
         
-        # DEBUG: Admin ID değerini yazdır
-        print(f"DEBUG: Belirlenen Admin ID: {admin_id}")
+        # DEBUG: Belirlenen Admin ID'leri yazdır
+        print(f"DEBUG: Belirlenen Admin ID'ler: {admin_ids}")
 
-        if not admin_id:
+        if not admin_ids: # Eğer hiç admin bulunamazsa
             print("UYARI: Yönetici (Admin) kullanıcısı bulunamadı. Yöneticiye bildirim gönderilemeyecek.")
 
         # Bitiş tarihi bugün veya geçmiş olan ve henüz bildirim gönderilmemiş iş adımlarını bul
@@ -3015,9 +3015,10 @@ def _check_and_notify_completed_steps(cursor):
             else:
                 print(f"UYARI: Proje '{project_name}' için proje yöneticisi bulunamadı. Proje yöneticisine bildirim gönderilemedi.")
 
-            # Yöneticiye bildirim gönder
-            if admin_id:
-                send_notification(cursor, admin_id, notification_title, notification_message)
+            # Tüm yöneticilere bildirim gönder
+            if admin_ids:
+                for admin_id in admin_ids: # Her bir admin ID'si için döngü
+                    send_notification(cursor, admin_id, notification_title, notification_message)
             else:
                 print(f"UYARI: Yöneticiye bildirim gönderilemedi (Admin ID bulunamadı).")
 
