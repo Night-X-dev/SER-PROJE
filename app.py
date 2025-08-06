@@ -2962,8 +2962,15 @@ def _check_and_notify_completed_steps(cursor):
         # Admin kullanıcısının ID'sini al (bildirim göndermek için)
         cursor.execute("SELECT id FROM users WHERE role = 'Admin' LIMIT 1")
         admin_user = cursor.fetchone()
+        
+        # DEBUG: Admin kullanıcısı bilgisini yazdır
+        print(f"DEBUG: Admin kullanıcı sorgusu sonucu: {admin_user}")
+
         admin_id = admin_user['id'] if admin_user else None
         
+        # DEBUG: Admin ID değerini yazdır
+        print(f"DEBUG: Belirlenen Admin ID: {admin_id}")
+
         if not admin_id:
             print("UYARI: Yönetici (Admin) kullanıcısı bulunamadı. Yöneticiye bildirim gönderilemeyecek.")
 
@@ -3030,6 +3037,7 @@ def _check_and_notify_completed_steps(cursor):
     except Exception as e:
         print(f"Genel hata (_check_and_notify_completed_steps): {e}")
         traceback.print_exc()
+
 
 ##if __name__ == '__main__':
   ##  app.run(host='0.0.0.0', port=3001, debug=True)
