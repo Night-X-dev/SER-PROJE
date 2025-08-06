@@ -136,35 +136,43 @@ def get_db_connection():
     """Establishes and returns a database connection."""
     connection = None
     try:
+        # MYSQL_PUBLIC_URL ortam değişkenini kontrol et
         public_url = os.getenv("MYSQL_PUBLIC_URL")
+        host = None
+        port = None
+        user = None
+        password = None
+        database = None
+
         if public_url:
             try:
+                # Eğer public URL varsa, onu ayrıştır
                 parsed_url = urllib.parse.urlparse(public_url)
                 host = parsed_url.hostname
                 port = parsed_url.port if parsed_url.port else 3306
                 user = parsed_url.username
                 password = parsed_url.password
                 database = parsed_url.path.lstrip('/')
-                print(f"DEBUG: Using parsed public URL. Host={host}, Port={port}, User={user}, DB={database}")
+                print(f"DEBUG: Parsed public URL used. Host={host}, Port={port}, User={user}, DB={database}")
             except Exception as url_parse_e:
-                print(f"ERROR: Could not parse MYSQL_PUBLIC_URL: {url_parse_e}. Falling back to fixed values or individual environment variables.")
-                # Fallback to fixed values or individual environment variables in case of URL parsing error
-                host = os.getenv("MYSQL_HOST", "localhost")
-                port = int(os.getenv("MYSQL_PORT", 3306))
-                user = os.getenv("MYSQL_USER", "admin") # Updated
-                password = os.getenv("MYSQL_PASSWORD", "Ser171234") # Updated
-                database = os.getenv("MYSQL_DATABASE", "ser_db") # Updated
-                print(f"DEBUG: Using environment variables or fixed values: Host={host}, Port={port}, User={user}, DB={database}")
-        else:
-            print("DEBUG: MYSQL_PUBLIC_URL not found or empty. Using environment variables or fixed values.")
-            # If MYSQL_PUBLIC_URL is not present or empty, use individual environment variables.
-            # If environment variables are also not present, use the fixed values specified here.
-            host = os.getenv("MYSQL_HOST", "localhost")
-            port = int(os.getenv("MYSQL_PORT", 3306))
-            user = os.getenv("MYSQL_USER", "admin") # Updated
-            password = os.getenv("MYSQL_PASSWORD", "Ser171234") # Updated
-            database = os.getenv("MYSQL_DATABASE", "ser_db") # Updated
-            print(f"DEBUG: Using environment variables or fixed values: Host={host}, Port={port}, User={user}, DB={database}")
+                print(f"ERROR: Could not parse MYSQL_PUBLIC_URL: {url_parse_e}. Falling back to individual environment variables.")
+        
+        # Eğer public_url kullanılmadıysa veya ayrıştırma başarısız olduysa,
+        # ayrı ayrı ortam değişkenlerini kullanmayı dene
+        if not host: # Eğer host hala None ise (yani public_url başarılı olmadıysa)
+            host = os.getenv("MYSQL_HOST")
+            port = int(os.getenv("MYSQL_PORT", 3306)) # Port için varsayılan değer tutulabilir
+            user = os.getenv("MYSQL_USER")
+            password = os.getenv("MYSQL_PASSWORD")
+            database = os.getenv("MYSQL_DATABASE")
+            print(f"DEBUG: Individual environment variables used. Host={host}, Port={port}, User={user}, DB={database}")
+
+        # Gerekli tüm bağlantı bilgilerinin ayarlandığından emin ol
+        if not all([host, user, password, database]):
+            raise ValueError(
+                "Veritabanı bağlantı bilgileri (.env dosyasında veya ortam değişkenlerinde) eksik. "
+                "Lütfen MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE değişkenlerini ayarlayın."
+            )
 
         connection = pymysql.connect(
             host=host,
@@ -180,7 +188,15 @@ def get_db_connection():
         print(f"MySQL connection error: {e}")
         if connection:
             connection.close()
-        raise
+        raise # Hatanın yukarıya iletilmesini sağla
+    except ValueError as e: # Özel ValueError'ı yakala
+        print(f"Configuration error: {e}")
+        raise # Hatanın yukarıya iletilmesini sağla
+    except Exception as e:
+        print(f"General connection error: {e}")
+        if connection:
+            connection.close()
+        raise # Hatanın yukarıya iletilmesini sağla
 
 # Helper function: Gets user role from the database
 def get_user_role_from_db(user_id):
@@ -2916,40 +2932,7 @@ def get_project_status_stats():
     finally:
         if connection:
             connection.close()
-@app.route('/api/worker-performance')
-def worker_performance():
-    """Retrieves performance metrics for employees (project managers)."""
-    connection = get_db_connection()
-    try:
-        with connection.cursor() as cursor:
-            sql = """
-            SELECT
-                u.fullname AS manager_name,
-                COUNT(DISTINCT p.project_id) AS total_projects,
-                SUM(CASE
-                        WHEN p.status = 'Completed' AND (\
-                            SELECT SUM(pr.delay_days) + SUM(pr.custom_delay_days)
-                            FROM project_progress pr
-                            WHERE pr.project_id = p.project_id
-                        ) IS NULL OR (\
-                            SELECT SUM(pr.delay_days) + SUM(pr.custom_delay_days)
-                            FROM project_progress pr
-                            WHERE pr.project_id = p.project_id
-                        ) = 0
-                    THEN 1
-                    ELSE 0
-                END) AS on_time_projects
-            FROM projects p
-            LEFT JOIN users u ON u.id = p.project_manager_id
-            WHERE u.role IN ('Teknisyen', 'Tekniker', 'Mühendis', 'Müdür', 'Proje Yöneticisi')
-            GROUP BY u.fullname
-            """
-            cursor.execute(sql)
-            result = cursor.fetchall()
-            return jsonify(result)
-    finally:
-        if connection:
-            connection.close()
+
 def _check_and_notify_completed_steps(cursor):
     """
     Checks for project progress steps whose end_date is today or in the past,
