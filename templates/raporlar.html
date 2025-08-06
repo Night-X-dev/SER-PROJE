@@ -697,6 +697,7 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
             margin-bottom: 30px;
             overflow-x: auto;
+            position: relative; /* today-line için relative konumlandırma */
         }
         
         .gantt-header {
@@ -728,7 +729,7 @@
         }
         
         .task-bar {
-            grid-column: span 31;
+            /* grid-column değerleri JavaScript ile dinamik olarak ayarlanacak */
             height: 30px;
             background-color: var(--primary-light);
             border-radius: 4px;
@@ -761,6 +762,7 @@
             width: 2px;
             background-color: var(--warning);
             z-index: 10;
+            /* left değeri JavaScript ile ayarlanacak */
         }
         
         .task-tooltip {
@@ -1296,7 +1298,7 @@
                 </div>
                 
                 <!-- Bugün çizgisi (gün 15) -->
-                <div class="today-line" style="left: 48%;"></div>
+                <div class="today-line" style="left: 0;"></div> <!-- left değeri JavaScript ile ayarlanacak -->
                 
                 <div class="task-tooltip" id="taskTooltip">
                     <div class="task-tooltip-title">Malzeme Kontrol</div>
@@ -1531,6 +1533,44 @@
                         }
                     }
                 });
+
+                // Bugün çizgisini dinamik olarak konumlandırma
+                function positionTodayLine() {
+                    const ganttContainer = document.querySelector('.gantt-container');
+                    const ganttHeader = document.querySelector('.gantt-header');
+                    const todayLine = document.querySelector('.today-line');
+
+                    if (!ganttContainer || !ganttHeader || !todayLine) {
+                        console.warn("Gantt bileşenleri bulunamadı, bugün çizgisi konumlandırılamıyor.");
+                        return;
+                    }
+
+                    // Gantt şemasının başlangıç tarihini belirle (Örnek: Ağustos 2025'in ilk günü)
+                    // Gerçek projede bu, veritabanından gelen projenin başlangıç tarihi veya iş adımlarının en erken başlangıç tarihi olabilir.
+                    const ganttStartDate = new Date(2025, 7, 1); // Yıl, Ay (0-11), Gün. Ağustos = 7
+
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0); // Sadece tarih kısmını al
+
+                    // Bugünün, Gantt başlangıç tarihinden kaç gün sonra olduğunu bul
+                    const diffTime = today.getTime() - ganttStartDate.getTime();
+                    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+                    const totalDaysInGantt = 31; // Gantt şemasında gösterilen gün sayısı
+                    const dayWidthInPx = (ganttHeader.offsetWidth - 150) / totalDaysInGantt;
+
+                    // Bugün çizgisinin sol konumunu hesapla
+                    // 150px (ilk sütun) + (geçen gün sayısı * her günün piksel genişliği)
+                    const leftPosition = 150 + (diffDays * dayWidthInPx);
+                    
+                    // Çizgiyi konumlandır
+                    todayLine.style.left = `${leftPosition}px`;
+                    todayLine.style.height = `${ganttContainer.offsetHeight}px`; // Konteyner yüksekliği kadar uzat
+                }
+
+                // Sayfa yüklendiğinde ve pencere boyutu değiştiğinde çizgiyi konumlandır
+                positionTodayLine();
+                window.addEventListener('resize', positionTodayLine);
             });
         </script>
     </div>
