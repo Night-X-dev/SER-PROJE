@@ -755,6 +755,8 @@
             );
         }
         
+        /* Today line removed as per request */
+        /*
         .today-line {
             position: absolute;
             top: 0;
@@ -762,8 +764,8 @@
             width: 2px;
             background-color: var(--warning);
             z-index: 10;
-            /* left değeri JavaScript ile ayarlanacak */
         }
+        */
         
         .task-tooltip {
             position: absolute;
@@ -831,6 +833,19 @@
             font-weight: 600;
             font-size: 18px;
             color: var(--primary);
+        }
+
+        #map {
+            height: 300px; /* Haritanın yüksekliğini ayarla */
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 10px;
+            background-color: var(--input-bg); /* Harita yüklenene kadar arka plan */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--light-gray);
+            font-size: 1.2em;
         }
         
         @media (max-width: 1200px) {
@@ -1245,9 +1260,8 @@
                 <div class="summary-item">
                     <div class="summary-label">Proje Konumu</div>
                     <div class="summary-value" id="reportProjectLocation"></div>
-                    <div class="map-placeholder" style="height: 150px; background-color: var(--input-bg); border-radius: 8px; margin-top: 10px; display: flex; align-items: center; justify-content: center; color: var(--light-gray);">
-                        <i class="fas fa-map-marker-alt fa-2x"></i> Harita Görünümü
-                    </div>
+                    <!-- Google Maps Harita Alanı -->
+                    <div id="map">Harita Yükleniyor...</div>
                 </div>
                 
                 <div class="summary-item">
@@ -1269,9 +1283,7 @@
             <div class="gantt-container" id="ganttContainerWrapper" style="display: none;">
                 <div class="card-header">
                     <div class="card-title">İş Adımları Zaman Çizelgesi</div>
-                    <div class="today-line-indicator">
-                        <i class="fas fa-arrow-right" style="color: var(--warning);"></i> Bugün
-                    </div>
+                    <!-- Bugün çizgisi göstergesi kaldırıldı -->
                 </div>
                 
                 <div class="gantt-header" id="ganttHeader">
@@ -1283,8 +1295,8 @@
                     <!-- İş adımları JavaScript ile doldurulacak -->
                 </div>
                 
-                <!-- Bugün çizgisi -->
-                <div class="today-line" id="todayLine" style="left: 0;"></div> 
+                <!-- Bugün çizgisi kaldırıldı -->
+                <!-- <div class="today-line" id="todayLine" style="left: 0;"></div> -->
                 
                 <div class="task-tooltip" id="taskTooltip">
                     <div class="task-tooltip-title" id="tooltipStepName"></div>
@@ -1305,7 +1317,7 @@
                         <span class="tooltip-value" id="tooltipDelayDays"></span>
                     </div>
                     <div class="tooltip-row">
-                        <span class="tooltip-label">Custom Delay:</span>
+                        <span class="tooltip-label">Erteleme:</span> <!-- Custom Delay başlığı değiştirildi -->
                         <span class="tooltip-value" id="tooltipCustomDelayDays"></span>
                     </div>
                     <div class="tooltip-row">
@@ -1340,7 +1352,7 @@
                                 <th>Başlangıç</th>
                                 <th>Bitiş</th>
                                 <th>Gecikme</th>
-                                <th>Custom Delay</th>
+                                <th>Erteleme</th> <!-- Custom Delay başlığı değiştirildi -->
                                 <th>Gerçek Bitiş</th>
                                 <th>Durum</th>
                             </tr>
@@ -1388,6 +1400,94 @@
         <script>
             let delayChartInstance; // Chart.js instance'ını tutmak için
             let currentProjectData = null; // Mevcut proje verilerini tutmak için
+            let map; // Google Map instance'ını tutmak için
+            let marker; // Google Map marker'ını tutmak için
+
+            // Google Haritalar API'sini yükleme fonksiyonu
+            function loadGoogleMapsScript() {
+                const script = document.createElement('script');
+                // API anahtarınızı buraya ekleyin
+                script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap`;
+                script.async = true;
+                script.defer = true;
+                document.head.appendChild(script);
+            }
+
+            // Haritayı başlatma fonksiyonu (Google Maps API tarafından çağrılacak)
+            window.initMap = function() {
+                const defaultLocation = { lat: 38.9637, lng: 35.2433 }; // Türkiye'nin merkezi
+                map = new google.maps.Map(document.getElementById('map'), {
+                    zoom: 6,
+                    center: defaultLocation,
+                    mapId: 'DEMO_MAP_ID' // Kendi harita kimliğinizi buraya ekleyebilirsiniz
+                });
+                // Başlangıçta marker eklemeyin, proje konumu geldiğinde eklenecek
+            };
+
+            // Haritayı güncelleme fonksiyonu
+            async function updateMap(locationString) {
+                const mapElement = document.getElementById('map');
+                if (!mapElement) {
+                    console.error("Harita elementi bulunamadı.");
+                    return;
+                }
+
+                if (!locationString || locationString.trim() === '') {
+                    mapElement.innerHTML = '<i class="fas fa-map-marker-alt fa-2x"></i> Konum Bilgisi Yok';
+                    if (map) {
+                        map.setCenter({ lat: 38.9637, lng: 35.2433 }); // Türkiye'nin merkezi
+                        map.setZoom(6);
+                        if (marker) {
+                            marker.setMap(null); // Mevcut markeri kaldır
+                        }
+                    }
+                    return;
+                }
+
+                mapElement.innerHTML = ''; // Placeholder'ı temizle
+                if (!map) {
+                    // Eğer harita henüz yüklenmediyse, yükleme fonksiyonunu çağır
+                    // Bu senaryo, initMap'in henüz çağrılmadığı durumlar için.
+                    // initMap globalde tanımlı olduğu için doğrudan çağrılabilir.
+                    loadGoogleMapsScript(); // Bu, initMap'i çağıracak
+                    // Harita yüklenene kadar beklemek gerekebilir, bu yüzden burada doğrudan işlem yapmayalım.
+                    // initMap çağrıldıktan sonra updateMap tekrar çağrılmalı veya initMap içinde ilk konum ayarlanmalı.
+                    return;
+                }
+
+                try {
+                    // Konumu coğrafi koordinatlara dönüştürmek için Geocoding API kullan
+                    const geocoder = new google.maps.Geocoder();
+                    geocoder.geocode({ 'address': locationString }, function(results, status) {
+                        if (status === 'OK' && results[0]) {
+                            const latLng = results[0].geometry.location;
+                            map.setCenter(latLng);
+                            map.setZoom(12); // Daha yakın bir zoom seviyesi
+
+                            if (marker) {
+                                marker.setMap(null); // Önceki markeri kaldır
+                            }
+                            marker = new google.maps.Marker({
+                                map: map,
+                                position: latLng,
+                                title: locationString
+                            });
+                        } else {
+                            mapElement.innerHTML = `<i class="fas fa-map-marker-alt fa-2x"></i> Konum Bulunamadı: ${locationString}`;
+                            console.error('Geocode başarısız oldu: ' + status);
+                            if (marker) {
+                                marker.setMap(null); // Markeri kaldır
+                            }
+                            map.setCenter({ lat: 38.9637, lng: 35.2433 }); // Türkiye'nin merkezi
+                            map.setZoom(6);
+                        }
+                    });
+                } catch (error) {
+                    mapElement.innerHTML = '<i class="fas fa-map-marker-alt fa-2x"></i> Harita Hatası';
+                    console.error("Harita güncellenirken hata oluştu:", error);
+                }
+            }
+
 
             // Yardımcı fonksiyon: URL'den parametre okuma
             function getUrlParameter(name) {
@@ -1399,14 +1499,13 @@
 
             // Tarih formatlama yardımcı fonksiyonu
             function formatDate(dateString) {
-                if (!dateString) return '-';
+                if (!dateString || dateString === 'None') return '-'; // 'None' kontrolü eklendi
                 const date = new Date(dateString);
+                // Geçersiz tarih kontrolü
+                if (isNaN(date.getTime())) {
+                    return '-';
+                }
                 return date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            }
-
-            // PDF için tarih formatlama yardımcı fonksiyonu (formatDate ile aynı işlevi görecek)
-            function formatProjectEndDate(dateString) {
-                return formatDate(dateString);
             }
 
             // Gantt şeması başlıklarını oluşturma
@@ -1472,12 +1571,10 @@
                     taskBarDiv.style.gridColumn = `${startColumn} / span ${spanColumns}`;
 
                     // Duruma göre sınıf ekle
-                    if (step.status === 'Tamamlandı') {
+                    if (step.status === 'Tamamlandı' || step.status === 'Gecikmeli Bitti' || step.status === 'Ertelenmiş Bitti') {
                         taskBarDiv.classList.add('completed');
-                    } else if (step.status === 'Gecikmeli') {
+                    } else if (step.status === 'Gecikmeli' || step.status === 'Ertelenmiş') {
                         taskBarDiv.classList.add('delayed');
-                    } else if (step.custom_delay_days > 0) { // Eğer custom_delay_days varsa
-                        taskBarDiv.classList.add('custom-delay');
                     } else {
                         taskBarDiv.classList.add('active'); 
                     }
@@ -1510,8 +1607,19 @@
                     bar.addEventListener('mouseover', function(e) {
                         const rect = this.getBoundingClientRect();
                         taskTooltip.style.display = 'block';
-                        taskTooltip.style.top = (rect.top - taskTooltip.offsetHeight - 10) + 'px';
-                        taskTooltip.style.left = (rect.left + rect.width/2 - taskTooltip.offsetWidth/2) + 'px';
+                        // Tooltip'i fare konumuna göre ayarla
+                        taskTooltip.style.left = (e.pageX + 10) + 'px'; // Fare imlecinin sağında 10px boşluk
+                        taskTooltip.style.top = (e.pageY + 10) + 'px'; // Fare imlecinin altında 10px boşluk
+
+                        // Ekran dışına taşmayı engelle
+                        const tooltipRect = taskTooltip.getBoundingClientRect();
+                        if (tooltipRect.right > window.innerWidth) {
+                            taskTooltip.style.left = (e.pageX - tooltipRect.width - 10) + 'px';
+                        }
+                        if (tooltipRect.bottom > window.innerHeight) {
+                            taskTooltip.style.top = (e.pageY - tooltipRect.height - 10) + 'px';
+                        }
+
 
                         // Tooltip içeriğini güncelle
                         document.getElementById('tooltipStepName').textContent = this.dataset.stepName;
@@ -1530,36 +1638,6 @@
                 });
             }
 
-            // Bugün çizgisini dinamik olarak konumlandırma
-            function positionTodayLine(ganttStartDate, totalDaysInGantt) {
-                const ganttContainer = document.querySelector('.gantt-container');
-                const ganttHeader = document.getElementById('ganttHeader');
-                const todayLine = document.getElementById('todayLine');
-
-                if (!ganttContainer || !ganttHeader || !todayLine || !ganttStartDate || !totalDaysInGantt) {
-                    console.warn("Gantt bileşenleri veya tarih bilgileri eksik, bugün çizgisi konumlandırılamıyor.");
-                    return;
-                }
-
-                const startOfGantt = new Date(ganttStartDate);
-                startOfGantt.setHours(0, 0, 0, 0);
-
-                const today = new Date();
-                today.setHours(0, 0, 0, 0); // Sadece tarih kısmını al
-
-                const diffTime = today.getTime() - startOfGantt.getTime();
-                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-                // İlk sütun (task-name) genişliği 150px
-                // Geri kalan günlerin toplam genişliği (ganttHeader.offsetWidth - 150)
-                const dayWidthInPx = (ganttHeader.offsetWidth - 150) / totalDaysInGantt;
-
-                const leftPosition = 150 + (diffDays * dayWidthInPx);
-                
-                todayLine.style.left = `${leftPosition}px`;
-                todayLine.style.height = `${ganttContainer.offsetHeight}px`;
-            }
-
             // Detaylı İş Adımları Tablosunu Doldurma
             function populateProgressTable(progressSteps) {
                 const tableBody = document.getElementById('progressStepsTableBody');
@@ -1572,14 +1650,12 @@
                         <td data-label="Başlangıç">${formatDate(step.start_date)}</td>
                         <td data-label="Bitiş">${formatDate(step.end_date)}</td>
                         <td data-label="Gecikme">${(step.delay_days || 0) > 0 ? step.delay_days + ' gün' : '-'}</td>
-                        <td data-label="Custom Delay">${(step.custom_delay_days || 0) > 0 ? step.custom_delay_days + ' gün' : '-'}</td>
+                        <td data-label="Erteleme">${(step.custom_delay_days || 0) > 0 ? step.custom_delay_days + ' gün' : '-'}</td>
                         <td data-label="Gerçek Bitiş">${formatDate(step.real_end_date)}</td>
                         <td data-label="Durum">
                             <span class="status-badge ${
-                                step.status === 'Tamamlandı' ? 'normal' :
-                                step.status === 'Gecikmeli' ? 'gecikmeli' :
-                                step.status === 'Custom Delay' ? 'gecikmeli' : 
-                                step.status === 'Aktif' ? 'normal' :
+                                step.status === 'Tamamlandı' || step.status === 'Gecikmeli Bitti' || step.status === 'Ertelenmiş Bitti' ? 'normal' :
+                                step.status === 'Gecikmeli' || step.status === 'Ertelenmiş' ? 'gecikmeli' :
                                 ''
                             }">${step.status}</span>
                         </td>
@@ -1671,6 +1747,7 @@
                         delayChartInstance = null;
                     }
                     updateCompletionMetrics(0, 0, 0);
+                    updateMap(null); // Haritayı temizle
                     return;
                 }
 
@@ -1721,13 +1798,16 @@
                         delayWarning.style.display = 'none';
                     }
 
+                    // Haritayı güncelle
+                    updateMap(project.project_location);
+
                     // 2. İş Adımları Zaman Çizelgesi (Gantt)
                     // Gantt şemasının başlangıç ve bitiş tarihlerini projenin kendi başlangıç/bitiş tarihlerinden al
                     const ganttStartDate = project.start_date;
                     const ganttEndDate = project.end_date;
                     const totalDaysInGantt = generateGanttHeader(ganttStartDate, ganttEndDate);
                     renderGanttTasks(progress_steps, ganttStartDate, totalDaysInGantt);
-                    positionTodayLine(ganttStartDate, totalDaysInGantt); // Bugün çizgisini konumlandır
+                    // positionTodayLine(ganttStartDate, totalDaysInGantt); // Bugün çizgisi kaldırıldı
 
                     // 3. Detaylı İş Adımları Tablosunu Doldur
                     populateProgressTable(progress_steps);
@@ -1744,6 +1824,7 @@
                     ganttContainerWrapper.style.display = 'none';
                     progressStepsContainer.style.display = 'none';
                     metricsContainer.style.display = 'none';
+                    updateMap(null); // Haritayı temizle
                 }
             }
 
@@ -1756,6 +1837,9 @@
                         throw new Error('Projeler çekilemedi.');
                     }
                     const projects = await response.json();
+
+                    // Projeleri adına göre alfabetik sırala
+                    projects.sort((a, b) => a.project_name.localeCompare(b.project_name));
 
                     projects.forEach(project => {
                         const option = document.createElement('option');
@@ -1867,12 +1951,40 @@
                     y += lineHeight;
                     doc.text(`Planlanan Başlangıç: ${formatDate(currentProjectData.project.start_date)}`, margin, y);
                     y += lineHeight;
-                    doc.text(`Planlanan Bitiş: ${formatProjectEndDate(currentProjectData.project.end_date)}`, margin, y);
+                    doc.text(`Planlanan Bitiş: ${formatDate(currentProjectData.project.end_date)}`, margin, y);
                     y += lineHeight;
                     doc.text(`Proje Konumu: ${currentProjectData.project.project_location}`, margin, y);
                     y += lineHeight;
                     doc.text(`Açıklama: ${currentProjectData.project.description || 'Yok'}`, margin, y);
                     y += lineHeight * 2;
+
+                    // Google Map Snapshot
+                    const mapElement = document.getElementById('map');
+                    if (mapElement && mapElement.style.display !== 'none' && mapElement.innerHTML !== '<i class="fas fa-map-marker-alt fa-2x"></i> Konum Bilgisi Yok' && mapElement.innerHTML !== '<i class="fas fa-map-marker-alt fa-2x"></i> Harita Hatası') {
+                        doc.text("Proje Konumu Haritası", margin, y);
+                        y += lineHeight;
+                        try {
+                            const canvas = await html2canvas(mapElement, { scale: 2 }); // Daha yüksek çözünürlük için scale
+                            const imgData = canvas.toDataURL('image/png');
+                            const imgWidth = doc.internal.pageSize.width - 2 * margin;
+                            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+                            if (y + imgHeight + lineHeight * 2 > doc.internal.pageSize.height - margin) {
+                                doc.addPage();
+                                y = margin;
+                            }
+                            doc.addImage(imgData, 'PNG', margin, y, imgWidth, imgHeight);
+                            y += imgHeight + lineHeight * 2;
+                        } catch (error) {
+                            console.error("Harita görseli PDF'e eklenirken hata oluştu:", error);
+                            doc.text("Harita görseli yüklenemedi.", margin, y);
+                            y += lineHeight * 2;
+                        }
+                    } else {
+                        doc.text("Proje Konumu Haritası: Mevcut Değil veya Yüklenemedi", margin, y);
+                        y += lineHeight * 2;
+                    }
+
 
                     // Progress Steps Table
                     doc.setFontSize(16);
@@ -1880,7 +1992,7 @@
                     y += lineHeight * 1.5;
 
                     const tableHeaders = [
-                        ['Adım Adı', 'Başlangıç', 'Bitiş', 'Gecikme', 'Custom Delay', 'Gerçek Bitiş', 'Durum']
+                        ['Adım Adı', 'Başlangıç', 'Bitiş', 'Gecikme', 'Erteleme', 'Gerçek Bitiş', 'Durum']
                     ];
                     const tableData = currentProjectData.progress_steps.map(step => [
                         step.step_name,
@@ -1914,17 +2026,20 @@
                     const delayChartCanvas = document.getElementById('delayChart');
                     if (delayChartCanvas) {
                         const delayChartImg = delayChartCanvas.toDataURL('image/png');
-                        if (y + delayChartCanvas.height / 2 > doc.internal.pageSize.height - margin) {
+                        const chartWidth = doc.internal.pageSize.width - 2 * margin;
+                        const chartHeight = (delayChartCanvas.height * chartWidth) / delayChartCanvas.width;
+
+                        if (y + chartHeight + lineHeight * 2 > doc.internal.pageSize.height - margin) {
                             doc.addPage();
                             y = margin;
                         }
                         doc.text("Gecikme Analizi", margin, y);
                         y += lineHeight;
-                        doc.addImage(delayChartImg, 'PNG', margin, y, delayChartCanvas.width / 2, delayChartCanvas.height / 2); // Boyutu küçült
-                        y += delayChartCanvas.height / 2 + lineHeight * 2;
+                        doc.addImage(delayChartImg, 'PNG', margin, y, chartWidth, chartHeight);
+                        y += chartHeight + lineHeight * 2;
                     }
 
-                    // Genel Tamamlanma Durumu (Basit Metin veya İlerleme Çubuğu Görseli)
+                    // Genel Tamamlanma Durumu (Basit Metin)
                     if (y + 50 > doc.internal.pageSize.height - margin) {
                         doc.addPage();
                         y = margin;
@@ -1968,6 +2083,9 @@
                         });
                     }
                 });
+
+                // Sayfa yüklendiğinde Google Maps scriptini yükle
+                loadGoogleMapsScript();
             });
         </script>
     </div>

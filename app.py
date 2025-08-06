@@ -264,9 +264,13 @@ def get_project_report_data(project_id):
 
             total_project_delay_days = 0
             completed_steps_count = 0
+            today = datetime.date.today()
+
             for step in progress_steps:
                 # Calculate total delay for the step
-                step_total_delay = (step['delay_days'] or 0) + (step['custom_delay_days'] or 0)
+                step_delay_days = step['delay_days'] or 0
+                step_custom_delay_days = step['custom_delay_days'] or 0
+                step_total_delay = step_delay_days + step_custom_delay_days
                 total_project_delay_days += step_total_delay
 
                 # Convert dates to ISO format
@@ -276,17 +280,34 @@ def get_project_report_data(project_id):
                     else:
                         step[key] = None
 
-                # Determine step status for frontend display
-                # Eğer real_end_date varsa ve bugünden küçük veya eşitse tamamlandı
-                if step['real_end_date'] and datetime.date.fromisoformat(step['real_end_date']) <= datetime.date.today():
-                    step['status'] = 'Tamamlandı'
-                    completed_steps_count += 1
-                elif step_total_delay > 0: # Gecikme günleri varsa gecikmeli
+                # Determine step status for frontend display based on new rules
+                step_start_date = datetime.date.fromisoformat(step['start_date']) if step['start_date'] else None
+                step_end_date = datetime.date.fromisoformat(step['end_date']) if step['end_date'] else None
+                step_real_end_date = datetime.date.fromisoformat(step['real_end_date']) if step['real_end_date'] else None
+
+                # Durum belirleme mantığı güncellendi
+                if step_real_end_date: # Gerçek bitiş tarihi varsa
+                    if step_real_end_date <= step_end_date:
+                        step['status'] = 'Tamamlandı'
+                    elif step_real_end_date > step_end_date and step_custom_delay_days > 0:
+                        step['status'] = 'Ertelenmiş Bitti'
+                    elif step_real_end_date > step_end_date and step_delay_days > 0:
+                        step['status'] = 'Gecikmeli Bitti'
+                    else:
+                        step['status'] = 'Tamamlandı' # Gerçek bitiş var ama gecikme yoksa Tamamlandı
+                elif step_start_date and today < step_start_date:
+                    step['status'] = 'Başlamadı'
+                elif step_end_date and today > step_end_date and step_custom_delay_days > 0:
+                    step['status'] = 'Ertelenmiş'
+                elif step_end_date and today > step_end_date and step_delay_days > 0:
                     step['status'] = 'Gecikmeli'
-                elif step['start_date'] and datetime.date.fromisoformat(step['start_date']) > datetime.date.today(): # Başlangıç tarihi henüz gelmediyse planlanıyor
-                    step['status'] = 'Planlanıyor'
                 else:
-                    step['status'] = 'Aktif' # Diğer durumlarda aktif
+                    step['status'] = 'Aktif' # Diğer durumlarda Aktif
+
+                # Tamamlanan adım sayısını güncelle
+                # Tamamlandı, Gecikmeli Bitti veya Ertelenmiş Bitti ise tamamlandı say
+                if step['status'] in ['Tamamlandı', 'Gecikmeli Bitti', 'Ertelenmiş Bitti']:
+                    completed_steps_count += 1
 
             # 3. Calculate Overall Completion Percentage
             total_steps = len(progress_steps)
@@ -319,6 +340,7 @@ def get_project_report_data(project_id):
     finally:
         if connection:
             connection.close()
+
 
 # Helper function: Gets user role from the database
 def get_user_role_from_db(user_id):
