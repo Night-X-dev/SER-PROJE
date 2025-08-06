@@ -955,6 +955,10 @@ def login_user():
             session['user_id'] = user['id']
             del user['password'] # Remove password from response for security
 
+            # BAŞARILI GİRİŞTEN SONRA BİLDİRİM KONTROLÜNÜ ÇALIŞTIR
+            _check_and_notify_completed_steps(cursor)
+            connection.commit() # _check_and_notify_completed_steps içinde yapılan güncellemeleri kaydet
+
             return jsonify({
                 'message': 'Login successful!',
                 'user': user
@@ -962,9 +966,13 @@ def login_user():
 
     except pymysql.Error as e:
         print(f"Database login error: {e}")
+        if connection:
+            connection.rollback() # Hata durumunda değişiklikleri geri al
         return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
     except Exception as e:
         print(f"General login error: {e}")
+        if connection:
+            connection.rollback() # Hata durumunda değişiklikleri geri al
         return jsonify({'message': 'Server error, please try again later.'}), 500
     finally:
         if connection:
@@ -2931,6 +2939,20 @@ def worker_performance():
     finally:
         if connection:
             connection.close()
+def send_notification(cursor, user_id, title, message):
+    """Sends a notification to a specific user using the provided cursor."""
+    try:
+        sql = "INSERT INTO notifications (user_id, title, message, created_at) VALUES (%s, %s, %s, NOW())"
+        cursor.execute(sql, (user_id, title, message))
+        # Note: We don't commit here. The main function (e.g., login_user) will commit all changes at once.
+        print(f"Notification prepared: User ID: {user_id}, Title: '{title}', Message: '{message}'")
+    except pymysql.Error as e:
+        print(f"Database error while preparing notification: {e}")
+    except Exception as e:
+        print(f"General error while preparing notification: {e}")
+
+# _check_and_notify_completed_steps fonksiyonu zaten doğru çağırıyor olmalı.
+# Bu fonksiyonun tanımını daha önceki cevabımdan kopyalayıp yapıştırdığınızdan emin olun.
 def _check_and_notify_completed_steps(cursor):
     """
     Checks for project progress steps whose end_date is today or in the past,
