@@ -198,6 +198,128 @@ def get_db_connection():
             connection.close()
         raise # Hatanın yukarıya iletilmesini sağla
 
+@app.route('/api/reports/project/<int:project_id>', methods=['GET'])
+def get_project_report_data(project_id):
+    """
+    Retrieves comprehensive report data for a specific project,
+    including project details, progress steps, and calculated metrics.
+    """
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            # 1. Fetch Project Details
+            sql_project = """
+            SELECT
+                p.project_id,
+                p.project_name,
+                p.reference_no,
+                p.description,
+                p.contract_date,
+                p.meeting_date,
+                p.start_date,
+                p.end_date,
+                p.project_location,
+                p.status,
+                c.customer_name,
+                u.fullname AS project_manager_name,
+                c.customer_id,
+                u.id AS project_manager_user_id
+            FROM projects p
+            JOIN customers c ON p.customer_id = c.customer_id
+            JOIN users u ON p.project_manager_id = u.id
+            WHERE p.project_id = %s
+            """
+            cursor.execute(sql_project, (project_id,))
+            project_data = cursor.fetchone()
+
+            if not project_data:
+                return jsonify({'message': 'Project not found.'}), 404
+
+            # Convert dates to ISO format
+            for key in ['contract_date', 'meeting_date', 'start_date', 'end_date']:
+                if key in project_data and isinstance(project_data[key], datetime.date):
+                    project_data[key] = project_data[key].isoformat()
+                else:
+                    project_data[key] = None # Ensure it's null if not a date
+
+            # 2. Fetch Project Progress Steps
+            sql_progress = """
+            SELECT
+                progress_id,
+                title AS step_name,
+                description,
+                start_date,
+                end_date,
+                delay_days,
+                custom_delay_days,
+                real_end_date,
+                completion_notified
+            FROM project_progress
+            WHERE project_id = %s
+            ORDER BY start_date ASC, created_at ASC
+            """
+            cursor.execute(sql_progress, (project_id,))
+            progress_steps = cursor.fetchall()
+
+            total_project_delay_days = 0
+            completed_steps_count = 0
+            for step in progress_steps:
+                # Calculate total delay for the step
+                step_total_delay = (step['delay_days'] or 0) + (step['custom_delay_days'] or 0)
+                total_project_delay_days += step_total_delay
+
+                # Convert dates to ISO format
+                for key in ['start_date', 'end_date', 'real_end_date']:
+                    if key in step and isinstance(step[key], datetime.date):
+                        step[key] = step[key].isoformat()
+                    else:
+                        step[key] = None
+
+                # Determine step status for frontend display
+                # Eğer real_end_date varsa ve bugünden küçük veya eşitse tamamlandı
+                if step['real_end_date'] and datetime.date.fromisoformat(step['real_end_date']) <= datetime.date.today():
+                    step['status'] = 'Tamamlandı'
+                    completed_steps_count += 1
+                elif step_total_delay > 0: # Gecikme günleri varsa gecikmeli
+                    step['status'] = 'Gecikmeli'
+                elif step['start_date'] and datetime.date.fromisoformat(step['start_date']) > datetime.date.today(): # Başlangıç tarihi henüz gelmediyse planlanıyor
+                    step['status'] = 'Planlanıyor'
+                else:
+                    step['status'] = 'Aktif' # Diğer durumlarda aktif
+
+            # 3. Calculate Overall Completion Percentage
+            total_steps = len(progress_steps)
+            completion_percentage = 0
+            if total_steps > 0:
+                completion_percentage = round((completed_steps_count / total_steps) * 100)
+            
+            # If project status is 'Tamamlandı' from DB, force 100% completion
+            if project_data['status'] == 'Tamamlandı':
+                completion_percentage = 100
+
+            # 4. Prepare the final report data
+            report_data = {
+                'project': project_data,
+                'progress_steps': progress_steps,
+                'total_project_delay_days': total_project_delay_days,
+                'completion_percentage': completion_percentage,
+                'completed_steps_count': completed_steps_count # Frontend için tamamlanan adım sayısı
+            }
+
+            return jsonify(report_data), 200
+
+    except pymysql.Error as e:
+        print(f"Database error while fetching project report data: {e}")
+        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+    except Exception as e:
+        print(f"General error while fetching project report data: {e}")
+        traceback.print_exc()
+        return jsonify({'message': 'Server error, please try again later.'}), 500
+    finally:
+        if connection:
+            connection.close()
+
 # Helper function: Gets user role from the database
 def get_user_role_from_db(user_id):
     """Retrieves the role of a user from the database."""
