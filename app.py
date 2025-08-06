@@ -2916,40 +2916,6 @@ def get_project_status_stats():
     finally:
         if connection:
             connection.close()
-@app.route('/api/worker-performance')
-def worker_performance():
-    """Retrieves performance metrics for employees (project managers)."""
-    connection = get_db_connection()
-    try:
-        with connection.cursor() as cursor:
-            sql = """
-            SELECT
-                u.fullname AS manager_name,
-                COUNT(DISTINCT p.project_id) AS total_projects,
-                SUM(CASE
-                        WHEN p.status = 'Completed' AND (\
-                            SELECT SUM(pr.delay_days) + SUM(pr.custom_delay_days)
-                            FROM project_progress pr
-                            WHERE pr.project_id = p.project_id
-                        ) IS NULL OR (\
-                            SELECT SUM(pr.delay_days) + SUM(pr.custom_delay_days)
-                            FROM project_progress pr
-                            WHERE pr.project_id = p.project_id
-                        ) = 0
-                    THEN 1
-                    ELSE 0
-                END) AS on_time_projects
-            FROM projects p
-            LEFT JOIN users u ON u.id = p.project_manager_id
-            WHERE u.role IN ('Teknisyen', 'Tekniker', 'Mühendis', 'Müdür', 'Proje Yöneticisi')
-            GROUP BY u.fullname
-            """
-            cursor.execute(sql)
-            result = cursor.fetchall()
-            return jsonify(result)
-    finally:
-        if connection:
-            connection.close()
 def _check_and_notify_completed_steps(cursor):
     """
     Checks for project progress steps whose end_date is today or in the past,
