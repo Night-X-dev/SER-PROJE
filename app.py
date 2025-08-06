@@ -955,10 +955,6 @@ def login_user():
             session['user_id'] = user['id']
             del user['password'] # Remove password from response for security
 
-            # BAŞARILI GİRİŞTEN SONRA BİLDİRİM KONTROLÜNÜ ÇALIŞTIR
-            _check_and_notify_completed_steps(cursor)
-            connection.commit() # _check_and_notify_completed_steps içinde yapılan güncellemeleri kaydet
-
             return jsonify({
                 'message': 'Login successful!',
                 'user': user
@@ -966,13 +962,9 @@ def login_user():
 
     except pymysql.Error as e:
         print(f"Database login error: {e}")
-        if connection:
-            connection.rollback() # Hata durumunda değişiklikleri geri al
         return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
     except Exception as e:
         print(f"General login error: {e}")
-        if connection:
-            connection.rollback() # Hata durumunda değişiklikleri geri al
         return jsonify({'message': 'Server error, please try again later.'}), 500
     finally:
         if connection:
