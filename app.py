@@ -1312,7 +1312,12 @@ def get_projects():
                  WHERE project_id = p.project_id
                    AND CURDATE() BETWEEN start_date AND end_date
                  ORDER BY start_date ASC
-                 LIMIT 1) AS current_step_custom_delay_days
+                 LIMIT 1) AS current_step_custom_delay_days,
+                -- Yeni eklenen: Projenin ilk iş adımının başlığı (yedek olarak kullanılacak)
+                (SELECT title FROM project_progress
+                 WHERE project_id = p.project_id
+                 ORDER BY start_date ASC, created_at ASC
+                 LIMIT 1) AS first_progress_step_title
             FROM projects p
             JOIN customers c ON p.customer_id = c.customer_id
             JOIN users u ON p.project_manager_id = u.id
@@ -1340,7 +1345,12 @@ def get_projects():
                     else:
                         project['display_status'] = current_progress_title
                 elif total_delay_days > 0: # Aktif bir adım yok ama genel projede gecikme var
-                    project['display_status'] = 'Gecikmeli'
+                    # Eğer proje genel olarak gecikmeli ve aktif bir adım yoksa,
+                    # projenin adını veya ilk iş adımının adını kullan
+                    fallback_title = project['project_name'] # Varsayılan olarak proje adı
+                    if project['first_progress_step_title']: # Eğer ilk iş adımının başlığı varsa onu kullan
+                        fallback_title = project['first_progress_step_title']
+                    project['display_status'] = f"{fallback_title} (Gecikmeli)"
                 elif current_project_status == 'Planlama Aşamasında': # Backend'den gelen durum Planlama ise
                     project['display_status'] = 'Planlama Aşamasında'
                 else: # Aktif bir adım yok ve genel gecikme yok, veya diğer durumlar
