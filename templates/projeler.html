@@ -808,8 +808,9 @@
       }
 
       .delay-days-container {
-         display: flex; /* Flexbox kullanarak öğeleri aynı satırda hizala */
+        display: flex; /* Flexbox kullanarak öğeleri aynı satırda hizala */
         align-items: center; /* Öğeleri dikeyde ortala */
+        justify-content: space-between; /* Öğeleri iki yana yasla */
         gap: 10px; /* Öğeler arasında boşluk bırak */
         margin-top: 10px;
         background-color: var(--input-bg); /* Arka plan rengini temaya göre ayarla */
@@ -818,7 +819,11 @@
         border: 1px solid var(--border-color);
         flex-wrap: wrap; /* Küçük ekranlarda sarmalamaya izin ver */
     }
-
+    .delay-input-group { /* Erteleme inputu ve butonu için yeni grup */
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
 
       .delay-days-container label {
         margin-right: 10px;
@@ -2904,7 +2909,7 @@ async function updateProjectDatesFromSteps(projectId) {
 async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projectId) {
         if (newlyAddedDelayDays <= 0) {
             showToast("Erteleme günü en az 1 olmalıdır.", true);
-            return;
+            return null; // Hata durumunda null döndür
         }
 
         try {
@@ -2948,7 +2953,8 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
             if (!targetStepResponse.ok) {
                 throw new Error(targetStepResponseData.message || 'Hedef iş adımı güncellenemedi.');
             }
-            showToast(`"${targetStepData.step_name}" iş adımına ${newlyAddedDelayDays} gün erteleme eklendi.`);
+            // Burada toast mesajını kaldırıyoruz, çünkü renderProgressSteps'ten sonra gösterilecek.
+            // showToast(`"${targetStepData.step_name}" iş adımına ${newlyAddedDelayDays} gün erteleme eklendi.`);
 
             // Şimdi, sonraki adımların tarihlerini güncelle ve backend'e gönder
             // Bu döngü, gecikme uygulanan adımdan sonraki her adımı etkileyecek
@@ -3012,12 +3018,14 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
             await fetchProgressSteps(projectId, true);
             await fetchProjects();
 
+            return targetStepResponseData; // Return the response data for the toast
         } catch (error) {
             console.error("Erteleme uygulama hatası:", error);
             showToast("Erteleme uygulanırken bir hata oluştu: " + error.message, true);
+            return null;
         }
     }
-    function renderProgressSteps(steps, projectId, isEditable = false) {
+      function renderProgressSteps(steps, projectId, isEditable = false) {
         if (!steps || !Array.isArray(steps)) {
             console.error("Geçersiz steps parametresi:", steps);
             const progressStepsContainer = document.getElementById("progressStepsContainer");
@@ -3053,12 +3061,22 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     `<label for="step-${step.progress_id}-end">Bitiş:</label><input type="date" id="step-${step.progress_id}-end" class="progress-datepicker" value="${formatDateForInput(step.end_date || '')}" required>` :
                     `Bitiş: ${formatDateForDisplay(step.end_date || '-')}`;
 
-                // Gerçek Bitiş Tarihi içeriği
-                // real_end_date'in varlığını kontrol et ve ona göre göster
+                // Gerçek Bitiş Tarihi değeri, hem görüntülenecek hem de inputun değeri olacak
                 const realEndDateValue = step.real_end_date ? formatDateForDisplay(step.real_end_date) : '-';
-                const realEndDateContent = isEditable ?
-                    `<label for="step-${step.progress_id}-real-end">Gerçek Bitiş:</label><input type="date" id="step-${step.progress_id}-real-end" class="progress-datepicker" value="${formatDateForInput(step.real_end_date || '')}" disabled>` :
-                    `Gerçek Bitiş: ${realEndDateValue}`;
+                
+                // delayDaysContent içine Gerçek Bitiş Tarihi bilgisini ekle
+                const delayDaysContent = isEditable ?
+                    `<div class="delay-days-container">
+                        <div class="delay-input-group">
+                            <label for="step-${step.progress_id}-delay">Erteleme Ekle (gün):</label>
+                            <input type="number" id="step-${step.progress_id}-delay" class="delay-days-input" min="0" value="0">
+                            <button type="button" class="action-btn apply-delay-btn" data-id="${step.progress_id}" data-index="${index}"><i class="fas fa-check"></i> Uygula</button>
+                        </div>
+                        <span class="real-end-date-display">
+                            <label>Gerçek Bitiş Tarihi:</label>
+                            <span id="step-${step.progress_id}-real-end-display" style="font-weight: bold;">${realEndDateValue}</span>
+                        </span>
+                    </div>` : '';
 
                 let delayInfoHtml = '';
 
@@ -3088,13 +3106,6 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     `<textarea id="step-${step.progress_id}-desc" class="progress-description-textarea" placeholder="Açıklama">${step.description || ''}</textarea>` :
                     `<div class="progress-detail-description">Açıklama: ${step.description || 'Yok'}</div>`;
 
-                const delayDaysContent = isEditable ?
-                    `<div class="delay-days-container" style="margin-top: 10px;">
-                        <label for="step-${step.progress_id}-delay">Erteleme Ekle (gün):</label>
-                        <input type="number" id="step-${step.progress_id}-delay" class="delay-days-input" min="0" value="0">
-                        <button type="button" class="action-btn apply-delay-btn" data-id="${step.progress_id}" data-index="${index}" style="margin-left: 5px;"><i class="fas fa-check"></i> Uygula</button>
-                    </div>` : '';
-
                 const actionsContent = isEditable ?
                     `
                     <div class="progress-actions">
@@ -3116,7 +3127,6 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                             <span>
                                 ${endDateContent}
                             </span>
-                            ${isEditable ? `<span>${realEndDateContent}</span>` : ''}
                         </div>
                     </div>
                     ${delayInfoHtml}
@@ -3165,8 +3175,14 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                         const newDelayDays = parseInt(document.getElementById(`step-${progressId}-delay`).value) || 0;
 
                         if (newDelayDays > 0) {
-                            await applyDelayToStep(stepIndex, newDelayDays, steps, projectId);
-                            showToast(`Bu iş gidişatı ${newDelayDays} gün ertelenmiştir! (Gerçek Bitiş Tarihi: ${formatDateForDisplay(document.getElementById(`step-${progressId}-real-end`).value)})`);
+                            const updatedStepInfo = await applyDelayToStep(stepIndex, newDelayDays, steps, projectId);
+                            // Real end date'i doğrudan backend'den gelen değerle güncelle
+                            if (updatedStepInfo && updatedStepInfo.real_end_date) {
+                                document.getElementById(`step-${progressId}-real-end-display`).textContent = formatDateForDisplay(updatedStepInfo.real_end_date);
+                                showToast(`Bu iş gidişatı ${newDelayDays} gün ertelenmiştir! (Gerçek Bitiş Tarihi: ${formatDateForDisplay(updatedStepInfo.real_end_date)})`);
+                            } else {
+                                showToast("Erteleme başarıyla uygulandı.");
+                            }
                         } else {
                             showToast("Lütfen geçerli bir erteleme günü girin.", true);
                         }
