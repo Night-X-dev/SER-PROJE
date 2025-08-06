@@ -554,9 +554,10 @@
             color: #2ed573;
         }
 
-        .status-badge.tamamlandı {
-            background-color: rgba(9, 128, 211, 0.1);
-            color: var(--primary-light);
+        .status-badge.pending { /* Yeni eklendi */
+            background-color: rgba(9, 128, 211, 0.1); /* primary-light-bg */
+            color: var(--primary-light); /* primary-light */
+            border: 1px solid var(--primary-light);
         }
 
         .filters-container {
@@ -848,6 +849,7 @@
             justify-content: center;
             color: var(--light-gray);
             font-size: 1.2em;
+            cursor: pointer; /* Tıklanabilir olduğunu belirtmek için */
         }
         
         @media (max-width: 1200px) {
@@ -1447,6 +1449,8 @@
                             marker.setMap(null); // Mevcut markeri kaldır
                         }
                     }
+                    // Harita elementine tıklama olayını ekle (konum yoksa bile varsayılan link açar)
+                    mapElement.onclick = () => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Türkiye')}`, '_blank');
                     return;
                 }
 
@@ -1454,10 +1458,8 @@
                 if (!map) {
                     // Eğer harita henüz yüklenmediyse, yükleme fonksiyonunu çağır
                     // Bu senaryo, initMap'in henüz çağrılmadığı durumlar için.
-                    // initMap globalde tanımlı olduğu için doğrudan çağrılabilir.
-                    loadGoogleMapsScript(); // Bu, initMap'i çağıracak
+                    loadGoogleMapsScript(); 
                     // Harita yüklenene kadar beklemek gerekebilir, bu yüzden burada doğrudan işlem yapmayalım.
-                    // initMap çağrıldıktan sonra updateMap tekrar çağrılmalı veya initMap içinde ilk konum ayarlanmalı.
                     return;
                 }
 
@@ -1478,6 +1480,9 @@
                                 position: latLng,
                                 title: locationString
                             });
+                            // Harita elementine tıklama olayını ekle
+                            mapElement.onclick = () => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationString)}`, '_blank');
+
                         } else {
                             mapElement.innerHTML = `<i class="fas fa-map-marker-alt fa-2x"></i> Konum Bulunamadı: ${locationString}`;
                             console.error('Geocode başarısız oldu: ' + status);
@@ -1486,11 +1491,15 @@
                             }
                             map.setCenter({ lat: 38.9637, lng: 35.2433 }); // Türkiye'nin merkezi
                             map.setZoom(6);
+                            // Harita elementine tıklama olayını ekle (bulunamasa bile varsayılan link açar)
+                            mapElement.onclick = () => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationString)}`, '_blank');
                         }
                     });
                 } catch (error) {
                     mapElement.innerHTML = '<i class="fas fa-map-marker-alt fa-2x"></i> Harita Hatası';
                     console.error("Harita güncellenirken hata oluştu:", error);
+                    // Harita elementine tıklama olayını ekle (hata oluşsa bile varsayılan link açar)
+                    mapElement.onclick = () => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationString)}`, '_blank');
                 }
             }
 
@@ -1579,10 +1588,13 @@
                     // Duruma göre sınıf ekle
                     if (step.status === 'Tamamlandı' || step.status === 'Aktif') {
                         taskBarDiv.classList.add('completed'); // Yeşil
-                    } else if (step.status === 'Gecikmeli Bitti' || step.status === 'Ertelenmiş Bitti' || step.status === 'Gecikmeli' || step.status === 'Ertelenmiş') {
+                    } else if (['Gecikmeli Bitti', 'Ertelenmiş Bitti', 'Gecikmeli', 'Ertelenmiş'].includes(step.status)) {
                         taskBarDiv.classList.add('delayed'); // Kırmızı
-                    } else {
+                    } else if (step.status === 'Başlamadı') {
+                        // 'Bekliyor' durumu için özel bir renk veya varsayılan mavi tonu
                         taskBarDiv.classList.add('active'); // Varsayılan (mavi)
+                    } else {
+                        taskBarDiv.classList.add('active'); // Diğer durumlar için varsayılan (mavi)
                     }
 
                     // Tooltip verilerini sakla
@@ -1593,7 +1605,7 @@
                     const totalStepDelay = (step.delay_days || 0) + (step.custom_delay_days || 0);
                     taskBarDiv.dataset.delayDays = totalStepDelay > 0 ? `${totalStepDelay} gün` : '-';
                     taskBarDiv.dataset.customDelayDays = step.custom_delay_days > 0 ? `${step.custom_delay_days} gün` : '-';
-                    taskBarDiv.dataset.status = step.status;
+                    taskBarDiv.dataset.status = step.status === 'Başlamadı' ? 'Bekliyor' : step.status; // Metin güncellemesi
                     taskBarDiv.dataset.description = step.description || 'Açıklama yok.';
 
                     taskRow.appendChild(taskBarDiv);
@@ -1661,10 +1673,11 @@
                         <td data-label="Durum">
                             <span class="status-badge ${
                                 // Yeni durum renk mantığı
-                                step.status === 'Tamamlandı' || step.status === 'Aktif' || step.status === 'Başlamadı' ? 'normal' : // Yeşil veya varsayılan
+                                step.status === 'Tamamlandı' || step.status === 'Aktif' ? 'normal' : // Yeşil
+                                step.status === 'Başlamadı' ? 'pending' : // Mavi/Gri
                                 ['Gecikmeli Bitti', 'Ertelenmiş Bitti', 'Gecikmeli', 'Ertelenmiş'].includes(step.status) ? 'gecikmeli' : // Kırmızı
                                 ''
-                            }">${step.status}</span>
+                            }">${step.status === 'Başlamadı' ? 'Bekliyor' : step.status}</span>
                         </td>
                     `;
                 });
@@ -1958,7 +1971,7 @@
                     y += lineHeight;
                     doc.text(`Planlanan Başlangıç: ${formatDate(currentProjectData.project.start_date)}`, margin, y);
                     y += lineHeight;
-                    doc.text(`Planlanan Bitiş: ${formatProjectEndDate(currentProjectData.project.end_date)}`, margin, y);
+                    doc.text(`Planlanan Bitiş: ${formatDate(currentProjectData.project.end_date)}`, margin, y); <!-- formatProjectEndDate düzeltildi -->
                     y += lineHeight;
                     doc.text(`Proje Konumu: ${currentProjectData.project.project_location}`, margin, y);
                     y += lineHeight;
@@ -2008,7 +2021,7 @@
                         (step.delay_days || 0) > 0 ? `${step.delay_days} gün` : '-',
                         (step.custom_delay_days || 0) > 0 ? `${step.custom_delay_days} gün` : '-',
                         formatDate(step.real_end_date),
-                        step.status
+                        step.status === 'Başlamadı' ? 'Bekliyor' : step.status // PDF için de metin güncellemesi
                     ]);
 
                     doc.autoTable({
