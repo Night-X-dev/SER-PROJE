@@ -10,6 +10,7 @@ import dotenv
 from dotenv import load_dotenv
 import urllib.parse 
 import re 
+import traceback # Import traceback for detailed error logging
 
 load_dotenv()
 
@@ -1421,7 +1422,6 @@ def get_project_details(project_id):
             connection.close()
 
 # Helper function for sending notifications
-# Helper function for sending notifications
 def send_notification(cursor, user_id, title, message):
     """Sends a notification to a specific user using the provided cursor."""
     try:
@@ -1551,6 +1551,7 @@ def delete_project_api(project_id):
 
             # Send notification to project manager
             send_notification(
+                cursor, # Pass the cursor
                 project_manager_id,
                 "Proje Silindi",
                 f"Yönettiğiniz '{project_name}' Projesi silindi.." # Message updated
@@ -1848,35 +1849,6 @@ def log_pdf_report_api():
         print(f"Error logging PDF report activity: {e}")
         return jsonify({'message': 'Error logging PDF report activity.'}), 500
 
-# API to log PDF Report Creation Activity (to be called from frontend)
-@app.route('/api/log_pdf_report', methods=['POST'])
-def log_pdf_report_api():
-    """Logs a PDF report creation activity."""
-    data = request.get_json()
-    user_id = data.get('user_id')
-    report_type = data.get('report_type', 'General Report') # Default value
-    project_name = data.get('project_name') # Optional
-
-    if not user_id:
-        return jsonify({'message': 'User ID is missing.'}), 400
-
-    description_text = f'PDF file of "{report_type}" report created.'
-    if project_name:
-        description_text = f'PDF report created for project "{project_name}".'
-
-    try:
-        activity_data = {
-            'user_id': user_id,
-            'title': 'PDF Report Created',
-            'description': description_text,
-            'icon': 'fas fa-file-pdf'
-        }
-        # Call add_activity API
-        return jsonify({'message': 'PDF report activity successfully logged.'}), 200
-    except Exception as e:
-        print(f"Error logging PDF report activity: {e}")
-        return jsonify({'message': 'Error logging PDF report activity.'}), 500
-
 
 # API to get project progress steps
 @app.route('/api/projects/<int:project_id>/progress', methods=['GET'])
@@ -2017,6 +1989,7 @@ def add_project_progress_step_from_modal(project_id):
             if project_manager_id:
                 try:
                     send_notification(
+                        cursor, # Pass the cursor here
                         project_manager_id,
                         "Proje İlerleme Adımı Eklendi",
                         f"Yönettiğiniz '{project_name}' projesine '{step_name}' adında yeni bir iş adımı eklendi."
@@ -2045,7 +2018,6 @@ def add_project_progress_step_from_modal(project_id):
     finally:
         if connection:
             connection.close()
-# API to update project progress step
 # API to update project progress step
 @app.route('/api/progress/<int:progress_id>', methods=['PUT'])
 def update_project_progress_step(progress_id):
@@ -2711,6 +2683,7 @@ def add_task():
 
             # Send notification to the newly assigned user
             send_notification(
+                cursor, # Pass the cursor here
                 assigned_user_id,
                 "Yeni Görev Atandı",
                 f"Size yeni bir görev atandı: '{title}'."
@@ -2759,11 +2732,13 @@ def update_task(task_id):
             # If the assigned user changed, send notifications to old and new users
             if old_assigned_user_id and old_assigned_user_id != new_assigned_user_id:
                 send_notification(
+                    cursor, # Pass the cursor here
                     old_assigned_user_id,
                     "Görev Atama Değişti",
                     f"'{title}' adlı görev artık size atanmadı."
                 )
             send_notification(
+                cursor, # Pass the cursor here
                 new_assigned_user_id,
                 "Görev Güncellendi",
                 f"'{title}' adlı görev size atandı ve güncellendi."
@@ -2809,6 +2784,7 @@ def delete_task(task_id):
             # Send notification to the assigned user (if different from deleter)
             if user_id != task_info['assigned_user_id']:
                 send_notification(
+                    cursor, # Pass the cursor here
                     task_info['assigned_user_id'],
                     "Görev Silindi",
                     f"'{task_info['title']}' adlı görev size atanmıştı ve silindi."
@@ -2816,6 +2792,7 @@ def delete_task(task_id):
             # If the creator is different from assigned user and deleter, notify creator too
             if user_id != task_info['created_by'] and task_info['created_by'] != task_info['assigned_user_id']:
                  send_notification(
+                    cursor, # Pass the cursor here
                     task_info['created_by'],
                     "Görev Silindi",
                     f"Yönettiğiniz '{task_info['title']}' adlı görev silindi."
