@@ -3416,140 +3416,224 @@ function addNewProgressStepForm(projectId) {
 
     // PDF Oluşturma Fonksiyonları (progress_id kullanıldı)
     async function generateProjectPdf(project) {
-        let progressSteps = [];
+        // Proje detaylarını ve iş adımlarını API'den çek
+        let projectDetails;
+        let progressSteps;
         try {
-            const response = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
-            if (response.ok) {
-                progressSteps = await response.json();
-            }
-        } catch (e) {
-            // Progress adımları olmadan da PDF oluşturulabilir
-        }
+            const projectResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}`);
+            if (!projectResponse.ok) throw new Error('Proje detayları çekilemedi.');
+            projectDetails = await projectResponse.json();
 
-        const pdfContent = document.createElement('div');
-        pdfContent.className = 'pdf-report-content';
-        pdfContent.innerHTML = `
-            <div class="pdf-header">
-                <h1 style='font-size:28px;color:#005c9d;margin-bottom:5px;'>Ser Elektrik Otomasyon</h1>
-                <h2 style='font-size:22px;color:#0980d3;margin-bottom:15px;'>Proje Detaylı Raporu</h2>
-            </div>
-            <table class="pdf-info-table" style="width:100%;margin-bottom:20px;font-size:15px;">
-                <tr><th>Proje Adı</th><td>${project.project_name ? project.project_name.normalize('NFC') : "-"}</td></tr>
-                <tr><th>Referans No</th><td>${project.reference_no || '-'}</td></tr>
-                <tr><th>Müşteri</th><td>${project.customer_name || '-'}</td></tr>
-                <tr><th>Konum</th><td>${project.project_location || '-'}</td></tr>
-                <tr><th>Durum</th><td>${project.display_status || '-'}</td></tr>
-                <tr><th>Başlangıç Tarihi</th><td>${formatDateForDisplay(project.start_date || '-')}</td></tr>
-                <tr><th>Bitiş Tarihi</th><td>${formatDateForDisplay(project.end_date || '-')}</td></tr>
-                <tr><th>Yönetici</th><td>${project.project_manager_name || '-'}</td></tr>
-                <tr><th>Açıklama</th><td>${project.description || '-'}</td></tr>
-            </table>
-            <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
-            <div>
-                ${progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => `
-                    <div style="margin-bottom:12px;">
-                        <div style="font-weight:bold;font-size:15px;">${step.step_name || ''}</div>
-                        <div style="font-size:13px; color:#555;">
-                            Başlangıç: ${formatDateForDisplay(step.start_date || '-')} - 
-                            Bitiş: ${formatDateForDisplay(step.end_date || '-')}
-                            ${(step.real_end_date && step.end_date !== step.real_end_date) ? ` (Gerçek Bitiş: ${formatDateForDisplay(step.real_end_date)})` : ''}
-                            ${(step.delay_days > 0) ? `<span class='pdf-delay-text'>(${step.delay_days} gün gecikmeli)</span>` : ''}
-                            ${(step.custom_delay_days > 0) ? `<span class='pdf-delay-text'> (${step.custom_delay_days} gün ertelendi)</span>` : ''}
-                        </div>
-                        <div style="font-size:13px;">${step.description || ''}</div>
-                    </div>
-                `).join('')}
-            </div>
-            <div class="pdf-footer" style='margin-top:40px; font-size:12px; color:#6c757d; border-top:1px solid #eee; padding-top:15px;'>
-                © 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır.
-            </div>
-        `;
-
-        const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
-        if (!newWindow) {
-            showToast("PDF önizlemesi için yeni pencere açılamadı. Tarayıcınızın pop-up engelleyicisini kontrol edin.", true);
+            const progressResponse = await fetch(`${API_BASE_URL}/api/project_progress/${project.project_id}`);
+            if (!progressResponse.ok) throw new Error('İş adımları çekilemedi.');
+            progressSteps = await progressResponse.json();
+        } catch (error) {
+            showToast(`PDF için veri çekilirken hata oluştu: ${error.message}`, true);
+            console.error("PDF veri çekme hatası:", error);
             return;
         }
 
-        newWindow.document.write(`
-            <!DOCTYPE html>
-            <html lang="tr">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
-                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-                <style>
-                    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; }
-                    .pdf-container {
-                        width: 210mm;
-                        min-height: 297mm;
-                        margin: 20px auto;
-                        background: #fff;
-                        box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                        padding: 20mm;
-                        box-sizing: border-box;
-                    }
-                    .pdf-report-content {
-                        font-family: "Segoe UI", Arial, sans-serif;
-                        color: #333;
-                        box-sizing: border-box;
-                    }
-                    .pdf-header h1 { color: #005c9d; font-size: 28px; margin-bottom: 5px; }
-                    .pdf-header h2 { color: #0980d3; font-size: 22px; margin-bottom: 15px; }
-                    .pdf-info-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 15px; }
-                    .pdf-info-table th, .pdf-info-table td { padding: 8px; border: 1px solid #e1e5e9; text-align: left; }
-                    .pdf-info-table th { background-color: #f0f4f8; color: #5e6870; width: 30%; }
-                    .pdf-section-title { color: #005c9d; border-bottom: 1px solid #e1e5e9; padding-bottom: 5px; margin-bottom: 15px; font-size: 18px; }
-                    .pdf-delay-text { color: red; font-weight: bold; }
-                    .pdf-footer { text-align: center; font-size: 12px; color: #6c757d; margin-top: 40px; border-top: 1px solid #eee; padding-top: 15px; }
-                    .print-button-container {
-                        text-align: center;
-                        margin-top: 20px;
-                        padding-bottom: 20px;
-                    }
-                    .print-button {
-                        background-color: #005c9d;
-                        color: white;
-                        padding: 10px 20px;
-                        border: none;
-                        border-radius: 8px;
-                        font-size: 16px;
-                        cursor: pointer;
-                        transition: background-color 0.3s ease;
-                    }
-                    .print-button:hover {
-                        background-color: #0980d3;
-                    }
-                    @media print {
-                        .print-button-container { display: none; }
-                        body { background-color: #fff; }
-                        .pdf-container { margin: 0; box-shadow: none; padding: 0; }
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="pdf-container">
-                    ${pdfContent.innerHTML}
-                </div>
-                <div class="print-button-container">
-                    <button class="print-button" onclick="window.print()"><i class="fas fa-print"></i> PDF Kaydet / Yazdır</button>
-                </div>
-            </body>
-            </html>
-        `);
-        newWindow.document.close();
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4'); // A4 boyutunda dikey sayfa
+        const margin = 20;
+        let y = margin; // Dikey konum
+        const lineHeight = 7; // Satır yüksekliği
+        const sectionSpacing = 10; // Bölümler arası boşluk
 
-        newWindow.onload = () => {
-            showToast(`${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi hazır.`);
-            addActivity(
-                "PDF Raporu Önizlendi",
-                `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi açıldı.`,
-                project.project_id,
-                "fas fa-file-pdf",
-                "pdf_preview"
-            );
-        };
+        // Font ayarları
+        doc.setFont("helvetica"); // Varsayılan font
+        doc.setTextColor(51, 51, 51); // Koyu gri metin rengi
+
+        // Başlık
+        doc.setFontSize(24);
+        doc.setTextColor(0, 92, 157); // Primary renk
+        doc.text("Proje Detay Raporu", margin, y);
+        y += lineHeight * 2;
+
+        doc.setFontSize(18);
+        doc.setTextColor(9, 128, 211); // Primary-light renk
+        doc.text(projectDetails.project_name || "Proje Adı Bilinmiyor", margin, y);
+        y += sectionSpacing;
+
+        // Proje Bilgileri Tablosu
+        doc.setFontSize(10);
+        doc.setTextColor(51, 51, 51);
+
+        const projectInfoData = [
+            ["Referans No:", projectDetails.reference_no || "-"],
+            ["Müşteri:", projectDetails.customer_name || "-"],
+            ["Konum:", projectDetails.project_location || "-"],
+            ["Durum:", projectDetails.status || "-"],
+            ["Başlangıç Tarihi:", formatDateForDisplay(projectDetails.start_date || "-")],
+            ["Bitiş Tarihi:", formatDateForDisplay(projectDetails.end_date || "-")],
+            ["Yönetici:", projectDetails.project_manager_name || "-"],
+            ["Sözleşme Tarihi:", formatDateForDisplay(projectDetails.contract_date || "-")],
+            ["Toplantı Tarihi:", formatDateForDisplay(projectDetails.meeting_date || "-")],
+            ["Açıklama:", projectDetails.description || "-"],
+        ];
+
+        doc.autoTable({
+            startY: y,
+            head: [['Özellik', 'Değer']],
+            body: projectInfoData,
+            theme: 'grid', // Tablo teması
+            styles: {
+                fontSize: 10,
+                cellPadding: 2,
+                valign: 'middle',
+            },
+            headStyles: {
+                fillColor: [0, 92, 157], // Başlık arka planı (primary)
+                textColor: [255, 255, 255], // Başlık metin rengi
+                fontStyle: 'bold',
+            },
+            alternateRowStyles: {
+                fillColor: [248, 249, 250], // Açık gri (bg-color)
+            },
+            margin: { left: margin, right: margin },
+            didDrawPage: function (data) {
+                // Sayfa numarası ekle
+                doc.setFontSize(8);
+                doc.setTextColor(150);
+                doc.text('Sayfa ' + doc.internal.getNumberOfPages(), doc.internal.pageSize.width / 2, doc.internal.pageSize.height - 10, { align: 'center' });
+            }
+        });
+
+        y = doc.autoTable.previous.finalY + sectionSpacing; // Tablodan sonraki konum
+
+        // İş Gidişatı Detayları
+        if (progressSteps && progressSteps.length > 0) {
+            doc.setFontSize(16);
+            doc.setTextColor(0, 92, 157);
+            doc.text("İş Gidişatı Detayları", margin, y);
+            y += sectionSpacing;
+
+            progressSteps.forEach((step, index) => {
+                if (y + lineHeight * 8 > doc.internal.pageSize.height - margin) { // Yeni sayfaya geçme kontrolü
+                    doc.addPage();
+                    y = margin;
+                    doc.setFontSize(16);
+                    doc.setTextColor(0, 92, 157);
+                    doc.text("İş Gidişatı Detayları (Devam)", margin, y);
+                    y += sectionSpacing;
+                }
+
+                doc.setFontSize(12);
+                doc.setTextColor(51, 51, 51);
+                doc.text(`Adım ${index + 1}: ${step.title || "-"}`, margin, y);
+                y += lineHeight;
+
+                doc.setFontSize(10);
+                doc.setTextColor(100, 100, 100);
+                doc.text(`Planlanan Tarihler: ${formatDateForDisplay(step.start_date || "-")} - ${formatDateForDisplay(step.end_date || "-")}`, margin, y);
+                y += lineHeight;
+
+                let actualEndDate = new Date(step.end_date);
+                let delayText = "";
+                let totalDelayForStep = (step.delay_days || 0) + (step.custom_delay_days || 0);
+
+                if (totalDelayForStep > 0) {
+                    actualEndDate.setDate(actualEndDate.getDate() + totalDelayForStep);
+                    delayText = ` (Gecikme: ${totalDelayForStep} gün - Yeni Bitiş: ${formatDateForDisplay(actualEndDate.toISOString().slice(0, 10))})`;
+                    doc.setTextColor(255, 71, 87); // Kırmızı
+                    doc.text(`Gecikme Durumu: ${totalDelayForStep} gün gecikmeli${delayText}`, margin, y);
+                    doc.setTextColor(51, 51, 51); // Rengi sıfırla
+                } else {
+                    doc.text("Gecikme Durumu: Yok", margin, y);
+                }
+                y += lineHeight;
+
+                doc.text(`Açıklama: ${step.description || "-"}`, margin, y);
+                y += sectionSpacing;
+            });
+        } else {
+            doc.setFontSize(12);
+            doc.setTextColor(150, 150, 150);
+            doc.text("Bu proje için tanımlanmış iş adımı bulunmamaktadır.", margin, y);
+            y += sectionSpacing;
+        }
+
+        // Grafik Ekleme (Örnek: Gecikme Grafiği)
+        // Bu bölüm için Chart.js'i kullanarak bir canvas oluşturup onu PDF'e ekleyeceğiz.
+        // html2canvas ve jspdf kütüphaneleri zaten yüklü.
+        if (progressSteps && progressSteps.length > 0) {
+            doc.addPage();
+            y = margin;
+            doc.setFontSize(16);
+            doc.setTextColor(0, 92, 157);
+            doc.text("İş Adımı Gecikme Grafiği", margin, y);
+            y += sectionSpacing;
+
+            const chartCanvas = document.createElement('canvas');
+            chartCanvas.width = 600; // Genişlik
+            chartCanvas.height = 300; // Yükseklik
+            const ctx = chartCanvas.getContext('2d');
+
+            const stepTitles = progressSteps.map(step => step.title || `Adım ${step.progress_id}`);
+            const delayDays = progressSteps.map(step => (step.delay_days || 0) + (step.custom_delay_days || 0));
+
+            new Chart(ctx, {
+                type: 'bar', // Çubuk grafik
+                data: {
+                    labels: stepTitles,
+                    datasets: [{
+                        label: 'Gecikme Günleri',
+                        data: delayDays,
+                        backgroundColor: delayDays.map(delay => delay > 0 ? 'rgba(255, 99, 132, 0.7)' : 'rgba(75, 192, 192, 0.7)'), // Gecikme varsa kırmızı, yoksa yeşil
+                        borderColor: delayDays.map(delay => delay > 0 ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)'),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: false, // PDF için sabit boyut
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Gecikme Gün Sayısı'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'İş Adımı'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Proje İş Adımı Gecikme Durumu'
+                        }
+                    }
+                }
+            });
+
+            // Canvas'ı resme dönüştür ve PDF'e ekle
+            const imgData = chartCanvas.toDataURL('image/png');
+            const imgWidth = 180; // Genişlik (mm)
+            const imgHeight = chartCanvas.height * imgWidth / chartCanvas.width; // Oranı koru
+
+            doc.addImage(imgData, 'PNG', margin, y, imgWidth, imgHeight);
+            y += imgHeight + sectionSpacing;
+        }
+
+        // PDF'i kaydet
+        doc.save(`Proje_Raporu_${project.reference_no || project.project_id}.pdf`);
+        showToast("PDF raporu başarıyla oluşturuldu!");
+        addActivity(
+            "PDF Raporu Oluşturuldu",
+            `"${project.project_name}" projesi için PDF raporu oluşturuldu.`,
+            project.project_id,
+            "fas fa-file-pdf",
+            "pdf_export"
+        );
     }
 
     // Tüm projeleri PDF olarak dışa aktar
