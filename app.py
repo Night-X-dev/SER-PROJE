@@ -1837,18 +1837,24 @@ def log_pdf_report_api():
 # API to get project progress steps
 @app.route('/api/projects/<int:project_id>/progress', methods=['GET'])
 def get_project_progress_steps(project_id):
-    """Retrieves all progress steps for a specific project."""
+    """Retrieves all progress steps for a specific project, including real_end_date."""
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Check if 'custom_delay_days' column exists and add if not
+            # 'real_end_date' sütununun varlığını kontrol et ve yoksa ekle
+            cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'real_end_date'")
+            if not cursor.fetchone():
+                print("real_end_date sütunu bulunamadı, ekleniyor...")
+                cursor.execute("ALTER TABLE project_progress ADD COLUMN real_end_date DATE NULL")
+                connection.commit() # ALTER TABLE işlemini commit et
+
+            # 'custom_delay_days' sütununun varlığını kontrol et ve yoksa ekle
             cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'custom_delay_days'")
-            column_exists = cursor.fetchone() is not None
-            if not column_exists:
+            if not cursor.fetchone():
                 print("custom_delay_days sütunu bulunamadı, ekleniyor...")
                 cursor.execute("ALTER TABLE project_progress ADD COLUMN custom_delay_days INT DEFAULT 0")
-                connection.commit() # Commit the ALTER TABLE statement
+                connection.commit() # ALTER TABLE işlemini commit et
 
             sql = """
             SELECT
@@ -1859,7 +1865,8 @@ def get_project_progress_steps(project_id):
                 start_date,
                 end_date,
                 delay_days,
-                custom_delay_days, -- Yeni eklenen sütun
+                custom_delay_days,
+                real_end_date, -- Yeni eklenen sütun
                 created_at
             FROM project_progress
             WHERE project_id = %s
@@ -1871,10 +1878,10 @@ def get_project_progress_steps(project_id):
             for step in steps:
                 step['start_date'] = step['start_date'].isoformat() if isinstance(step['start_date'], datetime.date) else None
                 step['end_date'] = step['end_date'].isoformat() if isinstance(step['end_date'], datetime.date) else None
+                step['real_end_date'] = step['real_end_date'].isoformat() if isinstance(step['real_end_date'], datetime.date) else None
                 step['created_at'] = step['created_at'].isoformat() if isinstance(step['created_at'], datetime.datetime) else None
                 # Ensure custom_delay_days is an integer, default to 0 if None
                 step['custom_delay_days'] = int(step['custom_delay_days']) if step['custom_delay_days'] is not None else 0
-
 
         return jsonify(steps), 200
     except pymysql.Error as e:
@@ -1886,9 +1893,10 @@ def get_project_progress_steps(project_id):
     finally:
         if connection:
             connection.close()
+
 @app.route('/api/projects/<int:project_id>/progress', methods=['POST'])
 def add_project_progress_step_from_modal(project_id):
-    """Adds a new progress step to a project."""
+    """Adds a new progress step to a project, saving the initial end_date as real_end_date."""
     data = request.get_json()
     step_name = data.get('step_name')
     description = data.get('description')
@@ -1932,19 +1940,25 @@ def add_project_progress_step_from_modal(project_id):
                 time_diff = (new_step_start_date - previous_end_date).days
                 if time_diff > 1:
                     delay_days = time_diff - 1
-                    
+            
+            # 'real_end_date' sütununun varlığını kontrol et ve yoksa ekle (get_project_progress_steps'te de var, ama burada da emin olalım)
+            cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'real_end_date'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE project_progress ADD COLUMN real_end_date DATE NULL")
+                connection.commit()
+
+            # 'custom_delay_days' sütununun varlığını kontrol et ve yoksa ekle
             cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'custom_delay_days'")
-            column_exists = cursor.fetchone() is not None
-            if not column_exists:
-                print("custom_delay_days sütunu bulunamadı, ekleniyor...")
+            if not cursor.fetchone():
                 cursor.execute("ALTER TABLE project_progress ADD COLUMN custom_delay_days INT DEFAULT 0")
                 connection.commit()
 
             sql_insert = """
-                INSERT INTO project_progress (project_id, title, description, start_date, end_date, delay_days, custom_delay_days)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO project_progress (project_id, title, description, start_date, end_date, delay_days, custom_delay_days, real_end_date)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """
-            cursor.execute(sql_insert, (project_id, step_name, description, start_date_str, end_date_str, delay_days, 0))
+            # Yeni adım eklendiğinde real_end_date, end_date ile aynı olacak
+            cursor.execute(sql_insert, (project_id, step_name, description, start_date_str, end_date_str, delay_days, 0, end_date_str))
             new_progress_id = cursor.lastrowid
             
             # Proje başlangıç ve bitiş tarihlerini güncelle
@@ -2010,7 +2024,11 @@ def add_project_progress_step_from_modal(project_id):
 # API to update project progress step
 @app.route('/api/progress/<int:progress_id>', methods=['PUT'])
 def update_project_progress_step(progress_id):
-    """Updates an existing project progress step."""
+    """
+    Updates an existing project progress step.
+    If 'newly_added_custom_delay' is provided, it updates the description
+    to reflect the original real_end_date.
+    """
     data = request.get_json()
     print(f"Received data for updating progress {progress_id}: {data}")
     
@@ -2019,7 +2037,7 @@ def update_project_progress_step(progress_id):
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
     
-    # Frontend'den gelen yeni eklenen custom_delay_days değerini alıyoruz (bu, mevcut değere eklenecek olan miktar)
+    # Frontend'den gelen yeni eklenen custom_delay_days değerini alıyoruz
     newly_added_custom_delay = data.get('newly_added_custom_delay', 0)
     if newly_added_custom_delay is None:
         newly_added_custom_delay = 0
@@ -2036,8 +2054,8 @@ def update_project_progress_step(progress_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Mevcut adımı getir ve custom_delay_days değerini al
-            cursor.execute("SELECT project_id, title, custom_delay_days FROM project_progress WHERE progress_id = %s", (progress_id,))
+            # Mevcut adımı getir ve custom_delay_days, real_end_date ve description değerlerini al
+            cursor.execute("SELECT project_id, title, custom_delay_days, real_end_date, description FROM project_progress WHERE progress_id = %s", (progress_id,))
             existing_step = cursor.fetchone()
             
             if not existing_step:
@@ -2047,12 +2065,28 @@ def update_project_progress_step(progress_id):
             old_step_name = existing_step['title']
             current_custom_delay_from_db = existing_step.get('custom_delay_days', 0) or 0
             current_custom_delay_from_db = int(current_custom_delay_from_db)
-            
+            existing_real_end_date = existing_step['real_end_date']
+            existing_description = existing_step['description'] or "" # Mevcut açıklamayı al
+
             # Yeni toplam custom_delay_days değerini hesapla
             final_custom_delay_for_db = current_custom_delay_from_db + newly_added_custom_delay
             print(f"Mevcut custom_delay_days (DB'den): {current_custom_delay_from_db}")
             print(f"Yeni eklenen custom_delay: {newly_added_custom_delay}")
             print(f"Veritabanına kaydedilecek toplam custom_delay_days: {final_custom_delay_for_db}")
+            
+            # Eğer bir erteleme eklendiyse, açıklamayı güncelle
+            updated_description = description # Frontend'den gelen açıklamayı varsayılan al
+            if newly_added_custom_delay > 0 and existing_real_end_date:
+                formatted_real_end_date = existing_real_end_date.strftime('%d.%m.%Y')
+                delay_note = f"(Gerçek bitiş tarihi {formatted_real_end_date} idi.)"
+                
+                # Mevcut açıklamada bu notun olup olmadığını kontrol et
+                if delay_note not in existing_description:
+                    # Eğer yoksa, yeni açıklamaya ekle
+                    updated_description = f"{existing_description.strip()} {delay_note}".strip()
+                else:
+                    # Zaten varsa, açıklamayı değiştirmeden devam et
+                    updated_description = existing_description
             
             # Proje adını ve yöneticisini al
             cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (current_project_id,))
@@ -2085,7 +2119,7 @@ def update_project_progress_step(progress_id):
                     if time_diff > 1:
                         calculated_delay_days = time_diff - 1
             
-            # SQL sorgusu - custom_delay_days ve delay_days sütunlarını da güncelle
+            # SQL sorgusu - custom_delay_days, delay_days ve description sütunlarını da güncelle
             sql_update = """
                 UPDATE project_progress
                 SET title = %s, description = %s, start_date = %s, end_date = %s,
@@ -2093,7 +2127,7 @@ def update_project_progress_step(progress_id):
                 WHERE progress_id = %s
             """
             cursor.execute(sql_update, (
-                step_name, description, start_date_str, end_date_str,
+                step_name, updated_description, start_date_str, end_date_str, # updated_description kullanıldı
                 calculated_delay_days, final_custom_delay_for_db, progress_id
             ))
             

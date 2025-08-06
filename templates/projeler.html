@@ -792,7 +792,75 @@
           color: var(--text-color); /* Burası güncellendi */
           font-weight: 500;
       }
+       .progress-dates .date-display {
+        font-size: 0.9em;
+        color: var(--text-color);
+      }
+       .custom-delay-info {
+        color: #ff6b6b;
+        margin-top: 8px;
+        font-weight: bold;
+        font-style: italic;
+        padding: 8px;
+        background-color: rgba(255, 107, 107, 0.1);
+        border-left: 3px solid #ff6b6b;
+        border-radius: 3px;
+      }
 
+      .delay-days-container {
+        display: flex;
+        align-items: center;
+        margin-top: 10px;
+        background-color: var(--input-background);
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid var(--input-border);
+      }
+
+      .delay-days-container label {
+        margin-right: 10px;
+        font-weight: bold;
+        color: var(--text-color);
+      }
+
+      .delay-days-input {
+        flex-grow: 1;
+        max-width: 100px;
+        padding: 8px;
+        border: 1px solid var(--input-border);
+        border-radius: 6px;
+        background-color: var(--card-background);
+        color: var(--text-color);
+      }
+
+      .apply-delay-btn {
+        background-color: #3498db;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      .apply-delay-btn:hover {
+        background-color: #217dbb;
+      }
+       .delay-info {
+        color: #ff9800;
+        margin-top: 5px;
+        font-style: italic;
+        padding: 5px;
+        background-color: rgba(255, 152, 0, 0.1);
+        border-left: 3px solid #ff9800;
+        border-radius: 3px;
+      }
+       .real-end-date-info {
+        font-size: 0.85em;
+        color: var(--light-gray); /* Daha soluk bir renk */
+        margin-top: 2px;
+        font-style: italic;
+      }
       .progress-dates input.progress-datepicker {
         width: 130px; /* Tarih inputları için daha spesifik genişlik */
         padding: 8px 12px;
@@ -2837,9 +2905,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 step_name: currentStepName,
                 description: currentStepDescription,
                 start_date: currentStepStartDate,
-                // Güncellenmiş bitiş tarihini kullan
                 end_date: newCurrentStepEndDate.toISOString().split('T')[0], 
-                // Bu, backend'de mevcut custom_delay_days'e eklenecek
                 newly_added_custom_delay: newlyAddedDelayDays 
             };
 
@@ -2880,7 +2946,6 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 const currentEndDate = new Date(endDateInput.value);
 
                 // Yeni başlangıç ve bitiş tarihlerini hesapla (gecikme günlerini ekle)
-                // setDate metodu, tarihi doğrudan değiştirir, bu yüzden yeni bir Date objesi oluşturmak önemlidir.
                 const newStartDate = new Date(currentStartDate);
                 newStartDate.setDate(newStartDate.getDate() + newlyAddedDelayDays);
 
@@ -2897,7 +2962,6 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     description: descriptionInput.value,
                     start_date: newStartDate.toISOString().split('T')[0],
                     end_date: newEndDate.toISOString().split('T')[0],
-                    // Bu adımlara yeni bir custom delay eklemiyoruz, sadece tarihlerini kaydırıyoruz.
                     newly_added_custom_delay: 0 
                 };
 
@@ -2958,12 +3022,21 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
 
                 const startDateContent = isEditable ?
                     `<label for="step-${step.progress_id}-start">Başlangıç:</label><input type="date" id="step-${step.progress_id}-start" class="progress-datepicker" value="${formatDateForInput(step.start_date || '')}" required>` :
-                    `Başlangıç: ${formatDateForDisplay(step.start_date || '-')}`;
+                    `<div class="date-display">Başlangıç: ${formatDateForDisplay(step.start_date || '-')}</div>`;
 
                 const endDateContent = isEditable ?
                     `<label for="step-${step.progress_id}-end">Bitiş:</label><input type="date" id="step-${step.progress_id}-end" class="progress-datepicker" value="${formatDateForInput(step.end_date || '')}" required>` :
-                    `Bitiş: ${formatDateForDisplay(step.end_date || '-')}`;
+                    `<div class="date-display">Bitiş: ${formatDateForDisplay(step.end_date || '-')}</div>`;
 
+                // Gerçek bitiş tarihi bilgisi
+                let realEndDateHtml = '';
+                if (step.real_end_date && step.real_end_date !== step.end_date) {
+                    realEndDateHtml = `<div class="real-end-date-info">Gerçek bitiş tarihi: ${formatDateForDisplay(step.real_end_date)}</div>`;
+                } else if (step.real_end_date && step.real_end_date === step.end_date && !isEditable) {
+                    // Eğer gerçek bitiş tarihi ile bitiş tarihi aynıysa ve düzenleme modunda değilsek
+                    realEndDateHtml = `<div class="real-end-date-info">Gerçek bitiş tarihi: ${formatDateForDisplay(step.real_end_date)}</div>`;
+                }
+                
                 // Gecikme bilgileri - hem genel hem de özel gecikme
                 let delayInfoHtml = '';
 
@@ -2979,13 +3052,13 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 let customDelayDays = 0;
                 if (step.custom_delay_days !== undefined && step.custom_delay_days !== null) {
                     customDelayDays = parseInt(step.custom_delay_days) || 0;
-                } else if (step.custom_delay !== undefined && step.custom_delay !== null) {
+                } else if (step.custom_delay !== undefined && step.custom_delay !== null) { // Eski isimle uyumluluk için
                     customDelayDays = parseInt(step.custom_delay) || 0;
                 }
 
                 if (customDelayDays > 0) {
                     delayInfoHtml += `<div class="custom-delay-info" style="color: #ff6b6b; margin-top: 8px; font-weight: bold; font-style: italic; padding: 8px; background-color: rgba(255, 107, 107, 0.1); border-left: 3px solid #ff6b6b; border-radius: 3px;">
-                        Bu iş gidişatı ${customDelayDays} gün ertelenmiştir!
+                        Bu iş gidişatı ${customDelayDays} gün manuel olarak ertelenmiştir!
                     </div>`;
                 }
 
@@ -2993,8 +3066,8 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     `<textarea id="step-${step.progress_id}-desc" class="progress-description-textarea" placeholder="Açıklama">${step.description || ''}</textarea>` :
                     `<div class="progress-detail-description">Açıklama: ${step.description || 'Yok'}</div>`;
 
-                // BURADA YENİ ERTELEME GÜNÜ INPUTUNU EKLİYORUZ (sadece düzenleme modunda)
-                const delayDaysContent = isEditable ?
+                // Erteleme Günü Ekle inputu (sadece düzenleme modunda)
+                const delayDaysInputHtml = isEditable ?
                     `<div class="delay-days-container" style="margin-top: 10px;">
                         <label for="step-${step.progress_id}-delay">Erteleme Ekle (gün):</label>
                         <input type="number" id="step-${step.progress_id}-delay" class="delay-days-input" min="0" value="0" style="width: 70px; padding: 5px; margin-left: 5px;">
@@ -3021,6 +3094,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                             </span>
                             <span>
                                 ${endDateContent}
+                                ${realEndDateHtml}
                             </span>
                         </div>
                     </div>
@@ -3029,7 +3103,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                         ${isEditable ? '<label for="step-' + step.progress_id + '-desc">Açıklama</label>' : ''}
                         ${descriptionContent}
                     </div>
-                    ${delayDaysContent}
+                    ${delayDaysInputHtml}
                     ${actionsContent}
                 `;
                 progressStepsContainer.appendChild(stepElement);
@@ -3046,15 +3120,12 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                         const endDate = document.getElementById(`step-${progressId}-end`).value;
                         const description = document.getElementById(`step-${progressId}-desc`).value;
 
-                        // Kaydetme sırasında newly_added_custom_delay'i 0 olarak gönderiyoruz,
-                        // çünkü bu butona basıldığında sadece formdaki mevcut değerler kaydedilmeli,
-                        // erteleme butonu ayrı bir işlem.
                         await editProgressStep(progressId, projId, {
                             step_name: stepName,
                             start_date: startDate,
                             end_date: endDate,
                             description: description,
-                            newly_added_custom_delay: 0 // Bu önemli: Kaydetme sırasında ek bir gecikme eklemiyoruz
+                            newly_added_custom_delay: 0 // Kaydetme sırasında ek bir gecikme eklemiyoruz
                         });
                     });
                 });
