@@ -1421,22 +1421,18 @@ def get_project_details(project_id):
             connection.close()
 
 # Helper function for sending notifications
-def send_notification(user_id, title, message):
-    """Sends a notification to a specific user."""
-    connection = get_db_connection()
+# Helper function for sending notifications
+def send_notification(cursor, user_id, title, message):
+    """Sends a notification to a specific user using the provided cursor."""
     try:
-        with connection.cursor() as cursor:
-            sql = "INSERT INTO notifications (user_id, title, message, created_at) VALUES (%s, %s, %s, NOW())"
-            cursor.execute(sql, (user_id, title, message))
-            connection.commit()
-            print(f"Notification sent: User ID: {user_id}, Title: '{title}', Message: '{message}'")
+        sql = "INSERT INTO notifications (user_id, title, message, created_at) VALUES (%s, %s, %s, NOW())"
+        cursor.execute(sql, (user_id, title, message))
+        # Note: We don't commit here. The main function (e.g., login_user) will commit all changes at once.
+        print(f"Bildirim hazırlandı: Kullanıcı ID: {user_id}, Başlık: '{title}', Mesaj: '{message}'")
     except pymysql.Error as e:
-        print(f"Database error while sending notification: {e}")
+        print(f"Bildirim hazırlanırken veritabanı hatası: {e}")
     except Exception as e:
-        print(f"General error while sending notification: {e}")
-    finally:
-        if connection:
-            connection.close()
+        print(f"Bildirim hazırlanırken genel hata: {e}")
 
 # Project Update API (PUT) - for projects table
 # Find the update_project function in app.py and update it as follows:
@@ -1556,8 +1552,8 @@ def delete_project_api(project_id):
             # Send notification to project manager
             send_notification(
                 project_manager_id,
-                "Project Deleted",
-                f"The project '{project_name}' you managed has been deleted." # Message updated
+                "Proje Silindi",
+                f"Yönettiğiniz '{project_name}' Projesi silindi.." # Message updated
             )
 
         return jsonify({'message': 'Project successfully deleted!'}), 200
@@ -1799,8 +1795,8 @@ def add_project():
             if project_manager_id:
                 send_notification(
                     project_manager_id,
-                    "New Project Assigned",
-                    f"A new project has been assigned to you: '{project_name}'."
+                    "Yeni Bir Proje Atandı",
+                    f"Size yeni bir proje atandı: '{project_name}'."
                 )
 
         return jsonify({"message": "Project successfully added", "projectId": new_project_id}), 201
@@ -1984,8 +1980,8 @@ def add_project_progress_step_from_modal(project_id):
                 try:
                     send_notification(
                         project_manager_id,
-                        "Project Progress Step Added",
-                        f"A new work step named '{step_name}' has been added to the project '{project_name}' you managed."
+                        "Proje İlerleme Adımı Eklendi",
+                        f"Yönettiğiniz '{project_name}' projesine '{step_name}' adında yeni bir iş adımı eklendi."
                     )
                 except Exception as notif_error:
                     print(f"Error sending notification (non-critical): {notif_error}")
@@ -2678,8 +2674,8 @@ def add_task():
             # Send notification to the newly assigned user
             send_notification(
                 assigned_user_id,
-                "New Task Assigned",
-                f"A new task has been assigned to you: '{title}'."
+                "Yeni Görev Atandı",
+                f"Size yeni bir görev atandı: '{title}'."
             )
 
         return jsonify({'message': 'Task successfully added!'}), 201
@@ -2726,16 +2722,16 @@ def update_task(task_id):
             if old_assigned_user_id and old_assigned_user_id != new_assigned_user_id:
                 send_notification(
                     old_assigned_user_id,
-                    "Task Assignment Changed",
-                    f"The task '{title}' is no longer assigned to you."
+                    "Görev Atama Değişti",
+                    f"'{title}' adlı görev artık size atanmadı."
                 )
             send_notification(
                 new_assigned_user_id,
-                "Task Updated",
-                f"The task '{title}' assigned to you has been updated."
+                "Görev Güncellendi",
+                f"'{title}' adlı görev size atandı ve güncellendi."
             )
 
-        return jsonify({'message': 'Task successfully updated!'}), 200
+        return jsonify({'message': 'Görev başarıyla güncellendi!'}), 200
     except Exception as e:
         print(f"Error updating task: {e}")
         return jsonify({'message': 'Error updating task.'}), 500
@@ -2776,15 +2772,15 @@ def delete_task(task_id):
             if user_id != task_info['assigned_user_id']:
                 send_notification(
                     task_info['assigned_user_id'],
-                    "Task Deleted",
-                    f"The task '{task_info['title']}' assigned to you has been deleted."
+                    "Görev Silindi",
+                    f"'{task_info['title']}' adlı görev size atanmıştı ve silindi."
                 )
             # If the creator is different from assigned user and deleter, notify creator too
             if user_id != task_info['created_by'] and task_info['created_by'] != task_info['assigned_user_id']:
                  send_notification(
                     task_info['created_by'],
-                    "Task Deleted",
-                    f"The task '{task_info['title']}' you created has been deleted."
+                    "Görev Silindi",
+                    f"Yönettiğiniz '{task_info['title']}' adlı görev silindi."
                 )
 
 
