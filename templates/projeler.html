@@ -1916,21 +1916,20 @@
         return dateStr;
     }
 
-    // Durum rozeti ve renk sınıfı HTML'i döndürür
-    // projeler.html ve index.html için geçerli
+  
 function getStatusBadgeHtml(status) { // delayDays parametresi kaldırıldı
-        let statusClass = "normal"; // Varsayılan olarak normal (yeşil)
-        let statusText = status;
-        
-        if (status === "Tamamlandı") {
-            statusClass = "tamamlandı";
-        } else if (status === "Gecikmeli") {
+       let statusClass = "normal"; // 'Aktif' veya herhangi bir spesifik adım başlığı için varsayılan
+        let statusText = displayStatus;
+
+        if (displayStatus.includes("Gecikmeli")) {
             statusClass = "gecikmeli";
-            statusText = "Gecikmeli"; // Backend'den 'Gecikmeli' geliyorsa, doğrudan kullan
-        } else { 
-            // 'Aktif' veya herhangi bir iş gidişatı başlığı (örn. 'Montaj', 'Test') için
-            statusClass = "normal"; // Aktif adımlar veya 'Aktif' için varsayılan normal (yeşil) rozet
+        } else if (displayStatus === "Tamamlandı") {
+            statusClass = "tamamlandı";
+        } else if (displayStatus === "Planlama Aşamasında") {
+            statusClass = "planlama";
         }
+        // Diğer durumlar için (örn. "Montaj", "Test", "Kurulum" gibi adım başlıkları veya "Aktif")
+        // varsayılan 'normal' sınıfı (yeşil) kullanılacaktır.
 
         return `<span class="status-badge ${statusClass}">${statusText}</span>`;
     }
