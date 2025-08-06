@@ -1756,7 +1756,8 @@ def add_project():
                 project_name, customer_id, project_manager_id, reference_no, description,
                 contract_date, meeting_date, start_date_str, end_date_str, project_location, status
             ))
-            connection.commit()
+            # No commit here, commit after all progress steps are added
+
             new_project_id = cursor.lastrowid
 
             progress_steps = data.get('progressSteps', [])
@@ -1785,15 +1786,17 @@ def add_project():
                 INSERT INTO project_progress (project_id, title, description, start_date, end_date, delay_days, real_end_date)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """
-                # BURADA DEĞİŞİKLİK YAPILDI: real_end_date eklendi.
-                # Yeni eklenen iş adımının real_end_date'i, başlangıçta end_date ile aynı olacak
                 cursor.execute(sql_insert_progress, (new_project_id, step_title, step_description, step_start_date_str, step_end_date_str, delay_days, step_end_date_str))
-                connection.commit()
+                # Removed commit inside the loop
 
                 last_step_end_date = step_end_date
+            
+            # Commit all changes (project and its progress steps) at once
+            connection.commit()
 
             if project_manager_id:
                 send_notification(
+                    cursor, # Pass the cursor here
                     project_manager_id,
                     "Yeni Bir Proje Atandı",
                     f"Size yeni bir proje atandı: '{project_name}'."
@@ -1802,13 +1805,48 @@ def add_project():
         return jsonify({"message": "Project successfully added", "projectId": new_project_id}), 201
     except pymysql.Error as e:
         print(f"Database error while adding project: {e}")
+        traceback.print_exc() # Print full traceback for database errors
+        if connection:
+            connection.rollback() # Rollback on database error
         return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
     except Exception as e:
         print(f"General error while adding project: {e}")
+        traceback.print_exc() # Print full traceback for general errors
+        if connection:
+            connection.rollback() # Rollback on general error
         return jsonify({'message': 'Server error, please try again later.'}), 500
     finally:
         if connection:
             connection.close()
+
+# API to log PDF Report Creation Activity (to be called from frontend)
+@app.route('/api/log_pdf_report', methods=['POST'])
+def log_pdf_report_api():
+    """Logs a PDF report creation activity."""
+    data = request.get_json()
+    user_id = data.get('user_id')
+    report_type = data.get('report_type', 'General Report') # Default value
+    project_name = data.get('project_name') # Optional
+
+    if not user_id:
+        return jsonify({'message': 'User ID is missing.'}), 400
+
+    description_text = f'PDF file of "{report_type}" report created.'
+    if project_name:
+        description_text = f'PDF report created for project "{project_name}".'
+
+    try:
+        activity_data = {
+            'user_id': user_id,
+            'title': 'PDF Report Created',
+            'description': description_text,
+            'icon': 'fas fa-file-pdf'
+        }
+        # Call add_activity API
+        return jsonify({'message': 'PDF report activity successfully logged.'}), 200
+    except Exception as e:
+        print(f"Error logging PDF report activity: {e}")
+        return jsonify({'message': 'Error logging PDF report activity.'}), 500
 
 # API to log PDF Report Creation Activity (to be called from frontend)
 @app.route('/api/log_pdf_report', methods=['POST'])
