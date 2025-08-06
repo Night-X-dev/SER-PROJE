@@ -3095,6 +3095,7 @@ def update_task(task_id):
     finally:
         if connection:
             connection.close()
+
 @app.route('/api/tasks/<int:task_id>', methods=['DELETE'])
 def delete_task(task_id):
     """Deletes a task from the database."""
@@ -3121,9 +3122,6 @@ def delete_task(task_id):
             if not (user_id == task_info['assigned_user_id'] or user_id == task_info['created_by']):
                 return jsonify({'message': 'You are not authorized to delete this task.'}), 403
 
-            # Görevi silen kişinin adını al
-            deleted_by_fullname = get_user_fullname_by_id(cursor, user_id)
-
             cursor.execute("DELETE FROM tasks WHERE id = %s", (task_id,))
             connection.commit()
 
@@ -3135,20 +3133,14 @@ def delete_task(task_id):
                     "Görev Silindi",
                     f"'{task_info['title']}' adlı görev size atanmıştı ve silindi."
                 )
-                # Atanan kullanıcının e-posta adresini al ve e-posta gönder
+                # Atanan kullanıcının e-postasını al ve e-posta gönder
                 cursor.execute("SELECT email FROM users WHERE id = %s", (task_info['assigned_user_id'],))
                 assigned_user_email_info = cursor.fetchone()
                 if assigned_user_email_info and assigned_user_email_info['email']:
-                    assigned_user_email_body = (
-                        f"Merhaba,\n\n"
-                        f"'{task_info['title']}' başlıklı görev size atanmıştı ve silindi.\n"
-                        f"Görevi silen: {deleted_by_fullname}\n\n"
-                        f"Detaylar için lütfen SERProjeTakip uygulamasını kontrol edin."
-                    )
                     send_email_notification(
                         assigned_user_email_info['email'],
-                        "Görev Silindi - SERProjeTakip",
-                        assigned_user_email_body
+                        "Görev Silindi",
+                        f"'{task_info['title']}' adlı görev size atanmıştı ve silindi."
                     )
                 else:
                     print(f"UYARI: Atanan kullanıcı {task_info['assigned_user_id']} için e-posta adresi bulunamadı.")
@@ -3165,16 +3157,10 @@ def delete_task(task_id):
                  cursor.execute("SELECT email FROM users WHERE id = %s", (task_info['created_by'],))
                  creator_user_email_info = cursor.fetchone()
                  if creator_user_email_info and creator_user_email_info['email']:
-                     creator_email_body = (
-                         f"Merhaba,\n\n"
-                         f"Yönettiğiniz '{task_info['title']}' başlıklı görev silindi.\n"
-                         f"Görevi silen: {deleted_by_fullname}\n\n"
-                         f"Detaylar için lütfen SERProjeTakip uygulamasını kontrol edin."
-                     )
                      send_email_notification(
                          creator_user_email_info['email'],
-                         "Görev Silindi - SERProjeTakip",
-                         creator_email_body
+                         "Görev Silindi",
+                         f"Yönettiğiniz '{task_info['title']}' adlı görev silindi."
                      )
                  else:
                      print(f"UYARI: Oluşturan kullanıcı {task_info['created_by']} için e-posta adresi bulunamadı.")
@@ -3184,110 +3170,6 @@ def delete_task(task_id):
     except Exception as e:
         print(f"Error deleting task: {e}")
         return jsonify({'message': 'Error deleting task.'}), 500
-    finally:
-        if connection: # Hata düzeltmesi: connection'ın varlığını kontrol et
-            connection.close()
-@app.route('/api/tasks/<int:task_id>', methods=['PUT'])
-def update_task(task_id):
-    """Updates an existing task."""
-    data = request.get_json()
-    title = data.get('title')
-    description = data.get('description')
-    start = data.get('start')
-    end = data.get('end')
-    priority = data.get('priority', 'medium')
-    new_assigned_user_id = int(data.get('assigned_user_id')) if data.get('assigned_user_id') else None
-    created_by = int(data.get('created_by')) if data.get('created_by') else None # Bu, görevi ilk oluşturan kişi
-
-    # Görevi güncelleyen kişinin ID'si (session'dan veya request body'den alınabilir)
-    # Varsayılan olarak session'daki kullanıcıyı alalım veya isteğe bağlı olarak data'dan
-    updated_by_user_id = session.get('user_id')
-    if not updated_by_user_id and 'user_id' in data:
-        updated_by_user_id = data.get('user_id')
-
-    if not all([title, start, new_assigned_user_id, created_by]):
-        return jsonify({'message': 'Required fields are missing!'}), 400
-
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # Get the current assigned user of the task
-            cursor.execute("SELECT assigned_user_id FROM tasks WHERE id = %s", (task_id,))
-            existing_task = cursor.fetchone()
-            old_assigned_user_id = existing_task['assigned_user_id'] if existing_task else None
-
-            sql = """
-                UPDATE tasks
-                SET title=%s, description=%s, start=%s, end=%s, priority=%s, assigned_user_id=%s, created_by=%s
-                WHERE id=%s
-            """
-            cursor.execute(sql, (title, description, start, end, priority, new_assigned_user_id, created_by, task_id))
-            connection.commit()
-
-            # Görevi güncelleyen kişinin adını al
-            updated_by_fullname = get_user_fullname_by_id(cursor, updated_by_user_id)
-
-            # If the assigned user changed, send notifications to old and new users
-            if old_assigned_user_id and old_assigned_user_id != new_assigned_user_id:
-                send_notification(
-                    cursor, # Pass the cursor here
-                    old_assigned_user_id,
-                    "Görev Atama Değişti",
-                    f"'{title}' adlı görev artık size atanmadı."
-                )
-                # Eski atanan kullanıcının e-postasını al ve e-posta gönder
-                cursor.execute("SELECT email FROM users WHERE id = %s", (old_assigned_user_id,))
-                old_assigned_user_email_info = cursor.fetchone()
-                if old_assigned_user_email_info and old_assigned_user_email_info['email']:
-                    old_assignee_email_body = (
-                        f"Merhaba,\n\n"
-                        f"'{title}' başlıklı görev artık size atanmamıştır.\n"
-                        f"Görevi güncelleyen: {updated_by_fullname}\n\n"
-                        f"Detaylar için lütfen SERProjeTakip uygulamasını kontrol edin."
-                    )
-                    send_email_notification(
-                        old_assigned_user_email_info['email'],
-                        "Görev Atama Değişti - SERProjeTakip",
-                        old_assignee_email_body
-                    )
-                else:
-                    print(f"UYARI: Eski atanan kullanıcı {old_assigned_user_id} için e-posta adresi bulunamadı.")
-
-            # Yeni atanan kullanıcıya bildirim gönder
-            send_notification(
-                cursor, # Pass the cursor here
-                new_assigned_user_id,
-                "Görev Güncellendi",
-                f"'{title}' adlı görev size atandı ve güncellendi."
-            )
-            # Yeni atanan kullanıcının e-posta adresini al ve e-posta gönder
-            cursor.execute("SELECT email FROM users WHERE id = %s", (new_assigned_user_id,))
-            new_assigned_user_email_info = cursor.fetchone()
-            if new_assigned_user_email_info and new_assigned_user_email_info['email']:
-                new_assignee_email_body = (
-                    f"Merhaba,\n\n"
-                    f"Size '{title}' başlıklı görev atandı ve güncellendi.\n"
-                    f"Açıklama: {description or 'Yok'}\n"
-                    f"Başlangıç Tarihi: {start}\n"
-                    f"Bitiş Tarihi: {end or 'Belirtilmemiş'}\n"
-                    f"Öncelik: {priority.capitalize()}\n\n"
-                    f"Görevi güncelleyen: {updated_by_fullname}\n\n"
-                    f"Detaylar için lütfen SERProjeTakip uygulamasını kontrol edin."
-                )
-                send_email_notification(
-                    new_assigned_user_email_info['email'],
-                    "Görev Güncellendi - SERProjeTakip",
-                    new_assignee_email_body
-                )
-            else:
-                print(f"UYARI: Yeni atanan kullanıcı {new_assigned_user_id} için e-posta adresi bulunamadı.")
-
-
-        return jsonify({'message': 'Görev başarıyla güncellendi!'}), 200
-    except Exception as e:
-        print(f"Error updating task: {e}")
-        return jsonify({'message': 'Error updating task.'}), 500
     finally:
         if connection:
             connection.close()
