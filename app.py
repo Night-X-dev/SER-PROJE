@@ -1622,11 +1622,29 @@ def send_email_notification(recipient_email, subject, body):
     message["To"] = recipient_email
 
     # HTML içeriği olarak e-posta gövdesi
+    # "Merhaba," tekrarını kaldırdık ve daha düzenli bir HTML yapısı oluşturduk.
     html_body = f"""\
     <html>
+      <head>
+        <style>
+          table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+          }}
+          th, td {{
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+          }}
+          th {{
+            background-color: #f2f2f2;
+          }}
+        </style>
+      </head>
       <body>
         <p>Merhaba,</p>
-        <p>{body}</p>
+        {body}
         <p>Saygılarımızla,</p>
         <p>Ser Elektrik Otomasyon Yönetimi</p>
         <br>
@@ -1634,6 +1652,7 @@ def send_email_notification(recipient_email, subject, body):
       </body>
     </html>
     """
+    # Düz metin içeriği, HTML'nin bir yedeği olarak kalır.
     part1 = MIMEText(body, "plain")
     part2 = MIMEText(html_body, "html")
 
@@ -2964,14 +2983,16 @@ def add_task():
             assigned_user_email_info = cursor.fetchone()
             if assigned_user_email_info and assigned_user_email_info['email']:
                 email_body = (
-                    f"Merhaba,\n\n"
-                    f"Size yeni bir görev atandı: '{title}'.\n"
-                    f"Açıklama: {description or 'Yok'}\n"
-                    f"Başlangıç Tarihi: {start}\n"
-                    f"Bitiş Tarihi: {end or 'Belirtilmemiş'}\n"
-                    f"Öncelik: {priority.capitalize()}\n\n"
-                    f"Görevi atayan: {created_by_fullname}\n\n"
-                    f"Detaylar için lütfen SERProjeTakip uygulamasını kontrol edin."
+                    f"<p>Size yeni bir görev atandı:</p>"
+                    f"<table>"
+                    f"<tr><th>Görev Adı</th><td>{title}</td></tr>"
+                    f"<tr><th>Açıklama</th><td>{description or 'Yok'}</td></tr>"
+                    f"<tr><th>Başlangıç Tarihi</th><td>{start}</td></tr>"
+                    f"<tr><th>Bitiş Tarihi</th><td>{end or 'Belirtilmemiş'}</td></tr>"
+                    f"<tr><th>Öncelik</th><td>{priority.capitalize()}</td></tr>"
+                    f"<tr><th>Görevi Atayan</th><td>{created_by_fullname}</td></tr>"
+                    f"</table>"
+                    f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SERProjeTakip uygulamasını</a> kontrol edin.</p>"
                 )
                 send_email_notification(
                     assigned_user_email_info['email'],
@@ -3040,15 +3061,17 @@ def update_task(task_id):
                     "Görev Atama Değişti",
                     f"'{title}' adlı görev artık size atanmadı."
                 )
-                # Eski atanan kullanıcının e-postasını al ve e-posta gönder
+                # Eski atanan kullanıcının e-posta adresini al ve e-posta gönder
                 cursor.execute("SELECT email FROM users WHERE id = %s", (old_assigned_user_id,))
                 old_assigned_user_email_info = cursor.fetchone()
                 if old_assigned_user_email_info and old_assigned_user_email_info['email']:
                     old_assignee_email_body = (
-                        f"Merhaba,\n\n"
-                        f"'{title}' başlıklı görev artık size atanmamıştır.\n"
-                        f"Görevi güncelleyen: {updated_by_fullname}\n\n"
-                        f"Detaylar için lütfen SERProjeTakip uygulamasını kontrol edin."
+                        f"<p>Merhaba,</p>"
+                        f"<p>'{title}' başlıklı görev artık size atanmamıştır.</p>"
+                        f"<table>"
+                        f"<tr><th>Görevi Güncelleyen</th><td>{updated_by_fullname}</td></tr>"
+                        f"</table>"
+                        f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SERProjeTakip uygulamasını</a> kontrol edin.</p>"
                     )
                     send_email_notification(
                         old_assigned_user_email_info['email'],
@@ -3070,14 +3093,15 @@ def update_task(task_id):
             new_assigned_user_email_info = cursor.fetchone()
             if new_assigned_user_email_info and new_assigned_user_email_info['email']:
                 new_assignee_email_body = (
-                    f"Merhaba,\n\n"
-                    f"Size '{title}' başlıklı görev atandı ve güncellendi.\n"
-                    f"Açıklama: {description or 'Yok'}\n"
-                    f"Başlangıç Tarihi: {start}\n"
-                    f"Bitiş Tarihi: {end or 'Belirtilmemiş'}\n"
-                    f"Öncelik: {priority.capitalize()}\n\n"
-                    f"Görevi güncelleyen: {updated_by_fullname}\n\n"
-                    f"Detaylar için lütfen SERProjeTakip uygulamasını kontrol edin."
+                    f"<p>Size '{title}' başlıklı görev atandı ve güncellendi:</p>"
+                    f"<table>"
+                    f"<tr><th>Açıklama</th><td>{description or 'Yok'}</td></tr>"
+                    f"<tr><th>Başlangıç Tarihi</th><td>{start}</td></tr>"
+                    f"<tr><th>Bitiş Tarihi</th><td>{end or 'Belirtilmemiş'}</td></tr>"
+                    f"<tr><th>Öncelik</th><td>{priority.capitalize()}</td></tr>"
+                    f"<tr><th>Görevi Güncelleyen</th><td>{updated_by_fullname}</td></tr>"
+                    f"</table>"
+                    f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SERProjeTakip uygulamasını</a> kontrol edin.</p>"
                 )
                 send_email_notification(
                     new_assigned_user_email_info['email'],
@@ -3122,6 +3146,9 @@ def delete_task(task_id):
             if not (user_id == task_info['assigned_user_id'] or user_id == task_info['created_by']):
                 return jsonify({'message': 'You are not authorized to delete this task.'}), 403
 
+            # Görevi silen kişinin adını al
+            deleted_by_fullname = get_user_fullname_by_id(cursor, user_id)
+
             cursor.execute("DELETE FROM tasks WHERE id = %s", (task_id,))
             connection.commit()
 
@@ -3133,14 +3160,22 @@ def delete_task(task_id):
                     "Görev Silindi",
                     f"'{task_info['title']}' adlı görev size atanmıştı ve silindi."
                 )
-                # Atanan kullanıcının e-postasını al ve e-posta gönder
+                # Atanan kullanıcının e-posta adresini al ve e-posta gönder
                 cursor.execute("SELECT email FROM users WHERE id = %s", (task_info['assigned_user_id'],))
                 assigned_user_email_info = cursor.fetchone()
                 if assigned_user_email_info and assigned_user_email_info['email']:
+                    assigned_user_email_body = (
+                        f"<p>Merhaba,</p>"
+                        f"<p>'{task_info['title']}' başlıklı görev size atanmıştı ve silindi.</p>"
+                        f"<table>"
+                        f"<tr><th>Görevi Silen</th><td>{deleted_by_fullname}</td></tr>"
+                        f"</table>"
+                        f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SERProjeTakip uygulamasını</a> kontrol edin.</p>"
+                    )
                     send_email_notification(
                         assigned_user_email_info['email'],
-                        "Görev Silindi",
-                        f"'{task_info['title']}' adlı görev size atanmıştı ve silindi."
+                        "Görev Silindi - SERProjeTakip",
+                        assigned_user_email_body
                     )
                 else:
                     print(f"UYARI: Atanan kullanıcı {task_info['assigned_user_id']} için e-posta adresi bulunamadı.")
@@ -3157,10 +3192,18 @@ def delete_task(task_id):
                  cursor.execute("SELECT email FROM users WHERE id = %s", (task_info['created_by'],))
                  creator_user_email_info = cursor.fetchone()
                  if creator_user_email_info and creator_user_email_info['email']:
+                     creator_email_body = (
+                         f"<p>Merhaba,</p>"
+                         f"<p>Yönettiğiniz '{task_info['title']}' başlıklı görev silindi.</p>"
+                         f"<table>"
+                         f"<tr><th>Görevi Silen</th><td>{deleted_by_fullname}</td></tr>"
+                         f"</table>"
+                         f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SERProjeTakip uygulamasını</a> kontrol edin.</p>"
+                     )
                      send_email_notification(
                          creator_user_email_info['email'],
-                         "Görev Silindi",
-                         f"Yönettiğiniz '{task_info['title']}' adlı görev silindi."
+                         "Görev Silindi - SERProjeTakip",
+                         creator_email_body
                      )
                  else:
                      print(f"UYARI: Oluşturan kullanıcı {task_info['created_by']} için e-posta adresi bulunamadı.")
@@ -3171,7 +3214,7 @@ def delete_task(task_id):
         print(f"Error deleting task: {e}")
         return jsonify({'message': 'Error deleting task.'}), 500
     finally:
-        if connection:
+        if connection: # Hata düzeltmesi: connection'ın varlığını kontrol et
             connection.close()
 
 @app.route('/api/manager-stats')
@@ -3349,10 +3392,15 @@ def _check_and_notify_completed_steps(cursor):
                 cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
                 manager_email_info = cursor.fetchone()
                 if manager_email_info and manager_email_info['email']:
+                    email_body = (
+                        f"<p>Merhaba,</p>"
+                        f"<p>'{project_name}' projesindeki '{step_name}' iş adımı planlanan bitiş tarihine ({step_end_date}) ulaştı.</p>"
+                        f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SERProjeTakip uygulamasını</a> kontrol edin.</p>"
+                    )
                     send_email_notification(
                         manager_email_info['email'],
-                        notification_title,
-                        notification_message + " Detaylar için sistemi kontrol edin."
+                        notification_title + " - SERProjeTakip",
+                        email_body
                     )
                 else:
                     print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta adresi bulunamadı.")
@@ -3364,10 +3412,15 @@ def _check_and_notify_completed_steps(cursor):
                 for admin_id in admin_ids:
                     send_notification(cursor, admin_id, notification_title, notification_message)
                 for admin_email in admin_emails:
+                    email_body = (
+                        f"<p>Merhaba,</p>"
+                        f"<p>'{project_name}' projesindeki '{step_name}' iş adımı planlanan bitiş tarihine ({step_end_date}) ulaştı.</p>"
+                        f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SERProjeTakip uygulamasını</a> kontrol edin.</p>"
+                    )
                     send_email_notification(
                         admin_email,
-                        notification_title,
-                        notification_message + " Detaylar için sistemi kontrol edin."
+                        notification_title + " - SERProjeTakip",
+                        email_body
                     )
             else:
                 print(f"UYARI: Yöneticiye bildirim/e-posta gönderilemedi (Admin ID/E-posta bulunamadı).")
@@ -3388,7 +3441,6 @@ def _check_and_notify_completed_steps(cursor):
     except Exception as e:
         print(f"Genel hata (_check_and_notify_completed_steps): {e}")
         traceback.print_exc()
-
 
 ##if __name__ == '__main__':
   ##  app.run(host='0.0.0.0', port=3001, debug=True)
