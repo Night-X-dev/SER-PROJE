@@ -308,7 +308,106 @@ def mark_notification_as_read(notification_id):
     finally:
         if connection:
             connection.close()
+def determine_and_update_project_status(cursor, project_id):
+    """
+    Determines and updates the project's 'status' column in the database
+    based on its progress steps and dates.
+    This function expects an active cursor and does not manage connection.
+    """
+    try:
+        # Mevcut proje bilgilerini çek
+        cursor.execute("SELECT start_date, end_date, status FROM projects WHERE project_id = %s", (project_id,))
+        project_info = cursor.fetchone()
+        if not project_info:
+            print(f"Project {project_id} not found for status update.")
+            return False
 
+        project_start_date = project_info['start_date']
+        project_end_date = project_info['end_date']
+        current_db_status = project_info['status']
+
+        # Eğer proje açıkça 'Tamamlandı' olarak işaretlendiyse, bu durumu koru.
+        if current_db_status == 'Tamamlandı':
+            print(f"Project {project_id} is already 'Tamamlandı', no auto-update needed.")
+            return True
+
+        today = datetime.date.today()
+        new_status = 'Aktif' # Varsayılan durum
+
+        # Projenin tüm iş adımlarını çek
+        cursor.execute("""
+            SELECT
+                start_date,
+                end_date,
+                delay_days,
+                custom_delay_days
+            FROM project_progress
+            WHERE project_id = %s
+            ORDER BY start_date ASC
+        """, (project_id,))
+        progress_steps = cursor.fetchall()
+
+        total_project_delay_days = 0
+        for step in progress_steps:
+            total_project_delay_days += (step['delay_days'] or 0) + (step['custom_delay_days'] or 0)
+
+        # 1. 'Gecikmeli' durumu kontrolü
+        if total_project_delay_days > 0:
+            new_status = 'Gecikmeli'
+        elif project_end_date and today > project_end_date:
+            # Eğer bitiş tarihi geçmişse ve tamamlanmadıysa, gecikmeli
+            new_status = 'Gecikmeli'
+        
+        # 2. 'Planlama Aşamasında' durumu kontrolü
+        # Bu, genel gecikme yoksa ve proje henüz başlamadıysa geçerlidir.
+        if new_status not in ['Gecikmeli']: # Eğer zaten gecikmeli değilse kontrol et
+            if not progress_steps and project_start_date and today < project_start_date:
+                new_status = 'Planlama Aşamasında'
+            elif progress_steps: # İş adımları varsa, hepsi gelecekte mi kontrol et
+                all_steps_in_future = True
+                for step in progress_steps:
+                    if step['start_date'] and step['start_date'] <= today:
+                        all_steps_in_future = False
+                        break
+                if all_steps_in_future and project_start_date and today < project_start_date:
+                    new_status = 'Planlama Aşamasında'
+
+        # 3. 'Aktif' durumu kontrolü (eğer zaten gecikmeli veya planlama aşamasında değilse)
+        if new_status not in ['Gecikmeli', 'Planlama Aşamasında']:
+            has_active_step_today = False
+            for step in progress_steps:
+                step_start = step['start_date']
+                step_end = step['end_date']
+                if step_start and step_end and step_start <= today <= step_end:
+                    has_active_step_today = True
+                    break
+            
+            if has_active_step_today:
+                new_status = 'Aktif'
+            elif progress_steps and project_end_date and today <= project_end_date:
+                # Adımlar var, proje bitiş tarihi gelecekte/bugün, ancak bugün aktif bir adım yok.
+                # Bu, adımlar arasında veya yeni başlamış/bitmek üzere olduğu anlamına gelir. Hala 'Aktif'.
+                new_status = 'Aktif'
+            elif not progress_steps and (not project_start_date or today >= project_start_date):
+                # Hiç iş adımı yok, ancak proje başlangıç tarihi geçmiş veya bugün.
+                # Bu, aktif olması gerektiği anlamına gelir, ancak henüz adım tanımlanmamış.
+                new_status = 'Aktif'
+            else:
+                # Hiçbir şeye uymuyorsa varsayılan olarak 'Aktif'
+                new_status = 'Aktif'
+
+        # Projenin veritabanındaki durumunu güncelle
+        if new_status != current_db_status:
+            cursor.execute("UPDATE projects SET status = %s WHERE project_id = %s", (new_status, project_id))
+            print(f"Project {project_id} status updated from '{current_db_status}' to '{new_status}'.")
+        else:
+            print(f"Project {project_id} status remains '{current_db_status}'. No change needed.")
+        
+        return True
+    except Exception as e:
+        print(f"Error determining and updating project status for {project_id}: {str(e)}")
+        traceback.print_exc()
+        return False
 # API to get notifications (for notifications table)
 @app.route('/api/notifications', methods=['GET'])
 def get_notifications():
@@ -1223,7 +1322,7 @@ def get_projects():
             projects_data = cursor.fetchall()
 
             for project in projects_data:
-                current_project_status = project['status']
+                current_project_status = project['status'] # Bu, DB'den gelen kalıcı durumdur
                 total_delay_days = project['total_delay_days'] if project['total_delay_days'] is not None else 0
                 current_progress_title = project['current_progress_title']
                 current_step_delay_days = project['current_step_delay_days'] if project['current_step_delay_days'] is not None else 0
@@ -1235,21 +1334,23 @@ def get_projects():
                 # display_status'u belirle
                 if current_project_status == 'Tamamlandı':
                     project['display_status'] = 'Tamamlandı'
-                elif current_progress_title and current_step_total_delay == 0: # Mevcut adım var ve gecikmesiz
-                    project['display_status'] = current_progress_title # Mevcut iş gidişatının başlığı
-                elif total_delay_days > 0: # Genel projede gecikme var (geçmişten gelen veya mevcut)
+                elif current_progress_title: # Mevcut tarih aralığına uyan bir iş gidişatı başlığı varsa
+                    if current_step_total_delay > 0:
+                        project['display_status'] = f"{current_progress_title} (Gecikmeli)"
+                    else:
+                        project['display_status'] = current_progress_title
+                elif total_delay_days > 0: # Aktif bir adım yok ama genel projede gecikme var
                     project['display_status'] = 'Gecikmeli'
-                else:
-                    project['display_status'] = 'Aktif' # Gecikme yoksa, tamamlanmadıysa ve aktif adım yoksa Aktif
+                elif current_project_status == 'Planlama Aşamasında': # Backend'den gelen durum Planlama ise
+                    project['display_status'] = 'Planlama Aşamasında'
+                else: # Aktif bir adım yok ve genel gecikme yok, veya diğer durumlar
+                    project['display_status'] = 'Aktif' # Varsayılan olarak Aktif
 
-                # Convert datetime.date objects to ISO formatted strings for JSON serialization
+                # datetime.date objelerini ISO formatlı stringlere dönüştür
                 project['contract_date'] = project['contract_date'].isoformat() if isinstance(project['contract_date'], datetime.date) else None
                 project['meeting_date'] = project['meeting_date'].isoformat() if isinstance(project['meeting_date'], datetime.date) else None
                 project['start_date'] = project['start_date'].isoformat() if isinstance(project['start_date'], datetime.date) else None
                 project['end_date'] = project['end_date'].isoformat() if isinstance(project['end_date'], datetime.date) else None
-                # first_progress_start ve last_progress_end artık burada hesaplanmıyor, frontend'de hesaplanabilir veya gerekirse ayrı bir sorgu ile alınabilir.
-                # project['first_progress_start'] = project['first_progress_start'].isoformat() if isinstance(project['first_progress_start'], datetime.date) else None
-                # project['last_progress_end'] = project['last_progress_end'].isoformat() if isinstance(project['last_progress_end'], datetime.date) else None
 
         return jsonify(projects_data), 200
     except pymysql.Error as e:
@@ -1341,11 +1442,11 @@ def update_project(project_id):
     updates = []
     params = []
     
-    # Mevcut projeyi getir
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # Mevcut projeyi getir
             cursor.execute("SELECT * FROM projects WHERE project_id = %s", (project_id,))
             existing_project = cursor.fetchone()
             if not existing_project:
@@ -1353,8 +1454,13 @@ def update_project(project_id):
             
             # Güncellenecek değerleri belirle
             for column in possible_columns:
-                # Eğer veri mevcut ve eski değerden farklıysa veya zorunlu bir alan ise güncelle
-                if column in data and data[column] is not None:
+                # Sadece 'status' alanı için özel bir durum: Eğer manuel olarak 'Tamamlandı' gelmediyse, otomatik güncellemeye bırak
+                if column == 'status':
+                    if data.get(column) == 'Tamamlandı': # Eğer frontend'den Tamamlandı olarak gelirse güncelle
+                        updates.append(f"{column} = %s")
+                        params.append(data[column])
+                    # Aksi takdirde, status alanını bu API'de güncelleme, determine_and_update_project_status yönetsin
+                elif column in data and data[column] is not None:
                     updates.append(f"{column} = %s")
                     params.append(data[column])
             
@@ -1371,12 +1477,17 @@ def update_project(project_id):
             
             # Sorguyu çalıştır
             cursor.execute(sql, params)
-            connection.commit()
+            connection.commit() # update_project tarafından yapılan değişiklikleri commit et
+
+            # Projenin genel durumunu belirle ve güncelle
+            determine_and_update_project_status(cursor, project_id)
+            connection.commit() # determine_and_update_project_status tarafından yapılan değişiklikleri commit et
             
             return jsonify({'message': 'Project successfully updated!'}), 200
     
     except Exception as e:
         print(f"Proje güncelleme hatası: {str(e)}")
+        traceback.print_exc()
         if connection:
             connection.rollback()
         return jsonify({'message': f'Server error: {str(e)}'}), 500
@@ -1384,7 +1495,6 @@ def update_project(project_id):
     finally:
         if connection:
             connection.close()
-
 # Proje silme api (DELETE)
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
 def delete_project_api(project_id):
@@ -1784,9 +1894,7 @@ def add_project_progress_step_from_modal(project_id):
     description = data.get('description')
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
-    # custom_delay_days for a new step will be 0 by default, no need to get from frontend here.
     
-    # Session'dan user_id'yi al ama yoksa JSON'dan da kullan
     user_id = session.get('user_id')
     if not user_id and 'user_id' in data:
         user_id = data.get('user_id')
@@ -1794,22 +1902,21 @@ def add_project_progress_step_from_modal(project_id):
     if not all([project_id, step_name, start_date_str, end_date_str]):
         return jsonify({'message': 'Project ID, title, start and end date are required.'}), 400
         
-    # user_id kontrolünü biraz daha esnek hale getiriyoruz
     if not user_id:
         print("Warning: No user_id found in session or request. Using default.")
-        user_id = 1  # Default bir değer kullanın veya hata döndürün
+        user_id = 1  # Varsayılan bir değer kullanın veya hata döndürün
     
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Get project name
+            # Proje adını al
             cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (project_id,))
             project_info = cursor.fetchone()
             project_name = project_info['project_name'] if project_info else f"ID: {project_id}"
             project_manager_id = project_info['project_manager_id'] if project_info else None
             
-            # Find the existing end date of the project (to calculate delay days)
+            # Mevcut projenin bitiş tarihini bul (gecikme günlerini hesaplamak için)
             cursor.execute("""
                 SELECT end_date FROM project_progress
                 WHERE project_id = %s
@@ -1826,31 +1933,32 @@ def add_project_progress_step_from_modal(project_id):
                 if time_diff > 1:
                     delay_days = time_diff - 1
                     
-            # Check if 'custom_delay_days' column exists and add if not
             cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'custom_delay_days'")
             column_exists = cursor.fetchone() is not None
             if not column_exists:
                 print("custom_delay_days sütunu bulunamadı, ekleniyor...")
                 cursor.execute("ALTER TABLE project_progress ADD COLUMN custom_delay_days INT DEFAULT 0")
-                connection.commit() # Commit the ALTER TABLE statement
-            
+                connection.commit()
+
             sql_insert = """
                 INSERT INTO project_progress (project_id, title, description, start_date, end_date, delay_days, custom_delay_days)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
-            cursor.execute(sql_insert, (project_id, step_name, description, start_date_str, end_date_str, delay_days, 0)) # New steps start with 0 custom_delay_days
+            cursor.execute(sql_insert, (project_id, step_name, description, start_date_str, end_date_str, delay_days, 0))
             new_progress_id = cursor.lastrowid
             
-            # Proje başlangıç ve bitiş tarihlerini her zaman güncelle
+            # Proje başlangıç ve bitiş tarihlerini güncelle
             update_result = update_project_dates(cursor, project_id)
             if update_result:
                 print(f"Project dates successfully updated for project {project_id}")
             else:
                 print(f"Failed to update project dates for project {project_id}")
-                
+            
+            # Projenin genel durumunu belirle ve güncelle
+            determine_and_update_project_status(cursor, project_id)
             connection.commit()
             
-            # Send notification to project manager
+            # Proje yöneticisine bildirim gönder
             if project_manager_id:
                 try:
                     send_notification(
@@ -1861,7 +1969,7 @@ def add_project_progress_step_from_modal(project_id):
                 except Exception as notif_error:
                     print(f"Error sending notification (non-critical): {notif_error}")
             
-            # Log activity
+            # Aktiviteyi kaydet
             try:
                 activity_data = {
                     'user_id': user_id,
@@ -1889,8 +1997,7 @@ def add_project_progress_step_from_modal(project_id):
         
     except Exception as e:
         print(f"General error while adding progress step: {e}")
-        import traceback
-        traceback.print_exc()  # Detaylı hata bilgisini yazdır
+        traceback.print_exc()
         if connection:
             connection.rollback()
         return jsonify({'message': 'Server error, please try again later.'}), 500
@@ -1899,6 +2006,7 @@ def add_project_progress_step_from_modal(project_id):
         if connection:
             connection.close()
 
+# API to update project progress step
 # API to update project progress step
 @app.route('/api/progress/<int:progress_id>', methods=['PUT'])
 def update_project_progress_step(progress_id):
@@ -1912,13 +2020,11 @@ def update_project_progress_step(progress_id):
     end_date_str = data.get('end_date')
     
     # Frontend'den gelen yeni eklenen custom_delay_days değerini alıyoruz (bu, mevcut değere eklenecek olan miktar)
-    # Eğer yoksa veya null ise 0 olarak kabul et
     newly_added_custom_delay = data.get('newly_added_custom_delay', 0)
     if newly_added_custom_delay is None:
         newly_added_custom_delay = 0
-    newly_added_custom_delay = int(newly_added_custom_delay) # Gelen değeri int'e çevir
+    newly_added_custom_delay = int(newly_added_custom_delay)
     
-    # Kullanıcı ID kontrolü
     user_id = session.get('user_id')
     if not user_id and 'user_id' in data:
         user_id = data.get('user_id')
@@ -1939,9 +2045,8 @@ def update_project_progress_step(progress_id):
                 
             current_project_id = existing_step['project_id']
             old_step_name = existing_step['title']
-            # Mevcut custom_delay_days değerini al, yoksa 0 kabul et
             current_custom_delay_from_db = existing_step.get('custom_delay_days', 0) or 0
-            current_custom_delay_from_db = int(current_custom_delay_from_db) # Integer'a çevir
+            current_custom_delay_from_db = int(current_custom_delay_from_db)
             
             # Yeni toplam custom_delay_days değerini hesapla
             final_custom_delay_for_db = current_custom_delay_from_db + newly_added_custom_delay
@@ -1949,15 +2054,14 @@ def update_project_progress_step(progress_id):
             print(f"Yeni eklenen custom_delay: {newly_added_custom_delay}")
             print(f"Veritabanına kaydedilecek toplam custom_delay_days: {final_custom_delay_for_db}")
             
-            # Get project name and manager
+            # Proje adını ve yöneticisini al
             cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (current_project_id,))
             project_info = cursor.fetchone()
             project_name = project_info['project_name'] if project_info else f"ID: {current_project_id}"
             project_manager_id = project_info['project_manager_id'] if project_info else None
             
-            # delay_days'i yeniden hesapla (önceki adımın bitiş tarihi ile bu adımın başlangıç tarihi arasındaki fark)
+            # delay_days'i yeniden hesapla
             calculated_delay_days = 0
-            # Önceki adımın bitiş tarihini bul
             cursor.execute("""
                 SELECT end_date FROM project_progress
                 WHERE project_id = %s AND progress_id < %s
@@ -1971,7 +2075,6 @@ def update_project_progress_step(progress_id):
                 time_diff = (current_start_date - prev_end_date).days
                 if time_diff > 1:
                     calculated_delay_days = time_diff - 1
-            # Eğer bu ilk adım ise veya önceki adım yoksa, projenin başlangıç tarihi ile karşılaştır
             elif not previous_step:
                 cursor.execute("SELECT start_date FROM projects WHERE project_id = %s", (current_project_id,))
                 project_start_info = cursor.fetchone()
@@ -2003,19 +2106,18 @@ def update_project_progress_step(progress_id):
             else:
                 print(f"Failed to update project dates for project {current_project_id}")
                 
+            # Projenin genel durumunu belirle ve güncelle
+            determine_and_update_project_status(cursor, current_project_id)
             connection.commit()
             
-            # ... Diğer kodlar (bildirimler, aktivite vs.) ...
-                
             return jsonify({
                 'message': 'Progress step successfully updated!',
-                'custom_delay_days': final_custom_delay_for_db,  # Güncel değeri frontend'e geri döndür
-                'delay_days': calculated_delay_days # Güncel calculated_delay_days değerini de döndür
+                'custom_delay_days': final_custom_delay_for_db,
+                'delay_days': calculated_delay_days
             }), 200
             
     except Exception as e:
         print(f"Proje güncelleme hatası: {str(e)}")
-        import traceback
         traceback.print_exc()
         if connection:
             connection.rollback()
@@ -2053,10 +2155,11 @@ def delete_project_progress_step(progress_id):
             else:
                 print(f"Failed to update project dates after step deletion for project {project_id}")
             
+            # Projenin genel durumunu belirle ve güncelle
+            determine_and_update_project_status(cursor, project_id)
             connection.commit()
             
             # Aktivite kaydı
-            # user_id'yi session'dan al
             user_id = session.get('user_id')
             if user_id:
                 log_activity(
@@ -2075,7 +2178,6 @@ def delete_project_progress_step(progress_id):
         return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
     except Exception as e:
         print(f"General error while deleting progress step: {e}")
-        import traceback
         traceback.print_exc()
         if connection:
             connection.rollback()
