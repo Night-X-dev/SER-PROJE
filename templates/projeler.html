@@ -808,13 +808,14 @@
       }
 
       .delay-days-container {
-        display: flex;
-        align-items: center;
+        display: flex; /* Flexbox kullanarak öğeleri aynı satırda hizala */
+        align-items: center; /* Öğeleri dikeyde ortala */
+        gap: 10px; /* Öğeler arasında boşluk bırak */
         margin-top: 10px;
-        background-color: var(--input-background);
+        background-color: var(--input-bg); /* Arka plan rengini temaya göre ayarla */
         padding: 10px;
         border-radius: 8px;
-        border: 1px solid var(--input-border);
+        border: 1px solid var(--border-color);
       }
 
       .delay-days-container label {
@@ -827,11 +828,12 @@
         flex-grow: 1;
         max-width: 100px;
         padding: 8px;
-        border: 1px solid var(--input-border);
+        border: 1px solid var(--border-color);
         border-radius: 6px;
-        background-color: var(--card-background);
+        background-color: var(--card-bg); /* Farklı bir arka plan rengi */
         color: var(--text-color);
-      }
+        text-align: center; /* Sayıyı ortala */
+    }
 
       .apply-delay-btn {
         background-color: #3498db;
@@ -3000,7 +3002,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
             showToast("Erteleme uygulanırken bir hata oluştu: " + error.message, true);
         }
     }
-   function renderProgressSteps(steps, projectId, isEditable = false) {
+    function renderProgressSteps(steps, projectId, isEditable = false) {
         if (!steps || !Array.isArray(steps)) {
             console.error("Geçersiz steps parametresi:", steps);
             const progressStepsContainer = document.getElementById("progressStepsContainer");
@@ -3037,13 +3039,15 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     `Bitiş: ${formatDateForDisplay(step.end_date || '-')}`;
 
                 // Gerçek Bitiş Tarihi içeriği
+                // real_end_date'in varlığını kontrol et ve ona göre göster
+                const realEndDateValue = step.real_end_date ? formatDateForDisplay(step.real_end_date) : '-';
                 const realEndDateContent = isEditable ?
-                    `<label for="step-${step.progress_id}-real-end">Gerçek Bitiş:</label><input type="date" id="step-${step.progress_id}-real-end" class="progress-datepicker" value="${formatDateForInput(step.real_end_date || '')}" disabled>` : // Disabled olarak kalsın, otomatik güncellenecek
-                    `Gerçek Bitiş: ${formatDateForDisplay(step.real_end_date || '-')}`;
-
+                    `<label for="step-${step.progress_id}-real-end">Gerçek Bitiş:</label><input type="date" id="step-${step.progress_id}-real-end" class="progress-datepicker" value="${formatDateForInput(step.real_end_date || '')}" disabled>` :
+                    `Gerçek Bitiş: ${realEndDateValue}`;
 
                 let delayInfoHtml = '';
 
+                // Hesaplanan gecikme (delay_days)
                 const delayDays = parseInt(step.delay_days) || 0;
                 if (delayDays > 0) {
                     delayInfoHtml += `<div class="delay-info" style="color: #ff9800; margin-top: 5px; font-style: italic; padding: 5px; background-color: rgba(255, 152, 0, 0.1); border-left: 3px solid #ff9800; border-radius: 3px;">
@@ -3051,6 +3055,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     </div>`;
                 }
 
+                // Ertelenen gün (custom_delay_days)
                 let customDelayDays = 0;
                 if (step.custom_delay_days !== undefined && step.custom_delay_days !== null) {
                     customDelayDays = parseInt(step.custom_delay_days) || 0;
@@ -3071,7 +3076,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 const delayDaysContent = isEditable ?
                     `<div class="delay-days-container" style="margin-top: 10px;">
                         <label for="step-${step.progress_id}-delay">Erteleme Ekle (gün):</label>
-                        <input type="number" id="step-${step.progress_id}-delay" class="delay-days-input" min="0" value="0" style="width: 70px; padding: 5px; margin-left: 5px;">
+                        <input type="number" id="step-${step.progress_id}-delay" class="delay-days-input" min="0" value="0">
                         <button type="button" class="action-btn apply-delay-btn" data-id="${step.progress_id}" data-index="${index}" style="margin-left: 5px;"><i class="fas fa-check"></i> Uygula</button>
                     </div>` : '';
 
@@ -3125,7 +3130,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                             start_date: startDate,
                             end_date: endDate,
                             description: description,
-                            newly_added_custom_delay: 0
+                            newly_added_custom_delay: 0 // Kaydet butonuna basıldığında ek bir erteleme olmamalı
                         });
                     });
                 });
@@ -3139,13 +3144,14 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 });
 
                 document.querySelectorAll('.apply-delay-btn').forEach(button => {
-                    button.addEventListener('click', (e) => {
+                    button.addEventListener('click', async (e) => {
                         const progressId = e.currentTarget.dataset.id;
                         const stepIndex = parseInt(e.currentTarget.dataset.index);
                         const newDelayDays = parseInt(document.getElementById(`step-${progressId}-delay`).value) || 0;
 
                         if (newDelayDays > 0) {
-                            applyDelayToStep(stepIndex, newDelayDays, steps, projectId);
+                            await applyDelayToStep(stepIndex, newDelayDays, steps, projectId);
+                            showToast(`Bu iş gidişatı ${newDelayDays} gün ertelenmiştir! (Gerçek Bitiş Tarihi: ${formatDateForDisplay(document.getElementById(`step-${progressId}-real-end`).value)})`);
                         } else {
                             showToast("Lütfen geçerli bir erteleme günü girin.", true);
                         }
