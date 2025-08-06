@@ -3467,15 +3467,10 @@ def _check_and_notify_completed_steps(cursor):
                 cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
                 manager_email_info = cursor.fetchone()
                 if manager_email_info and manager_email_info['email']:
-                    email_body = (
-                        f"Merhaba,\n\n"
-                        f"'{project_name}' projesindeki '{step_name}' iş adımı planlanan bitiş tarihine ({step_end_date}) ulaştı.\n\n"
-                        f"Detaylar için lütfen SERProjeTakip uygulamasını kontrol edin."
-                    )
                     send_email_notification(
                         manager_email_info['email'],
-                        notification_title + " - SERProjeTakip",
-                        email_body
+                        notification_title,
+                        notification_message + " Detaylar için sistemi kontrol edin."
                     )
                 else:
                     print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta adresi bulunamadı.")
@@ -3487,15 +3482,10 @@ def _check_and_notify_completed_steps(cursor):
                 for admin_id in admin_ids:
                     send_notification(cursor, admin_id, notification_title, notification_message)
                 for admin_email in admin_emails:
-                    email_body = (
-                        f"Merhaba,\n\n"
-                        f"'{project_name}' projesindeki '{step_name}' iş adımı planlanan bitiş tarihine ({step_end_date}) ulaştı.\n\n"
-                        f"Detaylar için lütfen SERProjeTakip uygulamasını kontrol edin."
-                    )
                     send_email_notification(
                         admin_email,
-                        notification_title + " - SERProjeTakip",
-                        email_body
+                        notification_title,
+                        notification_message + " Detaylar için sistemi kontrol edin."
                     )
             else:
                 print(f"UYARI: Yöneticiye bildirim/e-posta gönderilemedi (Admin ID/E-posta bulunamadı).")
