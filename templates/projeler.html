@@ -3424,7 +3424,8 @@ function addNewProgressStepForm(projectId) {
             if (!projectResponse.ok) throw new Error('Proje detayları çekilemedi.');
             projectDetails = await projectResponse.json();
 
-            const progressResponse = await fetch(`${API_BASE_URL}/api/project_progress/${project.project_id}`);
+            // Hata burada düzeltildi: İş adımları için doğru API uç noktası kullanılıyor.
+            const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
             if (!progressResponse.ok) throw new Error('İş adımları çekilemedi.');
             progressSteps = await progressResponse.json();
         } catch (error) {
@@ -3635,6 +3636,7 @@ function addNewProgressStepForm(projectId) {
             "pdf_export"
         );
     }
+
 
     // Tüm projeleri PDF olarak dışa aktar
      async function exportAllProjectsToPdf() {
