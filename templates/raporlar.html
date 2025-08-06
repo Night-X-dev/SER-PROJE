@@ -10,10 +10,1247 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        /* --- index.html'den alınan tüm CSS buraya gelecek --- */
-        /* Tüm CSS kodları burada olacak, uzunluk nedeniyle buraya eklemedim */
-        /* Ancek aynı index.html'deki gibi olacak */
+        :root {
+            --primary: #005c9d;
+            --primary-light: #0980d3;
+            --white: #ffffff;
+            --light-gray: #97a1aa;
+            --dark-gray: #5e6870;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --input-bg: #f0f4f8;
+            --border-color: #e1e5e9;
+            --sidebar-bg: #ffffff;
+            --topbar-bg: #ffffff;
+            --success: #2ed573;
+            --danger: #ff4757;
+            --warning: #ffc107;
+            --info: #0980d3;
+            --primary-light-bg: rgba(9, 128, 211, 0.1); /* Yeni: Hafif birincil renk arka planı */
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --input-bg: #2d2d2d;
+            --border-color: #3a3a3a;
+            --sidebar-bg: #1a1a1a;
+            --topbar-bg: #1a1a1a;
+            --primary-light-bg: rgba(9, 128, 211, 0.2); /* Koyu tema için hafif birincil renk arka planı */
+        }
+
+        /* Chart.js renkleri için doğrudan HEX değerleri (mevcut temayla uyumlu) */
+        .chart-color-info { background-color: #0980d3; }
+        .chart-color-success { background-color: #2ed573; }
+        .chart-color-danger { background-color: #ff4757; }
+        .chart-color-warning { background-color: #ffc107; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden; /* Yatay kaydırmayı engelle */
+        }
+
+        /* Hamburger menü butonu */
+        .hamburger-menu {
+            display: none; /* Varsayılan olarak gizli */
+            background-color: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            font-size: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            margin-right: 15px; /* Sağında boşluk bırak */
+            flex-shrink: 0; /* Küçülmesini engelle */
+        }
+
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            height: 100vh;
+            position: fixed; /* Masaüstünde sabit */
+            overflow-y: auto;
+            padding: 20px 0;
+            z-index: 1000;
+            transform: translateX(0); /* Masaüstünde görünür */
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .sidebar.show { /* Mobil görünümde açıldığında */
+            transform: translateX(0);
+        }
+        .sidebar.hidden { /* Mobil görünümde gizli */
+            transform: translateX(-100%);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            padding: 0 20px 25px 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 25px;
+        }
+
+        .logo-icon {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 20px;
+            margin-right: 12px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .nav-item {
+            padding: 12px 25px;
+            display: flex;
+            align-items: center;
+            color: var(--text-color);
+            text-decoration: none;
+            border-left: 3px solid transparent;
+            margin-bottom: 5px;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background-color: rgba(9, 128, 211, 0.1);
+            border-left-color: var(--primary-light);
+            color: var(--primary-light);
+        }
+
+        .nav-item i {
+            font-size: 18px;
+            margin-right: 15px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 260px; /* Sidebar genişliği kadar boşluk */
+            transition: margin-left 0.3s ease-in-out;
+            width: calc(100% - 260px); /* Kalan genişliği kapla */
+        }
+
+        .main-content.expanded {
+            margin-left: 0; /* Sidebar gizlendiğinde boşluk sıfırla */
+            width: 100%;
+        }
+
+        /* Topbar */
+        .topbar {
+            background-color: var(--topbar-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            flex-wrap: nowrap; /* Masaüstünde sarmalamayı engelle */
+            gap: 15px; /* Öğeler arası boşluk */
+        }
+
+        .search-container {
+            position: relative;
+            width: 300px; /* Masaüstü varsayılan */
+            flex-grow: 1; /* Esnek genişlik */
+        }
+
+        .search-container input {
+            width: 100%;
+            padding: 10px 15px 10px 40px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+        }
+
+        .search-container i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--light-gray);
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-left: auto; /* Masaüstünde sağa it */
+            flex-shrink: 0; /* Küçülmesini engelle */
+        }
+
+        .notification-btn, .theme-toggle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            cursor: pointer;
+            position: relative;
+            flex-shrink: 0; /* Küçülmesini engelle */
+        }
+
+        .notification-btn::after {
+            content: attr(data-count); /* JS ile dinamik olarak güncellenecek */
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #ff4757;
+            color: white;
+            font-size: 10px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Başlangıçta gizli, bildirim varsa gösterilecek */
+            opacity: 0; 
+            transform: scale(0);
+            transition: all 0.2s ease-out;
+        }
+        .notification-btn.has-notifications::after {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .user-role {
+            font-size: 13px;
+            color: var(--light-gray);
+        }
+
+        /* Tek Çıkış Butonu Stilleri */
+        .logout-btn {
+            display: flex; /* Varsayılan olarak masaüstünde görünür */
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px; /* Standart padding */
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            gap: 8px;
+            transition: all 0.3s ease;
+            background: transparent;
+            border: 1px solid var(--primary-light);
+            color: var(--primary-light);
+            margin-left: 10px; /* Masaüstünde sağa boşluk */
+        }
+
+        .logout-btn:hover {
+            background-color: var(--primary);
+            color: var(--white);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+
+        .dashboard-content { /* Raporlar sayfası için de kullanılabilir */
+            padding: 30px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .page-title i {
+            color: var(--primary-light);
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card { /* Raporlar sayfası için de kullanılabilir */
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .stat-card-title {
+            color: var(--light-gray);
+            font-size: 15px;
+        }
+
+        .stat-card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(9, 128, 211, 0.1);
+            color: var(--primary-light);
+        }
+
+        .stat-card-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-card-change {
+            font-size: 13px;
+            color: #2ed573;
+            display: flex;
+            align-items: center;
+        }
+
+        .stat-card-change.down {
+            color: #ff4757;
+        }
+
+        .charts-activity-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            height: 100%;
+        }
+
+        .card-header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .card-link {
+            color: var(--primary-light);
+            font-size: 14px;
+            text-decoration: none;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .chart-container {
+            height: 300px;
+            position: relative;
+        }
+
+        .activity-item {
+            display: flex;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--border-color);
+            cursor: default; 
+            pointer-events: none;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(9, 128, 211, 0.1);
+            color: var(--primary-light);
+            font-size: 18px;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .activity-desc {
+            color: var(--light-gray);
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .activity-time {
+            font-size: 12px;
+            color: var(--light-gray);
+        }
+
+        .projects-container {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .projects-header {
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .projects-actions {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .btn {
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: none;
+            background: linear-gradient(to right, var(--primary), var(--primary-light));
+            color: var(--white);
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--primary-light);
+            color: var(--primary-light);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(9, 128, 211, 0.3);
+        }
+
+        .btn i {
+            font-size: 14px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+        .projects-table td {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-color); 
+        }
+        .projects-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .projects-table th {
+            text-align: left;
+            padding: 15px 20px;
+            background-color: rgba(9, 128, 211, 0.05);
+            color: var(--light-gray);
+            font-weight: 500;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .projects-table td {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-color); 
+        }
+
+        /* Adjusted status badge styles to match actual backend status values */
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        /* Yeni durumlar için renk tanımları */
+        .status-badge.gecikmeli {
+            background-color: rgba(255, 71, 87, 0.1); /* Kırmızı tonu */
+            color: #ff4757;
+            border: 1px dashed #ff4757;
+        }
+
+        .status-badge.normal {
+            background-color: rgba(46, 213, 115, 0.1); /* Yeşil tonu */
+            color: #2ed573;
+        }
+
+        .status-badge.tamamlandı {
+            background-color: rgba(9, 128, 211, 0.1); /* Mavi tonu */
+            color: var(--primary-light);
+        }
+
+        /* Filtreleme alanı için yeni stiller */
+        .filters-container {
+            display: none; /* Varsayılan olarak gizli */
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .filters-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .filter-title {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .filter-reset {
+            color: var(--primary-light);
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-label {
+            font-size: 13px;
+            margin-bottom: 5px;
+            color: var(--light-gray);
+        }
+
+        .filter-input {
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            font-size: 14px;
+            width: 100%;
+        }
+
+        /* Responsive tasarım iyileştirmeleri */
+        @media (max-width: 1200px) {
+            .filter-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 992px) {
+            .charts-activity-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                width: 260px; /* Mobil görünümde açıkken genişlik */
+                position: fixed; /* Mobil görünümde sabit */
+                transform: translateX(-100%); /* Varsayılan olarak gizli */
+                box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            }
+            .sidebar.show {
+                transform: translateX(0); /* Açıldığında görünür */
+            }
+            
+            .logo-text, .nav-text {
+                display: block; /* Mobil menü açıkken görünür */
+            }
+            
+            .logo-container {
+                justify-content: flex-start;
+                padding: 0 20px 25px 20px;
+            }
+            
+            .logo-icon {
+                margin-right: 12px;
+            }
+            
+            .nav-item {
+                justify-content: flex-start;
+                padding: 12px 25px;
+            }
+            
+            .nav-item i {
+                margin-right: 15px;
+            }
+            
+            .main-content {
+                margin-left: 0; /* Mobil görünümde boşluk yok */
+                width: 100%;
+            }
+
+            .hamburger-menu {
+                display: block;
+                order: 1;
+                margin-right: 10px;
+            }
+
+            .topbar {
+                padding: 15px;
+                flex-wrap: wrap;
+                justify-content: flex-start;
+                gap: 10px;
+            }
+            .search-container {
+                order: 2;
+                flex-grow: 1;
+                margin-right: 0;
+            }
+            .topbar-actions {
+                order: 3;
+                width: 100%;
+                justify-content: flex-end;
+                margin-top: 10px;
+                gap: 10px;
+            }
+            .user-profile {
+                flex-grow: 0;
+            }
+            .logout-btn {
+                padding: 8px 10px;
+                font-size: 14px;
+                margin-left: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .filter-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-content {
+                padding: 15px;
+            }
+            
+            .projects-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .projects-actions {
+                width: 100%;
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .projects-actions .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .filter-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .page-title {
+                font-size: 22px;
+            }
+            
+            .stat-card-value {
+                font-size: 24px;
+            }
+            
+            .user-info {
+                display: none;
+            }
+
+            /* Proje tablosu responsive düzenlemesi */
+            .projects-table, .projects-table thead, .projects-table tbody, .projects-table th, .projects-table td, .projects-table tr {
+                display: block;
+            }
+            .projects-table thead {
+                display: none;
+            }
+            .projects-table tr {
+                margin-bottom: 15px;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+                background: var(--card-bg);
+                border: 1px solid var(--border-color);
+            }
+            .projects-table td {
+                padding: 10px 15px;
+                border: none;
+                position: relative;
+                text-align: left;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 14px;
+            }
+            .projects-table td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                color: var(--primary);
+                display: block;
+                margin-right: 15px;
+                min-width: 120px;
+                font-size: 13px;
+                flex-shrink: 0;
+            }
+            
+            .status-badge {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+
+            .action-btn {
+                width: 38px;
+                height: 38px;
+                padding: 0;
+                font-size: 16px;
+            }
+            .action-btn i {
+                margin: 0;
+            }
+            .projects-table td[data-label="İşlemler"] {
+                justify-content: center;
+            }
+            .projects-table td[data-label="İşlemler"]::before {
+                display: none;
+            }
+
+            .topbar {
+                padding: 10px;
+                flex-wrap: nowrap;
+                gap: 8px;
+                flex-direction: row; 
+                justify-content: flex-start;
+                align-items: center;
+            }
+            .hamburger-menu {
+                order: 1;
+            }
+            .search-container {
+                flex-grow: 1;
+                order: 2;
+                margin-left: 0;
+                width: auto;
+            }
+            .topbar-actions {
+                width: auto;
+                order: 3;
+                justify-content: flex-end;
+                margin-left: auto;
+                flex-wrap: nowrap;
+                gap: 5px;
+            }
+            .logout-btn .logout-text {
+                display: none;
+            }
+            .logout-btn i {
+                margin-right: 0;
+            }
+        }
+
+        /* PDF export için geçici tablo stili */
+        .pdf-export-table {
+            border: 1px solid #005c9d !important;
+            border-radius: 8px !important;
+            overflow: hidden !important;
+            background: #fff !important;
+            color: #222 !important;
+        }
+        [data-theme="dark"] .pdf-export-table {
+            background: #181c20 !important;
+            color: #f1f1f1 !important;
+        }
         
+        /* Toast bildirimi */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--success);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 10000;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+        
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .toast.error {
+            background-color: var(--danger);
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--light-gray);
+            font-size: 14px;
+            border-top: 1px solid var(--border-color);
+            margin-top: 30px;
+        }
+
+        /* --- PROJELER.HTML İLE AYNI ACTION-BTN TASARIMI --- */
+        .action-btn {
+            width: auto;
+            min-width: 38px;
+            height: 38px;
+            padding: 0 10px;
+            border-radius: 10px;
+            font-size: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease-in-out;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            cursor: pointer;
+        }
+        .action-btn:hover {
+            background-color: var(--primary-light);
+            color: var(--white);
+            box-shadow: 0 4px 12px rgba(9, 128, 211, 0.2);
+            transform: translateY(-1px) scale(1.02);
+            border-color: var(--primary-light);
+        }
+        [data-theme="dark"] .card-title,
+        [data-theme="dark"] .card-header,
+        [data-theme="dark"] .charts-activity-container .card-header {
+            color: #fff !important;
+        }
+        [data-theme="dark"] .activity-title {
+            color: #fff !important;
+        }
+
+        /* Modal için ek stiller (Bootstrap modalını özelleştirmek için) */
+        .modal-content {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-header {
+            border-bottom-color: var(--border-color);
+        }
+
+        .modal-title {
+            color: var(--primary);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-body p {
+            margin-bottom: 8px;
+        }
+
+        .modal-body strong {
+            color: var(--dark-gray);
+        }
+
+        .modal-body hr {
+            border-top: 1px solid var(--border-color);
+            margin: 20px 0;
+        }
+
+        .modal-body h6 {
+            color: var(--primary-light);
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .input-group .form-control {
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            border-color: var(--border-color);
+        }
+
+        .input-group .btn-primary {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .input-group .btn-primary:hover {
+            background-color: var(--primary-light);
+            border-color: var(--primary-light);
+        }
+
+        .modal-footer {
+            border-top-color: var(--border-color);
+        }
+
+        .modal-footer .btn-secondary {
+            background-color: var(--light-gray);
+            border-color: var(--light-gray);
+            color: white;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-top: 1px solid var(--border-color);
+            flex-wrap: wrap; /* Küçük ekranlarda sarmalamak için */
+            gap: 10px; /* Elemanlar arası boşluk */
+        }
+
+        .pagination-info {
+            font-size: 14px;
+            color: var(--light-gray);
+        }
+
+        .pagination-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #pageNumbers {
+            display: flex;
+            gap: 5px;
+        }
+
+        .page-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            cursor: pointer;
+            border: none;
+            flex-shrink: 0;
+        }
+
+        .page-btn.active {
+            background: linear-gradient(to right, var(--primary), var(--primary-light));
+            color: var(--white);
+        }
+
+        .page-btn:hover:not(.active) {
+            background-color: rgba(9, 128, 211, 0.1);
+            color: var(--primary-light);
+        }
+
+        /* Responsive pagination */
+        @media (max-width: 576px) {
+            .pagination {
+                flex-direction: column; /* Sayfalandırma bilgilerini ve kontrollerini dikey sırala */
+                align-items: center;
+            }
+
+            .pagination-controls {
+                margin-top: 10px;
+            }
+        }
+
+        /* Bildirim Paneli Stilleri (bildirim.html'den alındı) */
+        .notification-panel {
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            width: 360px;
+            max-height: 500px;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border: 1px solid var(--border-color);
+            z-index: 1001;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .notification-panel.show {
+            display: flex;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .notification-panel-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .notification-panel-header .close-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: var(--light-gray);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .notification-panel-header .close-btn:hover {
+            color: var(--primary);
+        }
+
+        .notification-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 5px 0;
+        }
+
+        .notification-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
+            transition: background-color 0.2s;
+        }
+
+        .notification-item:last-child {
+            border-bottom: none;
+        }
+
+        .notification-item:hover {
+            background-color: var(--primary-light-bg);
+        }
+
+        .notification-item.unread {
+            background-color: var(--primary-light-bg);
+            border-left: 3px solid var(--primary);
+        }
+
+        .notification-item-content {
+            cursor: pointer;
+            flex-grow: 1;
+            padding-right: 30px; /* Silme butonu için yer aç */
+        }
+        
+        .notification-item-icon {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(9, 128, 211, 0.1);
+            color: var(--primary-light);
+            font-size: 16px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .notification-item-title {
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 4px;
+            color: var(--text-color);
+        }
+
+        .notification-item-description {
+            font-size: 13px;
+            color: var(--light-gray);
+            line-height: 1.4;
+        }
+
+        .notification-item-time {
+            font-size: 11px;
+            color: var(--light-gray);
+            margin-top: 5px;
+        }
+
+        .notification-item-actions {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .notification-item:hover .notification-item-actions {
+            opacity: 1;
+        }
+
+        .delete-notification-btn {
+            background: transparent;
+            border: none;
+            color: var(--light-gray);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 5px;
+            border-radius: 50%;
+        }
+
+        .delete-notification-btn:hover {
+            background-color: rgba(255, 71, 87, 0.1);
+            color: var(--danger);
+        }
+
+        .notification-panel-footer {
+            padding: 10px 15px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--bg-color);
+        }
+
+        .notification-action-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .notification-action-btn:hover {
+            background-color: var(--input-bg);
+            border-color: var(--primary-light);
+            color: var(--primary-light);
+        }
+        
+        .notification-action-btn.danger:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+            background-color: rgba(255, 71, 87, 0.1);
+        }
+
+        .no-notifications {
+            text-align: center;
+            padding: 20px;
+            color: var(--light-gray);
+            font-size: 14px;
+        }
+
+        @media (max-width: 576px) {
+            .notification-panel {
+                width: calc(100% - 20px);
+                left: 10px;
+                right: 10px;
+                top: 65px;
+            }
+            .notification-action-btn span {
+                display: none;
+            }
+            .notification-action-btn {
+                padding: 8px;
+            }
+        }
+
         /* Raporlar sayfası için ek stiller */
         .timeline {
             position: relative;
@@ -152,17 +1389,17 @@
             margin-bottom: 20px;
             flex-wrap: wrap;
         }
-        .filter-group {
+        .report-filter .filter-group { /* Genel filter-group'u ezmek için */
             flex: 1;
             min-width: 200px;
         }
-        .filter-label {
+        .report-filter .filter-label { /* Genel filter-label'ı ezmek için */
             font-size: 14px;
             margin-bottom: 8px;
             color: var(--dark-gray);
             font-weight: 500;
         }
-        .filter-input {
+        .report-filter .filter-input { /* Genel filter-input'u ezmek için */
             width: 100%;
             padding: 10px 15px;
             border-radius: 8px;
@@ -177,7 +1414,7 @@
                 flex-direction: column;
                 gap: 10px;
             }
-            .filter-group {
+            .report-filter .filter-group {
                 min-width: 100%;
             }
             .timeline::before {
@@ -581,7 +1818,7 @@
                 console.log("Rapor verileri yüklendi:", reportData);
                 
                 // Özet kartları güncelle
-                updateSummaryCards(reportData);
+                updateSummaryData(reportData);
                 
                 // Filtre seçeneklerini doldur
                 populateFilters(reportData);
@@ -614,7 +1851,7 @@
             document.getElementById('totalCompletedProjects').textContent = completedProjects.length;
             
             // Ortalama gecikme süresi
-            const totalDelay = delayedProjects.reduce((sum, project) => sum + project.delay_days, 0);
+            const totalDelay = delayedProjects.length > 0 ? delayedProjects.reduce((sum, project) => sum + project.delay_days, 0) : 0;
             const avgDelay = delayedProjects.length > 0 ? (totalDelay / delayedProjects.length).toFixed(1) : 0;
             document.getElementById('avgDelayDays').textContent = avgDelay;
             
@@ -912,7 +2149,7 @@
             }
             
             // Özet kartları güncelle
-            updateSummaryCards(filteredData);
+            updateSummaryData(filteredData);
             
             // Raporları yeniden oluştur
             renderReports(filteredData);
@@ -1015,26 +2252,227 @@
         }
         
         // PDF raporu oluşturma
-        function exportReportToPdf() {
+        async function exportReportToPdf() {
             // Kullanıcı yetki kontrolü
-            if (currentUser.role !== "Admin") {
-                showToast('PDF oluşturma yetkiniz yok!', true);
+            if (!currentUser || !currentUser.id) {
+                showToast('Kullanıcı oturumu bulunamadı. Lütfen giriş yapın.', true);
                 return;
             }
             
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/role-permissions?role=${encodeURIComponent(currentUser.role)}`);
+                if (!response.ok) throw new Error('Yetki sorgusu başarısız');
+                const perms = await response.json();
+                const permission = Array.isArray(perms) ? perms[0] : perms;
+                if (permission.pdf_olusturma != 1) {
+                    showToast('PDF oluşturma yetkiniz yok!', true);
+                    return;
+                }
+            } catch (error) {
+                showToast('Yetki sorgusu sırasında hata oluştu.', true);
+                return;
+            }
+
             showToast('PDF raporu oluşturuluyor...');
             
-            // PDF oluşturma işlemleri burada yapılacak
-            // Gerçek uygulamada html2canvas ve jsPDF kullanılacak
+            const reportContentDiv = document.createElement('div');
+            reportContentDiv.style.fontFamily = "'Segoe UI', Arial, sans-serif";
+            reportContentDiv.style.padding = '20px';
+            reportContentDiv.style.color = '#333';
+            reportContentDiv.style.backgroundColor = '#fff';
+            reportContentDiv.style.boxSizing = 'border-box';
+
+            // Başlık
+            reportContentDiv.innerHTML += `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h1 style='font-size:28px;color:#005c9d;margin-bottom:5px;'>Ser Elektrik Otomasyon</h1>
+                    <h2 style='font-size:22px;color:#0980d3;margin-bottom:15px;'>Genel Rapor</h2>
+                    <p style='font-size:14px;color:#5e6870;'>Tarih: ${new Date().toLocaleDateString('tr-TR')}</p>
+                </div>
+            `;
+
+            // Özet Kartları HTML'i
+            const summaryCardsHtml = `
+                <h3 style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'>Özet Bilgiler</h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+                    <div style="flex: 1; min-width: 200px; background-color: #f8f9fa; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <div style="font-size: 20px; font-weight: 700; color: #ff4757;">${document.getElementById('totalDelayedProjects').textContent}</div>
+                        <div style="color: #5e6870; font-size: 14px;">Toplam Geciken Proje</div>
+                    </div>
+                    <div style="flex: 1; min-width: 200px; background-color: #f8f9fa; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <div style="font-size: 20px; font-weight: 700; color: #2ed573;">${document.getElementById('totalCompletedProjects').textContent}</div>
+                        <div style="color: #5e6870; font-size: 14px;">Tamamlanan Proje</div>
+                    </div>
+                    <div style="flex: 1; min-width: 200px; background-color: #f8f9fa; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <div style="font-size: 20px; font-weight: 700; color: #ffc107;">${document.getElementById('avgDelayDays').textContent}</div>
+                        <div style="color: #5e6870; font-size: 14px;">Ort. Gecikme (gün)</div>
+                    </div>
+                    <div style="flex: 1; min-width: 200px; background-color: #f8f9fa; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <div style="font-size: 20px; font-weight: 700; color: #0980d3;">${document.getElementById('totalSteps').textContent}</div>
+                        <div style="color: #5e6870; font-size: 14px;">Toplam İş Adımı</div>
+                    </div>
+                </div>
+            `;
+            reportContentDiv.innerHTML += summaryCardsHtml;
+
+            // Tablo Görünümü (PDF'e her zaman tablo görünümünü dahil edelim)
+            const tempTableContainer = document.createElement('div');
+            tempTableContainer.innerHTML = document.getElementById('tableView').innerHTML; // Mevcut tablo görünümünü al
             
-            setTimeout(() => {
-                showToast('PDF raporu başarıyla oluşturuldu');
-                
-                // Aktivite ekle
-                if (currentUser && currentUser.id) {
-                    addActivity('PDF Rapor Oluşturuldu', 'Proje raporunun PDF çıktısı alındı.', currentUser.id, 'fas fa-file-pdf');
+            // Tablo başlıklarını ve satırlarını PDF için uygun hale getir
+            const table = tempTableContainer.querySelector('.projects-table');
+            if (table) {
+                // Inline stiller ekle
+                table.style.width = '100%';
+                table.style.borderCollapse = 'collapse';
+                table.style.marginBottom = '20px';
+                table.style.fontSize = '12px';
+
+                table.querySelectorAll('th').forEach(th => {
+                    th.style.border = '1px solid #e1e5e9';
+                    th.style.padding = '8px';
+                    th.style.textAlign = 'left';
+                    th.style.backgroundColor = '#f0f4f8';
+                    th.style.fontWeight = 'bold';
+                    th.style.color = '#5e6870';
+                });
+
+                table.querySelectorAll('td').forEach(td => {
+                    td.style.border = '1px solid #e1e5e9';
+                    td.style.padding = '8px';
+                    td.style.textAlign = 'left';
+                    td.style.backgroundColor = '#ffffff'; // Varsayılan beyaz
+                });
+
+                // Çift satırlara hafif gri arka plan
+                table.querySelectorAll('tbody tr:nth-child(even)').forEach(tr => {
+                    tr.querySelectorAll('td').forEach(td => {
+                        td.style.backgroundColor = '#f9f9f9';
+                    });
+                });
+
+                // Durum rozetleri için inline stil
+                table.querySelectorAll('.status-badge').forEach(span => {
+                    span.style.padding = '3px 6px';
+                    span.style.borderRadius = '10px';
+                    span.style.fontSize = '10px';
+                    span.style.fontWeight = '500';
+                    span.style.display = 'inline-block';
+
+                    if (span.classList.contains('gecikmeli')) {
+                        span.style.backgroundColor = 'rgba(255, 71, 87, 0.1)';
+                        span.style.color = '#ff4757';
+                        span.style.border = '1px dashed #ff4757';
+                    } else if (span.classList.contains('tamamlandı')) {
+                        span.style.backgroundColor = 'rgba(9, 128, 211, 0.1)';
+                        span.style.color = '#0980d3';
+                    } else if (span.classList.contains('normal')) {
+                        span.style.backgroundColor = 'rgba(46, 213, 115, 0.1)';
+                        span.style.color = '#2ed573';
+                    }
+                });
+            }
+
+            reportContentDiv.innerHTML += `
+                <h3 style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px; margin-top: 30px;'>Proje Detayları Tablosu</h3>
+                ${tempTableContainer.innerHTML}
+            `;
+
+            // Grafik (Canvas'ı resme dönüştürüp ekle)
+            const chartCanvas = document.getElementById('stepsChart');
+            if (chartCanvas) {
+                try {
+                    const chartImg = chartCanvas.toDataURL('image/png');
+                    reportContentDiv.innerHTML += `
+                        <h3 style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px; margin-top: 30px;'>İş Adımı Tamamlanma Durumu Grafiği</h3>
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <img src="${chartImg}" style="max-width: 100%; height: auto; border: 1px solid #e1e5e9; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        </div>
+                    `;
+                } catch (e) {
+                    console.error("Grafik resme dönüştürülemedi:", e);
+                    reportContentDiv.innerHTML += `<p style="color: red;">Grafik yüklenemedi.</p>`;
                 }
-            }, 2000);
+            }
+
+            // Footer
+            reportContentDiv.innerHTML += `
+                <div style="text-align: center; font-size: 12px; color: #6c757d; margin-top: 40px; border-top: 1px solid #eee; padding-top: 15px;">
+                    © 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır.
+                </div>
+            `;
+
+            const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
+            if (!newWindow) {
+                showToast("PDF önizlemesi için yeni pencere açılamadı. Tarayıcınızın pop-up engelleyicisini kontrol edin.", true);
+                return;
+            }
+
+            newWindow.document.write(`
+                <!DOCTYPE html>
+                <html lang="tr">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Ser Elektrik Otomasyon - Rapor</title>
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                    <style>
+                        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; }
+                        .pdf-container {
+                            width: 210mm;
+                            min-height: 297mm;
+                            margin: 20px auto;
+                            background: #fff;
+                            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                            padding: 20mm;
+                            box-sizing: border-box;
+                        }
+                        .print-button-container {
+                            text-align: center;
+                            margin-top: 20px;
+                            padding-bottom: 20px;
+                        }
+                        .print-button {
+                            background-color: #005c9d;
+                            color: white;
+                            padding: 10px 20px;
+                            border: none;
+                            border-radius: 8px;
+                            font-size: 16px;
+                            cursor: pointer;
+                            transition: background-color 0.3s ease;
+                        }
+                        .print-button:hover {
+                            background-color: #0980d3;
+                        }
+                        @media print {
+                            .print-button-container { display: none; }
+                            body { background-color: #fff; }
+                            .pdf-container { margin: 0; box-shadow: none; padding: 0; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="pdf-container">
+                        ${reportContentDiv.innerHTML}
+                    </div>
+                    <div class="print-button-container">
+                        <button class="print-button" onclick="window.print()"><i class="fas fa-print"></i> PDF Kaydet / Yazdır</button>
+                    </div>
+                </body>
+                </html>
+            `);
+            newWindow.document.close();
+
+            newWindow.onload = () => {
+                showToast('Genel rapor PDF önizlemesi hazır.');
+                addActivity(
+                    "PDF Raporu Oluşturuldu",
+                    "Genel raporun PDF çıktısı alındı.",
+                    currentUser.id,
+                    "fas fa-file-pdf"
+                );
+            };
         }
         
         // Toast mesajı gösterme
