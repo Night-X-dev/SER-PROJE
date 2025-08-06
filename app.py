@@ -2950,20 +2950,6 @@ def worker_performance():
     finally:
         if connection:
             connection.close()
-def send_notification(cursor, user_id, title, message):
-    """Sends a notification to a specific user using the provided cursor."""
-    try:
-        sql = "INSERT INTO notifications (user_id, title, message, created_at) VALUES (%s, %s, %s, NOW())"
-        cursor.execute(sql, (user_id, title, message))
-        # Note: We don't commit here. The main function (e.g., login_user) will commit all changes at once.
-        print(f"Notification prepared: User ID: {user_id}, Title: '{title}', Message: '{message}'")
-    except pymysql.Error as e:
-        print(f"Database error while preparing notification: {e}")
-    except Exception as e:
-        print(f"General error while preparing notification: {e}")
-
-# _check_and_notify_completed_steps fonksiyonu zaten doğru çağırıyor olmalı.
-# Bu fonksiyonun tanımını daha önceki cevabımdan kopyalayıp yapıştırdığınızdan emin olun.
 def _check_and_notify_completed_steps(cursor):
     """
     Checks for project progress steps whose end_date is today or in the past,
@@ -3044,6 +3030,7 @@ def _check_and_notify_completed_steps(cursor):
     except Exception as e:
         print(f"Genel hata (_check_and_notify_completed_steps): {e}")
         traceback.print_exc()
+
 
 
 ##if __name__ == '__main__':
