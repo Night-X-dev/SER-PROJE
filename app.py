@@ -3122,7 +3122,7 @@ def update_task(task_id):
             new_assigned_user_email_info = cursor.fetchone()
             if new_assigned_user_email_info and new_assigned_user_email_info['email']:
                 new_assignee_email_body = (
-                    f"<p>Size '{title}' başlıklı görev atandı ve güncellendi:</p>"
+                    f"<p>Size '{title}' başlıklı görev güncellendi:</p>"
                     f"<table>"
                     f"<tr><th>Açıklama</th><td>{description or 'Yok'}</td></tr>"
                     f"<tr><th>Başlangıç Tarihi</th><td>{format_datetime_for_email(start)}</td></tr>"
