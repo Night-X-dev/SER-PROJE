@@ -2717,53 +2717,48 @@ function attachProjectTableEventListeners() {
     }
 
     // `isEditable` parametresi eklendi
-let successfulProgressEndpoint = null;
- async function fetchProgressSteps(projectId, isEditable = false) {
-    try {
-        console.log(`İş adımları getiriliyor: Proje ID ${projectId}`);
-        
-        // API_BASE_URL'de sorun olabilir, doğru URL'yi kullanmak için kontrol edelim
-        let baseUrl = API_BASE_URL;
-        if (baseUrl.endsWith('/')) {
-            baseUrl = baseUrl.slice(0, -1);
-        }
-        
-        // Başarılı endpoint'i biliyoruz: /api/projects/{projectId}/progress
-        const apiUrl = `${baseUrl}/api/projects/${projectId}/progress`;
-        console.log(`İş adımları için API URL: ${apiUrl}`);
-        
-        const response = await fetch(apiUrl);
-        console.log("API yanıt durumu:", response.status, response.statusText);
-        
-        if (!response.ok) {
-            console.error(`API hatası: ${response.status} ${response.statusText}`);
+ let successfulProgressEndpoint = null;
+    async function fetchProgressSteps(projectId, isEditable = false) {
+        try {
+            console.log(`İş adımları getiriliyor: Proje ID ${projectId}`);
+            
+            let baseUrl = API_BASE_URL;
+            if (baseUrl.endsWith('/')) {
+                baseUrl = baseUrl.slice(0, -1);
+            }
+            
+            const apiUrl = `${baseUrl}/api/projects/${projectId}/progress`;
+            console.log(`İş adımları için API URL: ${apiUrl}`);
+            
+            const response = await fetch(apiUrl);
+            console.log("API yanıt durumu:", response.status, response.statusText);
+            
+            if (!response.ok) {
+                console.error(`API hatası: ${response.status} ${response.statusText}`);
+                renderProgressSteps([], projectId, isEditable);
+                return;
+            }
+            
+            const data = await response.json();
+            console.log("API'den gelen iş adımları verisi:", data);
+            
+            if (!data || (!Array.isArray(data) && !Array.isArray(data.steps))) {
+                console.error("API'den geçersiz veri formatı geldi:", data);
+                renderProgressSteps([], projectId, isEditable);
+                return;
+            }
+            
+            const steps = Array.isArray(data) ? data : data.steps;
+            renderProgressSteps(steps, projectId, isEditable);
+            
+        } catch (error) {
+            console.error("İş adımlarını getirme hatası:", error);
             renderProgressSteps([], projectId, isEditable);
-            return;
+        } finally {
+            document.getElementById("projectModal").dataset.loading = "false";
+            console.log("İş adımları yüklendi. Modal hazır.");
         }
-        
-        const data = await response.json();
-        console.log("API'den gelen iş adımları verisi:", data);
-        
-        // Veri kontrolü
-        if (!data || (!Array.isArray(data) && !Array.isArray(data.steps))) {
-            console.error("API'den geçersiz veri formatı geldi:", data);
-            renderProgressSteps([], projectId, isEditable);
-            return;
-        }
-        
-        // Veriyi işle
-        const steps = Array.isArray(data) ? data : data.steps;
-        renderProgressSteps(steps, projectId, isEditable);
-        
-    } catch (error) {
-        console.error("İş adımlarını getirme hatası:", error);
-        renderProgressSteps([], projectId, isEditable);
-    } finally {
-        // Modal güncelleme işlemi
-        document.getElementById("projectModal").dataset.loading = "false";
-        console.log("İş adımları yüklendi. Modal hazır.");
     }
-}
 async function updateProjectDatesFromSteps(projectId) {
   try {
     console.log(`updateProjectDatesFromSteps başladı, projectId: ${projectId}`);
@@ -2905,7 +2900,9 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 step_name: currentStepName,
                 description: currentStepDescription,
                 start_date: currentStepStartDate,
+                // Güncellenmiş bitiş tarihini kullan
                 end_date: newCurrentStepEndDate.toISOString().split('T')[0], 
+                // Bu, backend'de mevcut custom_delay_days'e eklenecek
                 newly_added_custom_delay: newlyAddedDelayDays 
             };
 
@@ -2946,6 +2943,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 const currentEndDate = new Date(endDateInput.value);
 
                 // Yeni başlangıç ve bitiş tarihlerini hesapla (gecikme günlerini ekle)
+                // setDate metodu, tarihi doğrudan değiştirir, bu yüzden yeni bir Date objesi oluşturmak önemlidir.
                 const newStartDate = new Date(currentStartDate);
                 newStartDate.setDate(newStartDate.getDate() + newlyAddedDelayDays);
 
@@ -2962,6 +2960,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     description: descriptionInput.value,
                     start_date: newStartDate.toISOString().split('T')[0],
                     end_date: newEndDate.toISOString().split('T')[0],
+                    // Bu adımlara yeni bir custom delay eklemiyoruz, sadece tarihlerini kaydırıyoruz.
                     newly_added_custom_delay: 0 
                 };
 
@@ -2990,8 +2989,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
             showToast("Erteleme uygulanırken bir hata oluştu: " + error.message, true);
         }
     }
- function renderProgressSteps(steps, projectId, isEditable = false) {
-        // Steps parametresi için güvenlik kontrolü
+   function renderProgressSteps(steps, projectId, isEditable = false) {
         if (!steps || !Array.isArray(steps)) {
             console.error("Geçersiz steps parametresi:", steps);
             const progressStepsContainer = document.getElementById("progressStepsContainer");
@@ -3013,34 +3011,28 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 console.log(`İş adımı ${index} (ID: ${step.progress_id || step.id || 'bilinmiyor'}):`, step);
                 const stepElement = document.createElement("div");
                 stepElement.className = "progress-detail-item";
-                stepElement.dataset.stepIndex = index; // Adımın indeksini data attribute olarak sakla
+                stepElement.dataset.stepIndex = index;
 
-                // Her adım için başlık, başlangıç/bitiş tarihi ve açıklama içeriği
                 const titleContent = isEditable ?
                     `<input type="text" id="step-${step.progress_id}-name" class="progress-step-name-input" value="${step.step_name || step.title || ''}" placeholder="Adım Adı" required>` :
                     `<span class="progress-detail-title">${step.step_name || step.title || ''}</span>`;
 
                 const startDateContent = isEditable ?
                     `<label for="step-${step.progress_id}-start">Başlangıç:</label><input type="date" id="step-${step.progress_id}-start" class="progress-datepicker" value="${formatDateForInput(step.start_date || '')}" required>` :
-                    `<div class="date-display">Başlangıç: ${formatDateForDisplay(step.start_date || '-')}</div>`;
+                    `Başlangıç: ${formatDateForDisplay(step.start_date || '-')}`;
 
                 const endDateContent = isEditable ?
                     `<label for="step-${step.progress_id}-end">Bitiş:</label><input type="date" id="step-${step.progress_id}-end" class="progress-datepicker" value="${formatDateForInput(step.end_date || '')}" required>` :
-                    `<div class="date-display">Bitiş: ${formatDateForDisplay(step.end_date || '-')}</div>`;
+                    `Bitiş: ${formatDateForDisplay(step.end_date || '-')}`;
 
-                // Gerçek bitiş tarihi bilgisi
-                let realEndDateHtml = '';
-                if (step.real_end_date && step.real_end_date !== step.end_date) {
-                    realEndDateHtml = `<div class="real-end-date-info">Gerçek bitiş tarihi: ${formatDateForDisplay(step.real_end_date)}</div>`;
-                } else if (step.real_end_date && step.real_end_date === step.end_date && !isEditable) {
-                    // Eğer gerçek bitiş tarihi ile bitiş tarihi aynıysa ve düzenleme modunda değilsek
-                    realEndDateHtml = `<div class="real-end-date-info">Gerçek bitiş tarihi: ${formatDateForDisplay(step.real_end_date)}</div>`;
-                }
-                
-                // Gecikme bilgileri - hem genel hem de özel gecikme
+                // Gerçek Bitiş Tarihi içeriği
+                const realEndDateContent = isEditable ?
+                    `<label for="step-${step.progress_id}-real-end">Gerçek Bitiş:</label><input type="date" id="step-${step.progress_id}-real-end" class="progress-datepicker" value="${formatDateForInput(step.real_end_date || '')}" disabled>` : // Disabled olarak kalsın, otomatik güncellenecek
+                    `Gerçek Bitiş: ${formatDateForDisplay(step.real_end_date || '-')}`;
+
+
                 let delayInfoHtml = '';
 
-                // delay_days (otomatik hesaplanan) gecikme varsa
                 const delayDays = parseInt(step.delay_days) || 0;
                 if (delayDays > 0) {
                     delayInfoHtml += `<div class="delay-info" style="color: #ff9800; margin-top: 5px; font-style: italic; padding: 5px; background-color: rgba(255, 152, 0, 0.1); border-left: 3px solid #ff9800; border-radius: 3px;">
@@ -3048,17 +3040,16 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     </div>`;
                 }
 
-                // custom_delay_days (manuel eklenen) gecikme varsa
                 let customDelayDays = 0;
                 if (step.custom_delay_days !== undefined && step.custom_delay_days !== null) {
                     customDelayDays = parseInt(step.custom_delay_days) || 0;
-                } else if (step.custom_delay !== undefined && step.custom_delay !== null) { // Eski isimle uyumluluk için
+                } else if (step.custom_delay !== undefined && step.custom_delay !== null) {
                     customDelayDays = parseInt(step.custom_delay) || 0;
                 }
 
                 if (customDelayDays > 0) {
                     delayInfoHtml += `<div class="custom-delay-info" style="color: #ff6b6b; margin-top: 8px; font-weight: bold; font-style: italic; padding: 8px; background-color: rgba(255, 107, 107, 0.1); border-left: 3px solid #ff6b6b; border-radius: 3px;">
-                        Bu iş gidişatı ${customDelayDays} gün manuel olarak ertelenmiştir!
+                        Bu iş gidişatı ${customDelayDays} gün ertelenmiştir! (Gerçek Bitiş Tarihi: ${formatDateForDisplay(step.real_end_date || '-')})
                     </div>`;
                 }
 
@@ -3066,8 +3057,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     `<textarea id="step-${step.progress_id}-desc" class="progress-description-textarea" placeholder="Açıklama">${step.description || ''}</textarea>` :
                     `<div class="progress-detail-description">Açıklama: ${step.description || 'Yok'}</div>`;
 
-                // Erteleme Günü Ekle inputu (sadece düzenleme modunda)
-                const delayDaysInputHtml = isEditable ?
+                const delayDaysContent = isEditable ?
                     `<div class="delay-days-container" style="margin-top: 10px;">
                         <label for="step-${step.progress_id}-delay">Erteleme Ekle (gün):</label>
                         <input type="number" id="step-${step.progress_id}-delay" class="delay-days-input" min="0" value="0" style="width: 70px; padding: 5px; margin-left: 5px;">
@@ -3094,8 +3084,8 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                             </span>
                             <span>
                                 ${endDateContent}
-                                ${realEndDateHtml}
                             </span>
+                            ${isEditable ? `<span>${realEndDateContent}</span>` : ''}
                         </div>
                     </div>
                     ${delayInfoHtml}
@@ -3103,13 +3093,12 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                         ${isEditable ? '<label for="step-' + step.progress_id + '-desc">Açıklama</label>' : ''}
                         ${descriptionContent}
                     </div>
-                    ${delayDaysInputHtml}
+                    ${delayDaysContent}
                     ${actionsContent}
                 `;
                 progressStepsContainer.appendChild(stepElement);
             });
 
-            // Event listener'ları dinamik olarak atama (sadece düzenleme modunda)
             if (isEditable) {
                 document.querySelectorAll('.save-progress-btn').forEach(button => {
                     button.addEventListener('click', async (e) => {
@@ -3125,7 +3114,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                             start_date: startDate,
                             end_date: endDate,
                             description: description,
-                            newly_added_custom_delay: 0 // Kaydetme sırasında ek bir gecikme eklemiyoruz
+                            newly_added_custom_delay: 0
                         });
                     });
                 });
@@ -3138,7 +3127,6 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     });
                 });
 
-                // Erteleme uygulama butonları
                 document.querySelectorAll('.apply-delay-btn').forEach(button => {
                     button.addEventListener('click', (e) => {
                         const progressId = e.currentTarget.dataset.id;
@@ -3146,7 +3134,6 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                         const newDelayDays = parseInt(document.getElementById(`step-${progressId}-delay`).value) || 0;
 
                         if (newDelayDays > 0) {
-                            // Erteleme fonksiyonunu çağır
                             applyDelayToStep(stepIndex, newDelayDays, steps, projectId);
                         } else {
                             showToast("Lütfen geçerli bir erteleme günü girin.", true);
@@ -3156,7 +3143,6 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
             }
         }
 
-        // "İş Adımı Ekle" butonu için olay dinleyicisi
         const addProgressStepButton = document.getElementById("addProgressStepBtn");
         if (addProgressStepButton) {
             addProgressStepButton.onclick = null;
@@ -3378,7 +3364,6 @@ function addNewProgressStepForm(projectId) {
 
     // PDF Oluşturma Fonksiyonları (progress_id kullanıldı)
     async function generateProjectPdf(project) {
-        // 1. Progress adımlarını çek
         let progressSteps = [];
         try {
             const response = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
@@ -3389,7 +3374,6 @@ function addNewProgressStepForm(projectId) {
             // Progress adımları olmadan da PDF oluşturulabilir
         }
 
-        // 2. PDF içeriğini detaylı ve görsel olarak hazırla
         const pdfContent = document.createElement('div');
         pdfContent.className = 'pdf-report-content';
         pdfContent.innerHTML = `
@@ -3413,7 +3397,13 @@ function addNewProgressStepForm(projectId) {
                 ${progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => `
                     <div style="margin-bottom:12px;">
                         <div style="font-weight:bold;font-size:15px;">${step.step_name || ''}</div>
-                        <div style="font-size:13px; color:#555;">Başlangıç: ${formatDateForDisplay(step.start_date || '-')} - Bitiş: ${formatDateForDisplay(step.end_date || '-')} ${(step.delay_days > 0) ? `<span class='pdf-delay-text'>(${step.delay_days} gün gecikmeli)</span>` : ''}</div>
+                        <div style="font-size:13px; color:#555;">
+                            Başlangıç: ${formatDateForDisplay(step.start_date || '-')} - 
+                            Bitiş: ${formatDateForDisplay(step.end_date || '-')}
+                            ${(step.real_end_date && step.end_date !== step.real_end_date) ? ` (Gerçek Bitiş: ${formatDateForDisplay(step.real_end_date)})` : ''}
+                            ${(step.delay_days > 0) ? `<span class='pdf-delay-text'>(${step.delay_days} gün gecikmeli)</span>` : ''}
+                            ${(step.custom_delay_days > 0) ? `<span class='pdf-delay-text'> (${step.custom_delay_days} gün ertelendi)</span>` : ''}
+                        </div>
                         <div style="font-size:13px;">${step.description || ''}</div>
                     </div>
                 `).join('')}
@@ -3423,14 +3413,12 @@ function addNewProgressStepForm(projectId) {
             </div>
         `;
 
-        // Yeni pencere aç
         const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
         if (!newWindow) {
             showToast("PDF önizlemesi için yeni pencere açılamadı. Tarayıcınızın pop-up engelleyicisini kontrol edin.", true);
             return;
         }
 
-        // Yeni pencereye PDF içeriğini ve gerekli CSS'i ekle
         newWindow.document.write(`
             <!DOCTYPE html>
             <html lang="tr">
@@ -3442,12 +3430,12 @@ function addNewProgressStepForm(projectId) {
                 <style>
                     body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; }
                     .pdf-container {
-                        width: 210mm; /* A4 genişliği */
-                        min-height: 297mm; /* A4 yüksekliği */
+                        width: 210mm;
+                        min-height: 297mm;
                         margin: 20px auto;
                         background: #fff;
                         box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                        padding: 20mm; /* Kenar boşlukları */
+                        padding: 20mm;
                         box-sizing: border-box;
                     }
                     .pdf-report-content {
@@ -3498,9 +3486,8 @@ function addNewProgressStepForm(projectId) {
             </body>
             </html>
         `);
-        newWindow.document.close(); // Yazma işlemini bitir
+        newWindow.document.close();
 
-        // Yeni pencere yüklendiğinde aktivite kaydı
         newWindow.onload = () => {
             showToast(`${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi hazır.`);
             addActivity(
@@ -3514,10 +3501,9 @@ function addNewProgressStepForm(projectId) {
     }
 
     // Tüm projeleri PDF olarak dışa aktar
-    async function exportAllProjectsToPdf() {
+     async function exportAllProjectsToPdf() {
         showToast("Tüm projeler PDF olarak hazırlanıyor...", false);
 
-        // 1. Tüm projeleri içeren bir HTML tablosu oluştur
         let allProjectsHtml = `
             <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 15mm; color: #333; background: #fff; box-sizing: border-box;">
                 <div style="text-align: center; margin-bottom: 20px;">
@@ -3542,7 +3528,6 @@ function addNewProgressStepForm(projectId) {
                     <tbody>
         `;
 
-        // Yardımcı fonksiyonlar (mevcut fonksiyonlardan kopyalandı)
         function dateDiffInDays(date1, date2) {
             function parseDate(str) {
                 if (!str) return null;
@@ -3563,7 +3548,7 @@ function addNewProgressStepForm(projectId) {
 
         function getTodayStr() {
             const today = new Date();
-            return today.toISOString().slice(0, 10); // YYYY-MM-DD
+            return today.toISOString().slice(0, 10);
         }
 
         allProjectsData.forEach((project, index) => {
@@ -3606,7 +3591,6 @@ function addNewProgressStepForm(projectId) {
                 gecikmeDurumu = "0 gün";
             }
 
-            // Satır rengi için basit bir alternatif
             const rowBgColor = index % 2 === 0 ? '#ffffff' : '#f9f9f9';
 
             allProjectsHtml += `
@@ -3634,7 +3618,6 @@ function addNewProgressStepForm(projectId) {
             </div>
         `;
 
-        // 2. html2pdf kütüphanesini kullanarak PDF oluştur
         const element = document.createElement('div');
         element.innerHTML = allProjectsHtml;
 
@@ -3643,7 +3626,7 @@ function addNewProgressStepForm(projectId) {
             filename: 'Tüm_Projeler_Raporu.pdf',
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } // Yatay A4 formatı
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
         };
 
         try {
@@ -3652,23 +3635,13 @@ function addNewProgressStepForm(projectId) {
             addActivity(
                 "Tüm Projeler PDF Dışa Aktarıldı",
                 "Tüm projeler PDF olarak indirildi.",
-                null, // Proje ID'si yok, tüm projeler
+                null,
                 "fas fa-file-pdf",
                 "pdf_export_all"
             );
         } catch (error) {
             console.error("Tüm projeleri PDF'e aktarırken hata oluştu:", error);
             showToast(`PDF oluşturulurken hata oluştu: ${error.message}`, true);
-        }
-    }
-
-    // --- Sayfalandırma Fonksiyonları ---
-    function updateRowsPerPage() {
-        // Ekran genişliğine göre sayfa başına gösterilecek proje sayısını ayarla
-        if (window.innerWidth <= 576) { // Mobil cihazlar için
-            rowsPerPage = 8;
-        } else { // Masaüstü ve tabletler için
-            rowsPerPage = 10;
         }
     }
 
