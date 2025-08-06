@@ -2867,11 +2867,12 @@ def get_calendar_events():
 
             # Convert tasks to FullCalendar format
             for task in tasks_data:
-                color = "#2ed573" # Low priority
-                if task['priority'] == "high":
-                    color = "#ff4757"
-                elif task['priority'] == "medium":
-                    color = "#ffa502"
+                # Öncelik rengini belirle - Türkçe çevirilerle uyumlu hale getirildi
+                color = "#2ed573" # Varsayılan: Düşük Öncelik (Low)
+                if task['priority'].lower() == "high":
+                    color = "#ff4757" # Yüksek Öncelik (High)
+                elif task['priority'].lower() == "medium":
+                    color = "#ffa502" # Orta Öncelik (Medium)
 
                 events.append({
                     'id': f"task-{task['id']}", # Add type to ID
@@ -2895,18 +2896,20 @@ def get_calendar_events():
 
             # Convert projects to FullCalendar format
             for project in projects_data:
-                # Color assignment based on project status
+                # Color assignment based on project status - Türkçe statü isimleriyle uyumlu hale getirildi
                 project_color = "#005c9d" # Default
-                if "Delayed" in project['status']:
+                if project['status'] == 'Gecikmeli': # 'Delayed' yerine 'Gecikmeli'
                     project_color = "#ff4757" # Red
-                elif project['status'] == 'Completed':
+                elif project['status'] == 'Tamamlandı': # 'Completed' yerine 'Tamamlandı'
                     project_color = "#2ed573" # Green
-                elif project['status'] == 'Active':
+                elif project['status'] == 'Aktif': # 'Active' yerine 'Aktif'
                     project_color = "#0980d3" # Blue
+                elif project['status'] == 'Planlama Aşamasında': # 'Planning' yerine 'Planlama Aşamasında'
+                    project_color = "#ffa502" # Orange (Örnek renk)
 
                 events.append({
                     'id': f"project-{project['project_id']}", # Add type to ID
-                    'title': f"Project: {project['project_name']}",
+                    'title': f"Proje: {project['project_name']}",
                     'start': project['start_date'].isoformat() if isinstance(project['start_date'], (datetime.datetime, datetime.date)) else project['start_date'],
                     'end': project['end_date'].isoformat() if isinstance(project['end_date'], (datetime.datetime, datetime.date)) else (project['end_date'] if project['end_date'] else None), # Handle None for end date
                     'color': project_color,
@@ -3112,7 +3115,7 @@ def update_task(task_id):
                 cursor, # Pass the cursor here
                 new_assigned_user_id,
                 "Görev Güncellendi",
-                f"'{title}' adlı görev size atandı ve güncellendi."
+                f"Size atanmış görev güncellendi: '{title}'." # Mesaj güncellendi
             )
             # Yeni atanan kullanıcının e-posta adresini al ve e-posta gönder
             cursor.execute("SELECT email FROM users WHERE id = %s", (new_assigned_user_id,))
