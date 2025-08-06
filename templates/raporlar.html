@@ -1483,544 +1483,613 @@
             </div>
         </div>
         
-        <script>
-            let delayChartInstance; // Chart.js instance'ını tutmak için
-            let currentProjectData = null; // Mevcut proje verilerini tutmak için
+        <div class="toast" id="toast">
+            <i class="fas fa-check-circle"></i>
+            <span id="toastMessage">İşlem başarıyla tamamlandı</span>
+        </div>
+    </div>
+    
+    <script src="static/config.js"></script>
+    <script>
+        // Raporlar sayfası için JavaScript kodları
+        let currentUser = null;
+        let reportData = [];
+        let stepsChartInstance = null;
+        let delayChartInstance; // Chart.js instance'ını tutmak için
+        let currentProjectData = null; // Mevcut proje verilerini tutmak için
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Kullanıcı oturum kontrolü
+            const storedUser = localStorage.getItem('currentUser');
+            if (!storedUser) {
+                showToast("Oturum süreniz doldu. Lütfen tekrar giriş yapın.", true);
+                setTimeout(() => { window.location.href = '/'; }, 2000);
+            } else {
+                try {
+                    currentUser = JSON.parse(storedUser);
+                    document.getElementById('userName').textContent = currentUser.fullname;
+                    document.getElementById('userRole').textContent = currentUser.role;
+                    updateUserAvatar(currentUser);
+                } catch (e) {
+                    console.error("Kullanıcı verisi bozuk:", e);
+                    localStorage.removeItem('currentUser');
+                    showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", true);
+                    setTimeout(() => { window.location.href = '/'; }, 2000);
+                }
+            }
             
-            // Yardımcı fonksiyon: URL'den parametre okuma
-            function getUrlParameter(name) {
-                name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-                var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
-                var results = regex.exec(location.search);
-                return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
-            };
-
-            // Tarih formatlama yardımcı fonksiyonu
-            function formatDate(dateString) {
-                if (!dateString || dateString === 'None') return '-'; 
-                const date = new Date(dateString);
-                if (isNaN(date.getTime())) {
-                    return '-';
+            // Tema değiştirme
+            const themeToggle = document.getElementById('theme-toggle');
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.body.setAttribute('data-theme', savedTheme);
+                themeToggle.innerHTML = savedTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+            }
+            themeToggle.addEventListener('click', () => {
+                const currentTheme = document.body.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                document.body.setAttribute('data-theme', newTheme);
+                themeToggle.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+                localStorage.setItem('theme', newTheme);
+                
+                // Grafikleri yeniden oluştur
+                if (stepsChartInstance) {
+                    createStepsChart();
                 }
-                return date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            }
-
-            // Harita güncelleme fonksiyonu (DOMContentLoaded dışına taşındı)
-            function updateMapDisplay(locationString) {
-                const reportProjectLocationSpan = document.getElementById('reportProjectLocation');
-                const openMapLink = document.getElementById('openMapLink');
-
-                if (!locationString || locationString.trim() === '') {
-                    reportProjectLocationSpan.textContent = 'Konum Bilgisi Yok';
-                    openMapLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Türkiye')}`; // Varsayılan Türkiye linki
-                    openMapLink.style.display = 'inline'; // İkonu göster
-                } else {
-                    reportProjectLocationSpan.textContent = locationString;
-                    openMapLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationString)}`;
-                    openMapLink.style.display = 'inline'; // İkonu göster
-                }
-            }
-
-            // İş adımı durumunu belirleyen yeni fonksiyon
-            function getStepDisplayStatus(step) {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0); // Sadece tarih kısmı
-
-                const stepPlannedEndDate = new Date(step.end_date);
-                stepPlannedEndDate.setHours(0, 0, 0, 0);
-
-                let statusText = '';
-                let statusClass = '';
-                const hasDelay = (step.delay_days || 0) > 0 || (step.custom_delay_days || 0) > 0;
-
-                if (step.is_completed === 1) { 
-                    statusText = hasDelay ? 'Tamamlandı (Gecikmeli)' : 'Tamamlandı';
-                    statusClass = hasDelay ? 'completed-delayed' : 'completed'; 
-                } else if (stepPlannedEndDate < today) {
-                    statusText = 'Gecikmeli';
-                    statusClass = 'delayed'; 
-                } else {
-                    statusText = 'Bekliyor';
-                    statusClass = 'pending'; 
-                }
-                return { statusText, statusClass };
-            }
-
-            // Stepper zaman çizelgesini oluşturma
-            function renderStepperTimeline(progressSteps) {
-                const stepperBox = document.getElementById('stepperBox');
-                stepperBox.innerHTML = ''; // Önceki adımları temizle
-
-                progressSteps.forEach((step, index) => {
-                    const { statusText, statusClass } = getStepDisplayStatus(step);
-                    const stepElement = document.createElement('div');
-                    stepElement.classList.add('stepper-step', `stepper-${statusClass}`);
-
-                    const circleContent = statusClass === 'completed' || statusClass === 'completed-delayed'
-                        ? `<svg viewBox="0 0 16 16" class="bi bi-check-lg" fill="currentColor" height="16" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425z"></path></svg>`
-                        : (index + 1); // Adım numarası
-
-                    stepElement.innerHTML = `
-                        <div class="stepper-circle">${circleContent}</div>
-                        ${index < progressSteps.length - 1 ? '<div class="stepper-line"></div>' : ''}
-                        <div class="stepper-content">
-                            <div class="stepper-title">${step.step_name}</div>
-                            <div class="stepper-status">${statusText}</div>
-                            <div class="stepper-time">
-                                Planlanan Bitiş: ${formatDate(step.end_date)}
-                                ${step.real_end_date && step.real_end_date !== 'None' ? `<br>Gerçek Bitiş: ${formatDate(step.real_end_date)}` : ''}
-                                ${statusText.includes('Gecikmeli') ? `<br>Gecikme: ${(step.delay_days || 0) + (step.custom_delay_days || 0)} gün` : ''}
-                            </div>
-                        </div>
-                    `;
-                    stepperBox.appendChild(stepElement);
-                });
-            }
-
-            // Detaylı İş Adımları Tablosunu Doldurma
-            function populateProgressTable(progressSteps) {
-                const tableBody = document.getElementById('progressStepsTableBody');
-                tableBody.innerHTML = ''; 
-
-                progressSteps.forEach(step => {
-                    const row = tableBody.insertRow();
-                    const { statusText, statusClass } = getStepDisplayStatus(step); 
-
-                    row.innerHTML = `
-                        <td data-label="Adım Adı">${step.step_name}</td>
-                        <td data-label="Başlangıç">${formatDate(step.start_date)}</td>
-                        <td data-label="Bitiş">${formatDate(step.end_date)}</td>
-                        <td data-label="Gecikme">${(step.delay_days || 0) > 0 ? step.delay_days + ' gün' : '-'}</td>
-                        <td data-label="Erteleme">${(step.custom_delay_days || 0) > 0 ? step.custom_delay_days + ' gün' : '-'}</td>
-                        <td data-label="Gerçek Bitiş">${formatDate(step.real_end_date)}</td>
-                        <td data-label="Durum">
-                            <span class="status-badge ${statusClass === 'completed' ? 'normal' : statusClass === 'delayed' ? 'gecikmeli' : statusClass === 'completed-delayed' ? 'completed-delayed' : 'pending'}">${statusText}</span>
-                        </td>
-                    `;
-                });
-            }
-
-            // Gecikme Analizi Grafiğini Güncelleme
-            function updateDelayChart(progressSteps) {
-                const labels = progressSteps.map(step => step.step_name);
-                const data = progressSteps.map(step => {
-                    const { statusText } = getStepDisplayStatus(step); 
-                    if (statusText.includes('Gecikmeli')) { // 'Gecikmeli' veya 'Tamamlandı (Gecikmeli)'
-                        return (step.delay_days || 0) + (step.custom_delay_days || 0);
-                    }
-                    return 0; 
-                });
-                const backgroundColors = data.map(delay => delay > 0 ? '#ff4757' : '#2ed573'); 
-
                 if (delayChartInstance) {
-                    delayChartInstance.destroy(); 
+                    // delayChartInstance'ı yeniden oluşturmak için mevcut proje verilerini kullan
+                    if (currentProjectData && currentProjectData.progress_steps) {
+                        updateDelayChart(currentProjectData.progress_steps);
+                    }
                 }
+            });
+            
+            // Hamburger menü
+            const hamburgerMenu = document.getElementById('hamburgerMenu');
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            hamburgerMenu.addEventListener('click', () => {
+                sidebar.classList.toggle('show');
+                mainContent.classList.toggle('expanded');
+            });
+            
+            // Çıkış butonu
+            document.getElementById('logoutButton').addEventListener('click', () => {
+                localStorage.removeItem('currentUser');
+                window.location.href = '/';
+            });
+            
+            // Proje seçim dropdown'ını doldur
+            populateProjectSelect();
 
-                const delayCtx = document.getElementById('delayChart').getContext('2d');
-                delayChartInstance = new Chart(delayCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Gecikme (gün)',
-                            data: data,
-                            backgroundColor: backgroundColors
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: false
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Gün'
-                                }
-                            }
-                        }
-                    }
-                });
-            }
+            // Proje seçim dropdown'ı değiştiğinde raporu güncelle
+            document.getElementById('projectSelect').addEventListener('change', function() {
+                const selectedProjectId = this.value;
+                fetchAndRenderReportData(selectedProjectId);
+            });
 
-            // Genel Tamamlanma Durumu Metriklerini Güncelleme
-            function updateCompletionMetrics(progressSteps) {
-                const totalSteps = progressSteps.length;
-                let completedSteps = 0;
-                let totalDelayDays = 0;
-
-                progressSteps.forEach(step => {
-                    const { statusText } = getStepDisplayStatus(step);
-                    if (statusText.includes('Tamamlandı')) {
-                        completedSteps++;
-                    }
-                    if (statusText.includes('Gecikmeli')) { // 'Gecikmeli' veya 'Tamamlandı (Gecikmeli)'
-                        totalDelayDays += (step.delay_days || 0) + (step.custom_delay_days || 0);
-                    }
-                });
-
-                const completionPercentage = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
-
-                document.getElementById('completionPercentageText').textContent = `%${completionPercentage}`;
-                document.getElementById('completionProgressBar').style.width = `${completionPercentage}%`;
-                document.getElementById('completedStepsCount').textContent = completedSteps;
-                document.getElementById('totalStepsCount').textContent = totalSteps;
-                document.getElementById('reportTotalDelay').textContent = `${totalDelayDays} gün`;
-
-                const delayWarning = document.getElementById('reportDelayWarning');
-                if (totalDelayDays > 0) {
-                    delayWarning.style.display = 'flex';
-                    document.getElementById('reportDelayMessage').textContent = `Toplam ${totalDelayDays} gün gecikme bulunmaktadır. Acil önlem alınması gerekmektedir.`;
-                } else {
-                    delayWarning.style.display = 'none';
-                }
-            }
-
-
-            // Rapor verilerini API'den çekme ve sayfayı doldurma
-            async function fetchAndRenderReportData(projectId) {
-                const projectReportContent = document.getElementById('projectReportContent');
-                const stepperContainerWrapper = document.getElementById('stepperContainerWrapper'); 
-                const progressStepsContainer = document.getElementById('progressStepsContainer');
-                const metricsContainer = document.getElementById('metricsContainer');
-
-                if (!projectId) {
-                    console.log("Proje ID'si seçilmedi. Rapor içeriği gizleniyor.");
-                    projectReportContent.style.display = 'none';
-                    stepperContainerWrapper.style.display = 'none'; 
-                    progressStepsContainer.style.display = 'none';
-                    metricsContainer.style.display = 'none';
-                    // Önceki verileri temizle
-                    document.getElementById('reportProjectName').textContent = "";
-                    document.getElementById('reportProjectRef').textContent = "";
-                    document.getElementById('reportCustomerName').textContent = "";
-                    document.getElementById('reportProjectManager').textContent = "";
-                    document.getElementById('reportProjectStatus').textContent = "";
-                    document.getElementById('reportTotalDelay').textContent = "";
-                    document.getElementById('reportContractDate').textContent = "";
-                    document.getElementById('reportMeetingDate').textContent = "";
-                    document.getElementById('reportStartDate').textContent = "";
-                    document.getElementById('reportEndDate').textContent = "";
-                    document.getElementById('reportProjectLocation').textContent = "";
-                    document.getElementById('reportProjectDescription').textContent = "";
-                    document.getElementById('reportDelayWarning').style.display = 'none';
-                    document.getElementById('stepperBox').innerHTML = ''; 
-                    document.getElementById('progressStepsTableBody').innerHTML = '';
-                    if (delayChartInstance) {
-                        delayChartInstance.destroy();
-                        delayChartInstance = null;
-                    }
-                    updateCompletionMetrics([]); 
-                    updateMapDisplay(null); 
+            // PDF Oluştur butonu
+            document.getElementById('exportPdfBtn').addEventListener('click', async () => {
+                if (!currentProjectData) {
+                    showToast('Lütfen önce bir proje seçin ve rapor verilerinin yüklenmesini bekleyin.', true);
                     return;
                 }
 
-                projectReportContent.style.display = 'block';
-                stepperContainerWrapper.style.display = 'block'; 
-                progressStepsContainer.style.display = 'block';
-                metricsContainer.style.display = 'grid'; 
-
-                try {
-                    const response = await fetch(`/api/reports/project/${projectId}`);
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.message || 'Rapor verileri çekilemedi.');
-                    }
-                    currentProjectData = await response.json(); 
-                    const { project, progress_steps } = currentProjectData; 
-
-                    // 1. Genel Proje Özeti Alanını Doldur
-                    document.getElementById('reportProjectName').textContent = project.project_name;
-                    document.getElementById('reportProjectRef').textContent = project.reference_no;
-                    document.getElementById('reportCustomerName').textContent = project.customer_name;
-                    document.getElementById('reportProjectManager').textContent = project.project_manager_name;
-                    
-                    const projectStatusElement = document.getElementById('reportProjectStatus');
-                    projectStatusElement.textContent = project.status;
-                    projectStatusElement.className = 'summary-value status-indicator'; 
-                    if (project.status === 'Gecikmeli') {
-                        projectStatusElement.classList.add('status-delayed');
-                    } else if (project.status === 'Tamamlandı') {
-                        projectStatusElement.classList.add('status-active'); 
-                    } else {
-                        projectStatusElement.classList.add('status-active'); 
-                    }
-
-                    document.getElementById('reportContractDate').textContent = formatDate(project.contract_date);
-                    document.getElementById('reportMeetingDate').textContent = formatDate(project.meeting_date);
-                    document.getElementById('reportStartDate').textContent = formatDate(project.start_date);
-                    document.getElementById('reportEndDate').textContent = formatDate(project.end_date);
-                    updateMapDisplay(project.project_location);
-                    document.getElementById('reportProjectDescription').textContent = project.description || 'Açıklama bulunmamaktadır.';
-
-                    // 2. İş Adımları Zaman Çizelgesi (Stepper)
-                    renderStepperTimeline(progress_steps);
-
-                    // 3. Detaylı İş Adımları Tablosunu Doldur
-                    populateProgressTable(progress_steps);
-
-                    // 4. Performans Metriklerini Güncelle (progress_steps'e göre yeniden hesapla)
-                    updateDelayChart(progress_steps);
-                    updateCompletionMetrics(progress_steps); 
-
-                } catch (error) {
-                    console.error("Rapor verileri çekilirken hata oluştu:", error);
-                    document.getElementById('reportProjectName').textContent = "Hata: Rapor Yüklenemedi";
-                    document.getElementById('reportProjectRef').textContent = "Veri çekilirken bir sorun oluştu.";
-                    projectReportContent.style.display = 'block'; 
-                    stepperContainerWrapper.style.display = 'none'; 
-                    progressStepsContainer.style.display = 'none';
-                    metricsContainer.style.display = 'none';
-                    updateMapDisplay(null); 
+                if (currentUser.role !== "Admin") {
+                    showToast('PDF oluşturma yetkiniz yok!', true);
+                    return;
                 }
-            }
-
-            // Tüm projeleri çekip dropdown'a doldurma
-            async function populateProjectSelect() {
-                const projectSelect = document.getElementById('projectSelect');
-                try {
-                    const response = await fetch('/api/projects');
-                    if (!response.ok) {
-                        throw new Error('Projeler çekilemedi.');
-                    }
-                    const projects = await response.json();
-
-                    // Projeleri adına göre alfabetik sırala
-                    projects.sort((a, b) => a.project_name.localeCompare(b.project_name));
-
-                    projects.forEach(project => {
-                        const option = document.createElement('option');
-                        option.value = project.project_id;
-                        option.textContent = `${project.project_name} (${project.reference_no})`;
-                        projectSelect.appendChild(option);
-                    });
-
-                    // URL'de bir proje ID'si varsa otomatik seç ve raporu yükle
-                    const initialProjectId = getUrlParameter('project_id');
-                    if (initialProjectId) {
-                        projectSelect.value = initialProjectId;
-                        fetchAndRenderReportData(initialProjectId);
-                    } else {
-                        fetchAndRenderReportData(null); 
-                    }
-
-                } catch (error) {
-                    console.error("Projeler yüklenirken hata oluştu:", error);
-                }
-            }
-
-
-            // Sayfa yüklendiğinde ve pencere boyutu değiştiğinde çizgiyi konumlandır
-            document.addEventListener('DOMContentLoaded', function() {
-                // Tema değiştirme
-                const themeToggle = document.getElementById('theme-toggle');
-                const savedTheme = localStorage.getItem('theme');
-                if (savedTheme) {
-                    document.body.setAttribute('data-theme', savedTheme);
-                    themeToggle.innerHTML =
-                        savedTheme === 'dark'
-                            ? '<i class="fas fa-sun"></i>'
-                            : '<i class="fas fa-moon"></i>';
-                }
-                themeToggle.addEventListener('click', () => {
-                    const currentTheme = document.body.getAttribute('data-theme');
-                    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                    document.body.setAttribute('data-theme', newTheme);
-                    themeToggle.innerHTML =
-                        newTheme === 'dark'
-                            ? '<i class="fas fa-sun"></i>'
-                            : '<i class="fas fa-moon"></i>';
-                    localStorage.setItem('theme', newTheme);
-                });
                 
-                // Hamburger menü
-                const hamburgerMenu = document.getElementById('hamburgerMenu');
-                const sidebar = document.getElementById('sidebar');
-                const mainContent = document.getElementById('mainContent');
-                
-                hamburgerMenu.addEventListener('click', () => {
-                    sidebar.classList.toggle('show');
-                    mainContent.classList.toggle('expanded');
-                });
-                
-                // Proje seçim dropdown'ını doldur
-                populateProjectSelect();
+                showToast('PDF raporu oluşturuluyor...');
 
-                // Proje seçim dropdown'ı değiştiğinde raporu güncelle
-                document.getElementById('projectSelect').addEventListener('change', function() {
-                    const selectedProjectId = this.value;
-                    fetchAndRenderReportData(selectedProjectId);
-                });
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'pt', 'a4'); 
 
-                // PDF Oluştur butonu
-                document.getElementById('exportPdfBtn').addEventListener('click', async () => {
-                    if (!currentProjectData) {
-                        alert('Lütfen önce bir proje seçin ve rapor verilerinin yüklenmesini bekleyin.');
-                        return;
-                    }
+                // Türkçe karakterler için font ekleme
+                // Bu örnekte, 'NotoSans-Regular.ttf' ve 'NotoSans-Bold.ttf' adında iki font dosyası Base64 olarak gömülüyor.
+                // Bu font dosyalarını projenizin 'static' klasörüne eklemeniz ve Base64 verilerini buraya yapıştırmanız gerekmektedir.
+                // Fontları Base64'e dönüştürmek için online araçlar kullanabilirsiniz (örn: Base64 Font Encoder).
+                // Bu kısım, gerçek font dosyalarının Base64 verileriyle doldurulmalıdır.
+                // Şimdilik, örnek olarak boş bırakılmıştır.
+                // doc.addFileToVFS("NotoSans-Regular.ttf", "BASE64_NOTO_SANS_REGULAR_BURAYA_GELECEK");
+                // doc.addFont("NotoSans-Regular.ttf", "NotoSans", "normal");
+                // doc.addFileToVFS("NotoSans-Bold.ttf", "BASE64_NOTO_SANS_BOLD_BURAYA_GELECEK");
+                // doc.addFont("NotoSans-Bold.ttf", "NotoSans", "bold");
+                // doc.setFont("NotoSans"); // Varsayılan fontu Noto Sans olarak ayarla
 
-                    const { jsPDF } = window.jspdf;
-                    const doc = new jsPDF('p', 'pt', 'a4'); 
+                const margin = 40;
+                let y = margin;
+                const lineHeight = 14;
 
-                    // --- PDF Türkçe Karakter Desteği için Önemli Not ---
-                    // jsPDF'in varsayılan fontları (Helvetica, Times, Courier) Türkçe karakterleri (ç, ğ, ı, ö, ş, ü) tam olarak desteklemeyebilir.
-                    // Tam Türkçe karakter desteği için, Noto Sans gibi bir fontu Base64 olarak gömmeniz gerekmektedir.
-                    // Örnek:
-                    // doc.addFileToVFS("NotoSans-Regular.ttf", "BASE64_FONT_DATA_BURAYA_GELECEK");
-                    // doc.addFont("NotoSans-Regular.ttf", "NotoSans", "normal");
-                    // doc.setFont("NotoSans");
-                    // Bu "BASE64_FONT_DATA_BURAYA_GELECEK" kısmı, font dosyasının Base64 kodlanmış halidir ve oldukça uzun olabilir.
-                    // Gerçek bir uygulamada bu font verisini ayrı bir JS dosyasından veya CDN'den yüklemek daha uygun olacaktır.
-                    // Şimdilik, varsayılan font ile devam edilecek ve karakter sorunları yaşanırsa bu yöntem uygulanmalıdır.
-                    // ---------------------------------------------------
+                // Header
+                doc.setFontSize(20);
+                doc.setFont('helvetica', 'bold'); // Geçici olarak helvetica kullanılıyor
+                doc.text("Proje Durum Raporu", margin, y);
+                y += lineHeight * 2;
 
-                    const margin = 40;
-                    let y = margin;
-                    const lineHeight = 14;
+                doc.setFontSize(14);
+                doc.text(`Proje Adı: ${currentProjectData.project.project_name}`, margin, y);
+                y += lineHeight;
+                doc.text(`Referans No: ${currentProjectData.project.reference_no}`, margin, y);
+                y += lineHeight;
+                doc.text(`Rapor Tarihi: ${formatDate(new Date().toISOString().split('T')[0])}`, margin, y);
+                y += lineHeight * 2;
 
-                    // Header
-                    doc.setFontSize(20);
-                    doc.setFont('helvetica', 'bold'); 
-                    doc.text("Proje Durum Raporu", margin, y);
-                    y += lineHeight * 2;
+                // Project Summary
+                doc.setFontSize(16);
+                doc.text("Genel Proje Özeti", margin, y);
+                y += lineHeight * 1.5;
 
-                    doc.setFontSize(14);
-                    doc.text(`Proje Adı: ${currentProjectData.project.project_name}`, margin, y);
-                    y += lineHeight;
-                    doc.text(`Referans No: ${currentProjectData.project.reference_no}`, margin, y);
-                    y += lineHeight;
-                    doc.text(`Rapor Tarihi: ${formatDate(new Date().toISOString().split('T')[0])}`, margin, y);
-                    y += lineHeight * 2;
+                doc.setFontSize(12);
+                doc.text(`Müşteri: ${currentProjectData.project.customer_name}`, margin, y);
+                y += lineHeight;
+                doc.text(`Proje Yöneticisi: ${currentProjectData.project.project_manager_name}`, margin, y);
+                y += lineHeight;
+                doc.text(`Genel Durum: ${currentProjectData.project.status}`, margin, y);
+                y += lineHeight;
+                doc.text(`Toplam Gecikme: ${document.getElementById('reportTotalDelay').textContent}`, margin, y); 
+                y += lineHeight;
+                doc.text(`Planlanan Başlangıç: ${formatDate(currentProjectData.project.start_date)}`, margin, y);
+                y += lineHeight;
+                doc.text(`Planlanan Bitiş: ${formatDate(currentProjectData.project.end_date)}`, margin, y); 
+                y += lineHeight;
+                doc.text(`Proje Konumu: ${currentProjectData.project.project_location || 'Belirtilmemiş'}`, margin, y);
+                y += lineHeight;
+                doc.text(`Açıklama: ${currentProjectData.project.description || 'Yok'}`, margin, y);
+                y += lineHeight * 2;
 
-                    // Project Summary
-                    doc.setFontSize(16);
-                    doc.text("Genel Proje Özeti", margin, y);
-                    y += lineHeight * 1.5;
+                // Progress Steps Table
+                doc.setFontSize(16);
+                doc.text("İş Adımları Detayları", margin, y);
+                y += lineHeight * 1.5;
 
-                    doc.setFontSize(12);
-                    doc.text(`Müşteri: ${currentProjectData.project.customer_name}`, margin, y);
-                    y += lineHeight;
-                    doc.text(`Proje Yöneticisi: ${currentProjectData.project.project_manager_name}`, margin, y);
-                    y += lineHeight;
-                    doc.text(`Genel Durum: ${currentProjectData.project.status}`, margin, y);
-                    y += lineHeight;
-                    doc.text(`Toplam Gecikme: ${document.getElementById('reportTotalDelay').textContent}`, margin, y); 
-                    y += lineHeight;
-                    doc.text(`Planlanan Başlangıç: ${formatDate(currentProjectData.project.start_date)}`, margin, y);
-                    y += lineHeight;
-                    doc.text(`Planlanan Bitiş: ${formatDate(currentProjectData.project.end_date)}`, margin, y); 
-                    y += lineHeight;
-                    doc.text(`Proje Konumu: ${currentProjectData.project.project_location || 'Belirtilmemiş'}`, margin, y);
-                    y += lineHeight;
-                    doc.text(`Açıklama: ${currentProjectData.project.description || 'Yok'}`, margin, y);
-                    y += lineHeight * 2;
-
-                    // Progress Steps Table
-                    doc.setFontSize(16);
-                    doc.text("İş Adımları Detayları", margin, y);
-                    y += lineHeight * 1.5;
-
-                    const tableHeaders = [
-                        ['Adım Adı', 'Başlangıç', 'Bitiş', 'Gecikme', 'Erteleme', 'Gerçek Bitiş', 'Durum']
+                const tableHeaders = [
+                    ['Adım Adı', 'Başlangıç', 'Bitiş', 'Gecikme', 'Erteleme', 'Gerçek Bitiş', 'Durum']
+                ];
+                const tableData = currentProjectData.progress_steps.map(step => {
+                    const { statusText } = getStepDisplayStatus(step); 
+                    return [
+                        step.step_name,
+                        formatDate(step.start_date),
+                        formatDate(step.end_date),
+                        (step.delay_days || 0) > 0 ? `${step.delay_days} gün` : '-',
+                        (step.custom_delay_days || 0) > 0 ? `${step.custom_delay_days} gün` : '-',
+                        formatDate(step.real_end_date),
+                        statusText 
                     ];
-                    const tableData = currentProjectData.progress_steps.map(step => {
-                        const { statusText } = getStepDisplayStatus(step); 
-                        return [
-                            step.step_name,
-                            formatDate(step.start_date),
-                            formatDate(step.end_date),
-                            (step.delay_days || 0) > 0 ? `${step.delay_days} gün` : '-',
-                            (step.custom_delay_days || 0) > 0 ? `${step.custom_delay_days} gün` : '-',
-                            formatDate(step.real_end_date),
-                            statusText 
-                        ];
-                    });
+                });
 
-                    doc.autoTable({
-                        startY: y,
-                        head: tableHeaders,
-                        body: tableData,
-                        theme: 'grid',
-                        styles: { fontSize: 10, cellPadding: 5 },
-                        headStyles: { fillColor: [9, 128, 211], textColor: [255, 255, 255] },
-                        didDrawPage: function (data) {
-                            // Footer
-                            let str = "Sayfa " + doc.internal.getNumberOfPages();
-                            doc.setFontSize(10);
-                            doc.text(str, data.settings.margin.left, doc.internal.pageSize.height - 10);
-                        }
-                    });
-
-                    y = doc.autoTable.previous.finalY + lineHeight * 2;
-
-                    // Charts (as images)
-                    // Gecikme Analizi Grafiği
-                    const delayChartCanvas = document.getElementById('delayChart');
-                    if (delayChartCanvas) {
-                        const delayChartImg = delayChartCanvas.toDataURL('image/png');
-                        const chartWidth = doc.internal.pageSize.width - 2 * margin;
-                        const chartHeight = (delayChartCanvas.height * chartWidth) / delayChartCanvas.width;
-
-                        if (y + chartHeight + lineHeight * 2 > doc.internal.pageSize.height - margin) {
-                            doc.addPage();
-                            y = margin;
-                        }
-                        doc.text("Gecikme Analizi", margin, y);
-                        y += lineHeight;
-                        doc.addImage(delayChartImg, 'PNG', margin, y, chartWidth, chartHeight);
-                        y += chartHeight + lineHeight * 2;
+                doc.autoTable({
+                    startY: y,
+                    head: tableHeaders,
+                    body: tableData,
+                    theme: 'grid',
+                    styles: { fontSize: 10, cellPadding: 5 },
+                    headStyles: { fillColor: [9, 128, 211], textColor: [255, 255, 255] },
+                    didDrawPage: function (data) {
+                        // Footer
+                        let str = "Sayfa " + doc.internal.getNumberOfPages();
+                        doc.setFontSize(10);
+                        doc.text(str, data.settings.margin.left, doc.internal.pageSize.height - 10);
                     }
+                });
 
-                    // Genel Tamamlanma Durumu (Basit Metin)
-                    if (y + 50 > doc.internal.pageSize.height - margin) {
+                y = doc.autoTable.previous.finalY + lineHeight * 2;
+
+                // Charts (as images)
+                // Gecikme Analizi Grafiği
+                const delayChartCanvas = document.getElementById('delayChart');
+                if (delayChartCanvas) {
+                    const delayChartImg = delayChartCanvas.toDataURL('image/png');
+                    const chartWidth = doc.internal.pageSize.width - 2 * margin;
+                    const chartHeight = (delayChartCanvas.height * chartWidth) / delayChartCanvas.width;
+
+                    if (y + chartHeight + lineHeight * 2 > doc.internal.pageSize.height - margin) {
                         doc.addPage();
                         y = margin;
                     }
-                    doc.text("Genel Tamamlanma Durumu", margin, y);
+                    doc.text("Gecikme Analizi", margin, y);
                     y += lineHeight;
-                    doc.setFontSize(12);
-                    doc.text(`Tamamlanma Yüzdesi: %${document.getElementById('completionPercentageText').textContent.replace('%', '')}`, margin, y);
-                    y += lineHeight;
-                    doc.text(`Tamamlanan Adım Sayısı: ${document.getElementById('completedStepsCount').textContent} / ${document.getElementById('totalStepsCount').textContent}`, margin, y);
-                    y += lineHeight * 2;
+                    doc.addImage(delayChartImg, 'PNG', margin, y, chartWidth, chartHeight);
+                    y += chartHeight + lineHeight * 2;
+                }
+
+                // Genel Tamamlanma Durumu (Basit Metin)
+                if (y + 50 > doc.internal.pageSize.height - margin) {
+                    doc.addPage();
+                    y = margin;
+                }
+                doc.text("Genel Tamamlanma Durumu", margin, y);
+                y += lineHeight;
+                doc.setFontSize(12);
+                doc.text(`Tamamlanma Yüzdesi: %${document.getElementById('completionPercentageText').textContent.replace('%', '')}`, margin, y);
+                y += lineHeight;
+                doc.text(`Tamamlanan Adım Sayısı: ${document.getElementById('completedStepsCount').textContent} / ${document.getElementById('totalStepsCount').textContent}`, margin, y);
+                y += lineHeight * 2;
 
 
-                    // PDF'i kaydet
-                    doc.save(`Proje_Raporu_${currentProjectData.project.project_name.replace(/\s/g, '_')}.pdf`);
+                // PDF'i kaydet
+                doc.save(`Proje_Raporu_${currentProjectData.project.project_name.replace(/\s/g, '_')}.pdf`);
 
-                    // PDF oluşturma aktivitesini logla
-                    const storedUser = localStorage.getItem('user');
-                    let userId = null;
-                    if (storedUser) {
-                        try {
-                            const user = JSON.parse(storedUser);
-                            userId = user.id;
-                        } catch (e) {
-                            console.error("Kullanıcı verisi parse edilemedi:", e);
+                // PDF oluşturma aktivitesini logla
+                const storedUser = localStorage.getItem('user');
+                let userId = null;
+                if (storedUser) {
+                    try {
+                        const user = JSON.parse(storedUser);
+                        userId = user.id;
+                    } catch (e) {
+                        console.error("Kullanıcı verisi parse edilemedi:", e);
+                    }
+                }
+
+                if (userId) {
+                    await fetch('/api/log_pdf_report', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            user_id: userId,
+                            report_type: 'Project Report',
+                            project_name: currentProjectData.project.project_name
+                        }),
+                    });
+                }
+            });
+        });
+
+        // Yardımcı fonksiyon: URL'den parametre okuma
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            var results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        };
+
+        // Tarih formatlama yardımcı fonksiyonu
+        function formatDate(dateString) {
+            if (!dateString || dateString === 'None') return '-'; 
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) {
+                return '-';
+            }
+            return date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        // Harita güncelleme fonksiyonu (DOMContentLoaded dışına taşındı)
+        function updateMapDisplay(locationString) {
+            const reportProjectLocationSpan = document.getElementById('reportProjectLocation');
+            const openMapLink = document.getElementById('openMapLink');
+
+            if (!locationString || locationString.trim() === '') {
+                reportProjectLocationSpan.textContent = 'Konum Bilgisi Yok';
+                openMapLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Türkiye')}`; // Varsayılan Türkiye linki
+                openMapLink.style.display = 'inline'; // İkonu göster
+            } else {
+                reportProjectLocationSpan.textContent = locationString;
+                openMapLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationString)}`;
+                openMapLink.style.display = 'inline'; // İkonu göster
+            }
+        }
+
+        // İş adımı durumunu belirleyen yeni fonksiyon
+        function getStepDisplayStatus(step) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Sadece tarih kısmı
+
+            const stepPlannedEndDate = new Date(step.end_date);
+            stepPlannedEndDate.setHours(0, 0, 0, 0);
+
+            let statusText = '';
+            let statusClass = '';
+            const hasDelay = (step.delay_days || 0) > 0 || (step.custom_delay_days || 0) > 0;
+
+            if (step.is_completed === 1) { 
+                statusText = hasDelay ? 'Tamamlandı (Gecikmeli)' : 'Tamamlandı';
+                statusClass = hasDelay ? 'completed-delayed' : 'completed'; 
+            } else if (stepPlannedEndDate < today) {
+                statusText = 'Gecikmeli';
+                statusClass = 'delayed'; 
+            } else {
+                statusText = 'Bekliyor';
+                statusClass = 'pending'; 
+            }
+            return { statusText, statusClass };
+        }
+
+        // Stepper zaman çizelgesini oluşturma
+        function renderStepperTimeline(progressSteps) {
+            const stepperBox = document.getElementById('stepperBox');
+            stepperBox.innerHTML = ''; // Önceki adımları temizle
+
+            progressSteps.forEach((step, index) => {
+                const { statusText, statusClass } = getStepDisplayStatus(step);
+                const stepElement = document.createElement('div');
+                stepElement.classList.add('stepper-step', `stepper-${statusClass}`);
+
+                const circleContent = statusClass === 'completed' || statusClass === 'completed-delayed'
+                    ? `<svg viewBox="0 0 16 16" class="bi bi-check-lg" fill="currentColor" height="16" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425z"></path></svg>`
+                    : (index + 1); // Adım numarası
+
+                stepElement.innerHTML = `
+                    <div class="stepper-circle">${circleContent}</div>
+                    ${index < progressSteps.length - 1 ? '<div class="stepper-line"></div>' : ''}
+                    <div class="stepper-content">
+                        <div class="stepper-title">${step.step_name}</div>
+                        <div class="stepper-status">${statusText}</div>
+                        <div class="stepper-time">
+                            Planlanan Bitiş: ${formatDate(step.end_date)}
+                            ${step.real_end_date && step.real_end_date !== 'None' ? `<br>Gerçek Bitiş: ${formatDate(step.real_end_date)}` : ''}
+                            ${statusText.includes('Gecikmeli') ? `<br>Gecikme: ${(step.delay_days || 0) + (step.custom_delay_days || 0)} gün` : ''}
+                        </div>
+                    </div>
+                `;
+                stepperBox.appendChild(stepElement);
+            });
+        }
+
+        // Detaylı İş Adımları Tablosunu Doldurma
+        function populateProgressTable(progressSteps) {
+            const tableBody = document.getElementById('progressStepsTableBody');
+            tableBody.innerHTML = ''; 
+
+            progressSteps.forEach(step => {
+                const row = tableBody.insertRow();
+                const { statusText, statusClass } = getStepDisplayStatus(step); 
+
+                row.innerHTML = `
+                    <td data-label="Adım Adı">${step.step_name}</td>
+                    <td data-label="Başlangıç">${formatDate(step.start_date)}</td>
+                    <td data-label="Bitiş">${formatDate(step.end_date)}</td>
+                    <td data-label="Gecikme">${(step.delay_days || 0) > 0 ? step.delay_days + ' gün' : '-'}</td>
+                    <td data-label="Erteleme">${(step.custom_delay_days || 0) > 0 ? step.custom_delay_days + ' gün' : '-'}</td>
+                    <td data-label="Gerçek Bitiş">${formatDate(step.real_end_date)}</td>
+                    <td data-label="Durum">
+                        <span class="status-badge ${statusClass === 'completed' ? 'normal' : statusClass === 'delayed' ? 'gecikmeli' : statusClass === 'completed-delayed' ? 'completed-delayed' : 'pending'}">${statusText}</span>
+                    </td>
+                `;
+            });
+        }
+
+        // Gecikme Analizi Grafiğini Güncelleme
+        function updateDelayChart(progressSteps) {
+            const labels = progressSteps.map(step => step.step_name);
+            const data = progressSteps.map(step => {
+                const { statusText } = getStepDisplayStatus(step); 
+                if (statusText.includes('Gecikmeli')) { // 'Gecikmeli' veya 'Tamamlandı (Gecikmeli)'
+                    return (step.delay_days || 0) + (step.custom_delay_days || 0);
+                }
+                return 0; 
+            });
+            const backgroundColors = data.map(delay => delay > 0 ? '#ff4757' : '#2ed573'); 
+
+            if (delayChartInstance) {
+                delayChartInstance.destroy(); 
+            }
+
+            const delayCtx = document.getElementById('delayChart').getContext('2d');
+            delayChartInstance = new Chart(delayCtx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Gecikme (gün)',
+                        data: data,
+                        backgroundColor: backgroundColors
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Gün'
+                            }
                         }
                     }
-
-                    if (userId) {
-                        await fetch('/api/log_pdf_report', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                user_id: userId,
-                                report_type: 'Project Report',
-                                project_name: currentProjectData.project.project_name
-                            }),
-                        });
-                    }
-                });
+                }
             });
-        </script>
-    </div>
+        }
+
+        // Genel Tamamlanma Durumu Metriklerini Güncelleme
+        function updateCompletionMetrics(progressSteps) {
+            const totalSteps = progressSteps.length;
+            let completedSteps = 0;
+            let totalDelayDays = 0;
+
+            progressSteps.forEach(step => {
+                const { statusText } = getStepDisplayStatus(step);
+                if (statusText.includes('Tamamlandı')) {
+                    completedSteps++;
+                }
+                if (statusText.includes('Gecikmeli')) { // 'Gecikmeli' veya 'Tamamlandı (Gecikmeli)'
+                    totalDelayDays += (step.delay_days || 0) + (step.custom_delay_days || 0);
+                }
+            });
+
+            const completionPercentage = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+
+            document.getElementById('completionPercentageText').textContent = `%${completionPercentage}`;
+            document.getElementById('completionProgressBar').style.width = `${completionPercentage}%`;
+            document.getElementById('completedStepsCount').textContent = completedSteps;
+            document.getElementById('totalStepsCount').textContent = totalSteps;
+            document.getElementById('reportTotalDelay').textContent = `${totalDelayDays} gün`;
+
+            const delayWarning = document.getElementById('reportDelayWarning');
+            if (totalDelayDays > 0) {
+                delayWarning.style.display = 'flex';
+                document.getElementById('reportDelayMessage').textContent = `Toplam ${totalDelayDays} gün gecikme bulunmaktadır. Acil önlem alınması gerekmektedir.`;
+            } else {
+                delayWarning.style.display = 'none';
+            }
+        }
+
+
+        // Rapor verilerini API'den çekme ve sayfayı doldurma
+        async function fetchAndRenderReportData(projectId) {
+            const projectReportContent = document.getElementById('projectReportContent');
+            const stepperContainerWrapper = document.getElementById('stepperContainerWrapper'); 
+            const progressStepsContainer = document.getElementById('progressStepsContainer');
+            const metricsContainer = document.getElementById('metricsContainer');
+
+            if (!projectId) {
+                console.log("Proje ID'si seçilmedi. Rapor içeriği gizleniyor.");
+                projectReportContent.style.display = 'none';
+                stepperContainerWrapper.style.display = 'none'; 
+                progressStepsContainer.style.display = 'none';
+                metricsContainer.style.display = 'none';
+                // Önceki verileri temizle
+                document.getElementById('reportProjectName').textContent = "";
+                document.getElementById('reportProjectRef').textContent = "";
+                document.getElementById('reportCustomerName').textContent = "";
+                document.getElementById('reportProjectManager').textContent = "";
+                document.getElementById('reportProjectStatus').textContent = "";
+                document.getElementById('reportTotalDelay').textContent = "";
+                document.getElementById('reportContractDate').textContent = "";
+                document.getElementById('reportMeetingDate').textContent = "";
+                document.getElementById('reportStartDate').textContent = "";
+                document.getElementById('reportEndDate').textContent = "";
+                document.getElementById('reportProjectLocation').textContent = "";
+                document.getElementById('reportProjectDescription').textContent = "";
+                document.getElementById('reportDelayWarning').style.display = 'none';
+                document.getElementById('stepperBox').innerHTML = ''; 
+                document.getElementById('progressStepsTableBody').innerHTML = '';
+                if (delayChartInstance) {
+                    delayChartInstance.destroy();
+                    delayChartInstance = null;
+                }
+                updateCompletionMetrics([]); 
+                updateMapDisplay(null); 
+                return;
+            }
+
+            projectReportContent.style.display = 'block';
+            stepperContainerWrapper.style.display = 'block'; 
+            progressStepsContainer.style.display = 'block';
+            metricsContainer.style.display = 'grid'; 
+
+            try {
+                const response = await fetch(`/api/reports/project/${projectId}`);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Rapor verileri çekilemedi.');
+                }
+                currentProjectData = await response.json(); 
+                const { project, progress_steps } = currentProjectData; 
+
+                // 1. Genel Proje Özeti Alanını Doldur
+                document.getElementById('reportProjectName').textContent = project.project_name;
+                document.getElementById('reportProjectRef').textContent = project.reference_no;
+                document.getElementById('reportCustomerName').textContent = project.customer_name;
+                document.getElementById('reportProjectManager').textContent = project.project_manager_name;
+                
+                const projectStatusElement = document.getElementById('reportProjectStatus');
+                projectStatusElement.textContent = project.status;
+                projectStatusElement.className = 'summary-value status-indicator'; 
+                if (project.status === 'Gecikmeli') {
+                    projectStatusElement.classList.add('status-delayed');
+                } else if (project.status === 'Tamamlandı') {
+                    projectStatusElement.classList.add('status-active'); 
+                } else {
+                    projectStatusElement.classList.add('status-active'); 
+                }
+
+                document.getElementById('reportContractDate').textContent = formatDate(project.contract_date);
+                document.getElementById('reportMeetingDate').textContent = formatDate(project.meeting_date);
+                document.getElementById('reportStartDate').textContent = formatDate(project.start_date);
+                document.getElementById('reportEndDate').textContent = formatDate(project.end_date);
+                updateMapDisplay(project.project_location);
+                document.getElementById('reportProjectDescription').textContent = project.description || 'Açıklama bulunmamaktadır.';
+
+                // 2. İş Adımları Zaman Çizelgesi (Stepper)
+                renderStepperTimeline(progress_steps);
+
+                // 3. Detaylı İş Adımları Tablosunu Doldur
+                populateProgressTable(progress_steps);
+
+                // 4. Performans Metriklerini Güncelle (progress_steps'e göre yeniden hesapla)
+                updateDelayChart(progress_steps);
+                updateCompletionMetrics(progress_steps); 
+
+            } catch (error) {
+                console.error("Rapor verileri çekilirken hata oluştu:", error);
+                document.getElementById('reportProjectName').textContent = "Hata: Rapor Yüklenemedi";
+                document.getElementById('reportProjectRef').textContent = "Veri çekilirken bir sorun oluştu.";
+                projectReportContent.style.display = 'block'; 
+                stepperContainerWrapper.style.display = 'none'; 
+                progressStepsContainer.style.display = 'none';
+                metricsContainer.style.display = 'none';
+                updateMapDisplay(null); 
+            }
+        }
+
+        // Tüm projeleri çekip dropdown'a doldurma
+        async function populateProjectSelect() {
+            const projectSelect = document.getElementById('projectSelect');
+            try {
+                const response = await fetch('/api/projects');
+                if (!response.ok) {
+                    throw new Error('Projeler çekilemedi.');
+                }
+                const projects = await response.json();
+
+                // Projeleri adına göre alfabetik sırala
+                projects.sort((a, b) => a.project_name.localeCompare(b.project_name));
+
+                projects.forEach(project => {
+                    const option = document.createElement('option');
+                    option.value = project.project_id;
+                    option.textContent = `${project.project_name} (${project.reference_no})`;
+                    projectSelect.appendChild(option);
+                });
+
+                // URL'de bir proje ID'si varsa otomatik seç ve raporu yükle
+                const initialProjectId = getUrlParameter('project_id');
+                if (initialProjectId) {
+                    projectSelect.value = initialProjectId;
+                    fetchAndRenderReportData(initialProjectId);
+                } else {
+                    fetchAndRenderReportData(null); 
+                }
+
+            } catch (error) {
+                console.error("Projeler yüklenirken hata oluştu:", error);
+            }
+        }
+        
+        // Toast mesajı gösterme
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toastMessage.textContent = message;
+            toast.className = 'toast show';
+            if (isError) {
+                toast.classList.add('error');
+            } else {
+                toast.classList.remove('error');
+            }
+            
+            setTimeout(() => {
+                toast.className = 'toast';
+            }, 3000);
+        }
+        
+        // Aktivite ekleme fonksiyonu
+        async function addActivity(title, description, user_id, icon = "fas fa-info-circle") {
+            // Aktivite ekleme işlemi
+            console.log(`Aktivite eklendi: ${title} - ${description}`);
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
