@@ -42,6 +42,59 @@
             --sidebar-bg: #1a1a1a;
             --topbar-bg: #1a1a1a;
             --primary-light-bg: rgba(9, 128, 211, 0.2);
+
+            /* Stepper Dark Theme */
+            .stepper-box {
+                background-color: var(--card-bg);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            }
+            .stepper-line {
+                background-color: #4a4a4a; /* Darker line for dark theme */
+            }
+            .stepper-completed .stepper-circle {
+                background-color: var(--primary-light); /* Use primary color for completed in dark */
+                color: var(--white);
+            }
+            .stepper-active .stepper-circle {
+                border-color: var(--primary-light);
+                color: var(--primary-light);
+            }
+            .stepper-pending .stepper-circle {
+                border-color: #4a4a4a;
+                color: var(--light-gray);
+            }
+            .stepper-completed .stepper-title,
+            .stepper-active .stepper-title {
+                color: var(--text-color);
+            }
+            .stepper-pending .stepper-title {
+                color: var(--light-gray);
+            }
+            .stepper-completed .stepper-status {
+                background-color: rgba(46, 213, 115, 0.2); /* Darker green background */
+                color: #2ed573; /* Original green text */
+            }
+            .stepper-active .stepper-status {
+                background-color: rgba(9, 128, 211, 0.2); /* Darker blue background */
+                color: var(--primary-light); /* Original blue text */
+            }
+            .stepper-pending .stepper-status {
+                background-color: rgba(148, 163, 184, 0.2); /* Darker gray background */
+                color: #94a3b8; /* Original gray text */
+            }
+            .stepper-time {
+                color: #b0b0b0; /* Lighter gray for time */
+            }
+            .stepper-button {
+                border-color: #4a4a4a;
+                background-color: var(--input-bg);
+                color: var(--text-color);
+            }
+            .stepper-button-primary {
+                background-color: var(--primary-light);
+                color: var(--white);
+                border-color: var(--primary-light);
+            }
         }
 
         /* Chart.js renkleri için doğrudan HEX değerleri */
@@ -679,6 +732,8 @@
             gap: 10px;
         }
         
+        /* Gantt chart styles removed as per request */
+        /*
         .gantt-container {
             background-color: var(--card-bg);
             border-radius: 12px;
@@ -686,7 +741,7 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
             margin-bottom: 30px;
             overflow-x: auto;
-            position: relative; /* today-line için relative konumlandırma */
+            position: relative; 
         }
         
         .gantt-header {
@@ -718,7 +773,6 @@
         }
         
         .task-bar {
-            /* grid-column değerleri JavaScript ile dinamik olarak ayarlanacak */
             height: 30px;
             background-color: var(--primary-light);
             border-radius: 4px;
@@ -734,26 +788,14 @@
             background-color: #ff4757;
         }
 
-        /* Yeni eklendi: Bekliyor durumu için Gantt çubuğu stili */
         .task-bar.pending {
-            background-color: var(--primary-light); /* Mavi tonu */
-            opacity: 0.7; /* Biraz daha soluk */
+            background-color: var(--primary-light); 
+            opacity: 0.7; 
             border: 1px solid var(--primary);
-        }
-        
-        /* Today line removed as per request */
-        /*
-        .today-line {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background-color: var(--warning);
-            z-index: 10;
         }
         */
         
-        .task-tooltip {
+        .task-tooltip { /* This tooltip is for the old Gantt chart, will be removed if not needed for stepper */
             position: absolute;
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -1065,9 +1107,12 @@
                 margin-right: 0;
             }
             
+            /* Gantt chart media queries removed */
+            /*
             .gantt-header, .gantt-task {
                 min-width: 800px;
             }
+            */
         }
 
         .footer {
@@ -1108,6 +1153,145 @@
             font-size: 16px;
             max-width: 400px; /* Limit dropdown width */
         }
+
+        /* Stepper Styles */
+        .stepper-box {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 32px;
+            width: 100%; /* Make it responsive */
+            max-width: 600px; /* Limit max width */
+            margin: 0 auto; /* Center it */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .stepper-step {
+            display: flex;
+            margin-bottom: 32px;
+            position: relative;
+        }
+
+        .stepper-step:last-child {
+            margin-bottom: 0;
+        }
+
+        .stepper-line {
+            position: absolute;
+            left: 19px;
+            top: 40px;
+            bottom: -32px;
+            width: 2px;
+            background-color: #e2e8f0;
+            z-index: 1;
+        }
+
+        .stepper-step:last-child .stepper-line {
+            display: none;
+        }
+
+        .stepper-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 16px;
+            z-index: 2;
+            font-weight: bold;
+        }
+
+        .stepper-completed .stepper-circle {
+            background-color: var(--primary); /* Use primary for completed */
+            color: var(--white);
+        }
+
+        .stepper-active .stepper-circle {
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .stepper-pending .stepper-circle {
+            border: 2px solid var(--border-color);
+            color: var(--light-gray);
+        }
+
+        .stepper-content {
+            flex: 1;
+        }
+
+        .stepper-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text-color);
+        }
+
+        .stepper-completed .stepper-title {
+            color: var(--text-color);
+        }
+
+        .stepper-active .stepper-title {
+            color: var(--text-color);
+        }
+
+        .stepper-pending .stepper-title {
+            color: var(--light-gray);
+        }
+
+        .stepper-status {
+            font-size: 13px;
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-top: 4px;
+        }
+
+        .stepper-completed .stepper-status {
+            background-color: rgba(46, 213, 115, 0.1); /* Light green */
+            color: #2ed573; /* Green */
+        }
+
+        .stepper-active .stepper-status {
+            background-color: rgba(9, 128, 211, 0.1); /* Light blue */
+            color: var(--primary-light); /* Blue */
+        }
+
+        .stepper-pending .stepper-status {
+            background-color: rgba(148, 163, 184, 0.1); /* Light gray */
+            color: #64748b; /* Gray */
+        }
+
+        .stepper-time {
+            font-size: 12px;
+            color: var(--light-gray);
+            margin-top: 4px;
+        }
+
+        /* Stepper controls removed as per request for a full timeline view */
+        /*
+        .stepper-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 32px;
+        }
+
+        .stepper-button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            background-color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stepper-button-primary {
+            background-color: #0f172a;
+            color: white;
+            border-color: #0f172a;
+        }
+        */
     </style>
 </head>
 <body data-theme="light">
@@ -1271,55 +1455,13 @@
                 </div>
             </div>
             
-            <!-- İş Adımları Zaman Çizelgesi -->
-            <div class="gantt-container" id="ganttContainerWrapper" style="display: none;">
+            <!-- İş Adımları Zaman Çizelgesi (Stepper) -->
+            <div class="stepper-container" id="stepperContainerWrapper" style="display: none;">
                 <div class="card-header">
                     <div class="card-title">İş Adımları Zaman Çizelgesi</div>
-                    <!-- Bugün çizgisi göstergesi kaldırıldı -->
                 </div>
-                
-                <div class="gantt-header" id="ganttHeader">
-                    <div></div>
-                    <!-- Tarih başlıkları JavaScript ile doldurulacak -->
-                </div>
-                
-                <div id="ganttTasksContainer">
-                    <!-- İş adımları JavaScript ile doldurulacak -->
-                </div>
-                
-                <!-- Bugün çizgisi kaldırıldı -->
-                <!-- <div class="today-line" id="todayLine" style="left: 0;"></div> -->
-                
-                <div class="task-tooltip" id="taskTooltip">
-                    <div class="task-tooltip-title" id="tooltipStepName"></div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-label">Başlangıç:</span>
-                        <span class="tooltip-value" id="tooltipStartDate"></span>
-                    </div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-label">Planlanan Bitiş:</span>
-                        <span class="tooltip-value" id="tooltipEndDate"></span>
-                    </div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-label">Gerçek Bitiş:</span>
-                        <span class="tooltip-value" id="tooltipRealEndDate"></span>
-                    </div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-label">Gecikme:</span>
-                        <span class="tooltip-value" id="tooltipDelayDays"></span>
-                    </div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-label">Erteleme:</span> <!-- Custom Delay başlığı değiştirildi -->
-                        <span class="tooltip-value" id="tooltipCustomDelayDays"></span>
-                    </div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-label">Durum:</span>
-                        <span class="tooltip-value" id="tooltipStatus"></span>
-                    </div>
-                     <div class="tooltip-row">
-                        <span class="tooltip-label">Açıklama:</span>
-                        <span class="tooltip-value" id="tooltipDescription"></span>
-                    </div>
+                <div class="stepper-box" id="stepperBox">
+                    <!-- Stepper adımları JavaScript ile doldurulacak -->
                 </div>
             </div>
             
@@ -1411,6 +1553,22 @@
                 return date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
             }
 
+            // Harita güncelleme fonksiyonu (DOMContentLoaded dışına taşındı)
+            function updateMapDisplay(locationString) {
+                const reportProjectLocationSpan = document.getElementById('reportProjectLocation');
+                const openMapLink = document.getElementById('openMapLink');
+
+                if (!locationString || locationString.trim() === '') {
+                    reportProjectLocationSpan.textContent = 'Konum Bilgisi Yok';
+                    openMapLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Türkiye')}`; // Varsayılan Türkiye linki
+                    openMapLink.style.display = 'inline'; // İkonu göster
+                } else {
+                    reportProjectLocationSpan.textContent = locationString;
+                    openMapLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationString)}`;
+                    openMapLink.style.display = 'inline'; // İkonu göster
+                }
+            }
+
             // İş adımı durumunu belirleyen yeni fonksiyon
             function getStepDisplayStatus(step) {
                 const today = new Date();
@@ -1422,133 +1580,47 @@
                 let statusText = '';
                 let statusClass = '';
 
-                if (step.is_completed === 1) { // Backend'den gelen tamamlanma durumu
+                if (step.is_completed === 1) { 
                     statusText = 'Tamamlandı';
-                    statusClass = 'normal';
+                    statusClass = 'completed'; // Stepper için 'completed' sınıfı
                 } else if (stepPlannedEndDate < today) {
                     statusText = 'Gecikmeli';
-                    statusClass = 'gecikmeli';
+                    statusClass = 'delayed'; // Stepper için 'delayed' sınıfı
                 } else {
                     statusText = 'Bekliyor';
-                    statusClass = 'pending';
+                    statusClass = 'pending'; // Stepper için 'pending' sınıfı
                 }
                 return { statusText, statusClass };
             }
 
-            // Gantt şeması başlıklarını oluşturma
-            function generateGanttHeader(startDate, endDate) {
-                const ganttHeader = document.getElementById('ganttHeader');
-                ganttHeader.innerHTML = '<div></div>'; // İlk boş hücreyi koru
+            // Stepper zaman çizelgesini oluşturma
+            function renderStepperTimeline(progressSteps) {
+                const stepperBox = document.getElementById('stepperBox');
+                stepperBox.innerHTML = ''; // Önceki adımları temizle
 
-                const start = new Date(startDate);
-                start.setDate(start.getDate()); 
-                const end = new Date(endDate);
-                end.setDate(end.getDate()); 
-
-                let current = new Date(start);
-                let dayCount = 0;
-
-                while (current <= end) {
-                    const dayDiv = document.createElement('div');
-                    dayDiv.classList.add('gantt-day');
-                    dayDiv.textContent = current.getDate();
-                    ganttHeader.appendChild(dayDiv);
-                    current.setDate(current.getDate() + 1);
-                    dayCount++;
-                }
-                const minWidthDays = Math.max(dayCount, 31); 
-                ganttHeader.style.gridTemplateColumns = `150px repeat(${minWidthDays}, 1fr)`;
-                return minWidthDays; 
-            }
-
-            // Gantt şeması görev çubuklarını oluşturma
-            function renderGanttTasks(progressSteps, ganttStartDate, totalDaysInGantt) {
-                const ganttTasksContainer = document.getElementById('ganttTasksContainer');
-                ganttTasksContainer.innerHTML = ''; 
-
-                const startOfGantt = new Date(ganttStartDate);
-                startOfGantt.setHours(0, 0, 0, 0);
-
-                progressSteps.forEach(step => {
-                    const taskRow = document.createElement('div');
-                    taskRow.classList.add('gantt-task');
-                    taskRow.style.gridTemplateColumns = `150px repeat(${totalDaysInGantt}, 1fr)`;
-
-                    const taskNameDiv = document.createElement('div');
-                    taskNameDiv.classList.add('task-name');
-                    taskNameDiv.textContent = step.step_name;
-                    taskRow.appendChild(taskNameDiv);
-
-                    const taskBarDiv = document.createElement('div');
-                    taskBarDiv.classList.add('task-bar');
-
-                    const stepStartDate = new Date(step.start_date);
-                    stepStartDate.setHours(0, 0, 0, 0);
-                    const stepEndDate = new Date(step.end_date);
-                    stepEndDate.setHours(0, 0, 0, 0);
-
-                    const startColumn = Math.floor((stepStartDate.getTime() - startOfGantt.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                    const spanColumns = Math.floor((stepEndDate.getTime() - stepStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-
-                    taskBarDiv.style.gridColumn = `${startColumn} / span ${spanColumns}`;
-
-                    // Yeni durum fonksiyonunu kullan
+                progressSteps.forEach((step, index) => {
                     const { statusText, statusClass } = getStepDisplayStatus(step);
-                    taskBarDiv.classList.add(statusClass);
+                    const stepElement = document.createElement('div');
+                    stepElement.classList.add('stepper-step', `stepper-${statusClass}`);
 
-                    // Tooltip verilerini sakla
-                    taskBarDiv.dataset.stepName = step.step_name;
-                    taskBarDiv.dataset.startDate = formatDate(step.start_date);
-                    taskBarDiv.dataset.endDate = formatDate(step.end_date);
-                    taskBarDiv.dataset.realEndDate = formatDate(step.real_end_date);
-                    const totalStepDelay = (step.delay_days || 0) + (step.custom_delay_days || 0);
-                    taskBarDiv.dataset.delayDays = totalStepDelay > 0 ? `${totalStepDelay} gün` : '-';
-                    taskBarDiv.dataset.customDelayDays = step.custom_delay_days > 0 ? `${step.custom_delay_days} gün` : '-';
-                    taskBarDiv.dataset.status = statusText; // Güncellenmiş durum metni
-                    taskBarDiv.dataset.description = step.description || 'Açıklama yok.';
+                    const circleContent = statusClass === 'completed' 
+                        ? `<svg viewBox="0 0 16 16" class="bi bi-check-lg" fill="currentColor" height="16" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425z"></path></svg>`
+                        : (index + 1); // Adım numarası
 
-                    taskRow.appendChild(taskBarDiv);
-                    ganttTasksContainer.appendChild(taskRow);
-                });
-
-                // Tooltip olay dinleyicilerini yeniden ata
-                addTooltipListeners();
-            }
-
-            // Tooltip olay dinleyicilerini ekleme fonksiyonu
-            function addTooltipListeners() {
-                const taskBars = document.querySelectorAll('.task-bar');
-                const taskTooltip = document.getElementById('taskTooltip');
-                
-                taskBars.forEach(bar => {
-                    bar.addEventListener('mouseover', function(e) {
-                        const rect = this.getBoundingClientRect();
-                        taskTooltip.style.display = 'block';
-                        taskTooltip.style.left = (e.pageX + 10) + 'px'; 
-                        taskTooltip.style.top = (e.pageY + 10) + 'px'; 
-
-                        const tooltipRect = taskTooltip.getBoundingClientRect();
-                        if (tooltipRect.right > window.innerWidth) {
-                            taskTooltip.style.left = (e.pageX - tooltipRect.width - 10) + 'px';
-                        }
-                        if (tooltipRect.bottom > window.innerHeight) {
-                            taskTooltip.style.top = (e.pageY - tooltipRect.height - 10) + 'px';
-                        }
-
-                        // Tooltip içeriğini güncelle
-                        document.getElementById('tooltipStepName').textContent = this.dataset.stepName;
-                        document.getElementById('tooltipStartDate').textContent = this.dataset.startDate;
-                        document.getElementById('tooltipEndDate').textContent = this.dataset.endDate;
-                        document.getElementById('tooltipRealEndDate').textContent = this.dataset.realEndDate;
-                        document.getElementById('tooltipDelayDays').textContent = this.dataset.delayDays;
-                        document.getElementById('tooltipCustomDelayDays').textContent = this.dataset.customDelayDays;
-                        document.getElementById('tooltipStatus').textContent = this.dataset.status;
-                        document.getElementById('tooltipDescription').textContent = this.dataset.description;
-                    });
-                    
-                    bar.addEventListener('mouseout', function() {
-                        taskTooltip.style.display = 'none';
-                    });
+                    stepElement.innerHTML = `
+                        <div class="stepper-circle">${circleContent}</div>
+                        ${index < progressSteps.length - 1 ? '<div class="stepper-line"></div>' : ''}
+                        <div class="stepper-content">
+                            <div class="stepper-title">${step.step_name}</div>
+                            <div class="stepper-status">${statusText}</div>
+                            <div class="stepper-time">
+                                Planlanan Bitiş: ${formatDate(step.end_date)}
+                                ${step.real_end_date && step.real_end_date !== 'None' ? `<br>Gerçek Bitiş: ${formatDate(step.real_end_date)}` : ''}
+                                ${statusText === 'Gecikmeli' ? `<br>Gecikme: ${(step.delay_days || 0) + (step.custom_delay_days || 0)} gün` : ''}
+                            </div>
+                        </div>
+                    `;
+                    stepperBox.appendChild(stepElement);
                 });
             }
 
@@ -1559,7 +1631,7 @@
 
                 progressSteps.forEach(step => {
                     const row = tableBody.insertRow();
-                    const { statusText, statusClass } = getStepDisplayStatus(step); // Yeni durum fonksiyonunu kullan
+                    const { statusText, statusClass } = getStepDisplayStatus(step); 
 
                     row.innerHTML = `
                         <td data-label="Adım Adı">${step.step_name}</td>
@@ -1569,7 +1641,7 @@
                         <td data-label="Erteleme">${(step.custom_delay_days || 0) > 0 ? step.custom_delay_days + ' gün' : '-'}</td>
                         <td data-label="Gerçek Bitiş">${formatDate(step.real_end_date)}</td>
                         <td data-label="Durum">
-                            <span class="status-badge ${statusClass}">${statusText}</span>
+                            <span class="status-badge ${statusClass === 'completed' ? 'normal' : statusClass === 'delayed' ? 'gecikmeli' : 'pending'}">${statusText}</span>
                         </td>
                     `;
                 });
@@ -1579,11 +1651,11 @@
             function updateDelayChart(progressSteps) {
                 const labels = progressSteps.map(step => step.step_name);
                 const data = progressSteps.map(step => {
-                    const { statusText } = getStepDisplayStatus(step); // Durumu al
+                    const { statusText } = getStepDisplayStatus(step); 
                     if (statusText === 'Gecikmeli') {
                         return (step.delay_days || 0) + (step.custom_delay_days || 0);
                     }
-                    return 0; // Tamamlanmış veya bekleyen adımlar için gecikme 0
+                    return 0; 
                 });
                 const backgroundColors = data.map(delay => delay > 0 ? '#ff4757' : '#2ed573'); 
 
@@ -1624,24 +1696,50 @@
             }
 
             // Genel Tamamlanma Durumu Metriklerini Güncelleme
-            function updateCompletionMetrics(completionPercentage, completedStepsCount, totalStepsCount) {
+            function updateCompletionMetrics(progressSteps) {
+                const totalSteps = progressSteps.length;
+                let completedSteps = 0;
+                let totalDelayDays = 0;
+
+                progressSteps.forEach(step => {
+                    const { statusText } = getStepDisplayStatus(step);
+                    if (statusText === 'Tamamlandı') {
+                        completedSteps++;
+                    }
+                    if (statusText === 'Gecikmeli') {
+                        totalDelayDays += (step.delay_days || 0) + (step.custom_delay_days || 0);
+                    }
+                });
+
+                const completionPercentage = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+
                 document.getElementById('completionPercentageText').textContent = `%${completionPercentage}`;
                 document.getElementById('completionProgressBar').style.width = `${completionPercentage}%`;
-                document.getElementById('completedStepsCount').textContent = completedStepsCount;
-                document.getElementById('totalStepsCount').textContent = totalStepsCount;
+                document.getElementById('completedStepsCount').textContent = completedSteps;
+                document.getElementById('totalStepsCount').textContent = totalSteps;
+                document.getElementById('reportTotalDelay').textContent = `${totalDelayDays} gün`;
+
+                const delayWarning = document.getElementById('reportDelayWarning');
+                if (totalDelayDays > 0) {
+                    delayWarning.style.display = 'flex';
+                    document.getElementById('reportDelayMessage').textContent = `Toplam ${totalDelayDays} gün gecikme bulunmaktadır. Acil önlem alınması gerekmektedir.`;
+                } else {
+                    delayWarning.style.display = 'none';
+                }
             }
+
 
             // Rapor verilerini API'den çekme ve sayfayı doldurma
             async function fetchAndRenderReportData(projectId) {
                 const projectReportContent = document.getElementById('projectReportContent');
-                const ganttContainerWrapper = document.getElementById('ganttContainerWrapper');
+                const stepperContainerWrapper = document.getElementById('stepperContainerWrapper'); // Gantt yerine stepper
                 const progressStepsContainer = document.getElementById('progressStepsContainer');
                 const metricsContainer = document.getElementById('metricsContainer');
 
                 if (!projectId) {
                     console.log("Proje ID'si seçilmedi. Rapor içeriği gizleniyor.");
                     projectReportContent.style.display = 'none';
-                    ganttContainerWrapper.style.display = 'none';
+                    stepperContainerWrapper.style.display = 'none'; // Gizle
                     progressStepsContainer.style.display = 'none';
                     metricsContainer.style.display = 'none';
                     // Önceki verileri temizle
@@ -1658,19 +1756,19 @@
                     document.getElementById('reportProjectLocation').textContent = "";
                     document.getElementById('reportProjectDescription').textContent = "";
                     document.getElementById('reportDelayWarning').style.display = 'none';
-                    document.getElementById('ganttTasksContainer').innerHTML = '';
+                    document.getElementById('stepperBox').innerHTML = ''; // Stepper içeriğini temizle
                     document.getElementById('progressStepsTableBody').innerHTML = '';
                     if (delayChartInstance) {
                         delayChartInstance.destroy();
                         delayChartInstance = null;
                     }
-                    updateCompletionMetrics(0, 0, 0);
+                    updateCompletionMetrics([]); // Boş dizi ile metrikleri sıfırla
                     updateMapDisplay(null); 
                     return;
                 }
 
                 projectReportContent.style.display = 'block';
-                ganttContainerWrapper.style.display = 'block';
+                stepperContainerWrapper.style.display = 'block'; // Göster
                 progressStepsContainer.style.display = 'block';
                 metricsContainer.style.display = 'grid'; 
 
@@ -1681,7 +1779,7 @@
                         throw new Error(errorData.message || 'Rapor verileri çekilemedi.');
                     }
                     currentProjectData = await response.json(); 
-                    const { project, progress_steps, total_project_delay_days, completion_percentage, completed_steps_count } = currentProjectData;
+                    const { project, progress_steps } = currentProjectData; // total_project_delay_days, completion_percentage, completed_steps_count kaldırıldı, updateCompletionMetrics içinde hesaplanacak
 
                     // 1. Genel Proje Özeti Alanını Doldur
                     document.getElementById('reportProjectName').textContent = project.project_name;
@@ -1700,7 +1798,6 @@
                         projectStatusElement.classList.add('status-active'); 
                     }
 
-                    document.getElementById('reportTotalDelay').textContent = total_project_delay_days > 0 ? `${total_project_delay_days} gün` : '0 gün';
                     document.getElementById('reportContractDate').textContent = formatDate(project.contract_date);
                     document.getElementById('reportMeetingDate').textContent = formatDate(project.meeting_date);
                     document.getElementById('reportStartDate').textContent = formatDate(project.start_date);
@@ -1708,33 +1805,22 @@
                     updateMapDisplay(project.project_location);
                     document.getElementById('reportProjectDescription').textContent = project.description || 'Açıklama bulunmamaktadır.';
 
-                    const delayWarning = document.getElementById('reportDelayWarning');
-                    if (total_project_delay_days > 0) {
-                        delayWarning.style.display = 'flex';
-                        document.getElementById('reportDelayMessage').textContent = `Toplam ${total_project_delay_days} gün gecikme bulunmaktadır. Acil önlem alınması gerekmektedir.`;
-                    } else {
-                        delayWarning.style.display = 'none';
-                    }
-
-                    // 2. İş Adımları Zaman Çizelgesi (Gantt)
-                    const ganttStartDate = project.start_date;
-                    const ganttEndDate = project.end_date;
-                    const totalDaysInGantt = generateGanttHeader(ganttStartDate, ganttEndDate);
-                    renderGanttTasks(progress_steps, ganttStartDate, totalDaysInGantt);
+                    // 2. İş Adımları Zaman Çizelgesi (Stepper)
+                    renderStepperTimeline(progress_steps);
 
                     // 3. Detaylı İş Adımları Tablosunu Doldur
                     populateProgressTable(progress_steps);
 
-                    // 4. Performans Metriklerini Güncelle
+                    // 4. Performans Metriklerini Güncelle (progress_steps'e göre yeniden hesapla)
                     updateDelayChart(progress_steps);
-                    updateCompletionMetrics(completion_percentage, completed_steps_count, progress_steps.length);
+                    updateCompletionMetrics(progress_steps); // Yeni fonksiyon çağrısı
 
                 } catch (error) {
                     console.error("Rapor verileri çekilirken hata oluştu:", error);
                     document.getElementById('reportProjectName').textContent = "Hata: Rapor Yüklenemedi";
                     document.getElementById('reportProjectRef').textContent = "Veri çekilirken bir sorun oluştu.";
                     projectReportContent.style.display = 'block'; 
-                    ganttContainerWrapper.style.display = 'none';
+                    stepperContainerWrapper.style.display = 'none'; // Gizle
                     progressStepsContainer.style.display = 'none';
                     metricsContainer.style.display = 'none';
                     updateMapDisplay(null); 
@@ -1834,7 +1920,9 @@
 
                     // Header
                     doc.setFontSize(20);
-                    doc.setFont('helvetica', 'bold');
+                    doc.setFont('helvetica', 'bold'); // Helvetica is a standard font, but might not fully support Turkish characters.
+                                                     // For full Turkish character support, consider embedding a custom font
+                                                     // like Noto Sans or Open Sans using doc.addFont() and doc.addFileToVFS().
                     doc.text("Proje Durum Raporu", margin, y);
                     y += lineHeight * 2;
 
@@ -1858,7 +1946,7 @@
                     y += lineHeight;
                     doc.text(`Genel Durum: ${currentProjectData.project.status}`, margin, y);
                     y += lineHeight;
-                    doc.text(`Toplam Gecikme: ${currentProjectData.total_project_delay_days} gün`, margin, y);
+                    doc.text(`Toplam Gecikme: ${document.getElementById('reportTotalDelay').textContent}`, margin, y); // Updated from currentProjectData.total_project_delay_days
                     y += lineHeight;
                     doc.text(`Planlanan Başlangıç: ${formatDate(currentProjectData.project.start_date)}`, margin, y);
                     y += lineHeight;
@@ -1878,7 +1966,7 @@
                         ['Adım Adı', 'Başlangıç', 'Bitiş', 'Gecikme', 'Erteleme', 'Gerçek Bitiş', 'Durum']
                     ];
                     const tableData = currentProjectData.progress_steps.map(step => {
-                        const { statusText } = getStepDisplayStatus(step); // Yeni durum fonksiyonunu kullan
+                        const { statusText } = getStepDisplayStatus(step); 
                         return [
                             step.step_name,
                             formatDate(step.start_date),
@@ -1886,7 +1974,7 @@
                             (step.delay_days || 0) > 0 ? `${step.delay_days} gün` : '-',
                             (step.custom_delay_days || 0) > 0 ? `${step.custom_delay_days} gün` : '-',
                             formatDate(step.real_end_date),
-                            statusText // PDF için güncellenmiş durum metni
+                            statusText 
                         ];
                     });
 
@@ -1933,9 +2021,9 @@
                     doc.text("Genel Tamamlanma Durumu", margin, y);
                     y += lineHeight;
                     doc.setFontSize(12);
-                    doc.text(`Tamamlanma Yüzdesi: %${currentProjectData.completion_percentage}`, margin, y);
+                    doc.text(`Tamamlanma Yüzdesi: %${document.getElementById('completionPercentageText').textContent.replace('%', '')}`, margin, y);
                     y += lineHeight;
-                    doc.text(`Tamamlanan Adım Sayısı: ${currentProjectData.completed_steps_count} / ${currentProjectData.progress_steps.length}`, margin, y);
+                    doc.text(`Tamamlanan Adım Sayısı: ${document.getElementById('completedStepsCount').textContent} / ${document.getElementById('totalStepsCount').textContent}`, margin, y);
                     y += lineHeight * 2;
 
 
@@ -1943,7 +2031,6 @@
                     doc.save(`Proje_Raporu_${currentProjectData.project.project_name.replace(/\s/g, '_')}.pdf`);
 
                     // PDF oluşturma aktivitesini logla
-                    // Kullanıcı ID'sini localStorage'dan veya session'dan al
                     const storedUser = localStorage.getItem('user');
                     let userId = null;
                     if (storedUser) {
