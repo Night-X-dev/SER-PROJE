@@ -8,23 +8,30 @@ import json
 import datetime
 import dotenv
 from dotenv import load_dotenv
-import urllib.parse 
-import re 
+import urllib.parse
+import re
 import traceback # Import traceback for detailed error logging
+
+# E-posta göndermek için gerekli kütüphaneler
+import smtplib
+import ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
 
 load_dotenv()
 
 app = Flask(__name__)
 # Session management secret key
 # THIS SHOULD BE A SECURE AND UNPREDICTABLE STRING!
-app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex") 
+app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex")
 CORS(app, resources={r"/*": {"origins": ["https://37.148.213.89:8000", "http://serotomasyon.tr"]}}, supports_credentials=True)
 @app.route('/')
 def serve_welcome_page():
     """Directs root URL (/) requests to the welcome.html page."""
     return render_template('welcome.html')
 
-@app.route('/login.html') 
+@app.route('/login.html')
 def serve_login_page():
     """Directs /login.html requests to the login.html page."""
     return render_template('login.html')
@@ -156,7 +163,7 @@ def get_db_connection():
                 print(f"DEBUG: Parsed public URL used. Host={host}, Port={port}, User={user}, DB={database}")
             except Exception as url_parse_e:
                 print(f"ERROR: Could not parse MYSQL_PUBLIC_URL: {url_parse_e}. Falling back to individual environment variables.")
-        
+
         # Eğer public_url kullanılmadıysa veya ayrıştırma başarısız olduysa,
         # ayrı ayrı ortam değişkenlerini kullanmayı dene
         if not host: # Eğer host hala None ise (yani public_url başarılı olmadıysa)
@@ -314,7 +321,7 @@ def get_project_report_data(project_id):
             completion_percentage = 0
             if total_steps > 0:
                 completion_percentage = round((completed_steps_count / total_steps) * 100)
-            
+
             # If project status is 'Tamamlandı' from DB, force 100% completion
             if project_data['status'] == 'Tamamlandı':
                 completion_percentage = 100
@@ -518,7 +525,7 @@ def determine_and_update_project_status(cursor, project_id):
         elif project_end_date and today > project_end_date:
             # Eğer bitiş tarihi geçmişse ve tamamlanmadıysa, gecikmeli
             new_status = 'Gecikmeli'
-        
+
         # 2. 'Planlama Aşamasında' durumu kontrolü
         # Bu, genel gecikme yoksa ve proje henüz başlamadıysa geçerlidir.
         if new_status not in ['Gecikmeli']: # Eğer zaten gecikmeli değilse kontrol et
@@ -542,7 +549,7 @@ def determine_and_update_project_status(cursor, project_id):
                 if step_start and step_end and step_start <= today <= step_end:
                     has_active_step_today = True
                     break
-            
+
             if has_active_step_today:
                 new_status = 'Aktif'
             elif progress_steps and project_end_date and today <= project_end_date:
@@ -563,7 +570,7 @@ def determine_and_update_project_status(cursor, project_id):
             print(f"Project {project_id} status updated from '{current_db_status}' to '{new_status}'.")
         else:
             print(f"Project {project_id} status remains '{current_db_status}'. No change needed.")
-        
+
         return True
     except Exception as e:
         print(f"Error determining and updating project status for {project_id}: {str(e)}")
@@ -762,7 +769,7 @@ def update_user_profile():
                 cursor.execute("SELECT id FROM users WHERE email = %s AND id != %s", (email, user_id))
                 if cursor.fetchone():
                     return jsonify({'message': 'Bu email adresi başka bir kullanıcı tarafından kullanılıyor.'}), 400
-                
+
                 updates.append("email = %s")
                 params.append(email)
                 message_parts.append("Email")
@@ -772,7 +779,7 @@ def update_user_profile():
                 # Verify current password
                 if not bcrypt.checkpw(current_password.encode('utf-8'), user['password'].encode('utf-8')):
                     return jsonify({'message': 'Mevcut şifre yanlış.'}), 400
-                
+
                 # Hash new password
                 hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
                 updates.append("password = %s")
@@ -1501,7 +1508,7 @@ def get_projects():
                 current_progress_title = project['current_progress_title']
                 current_step_delay_days = project['current_step_delay_days'] if project['current_step_delay_days'] is not None else 0
                 current_step_custom_delay_days = project['current_step_custom_delay_days'] if project['current_step_custom_delay_days'] is not None else 0
-                
+
                 # Mevcut iş adımının toplam gecikmesini hesapla
                 current_step_total_delay = current_step_delay_days + current_step_custom_delay_days
 
@@ -1594,6 +1601,60 @@ def send_notification(cursor, user_id, title, message):
     except Exception as e:
         print(f"Bildirim hazırlanırken genel hata: {e}")
 
+# YENİ EKLENEN FONKSİYON: E-posta gönderme yardımcı fonksiyonu
+def send_email_notification(recipient_email, subject, body):
+    """
+    Belirtilen e-posta adresine bildirim e-postası gönderir.
+    Ortam değişkenlerinden SMTP bilgilerini alır.
+    """
+    sender_email = os.getenv("EMAIL_SENDER")
+    sender_password = os.getenv("EMAIL_PASSWORD")
+    smtp_server = os.getenv("SMTP_SERVER")
+    smtp_port = int(os.getenv("SMTP_PORT", 587)) # Varsayılan 587 (TLS)
+
+    if not all([sender_email, sender_password, smtp_server]):
+        print("UYARI: E-posta gönderme ayarları eksik. E-posta gönderilemedi.")
+        return
+
+    message = MIMEMultipart("alternative")
+    message["Subject"] = subject
+    message["From"] = sender_email
+    message["To"] = recipient_email
+
+    # HTML içeriği olarak e-posta gövdesi
+    html_body = f"""\
+    <html>
+      <body>
+        <p>Merhaba,</p>
+        <p>{body}</p>
+        <p>Saygılarımızla,</p>
+        <p>Ser Elektrik Otomasyon Yönetimi</p>
+        <br>
+        <p style="font-size: 10px; color: #888;">Bu e-posta otomatik olarak gönderilmiştir, lütfen yanıtlamayın.</p>
+      </body>
+    </html>
+    """
+    part1 = MIMEText(body, "plain")
+    part2 = MIMEText(html_body, "html")
+
+    message.attach(part1)
+    message.attach(part2)
+
+    try:
+        context = ssl.create_default_context()
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.ehlo()  # Can be omitted
+            server.starttls(context=context)
+            server.ehlo()  # Can be omitted
+            server.login(sender_email, sender_password)
+            server.sendmail(sender_email, recipient_email, message.as_string())
+        print(f"E-posta başarıyla gönderildi: {recipient_email}")
+    except Exception as e:
+        print(f"E-posta gönderme hatası ({recipient_email}): {e}")
+        # Hata durumunda traceback'i yazdır
+        traceback.print_exc()
+
+
 # Project Update API (PUT) - for projects table
 # Find the update_project function in app.py and update it as follows:
 
@@ -1604,18 +1665,18 @@ def update_project(project_id):
     user_id = data.get('user_id')
     if not user_id:
         return jsonify({'message': 'User ID is required.'}), 400
-    
+
     # Tüm olası sütunlar
     possible_columns = [
-        'project_name', 'reference_no', 'description', 'customer_id', 
+        'project_name', 'reference_no', 'description', 'customer_id',
         'project_location', 'status', 'project_manager_id', 'contract_date',
         'meeting_date', 'start_date', 'end_date'
     ]
-    
+
     # Hangi sütunların güncellendiğini takip et
     updates = []
     params = []
-    
+
     connection = None
     try:
         connection = get_db_connection()
@@ -1625,7 +1686,7 @@ def update_project(project_id):
             existing_project = cursor.fetchone()
             if not existing_project:
                 return jsonify({'message': 'Project not found.'}), 404
-            
+
             # Güncellenecek değerleri belirle
             for column in possible_columns:
                 # Sadece 'status' alanı için özel bir durum: Eğer manuel olarak 'Tamamlandı' gelmediyse, otomatik güncellemeye bırak
@@ -1637,18 +1698,18 @@ def update_project(project_id):
                 elif column in data and data[column] is not None:
                     updates.append(f"{column} = %s")
                     params.append(data[column])
-            
+
             # Hiçbir güncelleme yoksa
             if not updates:
                 return jsonify({'message': 'No information to update.'}), 200
-            
+
             # SQL sorgusunu oluştur
             sql = f"UPDATE projects SET {', '.join(updates)} WHERE project_id = %s"
             params.append(project_id)
-            
+
             print(f"Güncelleme sorgusu: {sql}")
             print(f"Parametre değerleri: {params}")
-            
+
             # Sorguyu çalıştır
             cursor.execute(sql, params)
             connection.commit() # update_project tarafından yapılan değişiklikleri commit et
@@ -1656,16 +1717,16 @@ def update_project(project_id):
             # Projenin genel durumunu belirle ve güncelle
             determine_and_update_project_status(cursor, project_id)
             connection.commit() # determine_and_update_project_status tarafından yapılan değişiklikleri commit et
-            
+
             return jsonify({'message': 'Project successfully updated!'}), 200
-    
+
     except Exception as e:
         print(f"Proje güncelleme hatası: {str(e)}")
         traceback.print_exc()
         if connection:
             connection.rollback()
         return jsonify({'message': f'Server error: {str(e)}'}), 500
-    
+
     finally:
         if connection:
             connection.close()
@@ -1673,12 +1734,12 @@ def update_project(project_id):
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
 def delete_project_api(project_id):
     """Deletes a project from the database."""
-    data = request.get_json() # 
+    data = request.get_json()
     user_id = data.get('user_id')
     if not user_id:
         return jsonify({'message': 'User ID is missing.'}), 400
 
-    project_name = "Unknown Project" 
+    project_name = "Unknown Project"
     connection = None
     try:
         connection = get_db_connection()
@@ -1716,6 +1777,19 @@ def delete_project_api(project_id):
                 "Proje Silindi",
                 f"Yönettiğiniz '{project_name}' Projesi silindi.." # Message updated
             )
+
+            # Proje yöneticisinin e-postasını al ve e-posta gönder
+            cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
+            manager_email = cursor.fetchone()
+            if manager_email and manager_email['email']:
+                send_email_notification(
+                    manager_email['email'],
+                    "Proje Silindi",
+                    f"Yönettiğiniz '{project_name}' Projesi silindi."
+                )
+            else:
+                print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta adresi bulunamadı.")
+
 
         return jsonify({'message': 'Project successfully deleted!'}), 200
 
@@ -1887,21 +1961,21 @@ def log_activity(user_id, title, description, icon, is_read=0):
 @app.route('/api/projects', methods=['POST'])
 def add_project():
     data = request.json
-    project_name = data.get('projectName') 
+    project_name = data.get('projectName')
     customer_id = data.get('customerId')
     project_manager_id = data.get('projectManagerId')
-    reference_no = data.get('projectRef') 
-    description = data.get('projectDescription') 
+    reference_no = data.get('projectRef')
+    description = data.get('projectDescription')
     contract_date = data.get('contractDate')
     meeting_date = data.get('meetingDate')
     start_date_str = data.get('startDate')
-    end_date_str = data.get('endDate')     
+    end_date_str = data.get('endDate')
     project_location = data.get('projectLocation')
-    status = data.get('status', 'Planlama Aşamasında') 
+    status = data.get('status', 'Planlama Aşamasında')
 
-    user_id = data.get('user_id') 
+    user_id = data.get('user_id')
 
-    if not all([project_name, customer_id, project_manager_id, start_date_str, end_date_str]): 
+    if not all([project_name, customer_id, project_manager_id, start_date_str, end_date_str]):
         return jsonify({'message': 'Project name, customer, project manager, start date, and end date are required.'}), 400
 
     connection = None
@@ -1922,7 +1996,7 @@ def add_project():
             new_project_id = cursor.lastrowid
 
             progress_steps = data.get('progressSteps', [])
-            last_step_end_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date() 
+            last_step_end_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
 
             for step in progress_steps:
                 step_title = step.get('title')
@@ -1951,7 +2025,7 @@ def add_project():
                 # Removed commit inside the loop
 
                 last_step_end_date = step_end_date
-            
+
             # Commit all changes (project and its progress steps) at once
             connection.commit()
 
@@ -1962,6 +2036,18 @@ def add_project():
                     "Yeni Bir Proje Atandı",
                     f"Size yeni bir proje atandı: '{project_name}'."
                 )
+                # Proje yöneticisinin e-postasını al ve e-posta gönder
+                cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
+                manager_email = cursor.fetchone()
+                if manager_email and manager_email['email']:
+                    send_email_notification(
+                        manager_email['email'],
+                        "Yeni Bir Proje Atandı",
+                        f"Size yeni bir proje atandı: '{project_name}'. Proje detaylarını sistemden kontrol edebilirsiniz."
+                    )
+                else:
+                    print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta adresi bulunamadı.")
+
 
         return jsonify({"message": "Project successfully added", "projectId": new_project_id}), 201
     except pymysql.Error as e:
@@ -2079,18 +2165,18 @@ def add_project_progress_step_from_modal(project_id):
     description = data.get('description')
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
-    
+
     user_id = session.get('user_id')
     if not user_id and 'user_id' in data:
         user_id = data.get('user_id')
-    
+
     if not all([project_id, step_name, start_date_str, end_date_str]):
         return jsonify({'message': 'Project ID, title, start and end date are required.'}), 400
-        
+
     if not user_id:
         print("Warning: No user_id found in session or request. Using default.")
         user_id = 1
-    
+
     connection = None
     try:
         connection = get_db_connection()
@@ -2099,7 +2185,7 @@ def add_project_progress_step_from_modal(project_id):
             project_info = cursor.fetchone()
             project_name = project_info['project_name'] if project_info else f"ID: {project_id}"
             project_manager_id = project_info['project_manager_id'] if project_info else None
-            
+
             cursor.execute("""
                 SELECT end_date FROM project_progress
                 WHERE project_id = %s
@@ -2109,13 +2195,13 @@ def add_project_progress_step_from_modal(project_id):
             last_step = cursor.fetchone()
             previous_end_date = last_step['end_date'] if last_step else None
             delay_days = 0
-            
+
             if previous_end_date:
                 new_step_start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
                 time_diff = (new_step_start_date - previous_end_date).days
                 if time_diff > 1:
                     delay_days = time_diff - 1
-                    
+
             cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'custom_delay_days'")
             column_exists_custom_delay = cursor.fetchone() is not None
             if not column_exists_custom_delay:
@@ -2136,16 +2222,16 @@ def add_project_progress_step_from_modal(project_id):
             # BURADA DEĞİŞİKLİK YAPILDI: Yeni eklenen iş adımının real_end_date'i, başlangıçta end_date ile aynı olacak
             cursor.execute(sql_insert, (project_id, step_name, description, start_date_str, end_date_str, delay_days, 0, end_date_str))
             new_progress_id = cursor.lastrowid
-            
+
             update_result = update_project_dates(cursor, project_id)
             if update_result:
                 print(f"Project dates successfully updated for project {project_id}")
             else:
                 print(f"Failed to update project dates for project {project_id}")
-            
+
             determine_and_update_project_status(cursor, project_id)
             connection.commit()
-            
+
             if project_manager_id:
                 try:
                     send_notification(
@@ -2154,27 +2240,39 @@ def add_project_progress_step_from_modal(project_id):
                         "Proje İlerleme Adımı Eklendi",
                         f"Yönettiğiniz '{project_name}' projesine '{step_name}' adında yeni bir iş adımı eklendi."
                     )
+                    # E-posta bildirimi gönder
+                    cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
+                    manager_email = cursor.fetchone()
+                    if manager_email and manager_email['email']:
+                        send_email_notification(
+                            manager_email['email'],
+                            "Proje İlerleme Adımı Eklendi",
+                            f"Yönettiğiniz '{project_name}' projesine '{step_name}' adında yeni bir iş adımı eklendi. Detaylar için sistemi kontrol edin."
+                        )
+                    else:
+                        print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta adresi bulunamadı.")
+
                 except Exception as notif_error:
                     print(f"Error sending notification (non-critical): {notif_error}")
-            
+
             return jsonify({
-                'message': 'Progress step successfully added!', 
+                'message': 'Progress step successfully added!',
                 'progress_id': new_progress_id
             }), 201
-            
+
     except pymysql.Error as e:
         print(f"Database error while adding progress step: {e}")
         if connection:
             connection.rollback()
         return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
-        
+
     except Exception as e:
         print(f"General error while adding progress step: {e}")
         traceback.print_exc()
         if connection:
             connection.rollback()
         return jsonify({'message': 'Server error, please try again later.'}), 500
-        
+
     finally:
         if connection:
             connection.close()
@@ -2183,24 +2281,24 @@ def add_project_progress_step_from_modal(project_id):
 def update_project_progress_step(progress_id):
     data = request.get_json()
     print(f"Received data for updating progress {progress_id}: {data}")
-    
+
     step_name = data.get('step_name')
     description = data.get('description')
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
-    
+
     newly_added_custom_delay = data.get('newly_added_custom_delay', 0)
     if newly_added_custom_delay is None:
         newly_added_custom_delay = 0
     newly_added_custom_delay = int(newly_added_custom_delay)
-    
+
     user_id = session.get('user_id')
     if not user_id and 'user_id' in data:
         user_id = data.get('user_id')
-        
+
     if not all([step_name, start_date_str, end_date_str]):
         return jsonify({'message': 'Title, start, end date are required.'}), 400
-        
+
     connection = None
     try:
         connection = get_db_connection()
@@ -2208,26 +2306,26 @@ def update_project_progress_step(progress_id):
             # Mevcut iş adımının verilerini çek
             cursor.execute("SELECT project_id, title, custom_delay_days, end_date FROM project_progress WHERE progress_id = %s", (progress_id,))
             existing_step = cursor.fetchone()
-            
+
             if not existing_step:
                 return jsonify({'message': 'Progress step not found.'}), 404
-                
+
             current_project_id = existing_step['project_id']
             old_step_name = existing_step['title']
             current_custom_delay_from_db = existing_step.get('custom_delay_days', 0) or 0
             current_custom_delay_from_db = int(current_custom_delay_from_db)
-            
+
             # Toplam custom_delay_days'i hesapla
             final_custom_delay_for_db = current_custom_delay_from_db + newly_added_custom_delay
-            
-            # Gerçek bitiş tarihini hesapla: real_end_date, erteleme günlerinden etkilenmemeli, 
+
+            # Gerçek bitiş tarihini hesapla: real_end_date, erteleme günlerinden etkilenmemeli,
             # sadece end_date'in ilk girildiği hali olmalı.
             # Dolayısıyla, eğer bu bir erteleme işlemi değilse, mevcut real_end_date'i koru.
             # Eğer yeni bir adım ekleniyorsa, end_date ile aynı olsun.
             # Mevcut real_end_date'i veritabanından çekelim.
             cursor.execute("SELECT real_end_date FROM project_progress WHERE progress_id = %s", (progress_id,))
             current_real_end_date_from_db = cursor.fetchone()['real_end_date']
-            
+
             # Eğer veritabanında zaten bir real_end_date varsa onu kullan, yoksa end_date'i kullan
             if current_real_end_date_from_db:
                 real_end_date_to_save = current_real_end_date_from_db.isoformat()
@@ -2239,7 +2337,7 @@ def update_project_progress_step(progress_id):
             project_info = cursor.fetchone()
             project_name = project_info['project_name'] if project_info else f"ID: {current_project_id}"
             project_manager_id = project_info['project_manager_id'] if project_info else None
-            
+
             # calculated_delay_days'i yeniden hesapla (bir önceki adımın bitiş tarihi ile mevcut adımın başlangıç tarihi arasındaki fark)
             calculated_delay_days = 0
             cursor.execute("""
@@ -2249,7 +2347,7 @@ def update_project_progress_step(progress_id):
                 LIMIT 1
             """, (current_project_id, progress_id))
             previous_step = cursor.fetchone()
-            
+
             if previous_step and previous_step['end_date']:
                 prev_end_date = previous_step['end_date']
                 current_start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
@@ -2265,7 +2363,7 @@ def update_project_progress_step(progress_id):
                     time_diff = (current_start_date - project_start_date).days
                     if time_diff > 1:
                         calculated_delay_days = time_diff - 1
-            
+
             sql_update = """
                 UPDATE project_progress
                 SET title = %s, description = %s, start_date = %s, end_date = %s,
@@ -2276,7 +2374,7 @@ def update_project_progress_step(progress_id):
                 step_name, description, start_date_str, end_date_str,
                 calculated_delay_days, final_custom_delay_for_db, real_end_date_to_save, progress_id
             ))
-            
+
             print(f"SQL query executed. Rows affected: {cursor.rowcount}")
 
             # Sonraki adımların delay_days'ini yeniden hesapla ve güncelle
@@ -2302,7 +2400,7 @@ def update_project_progress_step(progress_id):
                 time_diff_sub = (sub_start_date - last_end_date_for_recalc).days
                 if time_diff_sub > 1:
                     recalculated_sub_delay_days = time_diff_sub - 1
-                
+
                 # Sonraki adımın gerçek bitiş tarihini de güncelle (mevcut real_end_date'i koru)
                 if sub_real_end_date_from_db:
                     sub_real_end_date_to_save = sub_real_end_date_from_db.isoformat()
@@ -2317,27 +2415,27 @@ def update_project_progress_step(progress_id):
                 connection.commit()
 
                 last_end_date_for_recalc = sub_end_date # Bir sonraki adım için bitiş tarihini güncelle
-            
+
             # Projenin genel başlangıç ve bitiş tarihlerini iş adımlarına göre güncelle
             update_project_dates(cursor, current_project_id)
             # Projenin genel durumunu belirle ve güncelle
             determine_and_update_project_status(cursor, current_project_id)
             connection.commit()
-            
+
             return jsonify({
                 'message': 'Progress step successfully updated!',
                 'custom_delay_days': final_custom_delay_for_db,
                 'delay_days': calculated_delay_days,
                 'real_end_date': real_end_date_to_save
             }), 200
-            
+
     except Exception as e:
         print(f"Proje güncelleme hatası: {str(e)}")
         traceback.print_exc()
         if connection:
             connection.rollback()
         return jsonify({'message': f'Server error: {str(e)}'}), 500
-        
+
     finally:
         if connection:
             connection.close()
@@ -2352,28 +2450,28 @@ def delete_project_progress_step(progress_id):
             # İş adımının ait olduğu projeyi bul
             cursor.execute("SELECT project_id, title FROM project_progress WHERE progress_id = %s", (progress_id,))
             step_info = cursor.fetchone()
-            
+
             if not step_info:
                 return jsonify({'message': 'İş adımı bulunamadı.'}), 404
-            
+
             project_id = step_info['project_id']
             step_title = step_info['title']
 
             # İş adımını sil
             sql_delete = "DELETE FROM project_progress WHERE progress_id = %s"
             cursor.execute(sql_delete, (progress_id,))
-            
+
             # Proje başlangıç ve bitiş tarihlerini güncelle
             update_result = update_project_dates(cursor, project_id)
             if update_result:
                 print(f"Project dates successfully updated after step deletion for project {project_id}")
             else:
                 print(f"Failed to update project dates after step deletion for project {project_id}")
-            
+
             # Projenin genel durumunu belirle ve güncelle
             determine_and_update_project_status(cursor, project_id)
             connection.commit()
-            
+
             # Aktivite kaydı
             user_id = session.get('user_id')
             if user_id:
@@ -2439,38 +2537,38 @@ def update_project_dates(cursor, project_id):
             FROM project_progress
             WHERE project_id = %s
         """, (project_id,))
-        
+
         date_range = cursor.fetchone()
-        
+
         if not date_range or (not date_range['earliest_start'] and not date_range['latest_end']):
             print(f"No progress steps found for project {project_id}")
-            
+
             # Eğer hiç iş adımı kalmadıysa, projenin başlangıç ve bitiş tarihlerini sıfırla
             cursor.execute("""
-                UPDATE projects 
+                UPDATE projects
                 SET start_date = NULL, end_date = NULL
                 WHERE project_id = %s
             """, (project_id,))
             print(f"Project dates set to NULL for project {project_id} as no progress steps remain.")
             return True
-            
+
         earliest_start = date_range['earliest_start']
         latest_end = date_range['latest_end']
-            
+
         if earliest_start and latest_end:
             # Update project dates
             cursor.execute("""
-                UPDATE projects 
+                UPDATE projects
                 SET start_date = %s, end_date = %s
                 WHERE project_id = %s
             """, (earliest_start, latest_end, project_id))
-            
+
             print(f"Project dates updated: project_id={project_id}, start={earliest_start}, end={latest_end}")
             return True
         else:
             print(f"Could not determine date range for project {project_id}")
             return False
-            
+
     except Exception as e:
         print(f"Error in update_project_dates: {str(e)}")
         return False
@@ -2637,11 +2735,11 @@ def update_password():
 
             # Yeni şifreyi hash'le
             hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
-            
+
             # Yeni şifreyi veritabanında güncelle
             cursor.execute("UPDATE users SET password = %s WHERE id = %s", (hashed_password.decode('utf-8'), user_id))
             connection.commit()
-        
+
         return jsonify({'message': 'Şifreniz başarıyla değiştirildi.'}), 200
     except pymysql.Error as e:
         print(f"Şifre güncellenirken veritabanı hatası: {e}")
@@ -2849,6 +2947,19 @@ def add_task():
                 f"Size yeni bir görev atandı: '{title}'."
             )
 
+            # Atanan kullanıcının e-posta adresini al ve e-posta gönder
+            cursor.execute("SELECT email FROM users WHERE id = %s", (assigned_user_id,))
+            assigned_user_email_info = cursor.fetchone()
+            if assigned_user_email_info and assigned_user_email_info['email']:
+                send_email_notification(
+                    assigned_user_email_info['email'],
+                    "Yeni Görev Atandı",
+                    f"Size yeni bir görev atandı: '{title}'. Görev açıklaması: {description}. Başlangıç: {start}, Bitiş: {end}. Öncelik: {priority}."
+                )
+            else:
+                print(f"UYARI: Atanan kullanıcı {assigned_user_id} için e-posta adresi bulunamadı.")
+
+
         return jsonify({'message': 'Task successfully added!'}), 201
     except Exception as e:
         print(f"Error adding task: {e}")
@@ -2897,12 +3008,36 @@ def update_task(task_id):
                     "Görev Atama Değişti",
                     f"'{title}' adlı görev artık size atanmadı."
                 )
+                # Eski atanan kullanıcının e-postasını al ve e-posta gönder
+                cursor.execute("SELECT email FROM users WHERE id = %s", (old_assigned_user_id,))
+                old_assigned_user_email_info = cursor.fetchone()
+                if old_assigned_user_email_info and old_assigned_user_email_info['email']:
+                    send_email_notification(
+                        old_assigned_user_email_info['email'],
+                        "Görev Atama Değişti",
+                        f"'{title}' adlı görev artık size atanmadı. Detaylar için sistemi kontrol edin."
+                    )
+                else:
+                    print(f"UYARI: Eski atanan kullanıcı {old_assigned_user_id} için e-posta adresi bulunamadı.")
+
             send_notification(
                 cursor, # Pass the cursor here
                 new_assigned_user_id,
                 "Görev Güncellendi",
                 f"'{title}' adlı görev size atandı ve güncellendi."
             )
+            # Yeni atanan kullanıcının e-posta adresini al ve e-posta gönder
+            cursor.execute("SELECT email FROM users WHERE id = %s", (new_assigned_user_id,))
+            new_assigned_user_email_info = cursor.fetchone()
+            if new_assigned_user_email_info and new_assigned_user_email_info['email']:
+                send_email_notification(
+                    new_assigned_user_email_info['email'],
+                    "Görev Güncellendi",
+                    f"'{title}' adlı görev size atandı ve güncellendi. Görev açıklaması: {description}. Başlangıç: {start}, Bitiş: {end}. Öncelik: {priority}."
+                )
+            else:
+                print(f"UYARI: Yeni atanan kullanıcı {new_assigned_user_id} için e-posta adresi bulunamadı.")
+
 
         return jsonify({'message': 'Görev başarıyla güncellendi!'}), 200
     except Exception as e:
@@ -2949,6 +3084,18 @@ def delete_task(task_id):
                     "Görev Silindi",
                     f"'{task_info['title']}' adlı görev size atanmıştı ve silindi."
                 )
+                # Atanan kullanıcının e-postasını al ve e-posta gönder
+                cursor.execute("SELECT email FROM users WHERE id = %s", (task_info['assigned_user_id'],))
+                assigned_user_email_info = cursor.fetchone()
+                if assigned_user_email_info and assigned_user_email_info['email']:
+                    send_email_notification(
+                        assigned_user_email_info['email'],
+                        "Görev Silindi",
+                        f"'{task_info['title']}' adlı görev size atanmıştı ve silindi."
+                    )
+                else:
+                    print(f"UYARI: Atanan kullanıcı {task_info['assigned_user_id']} için e-posta adresi bulunamadı.")
+
             # If the creator is different from assigned user and deleter, notify creator too
             if user_id != task_info['created_by'] and task_info['created_by'] != task_info['assigned_user_id']:
                  send_notification(
@@ -2957,6 +3104,17 @@ def delete_task(task_id):
                     "Görev Silindi",
                     f"Yönettiğiniz '{task_info['title']}' adlı görev silindi."
                 )
+                 # Oluşturan kullanıcının e-postasını al ve e-posta gönder
+                 cursor.execute("SELECT email FROM users WHERE id = %s", (task_info['created_by'],))
+                 creator_user_email_info = cursor.fetchone()
+                 if creator_user_email_info and creator_user_email_info['email']:
+                     send_email_notification(
+                         creator_user_email_info['email'],
+                         "Görev Silindi",
+                         f"Yönettiğiniz '{task_info['title']}' adlı görev silindi."
+                     )
+                 else:
+                     print(f"UYARI: Oluşturan kullanıcı {task_info['created_by']} için e-posta adresi bulunamadı.")
 
 
         return jsonify({'message': 'Task successfully deleted!'}), 200
@@ -3025,8 +3183,8 @@ def get_project_status_stats():
         with connection.cursor() as cursor:
             # Güncellenmiş sorgu: İngilizce statüleri Türkçe kategorilere dönüştür
             sql = """
-                SELECT 
-                    CASE 
+                SELECT
+                    CASE
                         WHEN status = 'Completed' THEN 'Tamamlandı'
                         WHEN status IN ('Active', 'Active (Work Delayed)') THEN 'Devam Ediyor'
                         WHEN status IN ('Delayed', 'Active (Work Delayed)') THEN 'Gecikti'
@@ -3034,9 +3192,9 @@ def get_project_status_stats():
                         ELSE 'Diğer'
                     END as status_category,
                     COUNT(*) as count
-                FROM projects 
+                FROM projects
                 GROUP BY status_category
-                ORDER BY 
+                ORDER BY
                     CASE status_category
                         WHEN 'Tamamlandı' THEN 1
                         WHEN 'Devam Ediyor' THEN 2
@@ -3047,7 +3205,7 @@ def get_project_status_stats():
             """
             cursor.execute(sql)
             results = cursor.fetchall()
-            
+
             # Varsayılan değerlerle sözlük oluştur
             status_counts = {
                 'Tamamlandı': 0,
@@ -3055,18 +3213,18 @@ def get_project_status_stats():
                 'Gecikti': 0,
                 'Planlama': 0
             }
-            
+
             for row in results:
                 status_category = row[0]
                 count = row[1]
                 if status_category in status_counts:
                     status_counts[status_category] = count
-            
+
             return jsonify({
                 'labels': list(status_counts.keys()),
                 'data': list(status_counts.values())
             }), 200
-            
+
     except pymysql.Error as e:
         print(f"Database error while fetching project status stats: {e}")
         return jsonify({'message': f'Veritabanı hatası: {e.args[1]}'}), 500
@@ -3086,20 +3244,17 @@ def _check_and_notify_completed_steps(cursor):
     try:
         today = datetime.date.today()
 
-        # Tüm Admin kullanıcılarının ID'lerini al (bildirim göndermek için)
-        cursor.execute("SELECT id FROM users WHERE role = 'Admin'")
-        admin_users = cursor.fetchall() # fetchall() ile tüm adminleri çekiyoruz
-        
-        # DEBUG: Admin kullanıcıları bilgisini yazdır
-        print(f"DEBUG: Admin kullanıcıları sorgu sonucu: {admin_users}")
+        # Tüm Admin kullanıcılarının ID'lerini ve e-posta adreslerini al
+        cursor.execute("SELECT id, email FROM users WHERE role = 'Admin'")
+        admin_users_info = cursor.fetchall()
+        admin_ids = [user['id'] for user in admin_users_info]
+        admin_emails = [user['email'] for user in admin_users_info if user['email']]
 
-        admin_ids = [user['id'] for user in admin_users] # ID'leri bir listeye topluyoruz
-        
-        # DEBUG: Belirlenen Admin ID'leri yazdır
-        print(f"DEBUG: Belirlenen Admin ID'ler: {admin_ids}")
+        print(f"DEBUG: Admin ID'ler: {admin_ids}")
+        print(f"DEBUG: Admin E-postaları: {admin_emails}")
 
-        if not admin_ids: # Eğer hiç admin bulunamazsa
-            print("UYARI: Yönetici (Admin) kullanıcısı bulunamadı. Yöneticiye bildirim gönderilemeyecek.")
+        if not admin_ids:
+            print("UYARI: Yönetici (Admin) kullanıcısı bulunamadı. Yöneticiye bildirim/e-posta gönderilemeyecek.")
 
         # Bitiş tarihi bugün veya geçmiş olan ve henüz bildirim gönderilmemiş iş adımlarını bul
         sql = """
@@ -3139,15 +3294,32 @@ def _check_and_notify_completed_steps(cursor):
             # Proje yöneticisine bildirim gönder
             if project_manager_id:
                 send_notification(cursor, project_manager_id, notification_title, notification_message)
+                # Proje yöneticisinin e-postasını al ve e-posta gönder
+                cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
+                manager_email_info = cursor.fetchone()
+                if manager_email_info and manager_email_info['email']:
+                    send_email_notification(
+                        manager_email_info['email'],
+                        notification_title,
+                        notification_message + " Detaylar için sistemi kontrol edin."
+                    )
+                else:
+                    print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta adresi bulunamadı.")
             else:
-                print(f"UYARI: Proje '{project_name}' için proje yöneticisi bulunamadı. Proje yöneticisine bildirim gönderilemedi.")
+                print(f"UYARI: Proje '{project_name}' için proje yöneticisi bulunamadı. Proje yöneticisine bildirim/e-posta gönderilemedi.")
 
-            # Tüm yöneticilere bildirim gönder
+            # Tüm yöneticilere bildirim gönder ve e-posta gönder
             if admin_ids:
-                for admin_id in admin_ids: # Her bir admin ID'si için döngü
+                for admin_id in admin_ids:
                     send_notification(cursor, admin_id, notification_title, notification_message)
+                for admin_email in admin_emails:
+                    send_email_notification(
+                        admin_email,
+                        notification_title,
+                        notification_message + " Detaylar için sistemi kontrol edin."
+                    )
             else:
-                print(f"UYARI: Yöneticiye bildirim gönderilemedi (Admin ID bulunamadı).")
+                print(f"UYARI: Yöneticiye bildirim/e-posta gönderilemedi (Admin ID/E-posta bulunamadı).")
 
             # İş adımının completion_notified durumunu güncelle
             cursor.execute(
