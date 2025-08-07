@@ -3578,9 +3578,10 @@ def scheduled_check_job():
     """
     connection = None
     try:
+        print("DEBUG: scheduled_check_job fonksiyonu çalışmaya başladı.")
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Sadece bitiş tarihi bugüne eşit veya geçmiş olan iş adımlarını bul
+            # Sadece bitiş tarihi geçmiş, tamamlanmamış ve bildirim gönderilmemiş iş adımlarını bul.
             sql = """
                 SELECT
                     pp.progress_id,
@@ -3594,14 +3595,19 @@ def scheduled_check_job():
                 JOIN projects p ON pp.project_id = p.project_id
                 JOIN users u ON p.project_manager_id = u.id
                 WHERE pp.end_date <= CURDATE()
+                AND pp.real_end_date IS NULL
+                AND pp.completion_notified = 0
             """
             cursor.execute(sql)
             steps_to_notify = cursor.fetchall()
             
-            print(f"DEBUG: {len(steps_to_notify)} adet tamamlanmamış iş adımı bulundu.")
+            print(f"DEBUG: SQL sorgusu çalıştırıldı. {len(steps_to_notify)} adet sonuç bulundu.")
 
             if steps_to_notify:
                 admin_emails = get_admin_emails()
+                if not admin_emails:
+                    print("WARN: Admin e-posta adresleri bulunamadı. Sadece proje yöneticisine e-posta gönderilecek.")
+                
                 for step in steps_to_notify:
                     project_name = step['project_name']
                     step_title = step['step_title']
@@ -3621,14 +3627,18 @@ def scheduled_check_job():
                     </body>
                     </html>
                     """
+                    
+                    print(f"DEBUG: E-posta gönderilmeye hazırlanıyor. Konu: {subject}, Alıcılar: {recipients}")
                     send_email_async(recipients, subject, body)
 
-                    # Bu sorgu ile completion_notified flag'ini güncellemiyoruz.
-                    # Eğer bu flag'i güncellemek isterseniz, bu satırı kaldırabilirsiniz.
-                    # cursor.execute("UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s", (step['progress_id'],))
+                    # Bildirim gönderildikten sonra `completion_notified` flag'ini güncelle
+                    cursor.execute("UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s", (step['progress_id'],))
+                    print(f"DEBUG: progress_id {step['progress_id']} için completion_notified güncellendi.")
 
                 connection.commit()
-                print(f"DEBUG: {len(steps_to_notify)} adet tamamlanmamış iş adımı için bildirim gönderildi.")
+                print(f"DEBUG: Veritabanı değişiklikleri kaydedildi. {len(steps_to_notify)} adet iş adımı için bildirim gönderildi.")
+            else:
+                print("DEBUG: Bildirim gönderilecek herhangi bir iş adımı bulunamadı.")
 
     except Exception as e:
         print(f"Zamanlanmış görevde hata: {e}")
@@ -3636,6 +3646,7 @@ def scheduled_check_job():
     finally:
         if connection:
             connection.close()
+            print("DEBUG: Veritabanı bağlantısı kapatıldı.")
             
 def check_and_notify_completed_steps():
     """
