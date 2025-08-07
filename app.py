@@ -20,8 +20,6 @@ from email.mime.multipart import MIMEMultipart
 import threading
 import time
 from apscheduler.schedulers.background import BackgroundScheduler
-import atexit
-
 
 load_dotenv()
 
@@ -3566,6 +3564,7 @@ def check_and_notify_completed_steps():
 
             for step in steps_to_notify:
                 progress_id = step['progress_id']
+                notify_on_step_completion_or_update(progress_id, is_update=False)
 
                 # Bildirim gönderildikten sonra `completion_notified` flag'ini güncelle
                 cursor.execute("UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s", (progress_id,))
@@ -3648,21 +3647,18 @@ def scheduled_check_job():
     finally:
         if connection:
             connection.close()
-
-
-# GÜNCELLEME: Zamanlayıcı başlatma bloğu güncellendi.
 if __name__ == '__main__':
-    # Flask'in reloader'ı aktifken, uygulamanın kodunu iki kez çalıştırmasını önlemek için
-    # zamanlayıcıyı sadece ana süreçte başlatıyoruz.
-    if os.environ.get('WERKZEUG_RUN_MAIN') == 'false':
+    # Flask debug modu (reloader) aktifken kod iki kez çalıştırılır.
+    # Bu kontrol, zamanlayıcının sadece ana süreçte (main process) çalışmasını sağlar.
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         scheduler = BackgroundScheduler()
         
-        # scheduled_check_job fonksiyonunu her gün saat 15:48'da çalışacak şekilde ayarlıyoruz.
+        # scheduled_check_job fonksiyonunu her gün saat 09:00'da çalışacak şekilde ayarlıyoruz.
         scheduler.add_job(
             scheduled_check_job,
             'cron',
-            hour=15,
-            minute=53
+            hour=9,
+            minute=0
         )
         
         scheduler.start()
@@ -3670,7 +3666,7 @@ if __name__ == '__main__':
         # Uygulama sonlandığında zamanlayıcının da durmasını sağlarız.
         atexit.register(lambda: scheduler.shutdown())
 
-
     # Uygulamayı başlat
     app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
+
 
