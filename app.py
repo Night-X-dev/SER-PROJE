@@ -2295,7 +2295,6 @@ def add_project_progress_step_from_modal(project_id):
     finally:
         if connection:
             connection.close()
-            
 def send_email_async(to_emails, subject, body):
     """
     E-posta gönderme işlemini ayrı bir thread'de asenkron olarak gerçekleştirir.
@@ -2340,8 +2339,6 @@ def send_email_async(to_emails, subject, body):
     # E-posta gönderme işlemini bir thread üzerinde başlat
     email_thread = threading.Thread(target=_send_email)
     email_thread.start()
-
-
 # API to update project progress step
 @app.route('/api/progress/<int:progress_id>', methods=['PUT'])
 def update_project_progress(progress_id):
