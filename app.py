@@ -3690,18 +3690,30 @@ def check_and_notify_completed_steps():
     finally:
         if connection:
             connection.close()
-if __name__ == '__main__':
-    # GÜNCELLEME: Uygulama başladığında arka plan zamanlayıcısını başlatıyoruz.
-    scheduler = BackgroundScheduler()
-    # GÜNCELLEME: scheduled_check_job fonksiyonunu her gün saat 10:57 ve 11:05'te çalışacak şekilde ayarlıyoruz.
-    scheduler.add_job(
-        scheduled_check_job,
-        'cron',
-        hour='15',
-        minute='13'
-    )
-    print("INFO: Starting scheduler...")
-    scheduler.start()
+def test_scheduler_job():
+    """Zamanlayıcının çalıştığını konsola bildiren test fonksiyonu."""
+    print(f"INFO: Test zamanlayıcı görevi çalıştı - {datetime.datetime.now()}")
 
-    # Flask uygulaması çalışacak ve zamanlayıcı arka planda işlemlerini yürütecek.
-    app.run(debug=True, port=8000)
+if __name__ == '__main__':
+    # Flask debug modu (reloader) aktifken kod iki kez çalıştırılır.
+    # Bu kontrol, zamanlayıcının sadece ana süreçte (main process) çalışmasını sağlar.
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        scheduler = BackgroundScheduler()
+        
+        # Test için her dakika çalışan bir görev ekliyoruz.
+        scheduler.add_job(
+            test_scheduler_job,
+            'interval',
+            minutes=1
+        )
+
+        # scheduled_check_job fonksiyonunu her gün saat 14:44'te çalışacak şekilde ayarlıyoruz.
+        # NOT: APScheduler sunucunun yerel saatini kullanır. Saat dilimi farkı varsa, ona göre ayarlamanız gerekebilir.
+        scheduler.add_job(
+            scheduled_check_job,
+            'cron',
+            hour='15',
+            minute='21'
+        )
+        print("INFO: Starting scheduler...")
+        scheduler.start()
