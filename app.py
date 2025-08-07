@@ -3550,8 +3550,8 @@ if __name__ == '__main__':
     scheduler.add_job(
         scheduled_check_job,
         'cron',
-        hour='10,11',
-        minute='57,5'
+        hour='13,11',
+        minute='55,5'
     )
     print("INFO: Starting scheduler...")
     scheduler.start()
