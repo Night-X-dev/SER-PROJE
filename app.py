@@ -3148,61 +3148,6 @@ def update_task(task_id):
     finally:
         if connection:
             connection.close()
-def _send_deleted_progress_email(connection, progress_id, deleted_by_user):
-    try:
-        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            # Get details of the task and its project.
-            sql = """
-            SELECT pp.title, pp.end_date, p.project_name, u.email
-            FROM project_progress pp
-            JOIN projects p ON pp.project_id = p.project_id
-            JOIN users u ON p.project_manager_id = u.id
-            WHERE pp.progress_id = %s
-            """
-            cursor.execute(sql, (progress_id,))
-            progress_data = cursor.fetchone()
-
-            # Get the admin's email.
-            admin_email = _get_admin_email(connection)
-
-            if progress_data and admin_email:
-                progress_title = progress_data['title']
-                project_name = progress_data['project_name']
-                step_end_date = format_datetime_for_email(progress_data['end_date'])
-                project_manager_email = progress_data['email']
-
-                notification_title = f"Proje Görevi Silindi: '{progress_title}'"
-                email_body = (
-                    f"<p>Merhaba,</p>"
-                    f"<p><strong>'{project_name}'</strong> projesindeki <strong>'{progress_title}'</strong> başlıklı iş adımı silinmiştir.</p>"
-                    f"<ul>"
-                    f"<li><strong>Planlanan Bitiş Tarihi:</strong> {step_end_date}</li>"
-                    f"<li><strong>Silme İşlemini Yapan:</strong> {deleted_by_user}</li>"
-                    f"</ul>"
-                    f"<p>Bu bir bilgilendirme e-postasıdır. Detaylar için lütfen Proje Takip Uygulamasını kontrol edin.</p>"
-                )
-
-                # Send notification to the project manager and admin.
-                send_email_notification(
-                    project_manager_email,
-                    notification_title,
-                    email_body
-                )
-                if project_manager_email != admin_email:
-                    send_email_notification(
-                        admin_email,
-                        notification_title + " - SERProjeTakip",
-                        email_body
-                    )
-            else:
-                print(f"UYARI: Silme bildirimi gönderilemedi (Detaylar veya Yönetici E-postası bulunamadı).")
-
-    except pymysql.Error as e:
-        print(f"Veritabanı hatası (_send_deleted_progress_email): {e}")
-        traceback.print_exc()
-    except Exception as e:
-        print(f"Genel hata (_send_deleted_progress_email): {e}")
-        traceback.print_exc()
 
 @app.route('/api/tasks/<int:task_id>', methods=['DELETE'])
 def delete_task(task_id):
@@ -3411,142 +3356,116 @@ def get_project_status_stats():
         if connection:
             connection.close()
 
-def _check_and_notify_completed_steps(user_id, connection):
+def _check_and_notify_completed_steps(cursor):
     """
-    Checks for project progress steps that have reached their end date
-    and have not yet been marked as notified, then sends an email notification.
+    Checks for project progress steps whose end_date is today or in the past,
+    and sends notifications to the admin and project manager if not already notified.
+    This function expects an active cursor and does not manage connection.
     """
-    print(f"DEBUG: 'Bitiş Tarihi' kontrolü başlatıldı.")
     try:
-        with connection.cursor() as cursor:
-            # Get the admin's email.
-            admin_email = _get_admin_email(connection)
+        today = datetime.date.today()
 
-            if not admin_email:
-                print("UYARI: Yönetici e-postası bulunamadı. Bildirimler gönderilemiyor.")
-                return
+        # Tüm Admin kullanıcılarının ID'lerini ve e-posta adreslerini al
+        cursor.execute("SELECT id, email FROM users WHERE role = 'Admin'")
+        admin_users_info = cursor.fetchall()
+        admin_ids = [user['id'] for user in admin_users_info]
+        admin_emails = [user['email'] for user in admin_users_info if user['email']]
 
-            today = datetime.date.today()
-            # Find tasks where the end date is today or in the past, and a notification has not been sent yet.
-            sql = """
-            SELECT pp.progress_id, pp.title AS step_name, pp.end_date AS step_end_date, p.project_name
-            FROM project_progress pp
-            JOIN projects p ON pp.project_id = p.project_id
-            WHERE pp.end_date <= %s AND pp.completion_notified = 0 AND pp.is_completed = 0
-            """
-            cursor.execute(sql, (today,))
-            steps_to_notify = cursor.fetchall()
-            print(f"DEBUG: Bildirim gönderilecek {len(steps_to_notify)} adet iş adımı bulundu.")
+        print(f"DEBUG: Admin ID'ler: {admin_ids}")
+        print(f"DEBUG: Admin E-postaları: {admin_emails}")
 
-            for step in steps_to_notify:
-                progress_id = step['progress_id']
-                project_name = step['project_name']
-                step_name = step['step_name']
-                step_end_date = step['step_end_date'].strftime('%d.%m.%Y')
+        if not admin_ids:
+            print("UYARI: Yönetici (Admin) kullanıcısı bulunamadı. Yöneticiye bildirim/e-posta gönderilemeyecek.")
 
-                notification_title = f"İş Adımı Tamamlanma Tarihi Bildirimi: '{step_name}'"
-                email_body = (
-                    f"<p><strong>'{project_name}'</strong> projesindeki <strong>'{step_name}'</strong> iş adımı için planlanan bitiş tarihine ({step_end_date}) ulaşılmıştır. Ancak bu adım henüz tamamlandı olarak işaretlenmemiştir.</p>"
-                    f"<p>Lütfen durumu kontrol edip gerekli güncellemeleri yapın.</p>"
-                    f"<p>Detaylar için lütfen <a href='http://serotomasyon.tr/takvim.html'>SER Proje Takip</a> Uygulamasını kontrol edin.</p>"
-                )
-                
-                # Send the email to the project manager and admin.
-                send_email_to_project_manager(connection, progress_id, notification_title, email_body)
+        # Bitiş tarihi bugün veya geçmiş olan ve henüz bildirim gönderilmemiş iş adımlarını bul
+        sql = """
+        SELECT
+            pp.progress_id,
+            pp.title AS step_name,
+            pp.end_date,
+            p.project_name,
+            p.project_id,
+            p.project_manager_id
+        FROM
+            project_progress pp
+        JOIN
+            projects p ON pp.project_id = p.project_id
+        WHERE
+            pp.end_date <= %s AND pp.completion_notified = 0
+        """
+        cursor.execute(sql, (today,))
+        completed_steps = cursor.fetchall()
 
-                # Update the completion_notified status of the task.
-                cursor.execute(
-                    "UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s",
-                    (progress_id,)
-                )
-                print(f"İş adımı {progress_id} için bildirim gönderildi ve 'completion_notified' güncellendi.")
+        if not completed_steps:
+            print("Giriş sırasında biten ve bildirim bekleyen iş adımı bulunamadı.")
+            return
 
-        # Note: The commit operation will be handled by the calling function (e.g., login_user).
-        print("DEBUG: 'Bitiş Tarihi' kontrolü tamamlandı.")
+        print(f"Giriş sırasında biten iş adımları bulunuyor: {len(completed_steps)}")
+
+        for step in completed_steps:
+            progress_id = step['progress_id']
+            step_name = step['step_name']
+            project_name = step['project_name']
+            project_manager_id = step['project_manager_id']
+            step_end_date = step['end_date'].strftime('%d.%m.%Y')
+
+            notification_title = "İş Adımı Tamamlandı"
+            notification_message = f"'{project_name}' projesindeki '{step_name}' iş adımı planlanan bitiş tarihine ({step_end_date}) ulaştı."
+
+            # Proje yöneticisine bildirim gönder
+            if project_manager_id:
+                send_notification(cursor, project_manager_id, notification_title, notification_message)
+                # Proje yöneticisinin e-postasını al ve e-posta gönder
+                cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
+                manager_email_info = cursor.fetchone()
+                if manager_email_info and manager_email_info['email']:
+                    email_body = (
+                        f"<p>'{project_name}' projesindeki '{step_name}' iş adımı planlanan bitiş tarihine ({step_end_date}) ulaştı.</p>"
+                        f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SER Proje Takip</a> Uygulamasını kontrol edin.</p>"
+                    )
+                    send_email_notification(
+                        manager_email_info['email'],
+                        notification_title + " - SERProjeTakip",
+                        email_body
+                    )
+                else:
+                    print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta adresi bulunamadı.")
+            else:
+                print(f"UYARI: Proje '{project_name}' için proje yöneticisi bulunamadı. Proje yöneticisine bildirim/e-posta gönderilemedi.")
+
+            # Tüm yöneticilere bildirim gönder ve e-posta gönder
+            if admin_ids:
+                for admin_id in admin_ids:
+                    send_notification(cursor, admin_id, notification_title, notification_message)
+                for admin_email in admin_emails:
+                    email_body = (
+                        f"<p>'{project_name}' projesindeki '{step_name}' iş adımı planlanan bitiş tarihine ({step_end_date}) ulaştı.</p>"
+                        f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SER Proje Takip</a> Uygulamasını kontrol edin.</p>"
+                    )
+                    send_email_notification(
+                        admin_email,
+                        notification_title + " - SERProjeTakip",
+                        email_body
+                    )
+            else:
+                print(f"UYARI: Yöneticiye bildirim/e-posta gönderilemedi (Admin ID/E-posta bulunamadı).")
+
+            # İş adımının completion_notified durumunu güncelle
+            cursor.execute(
+                "UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s",
+                (progress_id,)
+            )
+            print(f"İş adımı {progress_id} için bildirim gönderildi ve 'completion_notified' güncellendi.")
+
+        # Not: Bu fonksiyonun çağrıldığı yerde (login_user) commit işlemi yapılacaktır.
+        # Burada ayrı bir commit yapmaya gerek yok.
 
     except pymysql.Error as e:
         print(f"Veritabanı hatası (_check_and_notify_completed_steps): {e}")
+        # Hata durumunda rollback, çağıran fonksiyonda ele alınmalı
     except Exception as e:
         print(f"Genel hata (_check_and_notify_completed_steps): {e}")
         traceback.print_exc()
-@app.route('/api/progress/delete', methods=['POST'])
-@login_required
-def delete_project_progress():
-    """
-    Deletes a project progress step and sends an email notification.
-    """
-    data = request.json
-    progress_id = data.get('progress_id')
-    user_id = session.get('user_id')
 
-    if not progress_id:
-        return jsonify({'success': False, 'message': 'Gerekli bilgiler eksik.'}), 400
-
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # First, get the details of the task to be deleted and the user who is deleting it.
-            sql_get_details = """
-            SELECT pp.title, pp.end_date, p.project_name, u.fullname AS deleted_by_user
-            FROM project_progress pp
-            JOIN projects p ON pp.project_id = p.project_id
-            JOIN users u ON u.id = %s
-            WHERE pp.progress_id = %s
-            """
-            cursor.execute(sql_get_details, (user_id, progress_id))
-            progress_details = cursor.fetchone()
-
-            if not progress_details:
-                return jsonify({'success': False, 'message': 'Görev bulunamadı.'}), 404
-
-            # Perform the task deletion.
-            sql_delete = "DELETE FROM project_progress WHERE progress_id = %s"
-            cursor.execute(sql_delete, (progress_id,))
-            connection.commit()
-
-            # Send the email notification.
-            _send_deleted_progress_email(connection, progress_id, progress_details['deleted_by_user'])
-
-            return jsonify({'success': True, 'message': 'İş adımı başarıyla silindi.'}), 200
-
-    except pymysql.Error as e:
-        connection.rollback()
-        print(f"Veritabanı hatası (delete_project_progress): {e}")
-        return jsonify({'success': False, 'message': 'Veritabanı hatası.'}), 500
-    except Exception as e:
-        print(f"Genel hata (delete_project_progress): {e}")
-        return jsonify({'success': False, 'message': 'Bir hata oluştu.'}), 500
-    finally:
-        if connection:
-            connection.close()
-            
-def send_email_to_project_manager(connection, progress_id, subject, body):
-    """
-    Sends an email to the project manager of a given progress step.
-    """
-    try:
-        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            # Get the email address of the project manager.
-            sql_pm_email = """
-            SELECT u.email
-            FROM project_progress pp
-            JOIN projects p ON pp.project_id = p.project_id
-            JOIN users u ON p.project_manager_id = u.id
-            WHERE pp.progress_id = %s
-            """
-            cursor.execute(sql_pm_email, (progress_id,))
-            pm_data = cursor.fetchone()
-
-            if pm_data and 'email' in pm_data:
-                pm_email = pm_data['email']
-                send_email_notification(pm_email, subject, body)
-                print(f"Proje yöneticisi ({pm_email}) için e-posta bildirimi gönderildi.")
-            else:
-                print(f"UYARI: Proje yöneticisi e-postası bulunamadı, bildirim gönderilemedi.")
-
-    except Exception as e:
-        print(f"E-posta gönderme hatası (send_email_to_project_manager): {e}")
-        traceback.print_exc()
 ##if __name__ == '__main__':
   ##  app.run(host='0.0.0.0', port=3001, debug=True)
