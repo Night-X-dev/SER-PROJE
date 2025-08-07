@@ -19,7 +19,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import threading
 import time
-from apscheduler.schedulers.background import BackgroundScheduler
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -3691,17 +3691,17 @@ def check_and_notify_completed_steps():
         if connection:
             connection.close()
 if __name__ == '__main__':
-    # Flask debug modu (reloader) aktifken kod iki kez çalıştırılır.
-    # Bu kontrol, zamanlayıcının sadece ana süreçte (main process) çalışmasını sağlar.
-    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-        scheduler = BackgroundScheduler()
-        # scheduled_check_job fonksiyonunu her gün saat 14:44'te çalışacak şekilde ayarlıyoruz.
-        # NOT: APScheduler sunucunun yerel saatini kullanır. Saat dilimi farkı varsa, ona göre ayarlamanız gerekebilir.
-        scheduler.add_job(
-            scheduled_check_job,
-            'cron',
-            hour='14',
-            minute='44'
-        )
-        log_to_db("Starting scheduler...", "INFO")
-        scheduler.start()
+    # GÜNCELLEME: Uygulama başladığında arka plan zamanlayıcısını başlatıyoruz.
+    scheduler = BackgroundScheduler()
+    # GÜNCELLEME: scheduled_check_job fonksiyonunu her gün saat 10:57 ve 11:05'te çalışacak şekilde ayarlıyoruz.
+    scheduler.add_job(
+        scheduled_check_job,
+        'cron',
+        hour='14',
+        minute='44'
+    )
+    print("INFO: Starting scheduler...")
+    scheduler.start()
+
+    # Flask uygulaması çalışacak ve zamanlayıcı arka planda işlemlerini yürütecek.
+    app.run(debug=True, port=8000)
