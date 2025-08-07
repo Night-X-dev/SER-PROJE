@@ -447,6 +447,7 @@ def mark_all_notifications_as_read():
             connection.close()
 
 # API for unread notification count (for notifications table)
+# API for unread notification count (for notifications table)
 @app.route('/api/notifications/unread-count', methods=['GET'])
 def get_unread_notifications_count():
     """Returns the count of unread notifications in the database."""
@@ -480,19 +481,16 @@ def mark_notification_as_read(notification_id):
     user_id = data.get('user_id')
     if not user_id:
         return jsonify({'message': 'User ID is missing.'}), 400
-
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
             cursor.execute("SELECT id FROM notifications WHERE id = %s AND user_id = %s", (notification_id, user_id))
             if not cursor.fetchone():
                 return jsonify({'message': 'Notification not found or you do not have permission to modify it.'}), 404
-
             sql = "UPDATE notifications SET is_read = 1 WHERE id = %s"
             cursor.execute(sql, (notification_id,))
             connection.commit()
-
-        return jsonify({'message': 'Notification successfully marked as read!'}), 200
+            return jsonify({'message': 'Notification successfully marked as read!'}), 200
     except pymysql.Error as e:
         print(f"Database error while updating notification: {e}")
         return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
@@ -504,8 +502,7 @@ def mark_notification_as_read(notification_id):
             connection.close()
 def determine_and_update_project_status(cursor, project_id):
     """
-    Determines and updates the project's 'status' column in the database
-    based on its progress steps and dates.
+    Determines and updates the project's 'status' column in the database based on its progress steps and dates.
     This function expects an active cursor and does not manage connection.
     """
     try:
@@ -526,21 +523,16 @@ def determine_and_update_project_status(cursor, project_id):
             return True
 
         today = datetime.date.today()
-        new_status = 'Aktif' # Varsayılan durum
+        new_status = 'Aktif'  # Varsayılan durum
 
         # Projenin tüm iş adımlarını çek
         cursor.execute("""
-            SELECT
-                start_date,
-                end_date,
-                delay_days,
-                custom_delay_days
+            SELECT start_date, end_date, delay_days, custom_delay_days
             FROM project_progress
             WHERE project_id = %s
             ORDER BY start_date ASC
         """, (project_id,))
         progress_steps = cursor.fetchall()
-
         total_project_delay_days = 0
         for step in progress_steps:
             total_project_delay_days += (step['delay_days'] or 0) + (step['custom_delay_days'] or 0)
@@ -548,58 +540,30 @@ def determine_and_update_project_status(cursor, project_id):
         # 1. 'Gecikmeli' durumu kontrolü
         if total_project_delay_days > 0:
             new_status = 'Gecikmeli'
-        elif project_end_date and today > project_end_date:
-            # Eğer bitiş tarihi geçmişse ve tamamlanmadıysa, gecikmeli
-            new_status = 'Gecikmeli'
+        
+        # 2. 'Planlandı' durumu kontrolü
+        elif project_start_date and today < project_start_date:
+            new_status = 'Planlandı'
 
-        # 2. 'Planlama Aşamasında' durumu kontrolü
-        # Bu, genel gecikme yoksa ve proje henüz başlamadıysa geçerlidir.
-        if new_status not in ['Gecikmeli']: # Eğer zaten gecikmeli değilse kontrol et
-            if not progress_steps and project_start_date and today < project_start_date:
-                new_status = 'Planlama Aşamasında'
-            elif progress_steps: # İş adımları varsa, hepsi gelecekte mi kontrol et
-                all_steps_in_future = True
-                for step in progress_steps:
-                    if step['start_date'] and step['start_date'] <= today:
-                        all_steps_in_future = False
-                        break
-                if all_steps_in_future and project_start_date and today < project_start_date:
-                    new_status = 'Planlama Aşamasında'
-
-        # 3. 'Aktif' durumu kontrolü (eğer zaten gecikmeli veya planlama aşamasında değilse)
-        if new_status not in ['Gecikmeli', 'Planlama Aşamasında']:
-            has_active_step_today = False
-            for step in progress_steps:
-                step_start = step['start_date']
-                step_end = step['end_date']
-                if step_start and step_end and step_start <= today <= step_end:
-                    has_active_step_today = True
-                    break
-
-            if has_active_step_today:
-                new_status = 'Aktif'
-            elif progress_steps and project_end_date and today <= project_end_date:
-                # Adımlar var, proje bitiş tarihi gelecekte/bugün, ancak bugün aktif bir adım yok.
-                # Bu, adımlar arasında veya yeni başlamış/bitmek üzere olduğu anlamına gelir. Hala 'Aktif'.
-                new_status = 'Aktif'
-            elif not progress_steps and (not project_start_date or today >= project_start_date):
-                # Hiç iş adımı yok, ancak proje başlangıç tarihi geçmiş veya bugün.
-                # Bu, aktif olması gerektiği anlamına gelir, ancak henüz adım tanımlanmamış.
-                new_status = 'Aktif'
-            else:
-                # Hiçbir şeye uymuyorsa varsayılan olarak 'Aktif'
-                new_status = 'Aktif'
-
-        # Projenin veritabanındaki durumunu güncelle
-        if new_status != current_db_status:
+        # 3. 'Tamamlandı' durumu kontrolü
+        # Tüm iş adımları tamamlanmış mı kontrol et
+        all_steps_completed = True
+        for step in progress_steps:
+            if not step['real_end_date']: # Gerçek bitiş tarihi yoksa tamamlanmamıştır
+                all_steps_completed = False
+                break
+        
+        if all_steps_completed:
+            new_status = 'Tamamlandı'
+        
+        # 4. Durum güncellemesi
+        if current_db_status != new_status:
             cursor.execute("UPDATE projects SET status = %s WHERE project_id = %s", (new_status, project_id))
             print(f"Project {project_id} status updated from '{current_db_status}' to '{new_status}'.")
-        else:
-            print(f"Project {project_id} status remains '{current_db_status}'. No change needed.")
-
-        return True
+            return True
+        return False
     except Exception as e:
-        print(f"Error determining and updating project status for {project_id}: {str(e)}")
+        print(f"Error determining and updating project status: {e}")
         traceback.print_exc()
         return False
 # API to get notifications (for notifications table)
@@ -3476,78 +3440,18 @@ def scheduled_check_job():
         if connection:
             connection.close()
             
-import threading
-import time
+if __name__ == '__main__':
+    # GÜNCELLEME: Uygulama başladığında arka plan zamanlayıcısını başlatıyoruz.
+    scheduler = BackgroundScheduler()
+    # GÜNCELLEME: scheduled_check_job fonksiyonunu her gün saat 10:57 ve 11:05'te çalışacak şekilde ayarlıyoruz.
+    scheduler.add_job(
+        scheduled_check_job,
+        'cron',
+        hour='10,11',
+        minute='57,5'
+    )
+    print("INFO: Starting scheduler...")
+    scheduler.start()
 
-def schedule_email_checker():
-    already_sent_today = set()
-    while True:
-        now = datetime.datetime.now()
-        current_time_str = now.strftime('%H:%M')
-
-        # Saat eşleşiyorsa ve bugün gönderilmediyse, bildirimi çalıştır
-        if current_time_str in ['10:40', '17:50'] and current_time_str not in already_sent_today:
-            print(f"[{current_time_str}] E-posta kontrolü başlatılıyor...")
-            try:
-                check_and_notify_completed_steps()
-                already_sent_today.add(current_time_str)
-            except Exception as e:
-                print(f"Hata oluştu: {e}")
-
-        # Gece 00:00'da sıfırla
-        if current_time_str == '00:00':
-            already_sent_today.clear()
-
-        time.sleep(60)  # Her dakika kontrol et
-
-def check_and_notify_completed_steps():
-    today = datetime.date.today()
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            cursor.execute("""
-                SELECT pp.progress_id, pp.title, pp.end_date, pp.completion_notified,
-                       u.email, u.fullname, p.project_name
-                FROM project_progress pp
-                JOIN projects p ON pp.project_id = p.project_id
-                JOIN users u ON p.project_manager_id = u.id
-                WHERE pp.end_date = %s AND (pp.completion_notified IS NULL OR pp.completion_notified = 0)
-            """, (today,))
-            steps = cursor.fetchall()
-
-            for step in steps:
-                subject = f"[Hatırlatma] '{step['title']}' adımının süresi doldu"
-                body = f"""
-                <p><strong>{step['project_name']}</strong> projesindeki <strong>{step['title']}</strong> adımı bugün ({today.strftime('%d.%m.%Y')}) bitiyor.</p>
-                <p>Sorumlu kişi: {step['fullname']}</p>
-                """
-                send_email_notification(step['email'], subject, body)
-                cursor.execute("UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s", (step['progress_id'],))
-
-            connection.commit()
-    except Exception as e:
-        print(f"[E-POSTA HATASI]: {e}")
-    finally:
-        if connection:
-            connection.close()
-def schedule_daily_email_checks():
-    already_sent_today = set()
-    while True:
-        now = datetime.datetime.now()
-        current_time = now.strftime("%H:%M")
-
-        if current_time in ["10:43", "17:50"] and current_time not in already_sent_today:
-            print(f"[{current_time}] E-posta kontrolü başlatılıyor...")
-            check_and_notify_completed_steps()
-            already_sent_today.add(current_time)
-
-        if current_time == "00:00":
-            already_sent_today.clear()
-
-        time.sleep(60)  # Her dakika kontrol
-
-if __name__ == "__main__":
-    threading.Thread(target=schedule_daily_email_checks, daemon=True).start()
-    app.run(host="0.0.0.0", port=8000)
-
+    # Flask uygulaması çalışacak ve zamanlayıcı arka planda işlemlerini yürütecek.
+    app.run(debug=True, port=8000)
