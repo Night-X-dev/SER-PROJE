@@ -17,7 +17,8 @@ import smtplib
 import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-
+import threading
+import time
 
 load_dotenv()
 
@@ -3357,7 +3358,7 @@ def get_project_status_stats():
             connection.close()
 
 def _check_and_notify_completed_steps(cursor):
- 
+    
     try:
         today = datetime.date.today()
 
@@ -3475,6 +3476,62 @@ def scheduled_check_job():
         if connection:
             connection.close()
             
+import threading
+import time
 
-##if __name__ == '__main__':
-  ##  app.run(host='0.0.0.0', port=3001, debug=True)
+def schedule_email_checker():
+    already_sent_today = set()
+    while True:
+        now = datetime.datetime.now()
+        current_time_str = now.strftime('%H:%M')
+
+        # Saat eşleşiyorsa ve bugün gönderilmediyse, bildirimi çalıştır
+        if current_time_str in ['10:35', '17:50'] and current_time_str not in already_sent_today:
+            print(f"[{current_time_str}] E-posta kontrolü başlatılıyor...")
+            try:
+                check_and_notify_completed_steps()
+                already_sent_today.add(current_time_str)
+            except Exception as e:
+                print(f"Hata oluştu: {e}")
+
+        # Gece 00:00'da sıfırla
+        if current_time_str == '00:00':
+            already_sent_today.clear()
+
+        time.sleep(60)  # Her dakika kontrol et
+
+def check_and_notify_completed_steps():
+    today = datetime.date.today()
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("""
+                SELECT pp.progress_id, pp.title, pp.end_date, pp.completion_notified,
+                       u.email, u.fullname, p.project_name
+                FROM project_progress pp
+                JOIN projects p ON pp.project_id = p.project_id
+                JOIN users u ON p.project_manager_id = u.id
+                WHERE pp.end_date = %s AND (pp.completion_notified IS NULL OR pp.completion_notified = 0)
+            """, (today,))
+            steps = cursor.fetchall()
+
+            for step in steps:
+                subject = f"[Hatırlatma] '{step['title']}' adımının süresi doldu"
+                body = f"""
+                <p><strong>{step['project_name']}</strong> projesindeki <strong>{step['title']}</strong> adımı bugün ({today.strftime('%d.%m.%Y')}) bitiyor.</p>
+                <p>Sorumlu kişi: {step['fullname']}</p>
+                """
+                send_email_notification(step['email'], subject, body)
+                cursor.execute("UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s", (step['progress_id'],))
+
+            connection.commit()
+    except Exception as e:
+        print(f"[E-POSTA HATASI]: {e}")
+    finally:
+        if connection:
+            connection.close()
+
+if __name__ == '__main__':
+    threading.Thread(target=schedule_email_checker, daemon=True).start()
+    app.run(host='0.0.0.0', port=8000)
