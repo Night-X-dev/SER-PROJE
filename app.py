@@ -3531,7 +3531,23 @@ def check_and_notify_completed_steps():
     finally:
         if connection:
             connection.close()
+def schedule_daily_email_checks():
+    already_sent_today = set()
+    while True:
+        now = datetime.datetime.now()
+        current_time = now.strftime("%H:%M")
 
-if __name__ == '__main__':
-    threading.Thread(target=schedule_email_checker, daemon=True).start()
-    app.run(host='0.0.0.0', port=8000)
+        if current_time in ["10:43", "17:50"] and current_time not in already_sent_today:
+            print(f"[{current_time}] E-posta kontrolü başlatılıyor...")
+            check_and_notify_completed_steps()
+            already_sent_today.add(current_time)
+
+        if current_time == "00:00":
+            already_sent_today.clear()
+
+        time.sleep(60)  # Her dakika kontrol
+
+if __name__ == "__main__":
+    threading.Thread(target=schedule_daily_email_checks, daemon=True).start()
+    app.run(host="0.0.0.0", port=8000)
+
