@@ -230,21 +230,7 @@ def format_datetime_for_email(dt_str):
             return dt_obj.strftime('%d.%m.%Y')
     except ValueError:
         return dt_str # Ayrıştırma başarısız olursa orijinal stringi döndür
-if not app.debug:
-    # Log dosyası için bir handler oluşturun.
-    # Bu, log dosyasının çok büyümesini engeller (maxBytes=10240 bayt, 10 adet yedek dosya).
-    file_handler = RotatingFileHandler('scheduler.log', maxBytes=10240, backupCount=10)
-    # Log formatını ayarlayın
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    file_handler.setFormatter(formatter)
-    
-    # Flask uygulamasının logger'ına handler'ı ekleyin.
-    app.logger.addHandler(file_handler)
-    # Konsola da log yazması için bir handler daha ekleyelim.
-    app.logger.addHandler(logging.StreamHandler())
-    
-    # Log seviyesini ayarlayın.
-    app.logger.setLevel(logging.INFO)
+
 @app.route('/api/reports/project/<int:project_id>', methods=['GET'])
 def get_project_report_data(project_id):
     """
