@@ -211,7 +211,6 @@ def get_db_connection():
         if connection:
             connection.close()
         raise # Hatanın yukarıya iletilmesini sağla
-    
 
 def format_datetime_for_email(dt_str):
     """
@@ -3572,8 +3571,6 @@ def _check_and_notify_completed_steps(cursor):
     except Exception as e:
         print(f"Genel hata (_check_and_notify_completed_steps): {e}")
         traceback.print_exc()
-logging.basicConfig(filename='scheduler.log', level=logging.DEBUG,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
 def scheduled_check_job():
     """
     Her gün planlanan bir zamanda, bitiş tarihi geçmiş ve tamamlanmamış
@@ -3696,7 +3693,7 @@ if __name__ == '__main__':
         scheduled_check_job,
         'cron',
         hour='14',
-        minute='25'
+        minute='19'
     )
     print("INFO: Starting scheduler...")
     scheduler.start()
