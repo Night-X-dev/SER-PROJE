@@ -19,8 +19,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import threading
 import time
-from apscheduler.schedulers.background import BackgroundScheduler
-
 
 load_dotenv()
 
@@ -3518,15 +3516,15 @@ def check_and_notify_completed_steps():
 if __name__ == '__main__':
     # GÜNCELLEME: Uygulama başladığında arka plan zamanlayıcısını başlatıyoruz.
     scheduler = BackgroundScheduler()
-    # GÜNCELLEME: scheduled_check_job fonksiyonunu her gün saat 00:10'da çalışacak şekilde ayarlıyoruz.
+    # GÜNCELLEME: scheduled_check_job fonksiyonunu her gün saat 10:57 ve 11:05'te çalışacak şekilde ayarlıyoruz.
     scheduler.add_job(
         scheduled_check_job,
         'cron',
-        hour=13,
-        minute=43
+        hour='10,11',
+        minute='57,5'
     )
     print("INFO: Starting scheduler...")
     scheduler.start()
 
-    # Flask uygulaması...
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+    # Flask uygulaması çalışacak ve zamanlayıcı arka planda işlemlerini yürütecek.
+    app.run(debug=True, port=8000)
