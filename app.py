@@ -17,6 +17,8 @@ import smtplib
 import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from apscheduler.schedulers.background import BackgroundScheduler
+import atexit
 
 
 load_dotenv()
@@ -210,7 +212,118 @@ def get_db_connection():
         if connection:
             connection.close()
         raise # Hatanın yukarıya iletilmesini sağla
+def _get_admin_email(connection):
+    """
+    Veritabanından 'admin' rolüne sahip kullanıcının e-posta adresini döndürür.
+    """
+    try:
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("SELECT email FROM users WHERE role = 'admin' LIMIT 1")
+            result = cursor.fetchone()
+            if result:
+                return result['email']
+    except Exception as e:
+        print(f"Yönetici e-postası alınırken hata oluştu: {e}")
+        traceback.print_exc()
+    return None
+def _check_and_notify_completed_steps(connection):
+    """
+    Bitiş tarihi gelen ve bildirim gönderilmemiş iş adımlarını kontrol eder ve e-posta bildirimi gönderir.
+    """
+    print(f"DEBUG: 'Bitiş Tarihi' kontrolü başlatıldı.")
+    try:
+        # Zamanlayıcı ile çalıştırıldığı için kullanıcı kimliğine ihtiyaç duyulmaz.
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            # Yönetici e-postasını al
+            admin_email = _get_admin_email(connection)
 
+            if not admin_email:
+                print("UYARI: Yönetici e-postası bulunamadı. Bildirimler gönderilemiyor.")
+                return
+
+            today = datetime.date.today()
+            # Bitiş tarihi bugün veya daha önce olan, henüz tamamlanmamış ve bildirim gönderilmemiş görevleri bul
+            sql = """
+            SELECT pp.progress_id, pp.title AS step_name, pp.end_date AS step_end_date, p.project_name
+            FROM project_progress pp
+            JOIN projects p ON pp.project_id = p.project_id
+            WHERE pp.end_date <= %s AND pp.completion_notified = 0 AND pp.is_completed = 0
+            """
+            cursor.execute(sql, (today,))
+            steps_to_notify = cursor.fetchall()
+            print(f"DEBUG: Bildirim gönderilecek {len(steps_to_notify)} adet iş adımı bulundu.")
+
+            for step in steps_to_notify:
+                progress_id = step['progress_id']
+                project_name = step['project_name']
+                step_name = step['step_name']
+                step_end_date = format_datetime_for_email(step['step_end_date'])
+
+                notification_title = f"İş Adımı Tamamlanma Tarihi Bildirimi: '{step_name}'"
+                email_body = (
+                    f"<p><strong>'{project_name}'</strong> projesindeki <strong>'{step_name}'</strong> iş adımı için planlanan bitiş tarihine ({step_end_date}) ulaşılmıştır. Ancak bu adım henüz tamamlandı olarak işaretlenmemiştir.</p>"
+                    f"<p>Lütfen durumu kontrol edip gerekli güncellemeleri yapın.</p>"
+                    f"<p>Detaylar için lütfen <a href='http://serotomasyon.tr/takvim.html'>SER Proje Takip</a> Uygulamasını kontrol edin.</p>"
+                )
+                
+                send_email_notification(admin_email, notification_title + " - SERProjeTakip", email_body)
+
+                # İş adımının completion_notified durumunu güncelle
+                cursor.execute(
+                    "UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s",
+                    (progress_id,)
+                )
+                print(f"İş adımı {progress_id} için bildirim gönderildi ve 'completion_notified' güncellendi.")
+        
+        # Bu fonksiyonun çağrıldığı yerde commit işlemi yapılacak
+        print("DEBUG: 'Bitiş Tarihi' kontrolü tamamlandı.")
+
+    except pymysql.Error as e:
+        print(f"Veritabanı hatası (_check_and_notify_completed_steps): {e}")
+    except Exception as e:
+        print(f"Genel hata (_check_and_notify_completed_steps): {e}")
+        traceback.print_exc()
+def format_datetime_for_email(date_obj):
+    """
+    Tarih objesini e-posta için daha okunaklı bir formata dönüştürür.
+    """
+    if isinstance(date_obj, datetime.date):
+        return date_obj.strftime('%d.%m.%Y')
+    return "Belirtilmemiş"
+def send_email_notification(to_email, subject, body):
+    """
+    Belirtilen e-posta adresine bir bildirim e-postası gönderir.
+    """
+    try:
+        smtp_server = os.getenv("SMTP_SERVER")
+        smtp_port = int(os.getenv("SMTP_PORT"))
+        sender_email = os.getenv("SENDER_EMAIL")
+        sender_password = os.getenv("SENDER_PASSWORD")
+
+        if not all([smtp_server, smtp_port, sender_email, sender_password]):
+            print("UYARI: E-posta ayarları (.env dosyasında) eksik veya hatalı. E-posta gönderilemiyor.")
+            return
+
+        # MIMEMultipart objesi oluştur
+        message = MIMEMultipart("alternative")
+        message["Subject"] = subject
+        message["From"] = sender_email
+        message["To"] = to_email
+
+        # HTML içeriğini e-postaya ekle
+        html_part = MIMEText(body, "html")
+        message.attach(html_part)
+
+        # SMTP sunucusuna bağlan ve e-postayı gönder
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as server:
+            server.login(sender_email, sender_password)
+            server.sendmail(sender_email, to_email, message.as_string())
+        print(f"E-posta başarıyla gönderildi: {to_email}")
+
+    except Exception as e:
+        print(f"E-posta gönderme hatası: {e}")
+        traceback.print_exc()
 def format_datetime_for_email(dt_str):
     """
     Tarih/saat stringini e-posta için daha okunaklı bir formata dönüştürür.
@@ -359,7 +472,6 @@ def get_project_report_data(project_id):
                 'completion_percentage': completion_percentage,
                 'completed_steps_count': completed_steps_count # Frontend için tamamlanan adım sayısı
             }
-
             return jsonify(report_data), 200
 
     except pymysql.Error as e:
@@ -396,7 +508,6 @@ def check_role_permission(role_name, permission_key):
     # Admin role is always considered to have all permissions
     if role_name.lower() == 'admin':
         return True
-
     connection = None
     try:
         connection = get_db_connection()
@@ -405,7 +516,6 @@ def check_role_permission(role_name, permission_key):
             sql = f"SELECT {permission_key} FROM yetki WHERE LOWER(role_name) = %s"
             cursor.execute(sql, (role_name.lower(),))
             result = cursor.fetchone()
-
             # If no permission record for the role or permission value is 0, return False
             if result and result[permission_key] == 1:
                 return True
@@ -423,24 +533,28 @@ def check_role_permission(role_name, permission_key):
 def mark_all_notifications_as_read():
     """Marks all notifications in the database as read."""
     data = request.get_json() # Use get_json() for PUT requests
-    user_id = data.get('user_id') # Get user_id from the request body
-    if not user_id:
-        return jsonify({'message': 'User ID is missing.'}), 400
+    user_id = data.get('user_id')
 
-    connection = get_db_connection()
+    if not user_id:
+        return jsonify({'success': False, 'message': 'Kullanıcı kimliği eksik.'}), 400
+
+    connection = None
     try:
+        connection = get_db_connection()
         with connection.cursor() as cursor:
-            sql = "UPDATE notifications SET is_read = 1 WHERE user_id = %s AND is_read = 0"
-            cursor.execute(sql, (user_id,))
+            cursor.execute(
+                "UPDATE notifications SET is_read = 1 WHERE user_id = %s AND is_read = 0",
+                (user_id,)
+            )
             connection.commit()
-            rows_affected = cursor.rowcount
-        return jsonify({'message': f'{rows_affected} notifications marked as read.'}), 200
+            return jsonify({'success': True, 'message': 'Tüm bildirimler okundu olarak işaretlendi.'})
     except pymysql.Error as e:
-        print(f"Database error while updating all notifications: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası: {e}")
+        connection.rollback()
+        return jsonify({'success': False, 'message': 'Veritabanı hatası.'}), 500
     except Exception as e:
-        print(f"General error while updating all notifications: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata: {e}")
+        return jsonify({'success': False, 'message': 'Bir hata oluştu.'}), 500
     finally:
         if connection:
             connection.close()
@@ -3466,6 +3580,29 @@ def _check_and_notify_completed_steps(cursor):
     except Exception as e:
         print(f"Genel hata (_check_and_notify_completed_steps): {e}")
         traceback.print_exc()
+def scheduled_check_job():
+    """
+    Zamanlayıcı tarafından çağrılan, veritabanı bağlantısını açıp kapatan ana iş fonksiyonu.
+    """
+    connection = None
+    try:
+        connection = get_db_connection()
+        if connection:
+            _check_and_notify_completed_steps(connection)
+            connection.commit()
+    except Exception as e:
+        print(f"Zamanlanmış iş hatası: {e}")
+        traceback.print_exc()
+    finally:
+        if connection:
+            connection.close()
+            
+scheduler = BackgroundScheduler()
+# Her gün 09:35 ve 17:00'de çalışacak bir iş ekleyin
+scheduler.add_job(func=scheduled_check_job, trigger="cron", hour="9,17", minute="42,0")
+scheduler.start()
 
+# Flask uygulamasından çıkıldığında zamanlayıcının durmasını sağlayın
+atexit.register(lambda: scheduler.shutdown())
 ##if __name__ == '__main__':
   ##  app.run(host='0.0.0.0', port=3001, debug=True)
