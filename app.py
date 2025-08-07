@@ -1150,7 +1150,7 @@ def login_user():
             del user['password'] # Remove password from response for security
 
             # BAŞARILI GİRİŞTEN SONRA BİLDİRİM KONTROLÜNÜ ÇALIŞTIR
-            _check_and_notify_completed_steps(cursor)
+            # _check_and_notify_completed_steps(cursor)
             connection.commit() # _check_and_notify_completed_steps içinde yapılan güncellemeleri kaydet
 
             return jsonify({
@@ -3486,7 +3486,7 @@ def schedule_email_checker():
         current_time_str = now.strftime('%H:%M')
 
         # Saat eşleşiyorsa ve bugün gönderilmediyse, bildirimi çalıştır
-        if current_time_str in ['10:36', '17:50'] and current_time_str not in already_sent_today:
+        if current_time_str in ['10:40', '17:50'] and current_time_str not in already_sent_today:
             print(f"[{current_time_str}] E-posta kontrolü başlatılıyor...")
             try:
                 check_and_notify_completed_steps()
