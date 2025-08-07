@@ -3515,23 +3515,18 @@ def check_and_notify_completed_steps():
     finally:
         if connection:
             connection.close()
-# GÜNCELLEME: Uygulama başladığında arka plan zamanlayıcısını başlatıyoruz.
-scheduler = BackgroundScheduler()
-# GÜNCELLEME: scheduled_check_job fonksiyonunu her gün saat 00:10'da çalışacak şekilde ayarlıyoruz.
-scheduler.add_job(
-    scheduled_check_job,
-    'cron',
-    hour=13,
-    minute=47
-)
-print("INFO: Starting scheduler...")
-scheduler.start()
-
-# UYGULAMA BAŞLANGIÇ BLOĞU
 if __name__ == '__main__':
-    # Flask uygulamasını çalıştırmak için bu kısım sadece yerel geliştirme ortamında kullanılır.
-    # Üretim ortamında (xcalod gibi) bu kısım çalıştırılmaz, sunucu (gunicorn, uwsgi vs.) uygulamayı kendisi başlatır.
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+    # GÜNCELLEME: Uygulama başladığında arka plan zamanlayıcısını başlatıyoruz.
+    scheduler = BackgroundScheduler()
+    # GÜNCELLEME: scheduled_check_job fonksiyonunu her gün saat 10:57 ve 11:05'te çalışacak şekilde ayarlıyoruz.
+    scheduler.add_job(
+        scheduled_check_job,
+        'cron',
+        hour='10,11',
+        minute='57,5'
+    )
+    print("INFO: Starting scheduler...")
+    scheduler.start()
 
-    # Flask uygulaması...
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+    # Flask uygulaması çalışacak ve zamanlayıcı arka planda işlemlerini yürütecek.
+    app.run(debug=True, port=8000)
