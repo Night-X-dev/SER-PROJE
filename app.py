@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 import urllib.parse
 import re
 import traceback # Import traceback for detailed error logging
-from apscheduler.schedulers.background import BackgroundScheduler # YENİ EKLEME: Zamanlanmış görevler için kütüphane
 
 # E-posta göndermek için gerekli kütüphaneler
 import smtplib
@@ -3358,6 +3357,7 @@ def get_project_status_stats():
             connection.close()
 
 def _check_and_notify_completed_steps(cursor):
+ 
     try:
         today = datetime.date.today()
 
@@ -3463,36 +3463,18 @@ def _check_and_notify_completed_steps(cursor):
         print(f"Genel hata (_check_and_notify_completed_steps): {e}")
         traceback.print_exc()
 def scheduled_check_job():
-    """
-    Job to be run by the scheduler.
-    This function handles the database connection and calls the main check function.
-    """
     connection = None
     try:
         connection = get_db_connection()
         if connection:
-            print("INFO: Starting scheduled job to check for completed tasks.")
-            # The commit is now handled inside _check_and_notify_completed_steps
+            _check_and_notify_completed_steps(connection)
+            connection.commit()
     except Exception as e:
-        print(f"Scheduled job error: {e}")
-        traceback.print_exc()
+        print(f"Zamanlanmış iş hatası: {e}")
     finally:
         if connection:
             connection.close()
             
 
-if __name__ == '__main__':
-    # GÜNCELLEME: Uygulama başladığında arka plan zamanlayıcısını başlatıyoruz.
-    scheduler = BackgroundScheduler()
-    # GÜNCELLEME: scheduled_check_job fonksiyonunu her gün saat 08:00 ve 18:00'de çalışacak şekilde ayarlıyoruz.
-    scheduler.add_job(
-        scheduled_check_job,
-        'cron',
-        hour='8,18',
-        minute='0'
-    )
-    print("INFO: Starting scheduler...")
-    scheduler.start()
-
-    # Flask uygulaması çalışacak ve zamanlayıcı arka planda işlemlerini yürütecek.
-    app.run(debug=True, port=8000)
+##if __name__ == '__main__':
+  ##  app.run(host='0.0.0.0', port=3001, debug=True)
