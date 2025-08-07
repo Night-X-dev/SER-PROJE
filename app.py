@@ -3521,8 +3521,8 @@ scheduler = BackgroundScheduler()
 scheduler.add_job(
     scheduled_check_job,
     'cron',
-    hour=0,
-    minute=10
+    hour=13,
+    minute=47
 )
 print("INFO: Starting scheduler...")
 scheduler.start()
