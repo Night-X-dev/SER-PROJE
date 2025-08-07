@@ -20,6 +20,8 @@ from email.mime.multipart import MIMEMultipart
 import threading
 import time
 from apscheduler.schedulers.background import BackgroundScheduler
+import atexit
+
 
 load_dotenv()
 
