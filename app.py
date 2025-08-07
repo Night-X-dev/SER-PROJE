@@ -2390,25 +2390,6 @@ def update_project_progress(progress_id):
             cursor.execute(sql, tuple(params))
             connection.commit()
 
-            # Güncelleme bildirim e-postası gönder
-            admin_emails = get_admin_emails()
-            recipients = [step_info['manager_email']] + admin_emails
-            
-            subject = f"Proje İş Adımı Güncelleme Bildirimi: {step_info['project_name']}"
-            body = f"""
-            <html>
-            <body>
-            <p>Merhaba,</p>
-            <p><b>{step_info['project_name']}</b> projesinin <b>"{step_info['step_title']}"</b> başlıklı iş adımında bir güncelleme yapılmıştır.</p>
-            <p><b>Güncellenen Alanlar:</b> {', '.join(data.keys())}</p>
-            <p>Detayları kontrol etmek için lütfen sisteme giriş yapın.</p>
-            <p>İyi çalışmalar.</p>
-            </body>
-            </html>
-            """
-            
-            send_email_async(recipients, subject, body)
-
             return jsonify({'message': 'İş adımı başarıyla güncellendi ve bildirim gönderildi.'}), 200
 
     except pymysql.Error as e:
@@ -2717,26 +2698,7 @@ def update_project_dates(cursor, project_id):
         print(f"Error in update_project_dates: {str(e)}")
         return False
 
-def get_admin_emails():
-    """
-    Veritabanından tüm 'admin' rolündeki kullanıcıların e-posta adreslerini çeker.
-    Returns:
-        list: Admin e-posta adreslerinin listesi.
-    """
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            sql = "SELECT email FROM users WHERE role = 'admin'"
-            cursor.execute(sql)
-            results = cursor.fetchall()
-            return [result['email'] for result in results]
-    except Exception as e:
-        log_to_db(f"Admin e-postaları alınırken bir hata oluştu: {e}", "ERROR")
-        return []
-    finally:
-        if connection:
-            connection.close()
+
 
 @app.route('/api/users', methods=['GET'])
 def get_all_users():
@@ -3576,82 +3538,7 @@ def _check_and_notify_completed_steps(cursor):
     except Exception as e:
         print(f"Genel hata (_check_and_notify_completed_steps): {e}")
         traceback.print_exc()
-def scheduled_check_job():
-    """
-    Her gün planlanan bir zamanda, bitiş tarihi geçmiş ve tamamlanmamış
-    iş adımlarını kontrol eder ve ilgili kişilere e-posta ile bildirim gönderir.
-    """
-    connection = None
-    try:
-        log_to_db("scheduled_check_job fonksiyonu çalışmaya başladı.", "INFO")
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # Sadece bitiş tarihi geçmiş, tamamlanmamış ve bildirim gönderilmemiş iş adımlarını bul.
-            sql = """
-                SELECT
-                    pp.progress_id,
-                    pp.project_id,
-                    pp.title AS step_title,
-                    pp.end_date AS step_end_date,
-                    p.project_name,
-                    u.fullname AS manager_name,
-                    u.email AS manager_email
-                FROM project_progress pp
-                JOIN projects p ON pp.project_id = p.project_id
-                JOIN users u ON p.project_manager_id = u.id
-                WHERE pp.end_date <= CURDATE()
-                AND pp.real_end_date IS NULL
-                AND pp.completion_notified = 0
-            """
-            cursor.execute(sql)
-            steps_to_notify = cursor.fetchall()
-            
-            log_to_db(f"SQL sorgusu çalıştırıldı. {len(steps_to_notify)} adet sonuç bulundu.", "INFO")
 
-            if steps_to_notify:
-                admin_emails = get_admin_emails()
-                if not admin_emails:
-                    log_to_db("Admin e-posta adresleri bulunamadı. Sadece proje yöneticisine e-posta gönderilecek.", "WARNING")
-                
-                for step in steps_to_notify:
-                    project_name = step['project_name']
-                    step_title = step['step_title']
-                    step_end_date = format_datetime_for_email(str(step['step_end_date']))
-                    manager_email = step['manager_email']
-                    
-                    recipients = [manager_email] + admin_emails
-                    
-                    subject = f"ACİL: Geçmiş Bitiş Tarihli İş Adımı Bildirimi - {project_name}"
-                    body = f"""
-                    <html>
-                    <body>
-                    <p>Merhaba,</p>
-                    <p><b>{project_name}</b> projesindeki <b>"{step_title}"</b> başlıklı iş adımının bitiş tarihi (<b>{step_end_date}</b>) geçmiş olmasına rağmen henüz tamamlanmamıştır.</p>
-                    <p>İlgili iş adımını kontrol edip tamamlandığında güncellemeyi yapınız.</p>
-                    <p>İyi çalışmalar.</p>
-                    </body>
-                    </html>
-                    """
-                    
-                    log_to_db(f"E-posta gönderilmeye hazırlanıyor. Konu: {subject}, Alıcılar: {recipients}", "INFO")
-                    send_email_async(recipients, subject, body)
-
-                    # Bildirim gönderildikten sonra `completion_notified` flag'ini güncelle
-                    cursor.execute("UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s", (step['progress_id'],))
-                    log_to_db(f"progress_id {step['progress_id']} için completion_notified güncellendi.", "INFO")
-
-                connection.commit()
-                log_to_db(f"Veritabanı değişiklikleri kaydedildi. {len(steps_to_notify)} adet iş adımı için bildirim gönderildi.", "INFO")
-            else:
-                log_to_db("Bildirim gönderilecek herhangi bir iş adımı bulunamadı.", "INFO")
-
-    except Exception as e:
-        log_to_db(f"Zamanlanmış görevde hata: {e}", "ERROR")
-        traceback.print_exc()
-    finally:
-        if connection:
-            connection.close()
-            log_to_db("Veritabanı bağlantısı kapatıldı.", "INFO")
             
 def check_and_notify_completed_steps():
     """
@@ -3694,10 +3581,11 @@ def test_scheduler_job():
     """Zamanlayıcının çalıştığını konsola bildiren test fonksiyonu."""
     print(f"INFO: Test zamanlayıcı görevi çalıştı - {datetime.datetime.now()}")
 
+# GÜNCELLEME: Zamanlayıcı başlatma bloğu güncellendi.
 if __name__ == '__main__':
     # Flask debug modu (reloader) aktifken kod iki kez çalıştırılır.
     # Bu kontrol, zamanlayıcının sadece ana süreçte (main process) çalışmasını sağlar.
-    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'false':
         scheduler = BackgroundScheduler()
         
         # Test için her dakika çalışan bir görev ekliyoruz.
@@ -3712,8 +3600,8 @@ if __name__ == '__main__':
         scheduler.add_job(
             scheduled_check_job,
             'cron',
-            hour='15',
-            minute='21'
+            hour='14',
+            minute='44'
         )
         print("INFO: Starting scheduler...")
         scheduler.start()
