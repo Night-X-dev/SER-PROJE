@@ -2295,6 +2295,7 @@ def add_project_progress_step_from_modal(project_id):
     finally:
         if connection:
             connection.close()
+            
 def send_email_async(to_emails, subject, body):
     """
     E-posta gönderme işlemini ayrı bir thread'de asenkron olarak gerçekleştirir.
@@ -2339,6 +2340,8 @@ def send_email_async(to_emails, subject, body):
     # E-posta gönderme işlemini bir thread üzerinde başlat
     email_thread = threading.Thread(target=_send_email)
     email_thread.start()
+
+
 # API to update project progress step
 @app.route('/api/progress/<int:progress_id>', methods=['PUT'])
 def update_project_progress(progress_id):
@@ -2418,6 +2421,7 @@ def update_project_progress(progress_id):
     finally:
         if connection:
             connection.close()
+
 
 @app.route('/api/progress/<int:progress_id>', methods=['DELETE'])
 def delete_project_progress_step(progress_id):
@@ -3515,18 +3519,20 @@ def check_and_notify_completed_steps():
     finally:
         if connection:
             connection.close()
-if __name__ == '__main__':
-    # GÜNCELLEME: Uygulama başladığında arka plan zamanlayıcısını başlatıyoruz.
+# GÜNCELLEME: Uygulama başladığında arka plan zamanlayıcısını başlatıyoruz.
     scheduler = BackgroundScheduler()
-    # GÜNCELLEME: scheduled_check_job fonksiyonunu her gün saat 10:57 ve 11:05'te çalışacak şekilde ayarlıyoruz.
-    scheduler.add_job(
-        scheduled_check_job,
-        'cron',
-        hour='10,11',
-        minute='57,5'
-    )
-    print("INFO: Starting scheduler...")
-    scheduler.start()
+# GÜNCELLEME: scheduled_check_job fonksiyonunu her gün saat 00:10'da çalışacak şekilde ayarlıyoruz.
+scheduler.add_job(
+    scheduled_check_job,
+    'cron',
+    hour=0,
+    minute=10
+)
+print("INFO: Starting scheduler...")
+scheduler.start()
 
-    # Flask uygulaması çalışacak ve zamanlayıcı arka planda işlemlerini yürütecek.
-    app.run(debug=True, port=8000)
+# UYGULAMA BAŞLANGIÇ BLOĞU
+if __name__ == '__main__':
+    # Flask uygulamasını çalıştırmak için bu kısım sadece yerel geliştirme ortamında kullanılır.
+    # Üretim ortamında (xcalod gibi) bu kısım çalıştırılmaz, sunucu (gunicorn, uwsgi vs.) uygulamayı kendisi başlatır.
+    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
