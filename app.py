@@ -211,6 +211,7 @@ def get_db_connection():
         if connection:
             connection.close()
         raise # Hatanın yukarıya iletilmesini sağla
+    
 
 def format_datetime_for_email(dt_str):
     """
@@ -3571,6 +3572,8 @@ def _check_and_notify_completed_steps(cursor):
     except Exception as e:
         print(f"Genel hata (_check_and_notify_completed_steps): {e}")
         traceback.print_exc()
+logging.basicConfig(filename='scheduler.log', level=logging.DEBUG,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 def scheduled_check_job():
     """
     Her gün planlanan bir zamanda, bitiş tarihi geçmiş ve tamamlanmamış
@@ -3578,7 +3581,7 @@ def scheduled_check_job():
     """
     connection = None
     try:
-        print("DEBUG: scheduled_check_job fonksiyonu çalışmaya başladı.")
+        logging.info("scheduled_check_job fonksiyonu çalışmaya başladı.")
         connection = get_db_connection()
         with connection.cursor() as cursor:
             # Sadece bitiş tarihi geçmiş, tamamlanmamış ve bildirim gönderilmemiş iş adımlarını bul.
@@ -3601,12 +3604,12 @@ def scheduled_check_job():
             cursor.execute(sql)
             steps_to_notify = cursor.fetchall()
             
-            print(f"DEBUG: SQL sorgusu çalıştırıldı. {len(steps_to_notify)} adet sonuç bulundu.")
+            logging.info(f"SQL sorgusu çalıştırıldı. {len(steps_to_notify)} adet sonuç bulundu.")
 
             if steps_to_notify:
                 admin_emails = get_admin_emails()
                 if not admin_emails:
-                    print("WARN: Admin e-posta adresleri bulunamadı. Sadece proje yöneticisine e-posta gönderilecek.")
+                    logging.warning("Admin e-posta adresleri bulunamadı. Sadece proje yöneticisine e-posta gönderilecek.")
                 
                 for step in steps_to_notify:
                     project_name = step['project_name']
@@ -3628,25 +3631,25 @@ def scheduled_check_job():
                     </html>
                     """
                     
-                    print(f"DEBUG: E-posta gönderilmeye hazırlanıyor. Konu: {subject}, Alıcılar: {recipients}")
+                    logging.info(f"E-posta gönderilmeye hazırlanıyor. Konu: {subject}, Alıcılar: {recipients}")
                     send_email_async(recipients, subject, body)
 
                     # Bildirim gönderildikten sonra `completion_notified` flag'ini güncelle
                     cursor.execute("UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s", (step['progress_id'],))
-                    print(f"DEBUG: progress_id {step['progress_id']} için completion_notified güncellendi.")
+                    logging.info(f"progress_id {step['progress_id']} için completion_notified güncellendi.")
 
                 connection.commit()
-                print(f"DEBUG: Veritabanı değişiklikleri kaydedildi. {len(steps_to_notify)} adet iş adımı için bildirim gönderildi.")
+                logging.info(f"Veritabanı değişiklikleri kaydedildi. {len(steps_to_notify)} adet iş adımı için bildirim gönderildi.")
             else:
-                print("DEBUG: Bildirim gönderilecek herhangi bir iş adımı bulunamadı.")
+                logging.info("Bildirim gönderilecek herhangi bir iş adımı bulunamadı.")
 
     except Exception as e:
-        print(f"Zamanlanmış görevde hata: {e}")
+        logging.error(f"Zamanlanmış görevde hata: {e}")
         traceback.print_exc()
     finally:
         if connection:
             connection.close()
-            print("DEBUG: Veritabanı bağlantısı kapatıldı.")
+            logging.info("Veritabanı bağlantısı kapatıldı.")
             
 def check_and_notify_completed_steps():
     """
