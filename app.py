@@ -3651,27 +3651,5 @@ def scheduled_check_job():
             connection.close()
 
 
-# GÜNCELLEME: Zamanlayıcı başlatma bloğu güncellendi.
-if __name__ == '__main__':
-    # Flask'in reloader'ı aktifken, uygulamanın kodunu iki kez çalıştırmasını önlemek için
-    # zamanlayıcıyı sadece ana süreçte başlatıyoruz.
-    if os.environ.get('WERKZEUG_RUN_MAIN') == 'false':
-        scheduler = BackgroundScheduler()
-        
-        # scheduled_check_job fonksiyonunu her gün saat 15:48'da çalışacak şekilde ayarlıyoruz.
-        scheduler.add_job(
-            scheduled_check_job,
-            'cron',
-            hour=15,
-            minute=53
-        )
-        
-        scheduler.start()
-        
-        # Uygulama sonlandığında zamanlayıcının da durmasını sağlarız.
-        atexit.register(lambda: scheduler.shutdown())
 
-
-    # Uygulamayı başlat
-    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
 
