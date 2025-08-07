@@ -3580,7 +3580,7 @@ def scheduled_check_job():
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Bitiş tarihi geçmiş, tamamlanmamış ve daha önce bildirim gönderilmemiş iş adımlarını bul
+            # Sadece bitiş tarihi bugüne eşit veya geçmiş olan iş adımlarını bul
             sql = """
                 SELECT
                     pp.progress_id,
@@ -3594,8 +3594,6 @@ def scheduled_check_job():
                 JOIN projects p ON pp.project_id = p.project_id
                 JOIN users u ON p.project_manager_id = u.id
                 WHERE pp.end_date <= CURDATE()
-                AND pp.real_end_date IS NULL
-                AND pp.completion_notified = 0
             """
             cursor.execute(sql)
             steps_to_notify = cursor.fetchall()
@@ -3625,8 +3623,9 @@ def scheduled_check_job():
                     """
                     send_email_async(recipients, subject, body)
 
-                    # Bildirim gönderildikten sonra `completion_notified` flag'ini güncelle
-                    cursor.execute("UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s", (step['progress_id'],))
+                    # Bu sorgu ile completion_notified flag'ini güncellemiyoruz.
+                    # Eğer bu flag'i güncellemek isterseniz, bu satırı kaldırabilirsiniz.
+                    # cursor.execute("UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s", (step['progress_id'],))
 
                 connection.commit()
                 print(f"DEBUG: {len(steps_to_notify)} adet tamamlanmamış iş adımı için bildirim gönderildi.")
@@ -3683,7 +3682,7 @@ if __name__ == '__main__':
         scheduled_check_job,
         'cron',
         hour='14',
-        minute='5'
+        minute='11'
     )
     print("INFO: Starting scheduler...")
     scheduler.start()
