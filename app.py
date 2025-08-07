@@ -19,7 +19,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import threading
 import time
-from apscheduler.schedulers.background import BackgroundScheduler
 
 load_dotenv()
 
@@ -3578,95 +3577,4 @@ def check_and_notify_completed_steps():
     finally:
         if connection:
             connection.close()
-def scheduled_check_job():
-    """
-    Zamanlanmış görev: project_progress tablosundaki end_date'i bugün olan
-    ve henüz bildirimi yapılmamış adımları kontrol eder ve e-posta gönderir.
-    Bu fonksiyon Flask uygulaması içerisinde bir arka plan görevi olarak çalışır.
-    """
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            today = datetime.date.today().isoformat()
-            
-            # Bitmek üzere olan ve bildirimi yapılmamış iş adımlarını bul
-            sql = """
-            SELECT
-                pp.progress_id,
-                pp.title,
-                p.project_name,
-                u.fullname AS project_manager_name,
-                u.email AS project_manager_email
-            FROM project_progress pp
-            JOIN projects p ON pp.project_id = p.project_id
-            JOIN users u ON p.project_manager_id = u.id
-            WHERE pp.end_date = %s AND pp.completion_notified = 0;
-            """
-            cursor.execute(sql, (today,))
-            steps_to_notify = cursor.fetchall()
-            
-            if not steps_to_notify:
-                print("DEBUG: Bugün bitiş tarihi olan tamamlanmamış iş adımı bulunamadı.")
-                return
-
-            print(f"DEBUG: {len(steps_to_notify)} adet bildirim yapılacak iş adımı bulundu.")
-
-            # Proje yöneticileri ve adminlerin e-posta adreslerini al
-            sql_admins = "SELECT email FROM users WHERE role = 'admin'"
-            cursor.execute(sql_admins)
-            admin_emails = [row['email'] for row in cursor.fetchall()]
-
-            for step in steps_to_notify:
-                body = f"""
-                <ul>
-                    <li><b>Proje Adı:</b> {step['project_name']}</li>
-                    <li><b>İş Adımı:</b> {step['title']}</li>
-                    <li><b>Proje Yöneticisi:</b> {step['project_manager_name']}</li>
-                </ul>
-                """
-                subject = f"Proje Adımı Son Tarih Uyarısı: {step['project_name']} - {step['title']}"
-
-                # Proje yöneticisine e-posta gönder
-                if step['project_manager_email']:
-                    send_email_notification(step['project_manager_email'], subject, body)
-                
-                # Adminlere e-posta gönder
-                for admin_email in admin_emails:
-                    send_email_notification(admin_email, subject, body)
-
-                # Bildirimi yapıldı olarak işaretle
-                cursor.execute("UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s", (step['progress_id'],))
-            
-            connection.commit()
-            print(f"DEBUG: {len(steps_to_notify)} adet tamamlanmamış iş adımı için bildirim gönderildi.")
-
-    except Exception as e:
-        print(f"Zamanlanmış görevde hata: {e}")
-        traceback.print_exc()
-    finally:
-        if connection:
-            connection.close()
-if __name__ == '__main__':
-    # Flask debug modu (reloader) aktifken kod iki kez çalıştırılır.
-    # Bu kontrol, zamanlayıcının sadece ana süreçte (main process) çalışmasını sağlar.
-    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-        scheduler = BackgroundScheduler()
-        
-        # scheduled_check_job fonksiyonunu her gün saat 09:00'da çalışacak şekilde ayarlıyoruz.
-        scheduler.add_job(
-            scheduled_check_job,
-            'cron',
-            hour=9,
-            minute=0
-        )
-        
-        scheduler.start()
-        
-        # Uygulama sonlandığında zamanlayıcının da durmasını sağlarız.
-        atexit.register(lambda: scheduler.shutdown())
-
-    # Uygulamayı başlat
-    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
-
 
