@@ -2339,6 +2339,84 @@ def send_email_async(to_emails, subject, body):
     email_thread.start()
 # API to update project progress step
 @app.route('/api/progress/<int:progress_id>', methods=['PUT'])
+def update_project_progress(progress_id):
+    """
+    Bir iş adımı kaydını günceller ve ilgili taraflara (proje yöneticisi ve adminler)
+    güncelleme hakkında e-posta bildirimi gönderir.
+    """
+    data = request.get_json()
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Güncellenecek iş adımını al
+            cursor.execute("""
+                SELECT
+                    pp.project_id,
+                    pp.title AS step_title,
+                    p.project_name,
+                    p.project_manager_id,
+                    u.fullname AS manager_name,
+                    u.email AS manager_email
+                FROM project_progress pp
+                JOIN projects p ON pp.project_id = p.project_id
+                JOIN users u ON p.project_manager_id = u.id
+                WHERE pp.progress_id = %s
+            """, (progress_id,))
+            step_info = cursor.fetchone()
+
+            if not step_info:
+                return jsonify({'message': 'İş adımı bulunamadı.'}), 404
+
+            # Güncelleme için SQL sorgusunu hazırla
+            update_fields = []
+            params = []
+            for key, value in data.items():
+                if key in ['title', 'description', 'start_date', 'end_date', 'real_end_date', 'status', 'delay_days', 'custom_delay_days']:
+                    update_fields.append(f"{key} = %s")
+                    params.append(value)
+            
+            if not update_fields:
+                return jsonify({'message': 'Güncellenecek alan bulunamadı.'}), 400
+
+            sql = f"UPDATE project_progress SET {', '.join(update_fields)} WHERE progress_id = %s"
+            params.append(progress_id)
+            
+            cursor.execute(sql, tuple(params))
+            connection.commit()
+
+            # Güncelleme bildirim e-postası gönder
+            admin_emails = get_admin_emails()
+            recipients = [step_info['manager_email']] + admin_emails
+            
+            subject = f"Proje İş Adımı Güncelleme Bildirimi: {step_info['project_name']}"
+            body = f"""
+            <html>
+            <body>
+            <p>Merhaba,</p>
+            <p><b>{step_info['project_name']}</b> projesinin <b>"{step_info['step_title']}"</b> başlıklı iş adımında bir güncelleme yapılmıştır.</p>
+            <p><b>Güncellenen Alanlar:</b> {', '.join(data.keys())}</p>
+            <p>Detayları kontrol etmek için lütfen sisteme giriş yapın.</p>
+            <p>İyi çalışmalar.</p>
+            </body>
+            </html>
+            """
+            
+            send_email_async(recipients, subject, body)
+
+            return jsonify({'message': 'İş adımı başarıyla güncellendi ve bildirim gönderildi.'}), 200
+
+    except pymysql.Error as e:
+        print(f"Database error while updating progress step: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
+    except Exception as e:
+        print(f"General error while updating progress step: {e}")
+        traceback.print_exc()
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+    finally:
+        if connection:
+            connection.close()
+@app.route('/api/progress/<int:progress_id>', methods=['PUT'])
 def update_project_progress_step(progress_id):
     data = request.get_json()
     print(f"Received data for updating progress {progress_id}: {data}")
@@ -3494,14 +3572,68 @@ def _check_and_notify_completed_steps(cursor):
         print(f"Genel hata (_check_and_notify_completed_steps): {e}")
         traceback.print_exc()
 def scheduled_check_job():
+    """
+    Her gün planlanan bir zamanda, bitiş tarihi geçmiş ve tamamlanmamış
+    iş adımlarını kontrol eder ve ilgili kişilere e-posta ile bildirim gönderir.
+    """
     connection = None
     try:
         connection = get_db_connection()
-        if connection:
-            _check_and_notify_completed_steps(connection)
-            connection.commit()
+        with connection.cursor() as cursor:
+            # Bitiş tarihi geçmiş, tamamlanmamış ve daha önce bildirim gönderilmemiş iş adımlarını bul
+            sql = """
+                SELECT
+                    pp.progress_id,
+                    pp.project_id,
+                    pp.title AS step_title,
+                    pp.end_date AS step_end_date,
+                    p.project_name,
+                    u.fullname AS manager_name,
+                    u.email AS manager_email
+                FROM project_progress pp
+                JOIN projects p ON pp.project_id = p.project_id
+                JOIN users u ON p.project_manager_id = u.id
+                WHERE pp.end_date <= CURDATE()
+                AND pp.real_end_date IS NULL
+                AND pp.completion_notified = 0
+            """
+            cursor.execute(sql)
+            steps_to_notify = cursor.fetchall()
+            
+            print(f"DEBUG: {len(steps_to_notify)} adet tamamlanmamış iş adımı bulundu.")
+
+            if steps_to_notify:
+                admin_emails = get_admin_emails()
+                for step in steps_to_notify:
+                    project_name = step['project_name']
+                    step_title = step['step_title']
+                    step_end_date = format_datetime_for_email(str(step['step_end_date']))
+                    manager_email = step['manager_email']
+                    
+                    recipients = [manager_email] + admin_emails
+                    
+                    subject = f"ACİL: Geçmiş Bitiş Tarihli İş Adımı Bildirimi - {project_name}"
+                    body = f"""
+                    <html>
+                    <body>
+                    <p>Merhaba,</p>
+                    <p><b>{project_name}</b> projesindeki <b>"{step_title}"</b> başlıklı iş adımının bitiş tarihi (<b>{step_end_date}</b>) geçmiş olmasına rağmen henüz tamamlanmamıştır.</p>
+                    <p>İlgili iş adımını kontrol edip tamamlandığında güncellemeyi yapınız.</p>
+                    <p>İyi çalışmalar.</p>
+                    </body>
+                    </html>
+                    """
+                    send_email_async(recipients, subject, body)
+
+                    # Bildirim gönderildikten sonra `completion_notified` flag'ini güncelle
+                    cursor.execute("UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s", (step['progress_id'],))
+
+                connection.commit()
+                print(f"DEBUG: {len(steps_to_notify)} adet tamamlanmamış iş adımı için bildirim gönderildi.")
+
     except Exception as e:
-        print(f"Zamanlanmış iş hatası: {e}")
+        print(f"Zamanlanmış görevde hata: {e}")
+        traceback.print_exc()
     finally:
         if connection:
             connection.close()
