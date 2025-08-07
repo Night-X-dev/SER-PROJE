@@ -2422,7 +2422,6 @@ def update_project_progress(progress_id):
         if connection:
             connection.close()
 
-
 @app.route('/api/progress/<int:progress_id>', methods=['DELETE'])
 def delete_project_progress_step(progress_id):
     """Deletes a project progress step."""
