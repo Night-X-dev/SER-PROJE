@@ -19,7 +19,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 
-
 load_dotenv()
 
 app = Flask(__name__)
@@ -3480,11 +3479,6 @@ def scheduled_check_job():
         if connection:
             connection.close()
             
-# Her gün 09:00 ve 17:00'de çalışacak bir iş ekleyin
-scheduler.add_job(func=scheduled_check_job, trigger="cron", hour="9,17")
-scheduler.start()
 
-# Flask uygulamasından çıkıldığında zamanlayıcının durmasını sağlayın
-atexit.register(lambda: scheduler.shutdown())
 ##if __name__ == '__main__':
   ##  app.run(host='0.0.0.0', port=3001, debug=True)
