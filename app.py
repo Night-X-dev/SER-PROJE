@@ -1,5 +1,5 @@
 # app.py
-from flask import Flask, request, jsonify, render_template, session, redirect, url_for
+from flask import Flask, logging, request, jsonify, render_template, session, redirect, url_for
 from flask_cors import CORS
 import pymysql.cursors
 import bcrypt
@@ -230,7 +230,14 @@ def format_datetime_for_email(dt_str):
             return dt_obj.strftime('%d.%m.%Y')
     except ValueError:
         return dt_str # Ayrıştırma başarısız olursa orijinal stringi döndür
-
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('scheduler.log'),
+        logging.StreamHandler()
+    ]
+)
 @app.route('/api/reports/project/<int:project_id>', methods=['GET'])
 def get_project_report_data(project_id):
     """
