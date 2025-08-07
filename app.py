@@ -1193,15 +1193,6 @@ def add_customer():
                 'description': f'New customer named "{customer_name}" added.',
                 'icon': 'fas fa-user-plus'
             }
-            # To call your own API, Flask's test client or requests library can be used.
-            # Here, an internal call is simulated using Flask's test_client.
-            # It might be more appropriate to call the add_activity function directly instead of making an actual HTTP request.
-            # However, if add_activity is designed as an HTTP endpoint, such a call might make sense.
-            # For simplicity and to avoid circular dependencies, I am leaving a note assuming add_activity will be called externally
-            # instead of calling log_activity directly.
-            # If add_activity is not called from the frontend, this logging operation will not be performed.
-            # In this case, calling log_activity directly might be more appropriate.
-
         return jsonify({'message': 'Customer successfully added!', 'customerId': new_customer_id}), 201
 
     except pymysql.Error as e:
@@ -1216,6 +1207,24 @@ def add_customer():
         if connection:
             connection.close()
 
+def log_to_db(message, level="INFO"):
+    """
+    Log mesajlarını veritabanındaki 'logs' tablosuna kaydeder.
+    """
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            sql = "INSERT INTO logs (timestamp, level, message) VALUES (NOW(), %s, %s)"
+            cursor.execute(sql, (level, message))
+            connection.commit()
+    except Exception as e:
+        # Veritabanına log yazarken bir hata olursa, konsola yazdır
+        print(f"HATA: Veritabanına log yazarken bir hata oluştu: {e} - Mesaj: {message}")
+        traceback.print_exc()
+    finally:
+        if connection:
+            connection.close()
 # API to list all customers
 @app.route('/api/customers', methods=['GET'])
 def get_customers():
@@ -2309,7 +2318,7 @@ def send_email_async(to_emails, subject, body):
         sender_password = os.getenv("SENDER_PASSWORD")
 
         if not all([smtp_server, sender_email, sender_password]):
-            print("ERROR: SMTP sunucu bilgileri eksik. E-posta gönderilemedi.")
+            log_to_db("SMTP sunucu bilgileri eksik. E-posta gönderilemedi.", "ERROR")
             return
 
         try:
@@ -2329,14 +2338,10 @@ def send_email_async(to_emails, subject, body):
                 msg.attach(part)
                 
                 server.sendmail(sender_email, to_emails, msg.as_string())
-            print(f"INFO: E-posta başarıyla gönderildi: {subject} - Alıcılar: {to_emails}")
+            log_to_db(f"E-posta başarıyla gönderildi: {subject} - Alıcılar: {to_emails}", "INFO")
         except Exception as e:
-            print(f"ERROR: E-posta gönderilirken bir hata oluştu: {e}")
+            log_to_db(f"E-posta gönderilirken bir hata oluştu: {e}", "ERROR")
             traceback.print_exc()
-
-    # E-posta gönderme işlemini bir thread üzerinde başlat
-    email_thread = threading.Thread(target=_send_email)
-    email_thread.start()
 # API to update project progress step
 @app.route('/api/progress/<int:progress_id>', methods=['PUT'])
 def update_project_progress(progress_id):
@@ -2727,7 +2732,7 @@ def get_admin_emails():
             results = cursor.fetchall()
             return [result['email'] for result in results]
     except Exception as e:
-        print(f"ERROR: Admin e-postaları alınırken bir hata oluştu: {e}")
+        log_to_db(f"Admin e-postaları alınırken bir hata oluştu: {e}", "ERROR")
         return []
     finally:
         if connection:
@@ -3578,7 +3583,7 @@ def scheduled_check_job():
     """
     connection = None
     try:
-        logging.info("scheduled_check_job fonksiyonu çalışmaya başladı.")
+        log_to_db("scheduled_check_job fonksiyonu çalışmaya başladı.", "INFO")
         connection = get_db_connection()
         with connection.cursor() as cursor:
             # Sadece bitiş tarihi geçmiş, tamamlanmamış ve bildirim gönderilmemiş iş adımlarını bul.
@@ -3601,12 +3606,12 @@ def scheduled_check_job():
             cursor.execute(sql)
             steps_to_notify = cursor.fetchall()
             
-            logging.info(f"SQL sorgusu çalıştırıldı. {len(steps_to_notify)} adet sonuç bulundu.")
+            log_to_db(f"SQL sorgusu çalıştırıldı. {len(steps_to_notify)} adet sonuç bulundu.", "INFO")
 
             if steps_to_notify:
                 admin_emails = get_admin_emails()
                 if not admin_emails:
-                    logging.warning("Admin e-posta adresleri bulunamadı. Sadece proje yöneticisine e-posta gönderilecek.")
+                    log_to_db("Admin e-posta adresleri bulunamadı. Sadece proje yöneticisine e-posta gönderilecek.", "WARNING")
                 
                 for step in steps_to_notify:
                     project_name = step['project_name']
@@ -3628,25 +3633,25 @@ def scheduled_check_job():
                     </html>
                     """
                     
-                    logging.info(f"E-posta gönderilmeye hazırlanıyor. Konu: {subject}, Alıcılar: {recipients}")
+                    log_to_db(f"E-posta gönderilmeye hazırlanıyor. Konu: {subject}, Alıcılar: {recipients}", "INFO")
                     send_email_async(recipients, subject, body)
 
                     # Bildirim gönderildikten sonra `completion_notified` flag'ini güncelle
                     cursor.execute("UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s", (step['progress_id'],))
-                    logging.info(f"progress_id {step['progress_id']} için completion_notified güncellendi.")
+                    log_to_db(f"progress_id {step['progress_id']} için completion_notified güncellendi.", "INFO")
 
                 connection.commit()
-                logging.info(f"Veritabanı değişiklikleri kaydedildi. {len(steps_to_notify)} adet iş adımı için bildirim gönderildi.")
+                log_to_db(f"Veritabanı değişiklikleri kaydedildi. {len(steps_to_notify)} adet iş adımı için bildirim gönderildi.", "INFO")
             else:
-                logging.info("Bildirim gönderilecek herhangi bir iş adımı bulunamadı.")
+                log_to_db("Bildirim gönderilecek herhangi bir iş adımı bulunamadı.", "INFO")
 
     except Exception as e:
-        logging.error(f"Zamanlanmış görevde hata: {e}")
+        log_to_db(f"Zamanlanmış görevde hata: {e}", "ERROR")
         traceback.print_exc()
     finally:
         if connection:
             connection.close()
-            logging.info("Veritabanı bağlantısı kapatıldı.")
+            log_to_db("Veritabanı bağlantısı kapatıldı.", "INFO")
             
 def check_and_notify_completed_steps():
     """
@@ -3693,7 +3698,7 @@ if __name__ == '__main__':
         scheduled_check_job,
         'cron',
         hour='14',
-        minute='38'
+        minute='44'
     )
     print("INFO: Starting scheduler...")
     scheduler.start()
