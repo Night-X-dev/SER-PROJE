@@ -66,23 +66,21 @@ def send_email(subject, body, recipient_emails):
     html_part = MIMEText(body, "html")
     message.attach(html_part)
 
-    server = None
     try:
         context = ssl.create_default_context()
-        # Bağlantıyı manuel olarak başlatıyoruz
-        server = smtplib.SMTP(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT)
-        server.starttls(context=context)
-        server.login(EMAIL_SENDER_ADDRESS, EMAIL_SENDER_PASSWORD)
-        server.sendmail(EMAIL_SENDER_ADDRESS, recipient_emails, message.as_string())
-        print(f"Başarılı: E-posta '{subject}' şu alıcılara gönderildi: {recipient_emails}")
-        return True
+        # Bağlantıyı `with` ifadesiyle yönetiyoruz, bu sayede otomatik olarak kapatılır.
+        with smtplib.SMTP(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT) as server:
+            server.starttls(context=context)
+            server.login(EMAIL_SENDER_ADDRESS, EMAIL_SENDER_PASSWORD)
+            server.sendmail(EMAIL_SENDER_ADDRESS, recipient_emails, message.as_string())
+            print(f"Başarılı: E-posta '{subject}' şu alıcılara gönderildi: {recipient_emails}")
+            return True
+    except smtplib.SMTPException as e:
+        print(f"Hata: SMTP sunucusuna bağlanırken bir sorun oluştu. Hata detayları: {e}", file=sys.stderr)
+        return False
     except Exception as e:
         print(f"Hata: E-posta gönderilemedi. Hata detayları: {e}", file=sys.stderr)
         return False
-    finally:
-        # Hata olsa bile bağlantıyı mutlaka kapatıyoruz
-        if server:
-            server.quit()
 
 
 def notify_overdue_step(db_cursor, step):
