@@ -42,6 +42,7 @@ def send_email(subject, code, to_email):
         html = f"""
         <!DOCTYPE html>
         <html lang="tr">
+        
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -50,53 +51,53 @@ def send_email(subject, code, to_email):
                 /* Yukarıdaki CSS kodunun tamamı buraya */
             </style>
         </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <div class="logo">
-                        <div class="logo-icon">
+        <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f8f9fa; color: #333333;">
+            <div class="container" style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);">
+                <div class="header" style="background: linear-gradient(135deg, #005c9d, #0980d3); padding: 30px 20px; text-align: center; color: white;">
+                    <div class="logo" style="font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 15px;">
+                        <div class="logo-icon" style="background: rgba(255, 255, 255, 0.2); width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">
                             <i class="fas fa-bolt"></i>
                         </div>
                         <div class="logo-text">SER Elektrik</div>
                     </div>
-                    <h1>Şifre Sıfırlama Talebiniz</h1>
+                    <h1 style="margin: 0;">Şifre Sıfırlama Talebiniz</h1>
                 </div>
                 
-                <div class="content">
-                    <h2 class="title">Şifrenizi Sıfırlamak İçin Doğrulama Kodunuz</h2>
+                <div class="content" style="padding: 40px 30px; line-height: 1.6;">
+                    <h2 class="title" style="font-size: 24px; font-weight: 700; margin-bottom: 25px; text-align: center; color: #005c9d; margin-top: 0;">Şifrenizi Sıfırlamak İçin Doğrulama Kodunuz</h2>
                     
-                    <p class="message">Merhaba,<br>
-                       Şifre sıfırlama talebiniz için doğrulama kodunuz aşağıdadır. Bu kodu kullanarak şifrenizi yeniden oluşturabilirsiniz.</p>
+                    <p class="message" style="margin-bottom: 30px; font-size: 16px; color: #5e6870;">Merhaba,<br>
+                        Şifre sıfırlama talebiniz için doğrulama kodunuz aşağıdadır. Bu kodu kullanarak şifrenizi yeniden oluşturabilirsiniz.</p>
                     
-                    <div class="code-container">
-                        <div class="code-label">Lütfen aşağıdaki kodu kullanın:</div>
-                        <div class="code">{code}</div>
-                        <div class="code-label">Bu kod 15 dakika sonra geçerliliğini yitirecektir.</div>
+                    <div class="code-container" style="background: linear-gradient(135deg, #f0f4f8, #e1e5e9); border-radius: 12px; padding: 20px; text-align: center; margin: 30px 0;">
+                        <div class="code-label" style="font-size: 16px; margin-bottom: 15px; color: #5e6870;">Lütfen aşağıdaki kodu kullanın:</div>
+                        <div class="code" style="font-size: 42px; font-weight: 700; letter-spacing: 8px; color: #005c9d; margin: 15px 0; padding: 10px; background: white; border-radius: 10px; display: inline-block; box-shadow: 0 4px 15px rgba(0, 92, 157, 0.15); font-family: monospace;">{code}</div>
+                        <div class="code-label" style="font-size: 16px; margin-bottom: 0; color: #5e6870;">Bu kod 15 dakika sonra geçerliliğini yitirecektir.</div>
                     </div>
                     
                     <div style="text-align: center;">
-                        <a href="https://www.serelektrik.com/sifre-sifirla" class="button">Şifremi Sıfırla</a>
+                        <a href="https://www.serelektrik.com/sifre-sifirla" class="button" style="display: inline-block; background: linear-gradient(to right, #005c9d, #0980d3); color: white; padding: 14px 35px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; margin: 20px 0; box-shadow: 0 4px 15px rgba(9, 128, 211, 0.25);">Şifremi Sıfırla</a>
                     </div>
                     
-                    <div class="note">
+                    <div class="note" style="background-color: #fff9e6; border-left: 4px solid #ffd700; padding: 15px; border-radius: 0 8px 8px 0; margin: 25px 0; font-size: 14px;">
                         <strong>Önemli:</strong> Bu e-postayı siz talep etmediyseniz lütfen dikkate almayınız. 
                         Güvenliğiniz için bu kodu kimseyle paylaşmayınız.
                     </div>
                     
-                    <p class="message">Herhangi bir sorunuz varsa, ekibimiz size yardımcı olmaktan mutluluk duyacaktır.</p>
+                    <p class="message" style="margin-bottom: 0; font-size: 16px; color: #5e6870;">Herhangi bir sorunuz varsa, ekibimiz size yardımcı olmaktan mutluluk duyacaktır.</p>
                 </div>
                 
-                <div class="footer">
-                    <div class="social-icons">
-                        <a href="#" class="social-icon"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#" class="social-icon"><i class="fab fa-twitter"></i></a>
-                        <a href="#" class="social-icon"><i class="fab fa-instagram"></i></a>
-                        <a href="#" class="social-icon"><i class="fab fa-linkedin-in"></i></a>
+                <div class="footer" style="background-color: #f0f4f8; padding: 25px 20px; text-align: center; font-size: 14px; color: #97a1aa;">
+                    <div class="social-icons" style="display: flex; justify-content: center; gap: 15px; margin: 20px 0;">
+                        <a href="#" class="social-icon" style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #005c9d, #0980d3); display: flex; align-items: center; justify-content: center; color: white; text-decoration: none;"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="social-icon" style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #005c9d, #0980d3); display: flex; align-items: center; justify-content: center; color: white; text-decoration: none;"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="social-icon" style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #005c9d, #0980d3); display: flex; align-items: center; justify-content: center; color: white; text-decoration: none;"><i class="fab fa-instagram"></i></a>
+                        <a href="#" class="social-icon" style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #005c9d, #0980d3); display: flex; align-items: center; justify-content: center; color: white; text-decoration: none;"><i class="fab fa-linkedin-in"></i></a>
                     </div>
                     
                     <div>© 2023 SER Elektrik Otomasyon. Tüm hakları saklıdır.</div>
                     
-                    <div class="contact">
+                    <div class="contact" style="margin-top: 15px; font-size: 13px;">
                         <div>Adres: Teknoloji Geliştirme Bölgesi, No:15, İstanbul</div>
                         <div>Telefon: (0212) 345 67 89 | E-posta: info@serelektrik.com</div>
                     </div>
