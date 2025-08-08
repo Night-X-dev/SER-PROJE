@@ -55,7 +55,7 @@ def send_email(subject, code, to_email):
             <div class="container" style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);">
                 <div class="header" style="background: linear-gradient(135deg, #005c9d, #0980d3); padding: 30px 20px; text-align: center; color: white;">
                     <div class="logo" style="margin-bottom: 15px; text-align: center;">
-                        <img src="https://serotomasyon.tr/static/serlogo.png" alt="SER Elektrik Otomasyon" style="height: 60px; max-width: 100%; border-radius: 10px;">
+                        <img src="https://serotomasyon.tr/static/serlogobeyaz.png" alt="SER Elektrik Otomasyon" style="height: 60px; max-width: 100%; border-radius: 10px;">
                     </div>
                     <h1 style="margin: 0;">Şifre Sıfırlama Talebiniz</h1>
                 </div>
