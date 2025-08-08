@@ -54,11 +54,8 @@ def send_email(subject, code, to_email):
         <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f8f9fa; color: #333333;">
             <div class="container" style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);">
                 <div class="header" style="background: linear-gradient(135deg, #005c9d, #0980d3); padding: 30px 20px; text-align: center; color: white;">
-                    <div class="logo" style="font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 15px;">
-                        <div class="logo-icon" style="background: rgba(255, 255, 255, 0.2); width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">
-                            <i class="fas fa-bolt"></i>
-                        </div>
-                        <div class="logo-text">SER Elektrik</div>
+                    <div class="logo" style="margin-bottom: 15px; text-align: center;">
+                        <img src="https://serotomasyon.tr/static/serlogo.png" alt="SER Elektrik Otomasyon" style="height: 60px; max-width: 100%; border-radius: 10px;">
                     </div>
                     <h1 style="margin: 0;">Şifre Sıfırlama Talebiniz</h1>
                 </div>
@@ -84,22 +81,16 @@ def send_email(subject, code, to_email):
                         Güvenliğiniz için bu kodu kimseyle paylaşmayınız.
                     </div>
                     
-                    <p class="message" style="margin-bottom: 0; font-size: 16px; color: #5e6870;">Herhangi bir sorunuz varsa, ekibimiz size yardımcı olmaktan mutluluk duyacaktır.</p>
                 </div>
                 
                 <div class="footer" style="background-color: #f0f4f8; padding: 25px 20px; text-align: center; font-size: 14px; color: #97a1aa;">
-                    <div class="social-icons" style="display: flex; justify-content: center; gap: 15px; margin: 20px 0;">
-                        <a href="#" class="social-icon" style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #005c9d, #0980d3); display: flex; align-items: center; justify-content: center; color: white; text-decoration: none;"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#" class="social-icon" style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #005c9d, #0980d3); display: flex; align-items: center; justify-content: center; color: white; text-decoration: none;"><i class="fab fa-twitter"></i></a>
-                        <a href="#" class="social-icon" style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #005c9d, #0980d3); display: flex; align-items: center; justify-content: center; color: white; text-decoration: none;"><i class="fab fa-instagram"></i></a>
-                        <a href="#" class="social-icon" style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #005c9d, #0980d3); display: flex; align-items: center; justify-content: center; color: white; text-decoration: none;"><i class="fab fa-linkedin-in"></i></a>
-                    </div>
                     
-                    <div>© 2023 SER Elektrik Otomasyon. Tüm hakları saklıdır.</div>
+                    
+                    <div>© 2025 SER Elektrik Otomasyon. Tüm hakları saklıdır.</div>
                     
                     <div class="contact" style="margin-top: 15px; font-size: 13px;">
-                        <div>Adres: Teknoloji Geliştirme Bölgesi, No:15, İstanbul</div>
-                        <div>Telefon: (0212) 345 67 89 | E-posta: info@serelektrik.com</div>
+                        <div>Adres: Ser Plaza, Yeşilce, Dalgıç Sk. No:9, 34418 Kağıthane/İstanbul</div>
+                        <div>Telefon: (0212) 324 64 14 | E-posta: info@serelektrik.com</div>
                     </div>
                 </div>
             </div>
