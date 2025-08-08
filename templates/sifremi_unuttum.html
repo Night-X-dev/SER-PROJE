@@ -593,243 +593,266 @@
         <span id="toast-message">İşlem başarıyla tamamlandı</span>
     </div>
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const step1 = document.getElementById('step1');
-        const step2 = document.getElementById('step2');
-        const step3 = document.getElementById('step3');
-
-        const emailForm = document.getElementById('emailForm');
-        const codeForm = document.getElementById('codeForm');
-        const resetForm = document.getElementById('resetForm');
-        const resendButton = document.getElementById('resendButton');
-        const backToEmail = document.getElementById('backToEmail');
-        const backToCode = document.getElementById('backToCode');
-        const loginButton = document.getElementById('loginButton');
-
-        const emailInput = document.getElementById('email');
-        const sentEmailSpan = document.getElementById('sent-email');
-        const newPasswordInput = document.getElementById('newPassword');
-        const confirmPasswordInput = document.getElementById('confirmPassword');
-        const codeInputs = document.querySelectorAll('.code-input');
-
-        const toast = document.getElementById('toast');
-        const toastIcon = toast.querySelector('.toast-icon');
-        const toastMessage = toast.querySelector('.toast-message');
-
-        let sentEmail = '';
-
-        function showToast(message, isError = false) {
-            toast.classList.remove('success', 'error', 'show');
-            toastMessage.textContent = message;
-            if (isError) {
-                toast.classList.add('error');
-                toastIcon.innerHTML = '<i class="fas fa-exclamation-circle"></i>';
-            } else {
-                toast.classList.add('success');
-                toastIcon.innerHTML = '<i class="fas fa-check-circle"></i>';
-            }
-            toast.classList.add('show');
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
-        }
-
-        function goToStep(step) {
-            step1.classList.remove('active');
-            step2.classList.remove('active');
-            step3.classList.remove('active');
-            
-            if (step === 1) {
-                step1.classList.add('active');
-            } else if (step === 2) {
-                step2.classList.add('active');
-            } else if (step === 3) {
-                step3.classList.add('active');
-            }
-        }
-
-        // Sayfa yüklendiğinde URL'deki parametreleri kontrol et
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlStep = urlParams.get('step');
-        const urlEmail = urlParams.get('email');
-        const urlCode = urlParams.get('code');
-
-        if (urlStep === '2' && urlEmail) {
-            sentEmail = urlEmail;
-            sentEmailSpan.textContent = sentEmail;
-            goToStep(2);
-        }
-
-        emailForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = emailInput.value;
-            sentEmail = email;
-
-            try {
-                const res = await fetch('/forgot-password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    sentEmailSpan.textContent = sentEmail;
-                    goToStep(2);
-                    showToast(data.message);
-                } else {
-                    showToast(data.message || 'E-posta gönderme başarısız.', true);
-                }
-            } catch (err) {
-                console.error(err);
-                showToast('Sunucu hatası', true);
-            }
-        });
-
-        // Kod girdileri arasında gezinme
-        codeInputs.forEach((input, index) => {
-            input.addEventListener('input', (e) => {
-                if (e.target.value.length === e.target.maxLength) {
-                    if (index < codeInputs.length - 1) {
-                        codeInputs[index + 1].focus();
-                    }
-                }
-            });
-
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && e.target.value.length === 0) {
-                    if (index > 0) {
-                        codeInputs[index - 1].focus();
-                    }
-                }
-            });
-        });
-
-        codeForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const code = Array.from(codeInputs).map(input => input.value).join('');
-            if (code.length !== 6) {
-                showToast('Lütfen 6 haneli kodu girin.', true);
-                return;
-            }
-
-            try {
-                // Kod doğrulama için API çağrısı yapılabilir.
-                // Şimdilik doğrudan 3. adıma geçelim.
-                showToast('Kod doğrulandı.');
-                goToStep(3);
-
-            } catch (err) {
-                console.error(err);
-                showToast('Kod doğrulama başarısız.', true);
-            }
-        });
-
-        resetForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const newPassword = newPasswordInput.value;
-            const confirmPassword = confirmPasswordInput.value;
-            const code = Array.from(codeInputs).map(input => input.value).join('');
-
-            if (newPassword !== confirmPassword) {
-                showToast('Şifreler eşleşmiyor.', true);
-                return;
-            }
-
-            try {
-                const res = await fetch('/reset-password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: sentEmail, code, new_password: newPassword })
-                });
-                const data = await res.json();
-
-                if (res.ok) {
-                    showToast(data.message);
-                    setTimeout(() => {
-                        window.location.href = 'login.html';
-                    }, 2000);
-                } else {
-                    showToast(data.message || 'Şifre değiştirme başarısız.', true);
-                }
-            } catch (err) {
-                console.error(err);
-                showToast('Sunucu hatası', true);
-            }
-        });
-
-        // Kodu tekrar gönder
-        resendButton.addEventListener('click', async () => {
-            if (!sentEmail) {
-                showToast('Lütfen önce e-posta adresinizi girin.', true);
-                return;
-            }
-            
-            try {
-                const res = await fetch('/forgot-password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: sentEmail })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    showToast('Yeni bir doğrulama kodu gönderildi.');
-                } else {
-                    showToast(data.message || 'Kod gönderme başarısız.', true);
-                }
-            } catch (err) {
-                console.error(err);
-                showToast('Kod gönderme başarısız.', true);
-            }
-        });
-        
-        // Geri dönüş butonları
-        backToEmail.addEventListener('click', (e) => {
-            e.preventDefault();
-            goToStep(1);
-        });
-        
-        backToCode.addEventListener('click', (e) => {
-            e.preventDefault();
-            goToStep(2);
-        });
-        
-        // Giriş sayfasına yönlendirme
-        loginButton.addEventListener('click', () => {
-            window.location.href = 'login.html';
-        });
-
-        const themeToggleBtn = document.getElementById('themeToggleBtn');
-        const htmlElement = document.documentElement;
-
-        themeToggleBtn.addEventListener('click', () => {
-            if (htmlElement.getAttribute('data-theme') === 'dark') {
-                htmlElement.removeAttribute('data-theme');
-                themeToggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
-            } else {
-                htmlElement.setAttribute('data-theme', 'dark');
-                themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
-            }
-        });
-
-        // Başlangıç teması kontrolü
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            htmlElement.setAttribute('data-theme', 'dark');
-            themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
+document.addEventListener('DOMContentLoaded', () => {
+    // Tema değiştirme butonu
+    const themeToggle = document.getElementById('theme-toggle');
+    themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if (currentTheme === 'dark') {
+            document.documentElement.removeAttribute('data-theme');
+            themeToggle.classList.remove('dark');
+        } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            themeToggle.classList.add('dark');
         }
     });
-</script>
-    <script>
-        // Tema değişimi için basit bir toggle
-        const themeToggle = document.getElementById('theme-toggle');
-        const htmlElement = document.documentElement;
 
-        themeToggle.addEventListener('click', () => {
-            if (htmlElement.getAttribute('data-theme') === 'dark') {
-                htmlElement.removeAttribute('data-theme');
-            } else {
-                htmlElement.setAttribute('data-theme', 'dark');
+    // Toast bildirimi gösterme fonksiyonu
+    function showToast(message, isError = false) {
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+        
+        toastMessage.textContent = message;
+        toast.classList.remove('error');
+        
+        if (isError) {
+            toast.classList.add('error');
+            toast.querySelector('i').className = 'fas fa-exclamation-circle';
+        } else {
+            toast.querySelector('i').className = 'fas fa-check-circle';
+        }
+        
+        toast.classList.add('show');
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
+    
+    // Adım değiştirme fonksiyonu
+    function goToStep(stepNumber) {
+        // Tüm adım içeriklerini gizle
+        document.querySelectorAll('.step-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        
+        // İlgili adımı göster
+        const stepId = 
+            stepNumber === 1 ? 'step-email' :
+            stepNumber === 2 ? 'step-code' :
+            stepNumber === 3 ? 'step-password' : 'step-success';
+        
+        document.getElementById(stepId).classList.add('active');
+        
+        // Adım göstergelerini güncelle
+        document.querySelectorAll('.step').forEach(step => {
+            step.classList.remove('active', 'completed');
+            const stepNum = parseInt(step.dataset.step);
+            
+            if (stepNum < stepNumber) {
+                step.classList.add('completed');
+            } else if (stepNum === stepNumber) {
+                step.classList.add('active');
             }
         });
-    </script>
+    }
+    
+    // Şifre göster/gizle fonksiyonu
+    document.querySelectorAll('.toggle-password').forEach(icon => {
+        icon.addEventListener('click', function() {
+            const input = this.previousElementSibling;
+            const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+            input.setAttribute('type', type);
+            
+            // İkonu değiştir
+            this.classList.toggle('fa-eye');
+            this.classList.toggle('fa-eye-slash');
+        });
+    });
+
+    // Kod girişi için otomatik odaklanma ve birleştirme
+    const codeInputs = document.querySelectorAll('.code-char');
+    codeInputs.forEach((input, index) => {
+        input.addEventListener('input', (e) => {
+            if (e.target.value.length === 1 && index < codeInputs.length - 1) {
+                codeInputs[index + 1].focus();
+            }
+        });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && e.target.value.length === 0 && index > 0) {
+                codeInputs[index - 1].focus();
+            }
+        });
+    });
+
+    // Adım geçiş butonları
+    const nextButton = document.getElementById('next-button');
+    const verifyButton = document.getElementById('verify-button');
+    const saveButton = document.getElementById('save-button');
+    const loginButton = document.getElementById('login-button');
+    const resendButton = document.getElementById('resend-button');
+    
+    // Geri dönüş butonları
+    const backToEmail = document.getElementById('back-to-email');
+    const backToCode = document.getElementById('back-to-code');
+    
+    let sentEmail = '';
+    let verificationCode = ''; // Doğrulama kodunu saklamak için
+    
+    // 1. Adım: E-posta gönderme
+    nextButton.addEventListener('click', async () => {
+        const email = document.getElementById('email').value.trim();
+        if (!email) {
+            showToast('Lütfen e-posta adresinizi girin.', true);
+            return;
+        }
+        
+        // E-posta doğrulaması
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            showToast('Lütfen geçerli bir e-posta adresi girin.', true);
+            return;
+        }
+        
+        // Simüle edilmiş API isteği
+        try {
+            const res = await fetch('/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                sentEmail = email;
+                document.getElementById('sent-email').textContent = email;
+                showToast(data.message || 'Doğrulama kodu e-posta adresinize gönderildi.');
+                
+                // 2. adıma geç
+                goToStep(2);
+            } else {
+                showToast(data.message || 'E-posta adresi bulunamadı veya bir hata oluştu.', true);
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Sunucu hatası', true);
+        }
+    });
+    
+    // 2. Adım: Kod doğrulama
+    verifyButton.addEventListener('click', async () => {
+        const code = Array.from(codeInputs).map(i => i.value).join('');
+        if (code.length !== 6) {
+            showToast('Lütfen 6 haneli kodu girin.', true);
+            return;
+        }
+        
+        try {
+            const res = await fetch('/verify-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: sentEmail, code })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                verificationCode = code; // Kodu sakla
+                showToast(data.message || 'Kod doğrulama başarılı.');
+                
+                // 3. adıma geç
+                goToStep(3);
+            } else {
+                showToast(data.message || 'Geçersiz veya süresi dolmuş kod.', true);
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Sunucu hatası', true);
+        }
+    });
+    
+    // 3. Adım: Şifre sıfırlama
+    saveButton.addEventListener('click', async () => {
+        const newPassword = document.getElementById('new-password').value.trim();
+        const confirmPassword = document.getElementById('confirm-password').value.trim();
+        
+        if (!newPassword || !confirmPassword) {
+            showToast('Lütfen şifre alanlarını doldurun.', true);
+            return;
+        }
+        
+        if (newPassword.length < 8) {
+            showToast('Şifre en az 8 karakter olmalıdır.', true);
+            return;
+        }
+        
+        if (newPassword !== confirmPassword) {
+            showToast('Şifreler eşleşmiyor.', true);
+            return;
+        }
+        
+        try {
+            const res = await fetch('/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    email: sentEmail, 
+                    code: verificationCode, 
+                    new_password: newPassword 
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showToast('Şifre başarıyla değiştirildi.');
+                // Başarılı ekranına geç
+                goToStep(4);
+            } else {
+                showToast(data.message || 'Şifre değiştirme başarısız.', true);
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Sunucu hatası', true);
+        }
+    });
+    
+    // Kodu tekrar gönder
+    resendButton.addEventListener('click', async () => {
+        if (!sentEmail) {
+            showToast('Lütfen önce e-posta adresinizi girin.', true);
+            return;
+        }
+        
+        try {
+            const res = await fetch('/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: sentEmail })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showToast('Yeni bir doğrulama kodu gönderildi.');
+            } else {
+                showToast(data.message || 'Kod gönderme başarısız.', true);
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Kod gönderme başarısız.', true);
+        }
+    });
+    
+    // Geri dönüş butonları
+    backToEmail.addEventListener('click', (e) => {
+        e.preventDefault();
+        goToStep(1);
+    });
+    
+    backToCode.addEventListener('click', (e) => {
+        e.preventDefault();
+        goToStep(2);
+    });
+    
+    // Giriş sayfasına yönlendirme
+    loginButton.addEventListener('click', () => {
+        window.location.href = 'login.html';
+    });
+});
+</script>
 </body>
 </html>
