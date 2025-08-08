@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 import urllib.parse
 import re
 import traceback # Import traceback for detailed error logging
-from auth import forgot_password_request, reset_password_request
 
 # E-posta göndermek için gerekli kütüphaneler
 import smtplib
@@ -3583,20 +3582,3 @@ def check_and_notify_completed_steps():
         if connection:
             connection.close()
 
-# YENİ EKLENEN KOD BAŞLANGICI
-@app.route('/forgot-password', methods=['POST'])
-def handle_forgot_password_request():
-    """
-    Kullanıcının şifresini unuttuğu durumu işlemek için API rota.
-    `auth.py` içindeki mantığı çağırır.
-    """
-    return forgot_password_request()
-
-@app.route('/reset-password', methods=['POST'])
-def handle_reset_password_request():
-    """
-    Şifre sıfırlama doğrulama kodunu ve yeni şifreyi işlemek için API rota.
-    `auth.py` içindeki mantığı çağırır.
-    """
-    return reset_password_request()
-# YENİ EKLENEN KOD BİTİŞİ
