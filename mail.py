@@ -7,7 +7,6 @@
 import os
 import sys
 import pymysql.cursors
-import dotenv
 from dotenv import load_dotenv
 import smtplib
 import ssl
@@ -17,19 +16,18 @@ import datetime
 import traceback
 import json
 
-# dotenv dosyasını yükle
+# .env dosyasını yükle
 load_dotenv()
 
-# Veritabanı ve E-posta ayarlarını env dosyasından çek
+# Veritabanı ve E-posta ayarlarını .env dosyasından çek
 DB_HOST = os.getenv("DB_HOST")
 DB_USER = os.getenv("DB_USER")
 DB_PASS = os.getenv("DB_PASS")
 DB_NAME = os.getenv("DB_NAME")
 DB_PORT = int(os.getenv("DB_PORT", 3306))
 
-# E-posta ayarlarını .env dosyasından çek
-# EMAIL_PASSWORD değişkenindeki boşlukları kaldırıyoruz
 EMAIL_SENDER_ADDRESS = os.getenv("EMAIL_SENDER")
+# Şifredeki boşlukları kaldır
 EMAIL_SENDER_PASSWORD = os.getenv("EMAIL_PASSWORD", "").replace(" ", "")
 EMAIL_SMTP_SERVER = os.getenv("SMTP_SERVER")
 EMAIL_SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
@@ -63,7 +61,8 @@ def send_email(subject, body, recipient_emails):
     if not recipient_emails:
         print("Hata: E-posta alıcı listesi boş.", file=sys.stderr, flush=True)
         return False
-
+    
+    # E-posta içeriği
     message = MIMEMultipart("alternative")
     message["Subject"] = subject
     message["From"] = EMAIL_SENDER_ADDRESS
@@ -95,19 +94,22 @@ def notify_overdue_step(db_cursor, step):
     project_name = step['project_name']
     step_title = step['title']
 
+    # Proje yöneticisinin e-posta adresini bulma
     db_cursor.execute("SELECT u.email FROM users u JOIN projects p ON u.id = p.project_manager_id WHERE p.project_id = %s", (project_id,))
     project_manager = db_cursor.fetchone()
     manager_email = project_manager['email'] if project_manager else None
 
+    # E-posta alıcı listesini oluşturma
     recipients = []
     if manager_email:
         recipients.append(manager_email)
     recipients.extend(ADMIN_EMAIL_LIST)
     
+    # Kopyaları kaldırarak son alıcı listesini oluşturma
     recipients = list(set(recipients))
 
     if not recipients:
-        print(f"Uyarı: progress_id {progress_id} için e-posta alıcısı bulunamadı.")
+        print(f"Uyarı: progress_id {progress_id} için e-posta alıcısı bulunamadı.", file=sys.stderr, flush=True)
         return False
 
     subject = f"ACİL: Proje Adımı Süresi Doldu: {project_name} - {step_title}"
@@ -139,11 +141,14 @@ def main():
 
     try:
         with connection.cursor() as cursor:
+            # Bugünden önce veya bugünün tarihi olan ve henüz bildirim gönderilmemiş adımları bul.
+            # `completion_notified` koşulu, aynı adım için tekrar tekrar e-posta gönderilmesini engeller.
             sql = """
                 SELECT pp.progress_id, pp.end_date, pp.project_id, pp.title, p.project_name
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
                 WHERE pp.end_date <= CURDATE()
+                AND pp.completion_notified = 0
             """
             cursor.execute(sql)
             steps_to_notify = cursor.fetchall()
@@ -152,27 +157,11 @@ def main():
             for step in steps_to_notify:
                 if notify_overdue_step(cursor, step):
                     notified_count += 1
+                    # Bildirim gönderildikten sonra `completion_notified` flag'ini güncelle
                     cursor.execute("UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s", (step['progress_id'],))
             
             connection.commit()
             print(f"[{datetime.datetime.now()}] Görev tamamlandı. {notified_count} adet tamamlanmamış iş adımı için bildirim gönderildi.")
-            
-            # --- TEST E-POSTASI GÖNDERİMİ ---
-            # .env dosyasından çekilen ayarları kullanarak test e-postası gönderir.
-            print(f"[{datetime.datetime.now()}] .env ayarlarıyla test e-postası gönderiliyor...")
-            test_subject = f"Test E-postası - {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}"
-            test_body = """
-            <html>
-                <body>
-                    <p>Merhaba,</p>
-                    <p>Bu, cron job'un e-posta ayarlarını .env dosyasından başarıyla okuyup okumadığını kontrol etmek için gönderilmiş bir test e-postasıdır.</p>
-                    <p>İyi çalışmalar.</p>
-                </body>
-            </html>
-            """
-            test_recipients = ['mustafaozturkk1907@gmail.com'] # Alıcı adresini değiştirebilirsiniz
-            send_email(test_subject, test_body, test_recipients)
-            print(f"[{datetime.datetime.now()}] Test e-postası gönderim işlemi tamamlandı.")
 
     except Exception as e:
         print(f"Zamanlanmış görevde bir hata oluştu: {e}", file=sys.stderr, flush=True)
