@@ -546,7 +546,6 @@
         <span id="toastMessage">İşlem başarıyla tamamlandı</span>
     </div>
 <script>
-
 // Sayfa yüklendiğinde tüm DOM elemanları hazır olduğunda çalışacak kod bloğu
 document.addEventListener('DOMContentLoaded', () => {
     // --- Yardımcı Fonksiyonlar ---
@@ -579,7 +578,10 @@ document.addEventListener('DOMContentLoaded', () => {
         stepContents.forEach(content => {
             content.classList.remove('active');
         });
-        document.getElementById(`step-${stepNumber}`).classList.add('active');
+        const currentStep = document.getElementById(`step-${stepNumber}`);
+        if (currentStep) {
+            currentStep.classList.add('active');
+        }
     }
 
     /**
@@ -604,12 +606,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedTheme) {
         document.body.setAttribute('data-theme', savedTheme);
     }
-    themeToggle.addEventListener('click', () => {
-        const currentTheme = document.body.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        document.body.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
-    });
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+    }
 
     // Kod inputlarına odaklanma ve geri silme işlevleri
     codeInputs.forEach((input, index) => {
@@ -644,137 +648,156 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Adım Adım İşlem Olay Dinleyicileri ---
     
-    // Adım 1: E-posta Gönder (Şifremi Unuttum Formu)
-    document.getElementById('forgot-password-form').addEventListener('submit', async (e) => {
-        e.preventDefault(); // Bu butona basıldığında varsayılan form gönderme işlemini durdur
-        const email = document.getElementById('email').value;
+    // Adım 1: E-posta Gönder (next-button)
+    const nextButton = document.getElementById('next-button');
+    if (nextButton) {
+        nextButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
 
-        if (!email || !validateEmail(email)) {
-            showToast('Lütfen geçerli bir e-posta adresi girin.', true);
-            return;
-        }
-
-        try {
-            const response = await fetch('/forgot-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
-            });
-            const result = await response.json();
-
-            if (response.ok) {
-                showToast(result.message || 'Doğrulama kodu e-posta adresinize gönderildi.');
-                sentEmail = email; // E-postayı bir sonraki adım için sakla
-                showStep(2);
-            } else {
-                showToast(result.message || 'E-posta gönderimi başarısız.', true);
+            if (!email || !validateEmail(email)) {
+                showToast('Lütfen geçerli bir e-posta adresi girin.', true);
+                return;
             }
-        } catch (error) {
-            console.error('API Hatası:', error);
-            showToast('Sunucuya bağlanılamadı. Lütfen tekrar deneyin.', true);
-        }
-    });
+
+            try {
+                const response = await fetch('/forgot-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    showToast(result.message || 'Doğrulama kodu e-posta adresinize gönderildi.');
+                    sentEmail = email; // E-postayı bir sonraki adım için sakla
+                    showStep(2);
+                } else {
+                    showToast(result.message || 'E-posta gönderimi başarısız.', true);
+                }
+            } catch (error) {
+                console.error('API Hatası:', error);
+                showToast('Sunucuya bağlanılamadı. Lütfen tekrar deneyin.', true);
+            }
+        });
+    }
 
     // Adım 2: Kodu Doğrula
-    document.getElementById('verify-button').addEventListener('click', async () => {
-        let code = '';
-        codeInputs.forEach(input => {
-            code += input.value;
+    const verifyButton = document.getElementById('verify-button');
+    if (verifyButton) {
+        verifyButton.addEventListener('click', async () => {
+            let code = '';
+            codeInputs.forEach(input => {
+                code += input.value;
+            });
+
+            if (code.length !== 6) {
+                showToast('Lütfen 6 haneli doğrulama kodunu eksiksiz girin.', true);
+                return;
+            }
+
+            try {
+                const response = await fetch('/verify-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: sentEmail, code })
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    showToast('Doğrulama başarılı!');
+                    showStep(3);
+                } else {
+                    showToast(result.message || 'Doğrulama kodu yanlış.', true);
+                }
+            } catch (error) {
+                console.error('API Hatası:', error);
+                showToast('Bir hata oluştu, lütfen tekrar deneyin.', true);
+            }
         });
-
-        if (code.length !== 6) {
-            showToast('Lütfen 6 haneli doğrulama kodunu eksiksiz girin.', true);
-            return;
-        }
-
-        try {
-             const response = await fetch('/verify-code', {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({ email: sentEmail, code })
-             });
-             const result = await response.json();
-             if (response.ok) {
-                 showToast('Doğrulama başarılı!');
-                 showStep(3);
-             } else {
-                 showToast(result.message || 'Doğrulama kodu yanlış.', true);
-             }
-        } catch (error) {
-             console.error('API Hatası:', error);
-             showToast('Bir hata oluştu, lütfen tekrar deneyin.', true);
-        }
-    });
+    }
 
     // Kodu tekrar gönder
-    document.getElementById('resend-button').addEventListener('click', async () => {
-        try {
-            const response = await fetch('/forgot-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: sentEmail })
-            });
-            const result = await response.json();
+    const resendButton = document.getElementById('resend-button');
+    if (resendButton) {
+        resendButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/forgot-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: sentEmail })
+                });
+                const result = await response.json();
 
-            if (response.ok) {
-                showToast(result.message || 'Yeni doğrulama kodu e-posta adresinize gönderildi.');
-            } else {
-                showToast(result.message || 'E-posta gönderimi başarısız.', true);
+                if (response.ok) {
+                    showToast(result.message || 'Yeni doğrulama kodu e-posta adresinize gönderildi.');
+                } else {
+                    showToast(result.message || 'E-posta gönderimi başarısız.', true);
+                }
+            } catch (error) {
+                console.error('API Hatası:', error);
+                showToast('Sunucuya bağlanılamadı. Lütfen tekrar deneyin.', true);
             }
-        } catch (error) {
-            console.error('API Hatası:', error);
-            showToast('Sunucuya bağlanılamadı. Lütfen tekrar deneyin.', true);
-        }
-    });
+        });
+    }
 
-    // Adım 3: Şifreyi Kaydet
-    document.getElementById('reset-password-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const code = Array.from(document.querySelectorAll('.code-char')).map(input => input.value).join('');
-        const newPassword = document.getElementById('new-password').value;
-        const confirmPassword = document.getElementById('confirm-password').value;
+    // Adım 3: Şifreyi Kaydet (save-button)
+    const saveButton = document.getElementById('save-button');
+    if (saveButton) {
+        saveButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const code = Array.from(document.querySelectorAll('.code-char')).map(input => input.value).join('');
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
 
-        if (newPassword !== confirmPassword) {
-            showToast('Şifreler birbiriyle eşleşmiyor.', true);
-            return;
-        }
-        
-        if (newPassword.length < 8) {
-            showToast('Şifre en az 8 karakter olmalıdır.', true);
-            return;
-        }
-
-        try {
-            const response = await fetch('/reset-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: sentEmail, code, new_password: newPassword })
-            });
-            const result = await response.json();
-
-            if (response.ok) {
-                showToast(result.message || 'Şifreniz başarıyla güncellendi.');
-                showStep(4);
-            } else {
-                showToast(result.message || 'Şifre güncelleme başarısız oldu.', true);
+            if (newPassword !== confirmPassword) {
+                showToast('Şifreler birbiriyle eşleşmiyor.', true);
+                return;
             }
-        } catch (error) {
-            console.error('API Hatası:', error);
-            showToast('Bir hata oluştu, lütfen tekrar deneyin.', true);
-        }
-    });
-    
+            
+            if (newPassword.length < 8) {
+                showToast('Şifre en az 8 karakter olmalıdır.', true);
+                return;
+            }
+
+            try {
+                const response = await fetch('/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: sentEmail, code, new_password: newPassword })
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    showToast(result.message || 'Şifreniz başarıyla güncellendi.');
+                    showStep(4);
+                } else {
+                    showToast(result.message || 'Şifre güncelleme başarısız oldu.', true);
+                }
+            } catch (error) {
+                console.error('API Hatası:', error);
+                showToast('Bir hata oluştu, lütfen tekrar deneyin.', true);
+            }
+        });
+    }
+
     // Geri dön butonları
-    document.getElementById('back-to-code').addEventListener('click', (e) => {
-        e.preventDefault();
-        showStep(2);
-    });
+    const backToCodeButton = document.getElementById('back-to-code');
+    if (backToCodeButton) {
+        backToCodeButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            showStep(2);
+        });
+    }
 
     // Adım 4: Giriş sayfasına yönlendirme
-    document.getElementById('login-button').addEventListener('click', () => {
-        window.location.href = 'login.html';
-    });
+    const loginButton = document.getElementById('login-button');
+    if (loginButton) {
+        loginButton.addEventListener('click', () => {
+            window.location.href = 'login.html';
+        });
+    }
 });
+
 </script>
 </body>
 </html>
