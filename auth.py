@@ -73,7 +73,7 @@ def send_email(subject, code, to_email):
                     </div>
                     
                     <div style="text-align: center;">
-                        <a href="https://www.serelektrik.com/sifre-sifirla" class="button" style="display: inline-block; background: linear-gradient(to right, #005c9d, #0980d3); color: white; padding: 14px 35px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; margin: 20px 0; box-shadow: 0 4px 15px rgba(9, 128, 211, 0.25);">Şifremi Sıfırla</a>
+                        <a href="https://www.serelektrik.com/sifremi_unuttum.html" class="button" style="display: inline-block; background: linear-gradient(to right, #005c9d, #0980d3); color: white; padding: 14px 35px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; margin: 20px 0; box-shadow: 0 4px 15px rgba(9, 128, 211, 0.25);">Şifremi Sıfırla</a>
                     </div>
                     
                     <div class="note" style="background-color: #fff9e6; border-left: 4px solid #ffd700; padding: 15px; border-radius: 0 8px 8px 0; margin: 25px 0; font-size: 14px;">
