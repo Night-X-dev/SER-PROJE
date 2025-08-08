@@ -218,15 +218,19 @@ def get_db_connection():
 from auth import handle_forgot_password, handle_verify_code, handle_reset_password
 @app.route('/forgot-password', methods=['POST'])
 def forgot_password_route():
-     return handle_forgot_password()
+    """Kullanıcının e-posta adresine doğrulama kodu gönderir."""
+    return handle_forgot_password()
 
 @app.route('/verify-code', methods=['POST'])
 def verify_code_route():
-     return handle_verify_code()
+    """Gönderilen doğrulama kodunu kontrol eder."""
+    return handle_verify_code()
 
 @app.route('/reset-password', methods=['POST'])
 def reset_password_route():
-     return handle_reset_password()
+    """Doğrulama başarılı ise yeni şifreyi ayarlar."""
+    return handle_reset_password()
+
 def format_datetime_for_email(dt_str):
     """
     Tarih/saat stringini e-posta için daha okunaklı bir formata dönüştürür.
