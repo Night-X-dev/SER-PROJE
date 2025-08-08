@@ -182,6 +182,24 @@ def main():
             
             connection.commit()
             print(f"[{datetime.datetime.now()}] Görev tamamlandı. {notified_count} adet tamamlanmamış iş adımı için bildirim gönderildi.")
+            
+            # --- TEST E-POSTASI GÖNDERİMİ ---
+            print(f"[{datetime.datetime.now()}] Test e-postası gönderiliyor...")
+            test_subject = "Cron Job Test E-postası"
+            test_body = """
+            <html>
+                <body>
+                    <p>Merhaba,</p>
+                    <p>Bu, cron job'un e-posta gönderme ayarlarını kontrol etmek için gönderilmiş otomatik bir test e-postasıdır.</p>
+                    <p>Bu e-postayı aldıysanız, ayarlarınız başarılı bir şekilde çalışıyor demektir.</p>
+                    <p>İyi çalışmalar.</p>
+                </body>
+            </html>
+            """
+            # Buradaki e-posta adresini kendi test adresinizle değiştirmeyi unutmayın.
+            test_recipients = ['mustafaozturkk1907@gmail.com']
+            send_email(test_subject, test_body, test_recipients)
+            print(f"[{datetime.datetime.now()}] Test e-postası gönderim işlemi tamamlandı.")
 
     except Exception as e:
         print(f"Zamanlanmış görevde bir hata oluştu: {e}", file=sys.stderr)
