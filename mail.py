@@ -50,7 +50,7 @@ def get_db_connection():
                                port=DB_PORT,
                                cursorclass=pymysql.cursors.DictCursor)
     except Exception as e:
-        print(f"Hata: Veritabanına bağlanılamadı. Hata detayları: {e}", file=sys.stderr)
+        print(f"Hata: Veritabanına bağlanılamadı. Hata detayları: {e}", file=sys.stderr, flush=True)
         return None
 
 def send_email(subject, body, recipient_emails):
@@ -58,55 +58,44 @@ def send_email(subject, body, recipient_emails):
     Belirtilen alıcılara e-posta gönderir.
     """
     if not recipient_emails:
-        print("Hata: E-posta alıcı listesi boş.", file=sys.stderr)
+        print("Hata: E-posta alıcı listesi boş.", file=sys.stderr, flush=True)
         return False
 
     message = MIMEMultipart("alternative")
     message["Subject"] = subject
     message["From"] = EMAIL_SENDER_ADDRESS
     message["To"] = ", ".join(recipient_emails)
+    message.attach(MIMEText(body, "html"))
 
-    html_part = MIMEText(body, "html")
-    message.attach(html_part)
-
-    server = None
     try:
-        print("SMTP nesnesi oluşturuluyor...")
-        server = smtplib.SMTP()
-        server.set_debuglevel(1)  # Hata ayıklama çıktısını etkinleştirme
-        
-        # Bağlantı kurma
-        print(f"SMTP sunucusuna bağlanılıyor: {EMAIL_SMTP_SERVER}:{EMAIL_SMTP_PORT}")
-        server.connect(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT)
-        
-        # TLS'ye yükseltme
-        print("TLS'ye yükseltme başlatılıyor...")
-        server.starttls(context=ssl.create_default_context())
-        
-        # Giriş yapma
-        print("Giriş yapılıyor...")
-        server.login(EMAIL_SENDER_ADDRESS, EMAIL_SENDER_PASSWORD)
-        
-        # E-posta gönderme
-        print(f"E-posta gönderiliyor: Konu='{subject}', Alıcılar={recipient_emails}")
-        server.sendmail(EMAIL_SENDER_ADDRESS, recipient_emails, message.as_string())
-        
-        print(f"Başarılı: E-posta '{subject}' şu alıcılara gönderildi: {recipient_emails}")
+        # 'with' ifadesi ile bağlantının otomatik olarak kapanmasını sağla
+        with smtplib.SMTP(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT) as server:
+            server.set_debuglevel(1)  # Hata ayıklama çıktısını etkinleştirme
+            print("SMTP bağlantısı başlatıldı. TLS'ye yükseltiliyor...", file=sys.stdout, flush=True)
+            
+            # TLS'ye yükseltme
+            server.starttls(context=ssl.create_default_context())
+            
+            print("TLS başarılı. Giriş yapılıyor...", file=sys.stdout, flush=True)
+            
+            try:
+                # Giriş yapma
+                server.login(EMAIL_SENDER_ADDRESS, EMAIL_SENDER_PASSWORD)
+            except smtplib.SMTPAuthenticationError as e:
+                print(f"Hata: Kimlik doğrulama başarısız. Şifre (uygulama şifresi) veya kullanıcı adı yanlış olabilir. Hata: {e}", file=sys.stderr, flush=True)
+                return False
+            
+            print("Giriş başarılı. E-posta gönderiliyor...", file=sys.stdout, flush=True)
+            server.sendmail(EMAIL_SENDER_ADDRESS, recipient_emails, message.as_string())
+            print(f"Başarılı: E-posta '{subject}' şu alıcılara gönderildi: {recipient_emails}", file=sys.stdout, flush=True)
         return True
     except smtplib.SMTPException as e:
-        print(f"Hata: SMTP sunucusuna bağlanırken veya işlem sırasında bir sorun oluştu. Hata tipi: {type(e).__name__}, Detay: {e}", file=sys.stderr)
+        print(f"Hata: SMTP sunucusuna bağlanırken veya iletişimde sorun oluştu. Hata: {e}", file=sys.stderr, flush=True)
         return False
     except Exception as e:
-        print(f"Hata: E-posta gönderilemedi. Hata tipi: {type(e).__name__}, Detay: {e}", file=sys.stderr)
+        print(f"Hata: Genel bir hata oluştu. Detay: {e}", file=sys.stderr, flush=True)
+        traceback.print_exc(file=sys.stderr)
         return False
-    finally:
-        if server:
-            try:
-                print("SMTP bağlantısı kapatılıyor...")
-                server.quit()
-            except Exception as e:
-                print(f"Uyarı: Bağlantı kapatılırken bir hata oluştu: {e}", file=sys.stderr)
-
 
 def notify_overdue_step(db_cursor, step):
     """Süresi geçmiş bir iş adımı için e-posta bildirimi gönderir."""
@@ -202,8 +191,8 @@ def main():
             print(f"[{datetime.datetime.now()}] Test e-postası gönderim işlemi tamamlandı.")
 
     except Exception as e:
-        print(f"Zamanlanmış görevde bir hata oluştu: {e}", file=sys.stderr)
-        traceback.print_exc()
+        print(f"Zamanlanmış görevde bir hata oluştu: {e}", file=sys.stderr, flush=True)
+        traceback.print_exc(file=sys.stderr)
     finally:
         if connection:
             connection.close()
