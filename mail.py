@@ -17,20 +17,21 @@ import datetime
 import traceback
 import json
 
-# dotenv dosyasını yükle
+# dotenv dosyasını yükle (veritabanı ayarları için hala gerekli olabilir)
 load_dotenv()
 
-# Veritabanı ve E-posta ayarlarını env dosyasından çek
+# Veritabanı ayarlarını env dosyasından çek
 DB_HOST = os.getenv("DB_HOST")
 DB_USER = os.getenv("DB_USER")
 DB_PASS = os.getenv("DB_PASS")
 DB_NAME = os.getenv("DB_NAME")
 DB_PORT = int(os.getenv("DB_PORT", 3306))
 
-EMAIL_SENDER_ADDRESS = os.getenv("EMAIL_SENDER_ADDRESS")
-EMAIL_SENDER_PASSWORD = os.getenv("EMAIL_SENDER_PASSWORD")
-EMAIL_SMTP_SERVER = os.getenv("EMAIL_SMTP_SERVER")
-EMAIL_SMTP_PORT = int(os.getenv("EMAIL_SMTP_PORT", 587))
+# E-posta ayarlarını manuel olarak yazıldı
+EMAIL_SENDER_ADDRESS = "serelektrikotomasyon@gmail.com"
+EMAIL_SENDER_PASSWORD = "yqsjayixagvesrct"  # Boşluklar kaldırıldı
+EMAIL_SMTP_SERVER = "smtp.gmail.com"
+EMAIL_SMTP_PORT = 587
 ADMIN_EMAIL_LIST_JSON = os.getenv("ADMIN_EMAIL_LIST_JSON")
 
 # Eğer ADMIN_EMAIL_LIST_JSON mevcutsa, JSON olarak yükle. Yoksa boş liste kullan.
@@ -55,7 +56,6 @@ def get_db_connection():
 def send_email(subject, body, recipient_emails):
     """
     Belirtilen alıcılara e-posta gönderir.
-    Bu versiyon, SMTP bağlantısını açıkça kurarak `please run connect() first` hatasını çözer.
     """
     if not recipient_emails:
         print("Hata: E-posta alıcı listesi boş.", file=sys.stderr)
@@ -155,6 +155,7 @@ def notify_overdue_step(db_cursor, step):
 def main():
     """Ana fonksiyon - bitiş tarihi geçmiş veya bugünün tarihi olan adımları kontrol eder ve bildirim gönderir."""
     print(f"[{datetime.datetime.now()}] Zamanlanmış görev başlatıldı...")
+        
     connection = get_db_connection()
     if not connection:
         return
@@ -181,23 +182,6 @@ def main():
             
             connection.commit()
             print(f"[{datetime.datetime.now()}] Görev tamamlandı. {notified_count} adet tamamlanmamış iş adımı için bildirim gönderildi.")
-
-            # Test amaçlı e-posta gönderimi
-            print(f"[{datetime.datetime.now()}] Test e-postası gönderiliyor...")
-            test_subject = "Cron Job Test E-postası"
-            test_body = """
-            <html>
-                <body>
-                    <p>Merhaba,</p>
-                    <p>Bu, cron job'un e-posta gönderme bağlantısını test etmek için gönderilmiş otomatik bir e-postadır.</p>
-                    <p>Bu e-postayı almanız, SMTP ayarlarınızın doğru çalıştığı anlamına gelir.</p>
-                    <p>İyi çalışmalar.</p>
-                </body>
-            </html>
-            """
-            test_recipients = ['mustafaozturkk1907@gmail.com']
-            send_email(test_subject, test_body, test_recipients)
-            print(f"[{datetime.datetime.now()}] Test e-postası gönderim işlemi tamamlandı.")
 
     except Exception as e:
         print(f"Zamanlanmış görevde bir hata oluştu: {e}", file=sys.stderr)
