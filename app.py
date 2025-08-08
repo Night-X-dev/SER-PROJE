@@ -19,7 +19,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import threading
 import time
-from auth import handle_forgot_password, handle_reset_password
 
 load_dotenv()
 
@@ -48,14 +47,6 @@ def serve_login_page():
 def serve_forgot_password_page():
     """Directs /sifremi_unuttum.html requests to the sifremi_unuttum.html page."""
     return render_template('sifremi_unuttum.html')
-
-@app.route('/forgot-password', methods=['POST'])
-def forgot_password():
-    return handle_forgot_password()
-
-@app.route('/reset-password', methods=['POST'])
-def reset_password():
-    return handle_reset_password()
 @app.route('/logout')
 def logout():
     """
