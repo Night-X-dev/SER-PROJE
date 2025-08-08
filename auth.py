@@ -79,53 +79,51 @@ def send_email(subject, body, to_email):
 # Şifre sıfırlama akışı için ana rotalar
 def handle_forgot_password():
     """
-    Kullanıcıdan e-posta alıp, doğrulama kodu oluşturup e-posta ile gönderen API rotası.
+    Şifremi unuttum isteğini işler, doğrulama kodu oluşturur ve e-posta gönderir.
     """
-    if request.method != 'POST':
-        return jsonify({'success': False, 'message': 'Invalid request method'}), 405
-
-    data = request.json
+    data = request.get_json()
     email = data.get('email')
 
     if not email:
-        return jsonify({'success': False, 'message': 'E-posta adresi gerekli.'}), 400
+        return jsonify({'message': 'E-posta adresi gerekli.'}), 400
 
+    # Veritabanında e-posta adresinin varlığını kontrol et
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # E-posta adresinin veritabanında var olup olmadığını kontrol et
             cursor.execute("SELECT user_id FROM users WHERE email = %s", (email,))
             user = cursor.fetchone()
 
             if not user:
-                return jsonify({'success': False, 'message': 'Bu e-posta adresi kayıtlı değil.'}), 404
+                return jsonify({'message': 'Bu e-posta adresine kayıtlı bir kullanıcı bulunamadı.'}), 404
 
-            user_id = user['user_id']
             # 6 haneli rastgele bir doğrulama kodu oluştur
             verification_code = ''.join(random.choices(string.digits, k=6))
-            # Kodun geçerlilik süresini (10 dakika) ayarla
-            expiry_time = datetime.datetime.now() + datetime.timedelta(minutes=10)
+            # Kodun geçerlilik süresini 15 dakika olarak ayarla
+            expires_at = datetime.datetime.now() + datetime.timedelta(minutes=15)
 
-            # Kod ve son kullanma tarihini veritabanına kaydet
+            # Doğrulama kodunu ve süresini veritabanına kaydet
             cursor.execute(
-                "UPDATE users SET verification_code = %s, verification_code_expires_at = %s WHERE user_id = %s",
-                (verification_code, expiry_time, user_id)
+                "UPDATE users SET verification_code = %s, verification_code_expires_at = %s WHERE email = %s",
+                (verification_code, expires_at, email)
             )
             connection.commit()
 
-            # Doğrulama kodunu e-posta ile gönder
-            email_sent = send_email("Şifre Sıfırlama Kodunuz", verification_code, email)
-            if email_sent:
-                session['reset_email'] = email # E-posta adresini session'da sakla
-                return jsonify({'success': True, 'message': 'Doğrulama kodu e-posta adresinize gönderildi.'}), 200
-            else:
-                return jsonify({'success': False, 'message': 'E-posta gönderimi başarısız oldu.'}), 500
+            # Kullanıcıya e-posta gönder
+            subject = "Şifre Sıfırlama Kodunuz"
+            body = f"Şifrenizi sıfırlamak için doğrulama kodunuz: {verification_code}. Bu kod 15 dakika içinde geçerliliğini yitirecektir."
+            send_email(subject, body, email)
+
+            # Session'a e-postayı kaydet (İleriki adımlarda kullanmak için)
+            session['reset_email'] = email
+
+            return jsonify({'message': 'Şifre sıfırlama kodu e-posta adresinize gönderildi.'}), 200
 
     except Exception as e:
-        print(f"Şifre sıfırlama talebi hatası: {e}")
+        print(f"Şifre sıfırlama kodu gönderme hatası: {e}")
         traceback.print_exc()
-        return jsonify({'success': False, 'message': 'Sunucu hatası'}), 500
+        return jsonify({'message': 'Bir hata oluştu, lütfen tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
@@ -146,25 +144,15 @@ def reset_password_route():
     return reset_password_handler()
 def handle_reset_password():
     """
-    Kullanıcıdan doğrulama kodu ve yeni şifreleri alıp, şifreyi güncelleyen API rotası.
+    Doğrulama kodunu ve yeni şifreyi alarak şifreyi sıfırlar.
     """
-    if request.method != 'POST':
-        return jsonify({'success': False, 'message': 'Invalid request method'}), 405
-
-    data = request.json
-    email = session.get('reset_email')
+    data = request.get_json()
+    email = session.get('reset_email') # Session'dan e-postayı al
     verification_code = data.get('code')
     new_password = data.get('new_password')
-    confirm_password = data.get('confirm_password')
 
-    if not all([email, verification_code, new_password, confirm_password]):
-        return jsonify({'success': False, 'message': 'Tüm alanları doldurmanız gerekiyor.'}), 400
-
-    if new_password != confirm_password:
-        return jsonify({'success': False, 'message': 'Şifreler birbiriyle eşleşmiyor.'}), 400
-    
-    if len(new_password) < 8:
-        return jsonify({'success': False, 'message': 'Şifre en az 8 karakter olmalıdır.'}), 400
+    if not email or not verification_code or not new_password:
+        return jsonify({'message': 'Eksik bilgi.'}), 400
 
     connection = None
     try:
@@ -178,7 +166,7 @@ def handle_reset_password():
             user = cursor.fetchone()
 
             if not user or datetime.datetime.now() > user['verification_code_expires_at']:
-                return jsonify({'success': False, 'message': 'Geçersiz veya süresi dolmuş doğrulama kodu.'}), 400
+                return jsonify({'message': 'Geçersiz veya süresi dolmuş doğrulama kodu.'}), 400
 
             # Şifreyi hashle ve güncelle
             hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -190,12 +178,12 @@ def handle_reset_password():
             connection.commit()
 
             session.pop('reset_email', None) # Session'daki e-postayı temizle
-            return jsonify({'success': True, 'message': 'Şifreniz başarıyla güncellendi.'}), 200
+            return jsonify({'message': 'Şifreniz başarıyla güncellendi.'}), 200
 
     except Exception as e:
         print(f"Şifre sıfırlama hatası: {e}")
         traceback.print_exc()
-        return jsonify({'success': False, 'message': 'Sunucu hatası'}), 500
+        return jsonify({'message': 'Bir hata oluştu, lütfen tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()

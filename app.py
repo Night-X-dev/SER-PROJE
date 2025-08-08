@@ -47,6 +47,15 @@ def serve_login_page():
 def serve_forgot_password_page():
     """Directs /sifremi_unuttum.html requests to the sifremi_unuttum.html page."""
     return render_template('sifremi_unuttum.html')
+from auth import handle_forgot_password, handle_reset_password
+
+@app.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    return handle_forgot_password()
+
+@app.route('/reset-password', methods=['POST'])
+def reset_password():
+    return handle_reset_password()
 @app.route('/logout')
 def logout():
     """
