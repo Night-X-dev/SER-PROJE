@@ -30,7 +30,7 @@ DB_PORT = int(os.getenv("DB_PORT", 3306))
 EMAIL_SENDER_ADDRESS = os.getenv("EMAIL_SENDER_ADDRESS")
 EMAIL_SENDER_PASSWORD = os.getenv("EMAIL_SENDER_PASSWORD")
 EMAIL_SMTP_SERVER = os.getenv("EMAIL_SMTP_SERVER")
-EMAIL_SMTP_PORT = int(os.getenv("EMAIL_SMTP_PORT", 587)) # app.py'deki gibi 587 portu kullanıldı.
+EMAIL_SMTP_PORT = int(os.getenv("EMAIL_SMTP_PORT", 587))
 ADMIN_EMAIL_LIST_JSON = os.getenv("ADMIN_EMAIL_LIST_JSON")
 
 # Eğer ADMIN_EMAIL_LIST_JSON mevcutsa, JSON olarak yükle. Yoksa boş liste kullan.
@@ -71,7 +71,6 @@ def send_email(subject, body, recipient_emails):
 
     try:
         context = ssl.create_default_context()
-        # app.py'deki gibi SMTP_SSL kullanılarak daha kararlı bir bağlantı kuruluyor.
         with smtplib.SMTP_SSL(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT, context=context) as server:
             server.login(EMAIL_SENDER_ADDRESS, EMAIL_SENDER_PASSWORD)
             server.sendmail(EMAIL_SENDER_ADDRESS, recipient_emails, message.as_string())
@@ -157,6 +156,23 @@ def main():
             
             connection.commit()
             print(f"[{datetime.datetime.now()}] Görev tamamlandı. {notified_count} adet tamamlanmamış iş adımı için bildirim gönderildi.")
+
+            # Test amaçlı e-posta gönderimi
+            print(f"[{datetime.datetime.now()}] Test e-postası gönderiliyor...")
+            test_subject = "Cron Job Test E-postası"
+            test_body = """
+            <html>
+                <body>
+                    <p>Merhaba,</p>
+                    <p>Bu, cron job'un e-posta gönderme bağlantısını test etmek için gönderilmiş otomatik bir e-postadır.</p>
+                    <p>Bu e-postayı almanız, SMTP ayarlarınızın doğru çalıştığı anlamına gelir.</p>
+                    <p>İyi çalışmalar.</p>
+                </body>
+            </html>
+            """
+            test_recipients = ['mustafaozturkk1907@gmail.com']
+            send_email(test_subject, test_body, test_recipients)
+            print(f"[{datetime.datetime.now()}] Test e-postası gönderim işlemi tamamlandı.")
 
     except Exception as e:
         print(f"Zamanlanmış görevde bir hata oluştu: {e}", file=sys.stderr)
