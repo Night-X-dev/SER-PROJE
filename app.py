@@ -47,20 +47,7 @@ def serve_login_page():
 def serve_forgot_password_page():
     """Directs /sifremi_unuttum.html requests to the sifremi_unuttum.html page."""
     return render_template('sifremi_unuttum.html')
-@app.route('/forgot-password', methods=['POST'])
-def handle_forgot_password_request():
-    """
-    Kullanıcının şifresini unuttuğu durumu işlemek için API rota.
-    `auth.py` içindeki mantığı çağırır.
-    """
-    return forgot_password_request()
-@app.route('/reset-password', methods=['POST'])
-def handle_reset_password_request():
-    """
-    Şifre sıfırlama doğrulama kodunu ve yeni şifreyi işlemek için API rota.
-    `auth.py` içindeki mantığı çağırır.
-    """
-    return reset_password_request()
+
 @app.route('/logout')
 def logout():
     """
