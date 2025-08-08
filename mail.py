@@ -86,8 +86,8 @@ def notify_overdue_step(db_cursor, step):
     step_title = step['title']
 
     # Proje yöneticisi e-postasını bul
-    # 'u.user_id' hatası, 'u.id' olarak düzeltildi.
-    db_cursor.execute("SELECT u.email FROM users u JOIN projects p ON u.id = p.manager_id WHERE p.project_id = %s", (project_id,))
+    # `projects` tablosundaki sütun adı 'project_manager_id' olarak düzeltildi.
+    db_cursor.execute("SELECT u.email FROM users u JOIN projects p ON u.id = p.project_manager_id WHERE p.project_id = %s", (project_id,))
     project_manager = db_cursor.fetchone()
     manager_email = project_manager['email'] if project_manager else None
 
