@@ -17,21 +17,23 @@ import datetime
 import traceback
 import json
 
-# dotenv dosyasını yükle (veritabanı ayarları için hala gerekli olabilir)
+# dotenv dosyasını yükle
 load_dotenv()
 
-# Veritabanı ayarlarını env dosyasından çek
+# Veritabanı ve E-posta ayarlarını env dosyasından çek
 DB_HOST = os.getenv("DB_HOST")
 DB_USER = os.getenv("DB_USER")
 DB_PASS = os.getenv("DB_PASS")
 DB_NAME = os.getenv("DB_NAME")
 DB_PORT = int(os.getenv("DB_PORT", 3306))
 
-# E-posta ayarlarını manuel olarak yazıldı
-EMAIL_SENDER_ADDRESS = "serelektrikotomasyon@gmail.com"
-EMAIL_SENDER_PASSWORD = "yqsjayixagvesrct"  # Boşluklar kaldırıldı
-EMAIL_SMTP_SERVER = "smtp.gmail.com"
-EMAIL_SMTP_PORT = 587
+# E-posta ayarlarını .env dosyasından çek
+# EMAIL_PASSWORD değişkenindeki boşlukları kaldırıyoruz
+EMAIL_SENDER_ADDRESS = os.getenv("EMAIL_SENDER")
+EMAIL_SENDER_PASSWORD = os.getenv("EMAIL_PASSWORD", "").replace(" ", "")
+EMAIL_SMTP_SERVER = os.getenv("SMTP_SERVER")
+EMAIL_SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
+
 ADMIN_EMAIL_LIST_JSON = os.getenv("ADMIN_EMAIL_LIST_JSON")
 
 # Eğer ADMIN_EMAIL_LIST_JSON mevcutsa, JSON olarak yükle. Yoksa boş liste kullan.
@@ -39,6 +41,7 @@ try:
     ADMIN_EMAIL_LIST = json.loads(ADMIN_EMAIL_LIST_JSON)
 except (json.JSONDecodeError, TypeError):
     ADMIN_EMAIL_LIST = []
+    print("Uyarı: ADMIN_EMAIL_LIST_JSON .env dosyasında bulunamadı veya hatalı formatta.", file=sys.stderr, flush=True)
 
 def get_db_connection():
     """Veritabanı bağlantısı kurar ve döndürür."""
@@ -68,27 +71,15 @@ def send_email(subject, body, recipient_emails):
     message.attach(MIMEText(body, "html"))
 
     try:
-        # 'with' ifadesi ile bağlantının otomatik olarak kapanmasını sağla
         with smtplib.SMTP(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT) as server:
-            server.set_debuglevel(1)  # Hata ayıklama çıktısını etkinleştirme
-            print("SMTP bağlantısı başlatıldı. TLS'ye yükseltiliyor...", file=sys.stdout, flush=True)
-            
-            # TLS'ye yükseltme
             server.starttls(context=ssl.create_default_context())
-            
-            print("TLS başarılı. Giriş yapılıyor...", file=sys.stdout, flush=True)
-            
-            try:
-                # Giriş yapma
-                server.login(EMAIL_SENDER_ADDRESS, EMAIL_SENDER_PASSWORD)
-            except smtplib.SMTPAuthenticationError as e:
-                print(f"Hata: Kimlik doğrulama başarısız. Şifre (uygulama şifresi) veya kullanıcı adı yanlış olabilir. Hata: {e}", file=sys.stderr, flush=True)
-                return False
-            
-            print("Giriş başarılı. E-posta gönderiliyor...", file=sys.stdout, flush=True)
+            server.login(EMAIL_SENDER_ADDRESS, EMAIL_SENDER_PASSWORD)
             server.sendmail(EMAIL_SENDER_ADDRESS, recipient_emails, message.as_string())
-            print(f"Başarılı: E-posta '{subject}' şu alıcılara gönderildi: {recipient_emails}", file=sys.stdout, flush=True)
+        print(f"Başarılı: E-posta '{subject}' şu alıcılara gönderildi: {recipient_emails}", file=sys.stdout, flush=True)
         return True
+    except smtplib.SMTPAuthenticationError as e:
+        print(f"Hata: Kimlik doğrulama başarısız. Şifre (uygulama şifresi) veya kullanıcı adı yanlış olabilir. Hata: {e}", file=sys.stderr, flush=True)
+        return False
     except smtplib.SMTPException as e:
         print(f"Hata: SMTP sunucusuna bağlanırken veya iletişimde sorun oluştu. Hata: {e}", file=sys.stderr, flush=True)
         return False
@@ -104,18 +95,15 @@ def notify_overdue_step(db_cursor, step):
     project_name = step['project_name']
     step_title = step['title']
 
-    # Proje yöneticisi e-postasını bul
     db_cursor.execute("SELECT u.email FROM users u JOIN projects p ON u.id = p.project_manager_id WHERE p.project_id = %s", (project_id,))
     project_manager = db_cursor.fetchone()
     manager_email = project_manager['email'] if project_manager else None
 
-    # Bildirim e-postası alıcı listesi
     recipients = []
     if manager_email:
         recipients.append(manager_email)
     recipients.extend(ADMIN_EMAIL_LIST)
     
-    # Sadece benzersiz e-postaları al
     recipients = list(set(recipients))
 
     if not recipients:
@@ -151,7 +139,6 @@ def main():
 
     try:
         with connection.cursor() as cursor:
-            # Bugünden önce veya bugünün tarihi olan adımları bul ve daha önce bildirim gönderilmemiş olanları filtrele.
             sql = """
                 SELECT pp.progress_id, pp.end_date, pp.project_id, pp.title, p.project_name
                 FROM project_progress pp
@@ -166,27 +153,25 @@ def main():
             for step in steps_to_notify:
                 if notify_overdue_step(cursor, step):
                     notified_count += 1
-                    # Bildirim gönderildikten sonra `completion_notified` flag'ini güncelle
                     cursor.execute("UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s", (step['progress_id'],))
             
             connection.commit()
             print(f"[{datetime.datetime.now()}] Görev tamamlandı. {notified_count} adet tamamlanmamış iş adımı için bildirim gönderildi.")
             
             # --- TEST E-POSTASI GÖNDERİMİ ---
-            print(f"[{datetime.datetime.now()}] Test e-postası gönderiliyor...")
-            test_subject = "Cron Job Test E-postası"
+            # .env dosyasından çekilen ayarları kullanarak test e-postası gönderir.
+            print(f"[{datetime.datetime.now()}] .env ayarlarıyla test e-postası gönderiliyor...")
+            test_subject = f"Test E-postası - {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}"
             test_body = """
             <html>
                 <body>
                     <p>Merhaba,</p>
-                    <p>Bu, cron job'un e-posta gönderme ayarlarını kontrol etmek için gönderilmiş otomatik bir test e-postasıdır.</p>
-                    <p>Bu e-postayı aldıysanız, ayarlarınız başarılı bir şekilde çalışıyor demektir.</p>
+                    <p>Bu, cron job'un e-posta ayarlarını .env dosyasından başarıyla okuyup okumadığını kontrol etmek için gönderilmiş bir test e-postasıdır.</p>
                     <p>İyi çalışmalar.</p>
                 </body>
             </html>
             """
-            # Buradaki e-posta adresini kendi test adresinizle değiştirmeyi unutmayın.
-            test_recipients = ['mustafaozturkk1907@gmail.com']
+            test_recipients = ['mustafaozturkk1907@gmail.com'] # Alıcı adresini değiştirebilirsiniz
             send_email(test_subject, test_body, test_recipients)
             print(f"[{datetime.datetime.now()}] Test e-postası gönderim işlemi tamamlandı.")
 
