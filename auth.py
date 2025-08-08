@@ -187,3 +187,41 @@ def handle_reset_password():
     finally:
         if connection:
             connection.close()
+def handle_verify_code():
+    """
+    Kullanıcının girdiği doğrulama kodunu kontrol eder.
+    Kod doğru ve süresi geçmemişse 200 döner, değilse hata verir.
+    """
+    data = request.get_json()
+    email = session.get('reset_email')
+    code = data.get('code')
+
+    if not email or not code:
+        return jsonify({'message': 'Eksik bilgi.'}), 400
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT verification_code, verification_code_expires_at FROM users WHERE email = %s",
+                (email,)
+            )
+            user = cursor.fetchone()
+            if not user:
+                return jsonify({'message': 'Kullanıcı bulunamadı.'}), 404
+
+            if user['verification_code'] != code:
+                return jsonify({'message': 'Kod hatalı.'}), 400
+
+            if not user['verification_code_expires_at'] or datetime.datetime.now() > user['verification_code_expires_at']:
+                return jsonify({'message': 'Kodun süresi dolmuş.'}), 400
+
+            return jsonify({'message': 'Kod doğrulandı.'}), 200
+
+    except Exception as e:
+        print(f"Kod doğrulama hatası: {e}")
+        return jsonify({'message': 'Bir hata oluştu.'}), 500
+    finally:
+        if connection:
+            connection.close()
