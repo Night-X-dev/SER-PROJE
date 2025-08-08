@@ -148,7 +148,6 @@ def main():
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
                 WHERE pp.end_date <= CURDATE()
-                AND pp.completion_notified = 0
             """
             cursor.execute(sql)
             steps_to_notify = cursor.fetchall()
