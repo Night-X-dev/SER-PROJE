@@ -55,7 +55,7 @@ def get_db_connection():
 def send_email(subject, body, recipient_emails):
     """
     Belirtilen alıcılara e-posta gönderir.
-    Bu versiyon, app.py'deki başarılı olan SMTP_SSL yöntemini kullanır.
+    Bu versiyon, SMTP_SSL yerine standart SMTP + TLS yöntemini kullanır.
     """
     if not recipient_emails:
         print("Hata: E-posta alıcı listesi boş.", file=sys.stderr)
@@ -70,12 +70,17 @@ def send_email(subject, body, recipient_emails):
     message.attach(html_part)
 
     try:
-        context = ssl.create_default_context()
-        with smtplib.SMTP_SSL(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT, context=context) as server:
-            server.login(EMAIL_SENDER_ADDRESS, EMAIL_SENDER_PASSWORD)
-            server.sendmail(EMAIL_SENDER_ADDRESS, recipient_emails, message.as_string())
-            print(f"Başarılı: E-posta '{subject}' şu alıcılara gönderildi: {recipient_emails}")
-            return True
+        # Standart SMTP bağlantısı oluşturma
+        server = smtplib.SMTP(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT)
+        server.set_debuglevel(1)  # Hata ayıklama çıktısını etkinleştirme
+        server.ehlo()
+        server.starttls(context=ssl.create_default_context())
+        server.ehlo()
+        server.login(EMAIL_SENDER_ADDRESS, EMAIL_SENDER_PASSWORD)
+        server.sendmail(EMAIL_SENDER_ADDRESS, recipient_emails, message.as_string())
+        server.quit()
+        print(f"Başarılı: E-posta '{subject}' şu alıcılara gönderildi: {recipient_emails}")
+        return True
     except smtplib.SMTPException as e:
         print(f"Hata: SMTP sunucusuna bağlanırken bir sorun oluştu. Hata detayları: {e}", file=sys.stderr)
         return False
