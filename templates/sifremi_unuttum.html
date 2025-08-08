@@ -547,6 +547,96 @@
     </div>
 
     <script>
+        const showStep = (stepNumber) => {
+    document.querySelectorAll('.step').forEach(step => {
+        step.classList.remove('active');
+    });
+    document.getElementById(`step${stepNumber}`).classList.add('active');
+};
+
+const showToast = (message, isError = false) => {
+    const toastContainer = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.classList.add('toast');
+    if (isError) {
+        toast.classList.add('error');
+    }
+    toast.textContent = message;
+    toastContainer.appendChild(toast);
+    setTimeout(() => {
+        toast.remove();
+    }, 4000);
+};
+        document.getElementById('forgot-password-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value;
+
+    try {
+        const response = await fetch('/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            showToast(result.message);
+            showStep(2);
+        } else {
+            showToast(result.message, true);
+        }
+    } catch (error) {
+        console.error('API Hatası:', error);
+        showToast('Bir hata oluştu, lütfen tekrar deneyin.', true);
+    }
+});
+        document.getElementById('verify-code-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const code = document.getElementById('verification-code').value;
+
+    // Bu form, şifre sıfırlama formuna geçiş için bir ön kontrol görevi görecek.
+    // Arka plandaki reset-password rotası hem kodu hem de şifreleri kontrol edeceği için,
+    // burada sadece bir sonraki adıma geçiş için bir mantık kurabiliriz.
+    // Ancak daha sağlam bir yapı için kodu burada doğrulayacak bir API rotası da eklenebilir.
+    // Şimdilik, sadece UI geçişini sağlıyoruz.
+
+    showStep(3);
+});
+        document.getElementById('reset-password-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const code = document.getElementById('verification-code').value;
+    const newPassword = document.getElementById('new-password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
+
+    if (newPassword !== confirmPassword) {
+        showToast('Şifreler birbiriyle eşleşmiyor.', true);
+        return;
+    }
+    
+    if (newPassword.length < 8) {
+        showToast('Şifre en az 8 karakter olmalıdır.', true);
+        return;
+    }
+
+    try {
+        const response = await fetch('/reset-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, new_password: newPassword, confirm_password: confirmPassword })
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            showToast(result.message);
+            showStep(4);
+        } else {
+            showToast(result.message, true);
+        }
+    } catch (error) {
+        console.error('API Hatası:', error);
+        showToast('Bir hata oluştu, lütfen tekrar deneyin.', true);
+    }
+});
         // Toast mesajı gösterme fonksiyonu
         function showToast(message, isError = false) {
             const toast = document.getElementById('toast');
@@ -699,14 +789,34 @@
             }
         });
 
-        document.getElementById('resend-button').addEventListener('click', () => {
-            showToast('Yeni doğrulama kodu gönderildi');
+       document.getElementById('resend-button').addEventListener('click', () => {
+    // Bu butona tıklandığında, forgot-password API'sine tekrar e-posta gönderilir.
+    const email = document.getElementById('email').value;
+    if (email) {
+        fetch('/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showToast('Yeni doğrulama kodu e-posta adresinize gönderildi.');
+            } else {
+                showToast(result.message, true);
+            }
+        })
+        .catch(error => {
+            console.error('API Hatası:', error);
+            showToast('Bir hata oluştu, lütfen tekrar deneyin.', true);
         });
+    }
+});
 
         document.getElementById('back-to-code').addEventListener('click', (e) => {
-            e.preventDefault();
-            showStep(2);
-        });
+    e.preventDefault();
+    showStep(2);
+});
 
         document.getElementById('save-button').addEventListener('click', () => {
             const newPassword = document.getElementById('new-password').value;
@@ -727,14 +837,14 @@
         });
 
         document.getElementById('login-button').addEventListener('click', () => {
-            window.location.href = 'login.html';
-        });
-
+       window.location.href = 'login.html';
+      });
         // E-posta doğrulama fonksiyonu
         function validateEmail(email) {
             const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
             return re.test(String(email).toLowerCase());
         }
+    
     </script>
 </body>
 </html>
