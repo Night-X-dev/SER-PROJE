@@ -547,12 +547,24 @@
     </div>
 
     <script>
-        const showStep = (stepNumber) => {
-    document.querySelectorAll('.step').forEach(step => {
-        step.classList.remove('active');
-    });
-    document.getElementById(`step${stepNumber}`).classList.add('active');
-};
+
+ function showStep(stepNumber) {
+            // Adım göstergesini güncelle
+            steps.forEach((step, index) => {
+                if (index < stepNumber) {
+                    step.classList.add('active');
+                } else {
+                    step.classList.remove('active');
+                }
+            });
+
+            // İçeriği güncelle
+            stepContents.forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`step-${getStepId(stepNumber)}`).classList.add('active');
+            currentStep = stepNumber;
+        }
 
 const showToast = (message, isError = false) => {
     const toastContainer = document.getElementById('toast-container');
@@ -703,23 +715,7 @@ const showToast = (message, isError = false) => {
         const sentEmailElement = document.getElementById('sent-email');
         let currentStep = 1;
 
-        function showStep(stepNumber) {
-            // Adım göstergesini güncelle
-            steps.forEach((step, index) => {
-                if (index < stepNumber) {
-                    step.classList.add('active');
-                } else {
-                    step.classList.remove('active');
-                }
-            });
-
-            // İçeriği güncelle
-            stepContents.forEach(content => {
-                content.classList.remove('active');
-            });
-            document.getElementById(`step-${getStepId(stepNumber)}`).classList.add('active');
-            currentStep = stepNumber;
-        }
+       
 
         function getStepId(stepNumber) {
             switch(stepNumber) {
