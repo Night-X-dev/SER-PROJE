@@ -68,8 +68,9 @@ def send_email(subject, body, recipient_emails):
 
     try:
         context = ssl.create_default_context()
-        # Bağlantıyı `with` ifadesiyle yönetiyoruz, bu sayede otomatik olarak kapatılır.
         with smtplib.SMTP(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT) as server:
+            # SMTP sunucusuna açıkça bağlanıyoruz
+            server.connect(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT)
             server.starttls(context=context)
             server.login(EMAIL_SENDER_ADDRESS, EMAIL_SENDER_PASSWORD)
             server.sendmail(EMAIL_SENDER_ADDRESS, recipient_emails, message.as_string())
