@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 import urllib.parse
 import re
 import traceback # Import traceback for detailed error logging
-from auth import handle_forgot_password, handle_reset_password, handle_verify_code
 
 # E-posta göndermek için gerekli kütüphaneler
 import smtplib
@@ -150,17 +149,6 @@ def serve_bildirim_page():
     return render_template('bildirim.html')
 # CORS (Cross-Origin Resource Sharing) settings
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
-@app.route('/forgot-password', methods=['POST'])
-def forgot_password_route():
-    return handle_forgot_password()
-
-@app.route('/verify-code', methods=['POST'])
-def verify_code_route():
-    return handle_verify_code()
-
-@app.route('/reset-password', methods=['POST'])
-def reset_password_route():
-    return handle_reset_password()
 
 def get_db_connection():
     """Establishes and returns a database connection."""
