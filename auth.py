@@ -51,7 +51,6 @@ def send_email(subject, code, to_email):
                 /* Yukarıdaki CSS kodunun tamamı buraya */
             </style>
         </head>
-            <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
         <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f8f9fa; color: #333333;">
             <div class="container" style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);">
                 <div class="header" style="background: linear-gradient(135deg, #005c9d, #0980d3); padding: 30px 20px; text-align: center; color: white;">
