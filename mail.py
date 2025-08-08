@@ -32,14 +32,13 @@ EMAIL_SENDER_PASSWORD = os.getenv("EMAIL_PASSWORD", "").replace(" ", "")
 EMAIL_SMTP_SERVER = os.getenv("SMTP_SERVER")
 EMAIL_SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 
-ADMIN_EMAIL_LIST_JSON = os.getenv("ADMIN_EMAIL_LIST_JSON")
-
-# Eğer ADMIN_EMAIL_LIST_JSON mevcutsa, JSON olarak yükle. Yoksa boş liste kullan.
-try:
-    ADMIN_EMAIL_LIST = json.loads(ADMIN_EMAIL_LIST_JSON)
-except (json.JSONDecodeError, TypeError):
-    ADMIN_EMAIL_LIST = []
-    print("Uyarı: ADMIN_EMAIL_LIST_JSON .env dosyasında bulunamadı veya hatalı formatta.", file=sys.stderr, flush=True)
+# ADMIN_EMAIL_LIST_JSON artık kullanılmıyor, çünkü admin e-postaları veritabanından çekilecek.
+# Bu satırlar daha önce vardı, dinamik olması için kaldırıldı.
+# try:
+#     ADMIN_EMAIL_LIST = json.loads(ADMIN_EMAIL_LIST_JSON)
+# except (json.JSONDecodeError, TypeError):
+#     ADMIN_EMAIL_LIST = []
+#     print("Uyarı: ADMIN_EMAIL_LIST_JSON .env dosyasında bulunamadı veya hatalı formatta.", file=sys.stderr, flush=True)
 
 def get_db_connection():
     """Veritabanı bağlantısı kurar ve döndürür."""
@@ -53,6 +52,19 @@ def get_db_connection():
     except Exception as e:
         print(f"Hata: Veritabanına bağlanılamadı. Hata detayları: {e}", file=sys.stderr, flush=True)
         return None
+
+def get_admin_emails(db_cursor):
+    """
+    Veritabanından 'Admin' rolüne sahip kullanıcıların e-posta adreslerini çeker.
+    """
+    try:
+        sql = "SELECT email FROM users WHERE role = 'Admin'"
+        db_cursor.execute(sql)
+        admin_emails = [row['email'] for row in db_cursor.fetchall()]
+        return admin_emails
+    except Exception as e:
+        print(f"Hata: Admin e-posta adresleri veritabanından çekilemedi. Hata detayları: {e}", file=sys.stderr, flush=True)
+        return []
 
 def send_email(subject, body, recipient_emails):
     """
@@ -87,7 +99,7 @@ def send_email(subject, body, recipient_emails):
         traceback.print_exc(file=sys.stderr)
         return False
 
-def notify_overdue_step(db_cursor, step):
+def notify_overdue_step(db_cursor, step, admin_emails):
     """Süresi geçmiş bir iş adımı için e-posta bildirimi gönderir."""
     progress_id = step['progress_id']
     project_id = step['project_id']
@@ -103,7 +115,7 @@ def notify_overdue_step(db_cursor, step):
     recipients = []
     if manager_email:
         recipients.append(manager_email)
-    recipients.extend(ADMIN_EMAIL_LIST)
+    recipients.extend(admin_emails)
     
     # Kopyaları kaldırarak son alıcı listesini oluşturma
     recipients = list(set(recipients))
@@ -141,6 +153,9 @@ def main():
 
     try:
         with connection.cursor() as cursor:
+            # Admin e-postalarını veritabanından çek
+            admin_emails = get_admin_emails(cursor)
+
             # Bugünden önce veya bugünün tarihi olan ve henüz bildirim gönderilmemiş adımları bul.
             # `completion_notified` koşulu, aynı adım için tekrar tekrar e-posta gönderilmesini engeller.
             sql = """
@@ -154,7 +169,7 @@ def main():
             
             notified_count = 0
             for step in steps_to_notify:
-                if notify_overdue_step(cursor, step):
+                if notify_overdue_step(cursor, step, admin_emails):
                     notified_count += 1
                     # Bildirim gönderildikten sonra `completion_notified` flag'ini güncelle
                     cursor.execute("UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s", (step['progress_id'],))
