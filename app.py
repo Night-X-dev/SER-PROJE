@@ -19,7 +19,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import threading
 import time
-from auth import forgot_password_request, reset_password_request
 load_dotenv()
 
 app = Flask(__name__)
