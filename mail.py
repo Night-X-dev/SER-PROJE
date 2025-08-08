@@ -55,7 +55,7 @@ def get_db_connection():
 def send_email(subject, body, recipient_emails):
     """
     Belirtilen alıcılara e-posta gönderir.
-    Bu versiyon, SMTP_SSL yerine standart SMTP + TLS yöntemini kullanır.
+    Bu versiyon, SMTP bağlantısını daha sağlam bir şekilde kurar.
     """
     if not recipient_emails:
         print("Hata: E-posta alıcı listesi boş.", file=sys.stderr)
@@ -69,24 +69,36 @@ def send_email(subject, body, recipient_emails):
     html_part = MIMEText(body, "html")
     message.attach(html_part)
 
+    server = None
     try:
-        # Standart SMTP bağlantısı oluşturma
+        print("SMTP bağlantısı başlatılıyor...")
         server = smtplib.SMTP(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT)
         server.set_debuglevel(1)  # Hata ayıklama çıktısını etkinleştirme
-        server.ehlo()
+        
+        # TLS'ye yükseltme
+        print("TLS'ye yükseltme başlatılıyor...")
         server.starttls(context=ssl.create_default_context())
-        server.ehlo()
+        
+        # Giriş yapma
+        print("Giriş yapılıyor...")
         server.login(EMAIL_SENDER_ADDRESS, EMAIL_SENDER_PASSWORD)
+        
+        # E-posta gönderme
+        print("E-posta gönderiliyor...")
         server.sendmail(EMAIL_SENDER_ADDRESS, recipient_emails, message.as_string())
-        server.quit()
+        
         print(f"Başarılı: E-posta '{subject}' şu alıcılara gönderildi: {recipient_emails}")
         return True
     except smtplib.SMTPException as e:
-        print(f"Hata: SMTP sunucusuna bağlanırken bir sorun oluştu. Hata detayları: {e}", file=sys.stderr)
+        print(f"Hata: SMTP sunucusuna bağlanırken veya işlem sırasında bir sorun oluştu. Hata tipi: {type(e).__name__}, Detay: {e}", file=sys.stderr)
         return False
     except Exception as e:
-        print(f"Hata: E-posta gönderilemedi. Hata detayları: {e}", file=sys.stderr)
+        print(f"Hata: E-posta gönderilemedi. Hata tipi: {type(e).__name__}, Detay: {e}", file=sys.stderr)
         return False
+    finally:
+        if server:
+            print("SMTP bağlantısı kapatılıyor...")
+            server.quit()
 
 def notify_overdue_step(db_cursor, step):
     """Süresi geçmiş bir iş adımı için e-posta bildirimi gönderir."""
