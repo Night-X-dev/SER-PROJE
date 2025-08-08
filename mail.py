@@ -30,7 +30,7 @@ DB_PORT = int(os.getenv("DB_PORT", 3306))
 EMAIL_SENDER_ADDRESS = os.getenv("EMAIL_SENDER_ADDRESS")
 EMAIL_SENDER_PASSWORD = os.getenv("EMAIL_SENDER_PASSWORD")
 EMAIL_SMTP_SERVER = os.getenv("EMAIL_SMTP_SERVER")
-EMAIL_SMTP_PORT = int(os.getenv("EMAIL_SMTP_PORT", 587))
+EMAIL_SMTP_PORT = int(os.getenv("EMAIL_SMTP_PORT", 587)) # app.py'deki gibi 587 portu kullanıldı.
 ADMIN_EMAIL_LIST_JSON = os.getenv("ADMIN_EMAIL_LIST_JSON")
 
 # Eğer ADMIN_EMAIL_LIST_JSON mevcutsa, JSON olarak yükle. Yoksa boş liste kullan.
@@ -55,7 +55,7 @@ def get_db_connection():
 def send_email(subject, body, recipient_emails):
     """
     Belirtilen alıcılara e-posta gönderir.
-    Bu versiyon, app.py'deki başarılı olan sistemden uyarlanmıştır.
+    Bu versiyon, app.py'deki başarılı olan SMTP_SSL yöntemini kullanır.
     """
     if not recipient_emails:
         print("Hata: E-posta alıcı listesi boş.", file=sys.stderr)
@@ -71,8 +71,8 @@ def send_email(subject, body, recipient_emails):
 
     try:
         context = ssl.create_default_context()
-        with smtplib.SMTP(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT) as server:
-            server.starttls(context=context)
+        # app.py'deki gibi SMTP_SSL kullanılarak daha kararlı bir bağlantı kuruluyor.
+        with smtplib.SMTP_SSL(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT, context=context) as server:
             server.login(EMAIL_SENDER_ADDRESS, EMAIL_SENDER_PASSWORD)
             server.sendmail(EMAIL_SENDER_ADDRESS, recipient_emails, message.as_string())
             print(f"Başarılı: E-posta '{subject}' şu alıcılara gönderildi: {recipient_emails}")
