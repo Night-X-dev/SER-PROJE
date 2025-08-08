@@ -39,77 +39,43 @@ def send_email(subject, code, to_email):
         message["To"] = to_email
 
         # Yeni HTML içeriğimiz
+        # 'Şifremi Sıfırla' butonuna tıklanınca doğrudan doğrulama kodunun girilmesi aşamasına geçiş
         html = f"""
         <!DOCTYPE html>
         <html lang="tr">
-        
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Şifre Sıfırlama Kodu | SER Elektrik</title>
-            <style>
-                /* Yukarıdaki CSS kodunun tamamı buraya */
-            </style>
+            <title>Şifre Sıfırlama</title>
         </head>
-        <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f8f9fa; color: #333333;">
-            <div class="container" style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);">
-                <div class="header" style="background: linear-gradient(135deg, #005c9d, #0980d3); padding: 30px 20px; text-align: center; color: white;">
-                    <div class="logo" style="margin-bottom: 15px; text-align: center;">
-                        <img src="https://serotomasyon.tr/static/serlogobeyaz.png" alt="SER Elektrik Otomasyon" style="height: 60px; max-width: 100%; border-radius: 10px;">
-                    </div>
-                    <h1 style="margin: 0;">Şifre Sıfırlama Talebiniz</h1>
-                </div>
-                
-                <div class="content" style="padding: 40px 30px; line-height: 1.6;">
-                    <h2 class="title" style="font-size: 24px; font-weight: 700; margin-bottom: 25px; text-align: center; color: #005c9d; margin-top: 0;">Şifrenizi Sıfırlamak İçin Doğrulama Kodunuz</h2>
-                    
-                    <p class="message" style="margin-bottom: 30px; font-size: 16px; color: #5e6870;">Merhaba,<br>
-                        Şifre sıfırlama talebiniz için doğrulama kodunuz aşağıdadır. Bu kodu kullanarak şifrenizi yeniden oluşturabilirsiniz.</p>
-                    
-                    <div class="code-container" style="background: linear-gradient(135deg, #f0f4f8, #e1e5e9); border-radius: 12px; padding: 20px; text-align: center; margin: 30px 0;">
-                        <div class="code-label" style="font-size: 16px; margin-bottom: 15px; color: #5e6870;">Lütfen aşağıdaki kodu kullanın:</div>
-                        <div class="code" style="font-size: 42px; font-weight: 700; letter-spacing: 8px; color: #005c9d; margin: 15px 0; padding: 10px; background: white; border-radius: 10px; display: inline-block; box-shadow: 0 4px 15px rgba(0, 92, 157, 0.15); font-family: monospace;">{code}</div>
-                        <div class="code-label" style="font-size: 16px; margin-bottom: 0; color: #5e6870;">Bu kod 15 dakika sonra geçerliliğini yitirecektir.</div>
-                    </div>
-                    
-                    <div style="text-align: center;">
-                        <a href="https://www.serotomasyon.tr/sifremi_unuttum.html" class="button" style="display: inline-block; background: linear-gradient(to right, #005c9d, #0980d3); color: white; padding: 14px 35px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; margin: 20px 0; box-shadow: 0 4px 15px rgba(9, 128, 211, 0.25);">Şifremi Sıfırla</a>
-                    </div>
-                    
-                    <div class="note" style="background-color: #fff9e6; border-left: 4px solid #ffd700; padding: 15px; border-radius: 0 8px 8px 0; margin: 25px 0; font-size: 14px;">
-                        <strong>Önemli:</strong> Bu e-postayı siz talep etmediyseniz lütfen dikkate almayınız. 
-                        Güvenliğiniz için bu kodu kimseyle paylaşmayınız.
-                    </div>
-                    
-                </div>
-                
-                <div class="footer" style="background-color: #f0f4f8; padding: 25px 20px; text-align: center; font-size: 14px; color: #97a1aa;">
-                    
-                    
-                    <div>© 2025 SER Elektrik Otomasyon. Tüm hakları saklıdır.</div>
-                    
-                    <div class="contact" style="margin-top: 15px; font-size: 13px;">
-                        <div>Adres: Ser Plaza, Yeşilce, Dalgıç Sk. No:9, 34418 Kağıthane/İstanbul</div>
-                        <div>Telefon: (0212) 324 64 14 | E-posta: info@serelektrik.com</div>
-                    </div>
-                </div>
+        <body>
+            <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                <h2 style="color: #005c9d;">Şifre Sıfırlama İsteği</h2>
+                <p>Merhaba,</p>
+                <p>Şifrenizi sıfırlamak için bir istek aldınız. Lütfen aşağıdaki butona tıklayarak işlemi tamamlayın.</p>
+                <p style="text-align: center; margin: 30px 0;">
+                    <!-- 'sifremi_unuttum.html' sayfasına yönlendiren link. 'step' parametresi ile doğrudan 2. adıma atlanacak. -->
+                    <!-- NOT: Kod ve email güvenlik nedeniyle URL'ye eklenmiştir. Gerçek bir senaryoda bu yerine token kullanılması daha güvenli olacaktır. -->
+                    <a href="https://www.serotomasyon.tr/sifremi_unuttum.html?step=2&email={to_email}&code={code}" class="button" style="display: inline-block; padding: 12px 24px; font-size: 16px; color: #ffffff; background-color: #005c9d; text-decoration: none; border-radius: 5px;">Şifremi Sıfırla</a>
+                </p>
+                <p>Doğrudan kodu girmek isterseniz: <strong>{code}</strong></p>
+                <p>Eğer bu isteği siz yapmadıysanız, bu e-postayı dikkate almayın.</p>
+                <p style="font-size: 12px; color: #777;">Ser Elektrik Otomasyon</p>
             </div>
         </body>
         </html>
         """
 
-        part = MIMEText(html, "html")
-        message.attach(part)
+        part1 = MIMEText(html, "html")
+        message.attach(part1)
 
         context = ssl.create_default_context()
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
-            server.starttls(context=context)
+        with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as server:
             server.login(sender_email, sender_password)
             server.sendmail(sender_email, to_email, message.as_string())
+
         return True
     except Exception as e:
-        print(f"E-posta gönderim hatası: {e}")
-        traceback.print_exc()
+        print(f"E-posta gönderme hatası: {e}")
         return False
 
 # -------------------- HANDLERS --------------------
