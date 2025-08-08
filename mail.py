@@ -53,7 +53,10 @@ def get_db_connection():
         return None
 
 def send_email(subject, body, recipient_emails):
-    """Belirtilen alıcılara e-posta gönderir."""
+    """
+    Belirtilen alıcılara e-posta gönderir.
+    Bu versiyon, app.py'deki başarılı olan sistemden uyarlanmıştır.
+    """
     if not recipient_emails:
         print("Hata: E-posta alıcı listesi boş.", file=sys.stderr)
         return False
@@ -69,8 +72,6 @@ def send_email(subject, body, recipient_emails):
     try:
         context = ssl.create_default_context()
         with smtplib.SMTP(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT) as server:
-            # SMTP sunucusuna açıkça bağlanıyoruz
-            server.connect(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT)
             server.starttls(context=context)
             server.login(EMAIL_SENDER_ADDRESS, EMAIL_SENDER_PASSWORD)
             server.sendmail(EMAIL_SENDER_ADDRESS, recipient_emails, message.as_string())
@@ -83,7 +84,6 @@ def send_email(subject, body, recipient_emails):
         print(f"Hata: E-posta gönderilemedi. Hata detayları: {e}", file=sys.stderr)
         return False
 
-
 def notify_overdue_step(db_cursor, step):
     """Süresi geçmiş bir iş adımı için e-posta bildirimi gönderir."""
     progress_id = step['progress_id']
@@ -92,7 +92,6 @@ def notify_overdue_step(db_cursor, step):
     step_title = step['title']
 
     # Proje yöneticisi e-postasını bul
-    # `projects` tablosundaki sütun adı 'project_manager_id' olarak düzeltildi.
     db_cursor.execute("SELECT u.email FROM users u JOIN projects p ON u.id = p.project_manager_id WHERE p.project_id = %s", (project_id,))
     project_manager = db_cursor.fetchone()
     manager_email = project_manager['email'] if project_manager else None
