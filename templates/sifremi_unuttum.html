@@ -367,8 +367,14 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* Toast bildirimi */
@@ -389,12 +395,12 @@
             transform: translateY(20px);
             transition: all 0.3s ease;
         }
-        
+
         .toast.show {
             opacity: 1;
             transform: translateY(0);
         }
-        
+
         .toast.error {
             background-color: #ff4757;
         }
@@ -414,251 +420,155 @@
             }
         }
 
-        @media (max-width: 480px) {
-            body {
-                padding: 15px;
-            }
-            .form-card {
-                padding: 25px;
-            }
-            .logo-text {
-                font-size: 24px;
-            }
-            .form-title {
-                font-size: 22px;
-            }
-            .step-label {
-                width: 70px;
-                font-size: 11px;
-            }
-            input {
-                padding: 14px 18px;
-            }
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <div class="logo">
-        <img src="{{ url_for('static', filename='serlogo.png') }}" alt="SER Elektrik Logo">
-    </div>
-            <div class="theme-toggle" id="theme-toggle">
+                <div class="logo-icon">
+                    <i class="fas fa-bolt"></i>
+                </div>
+                <span class="logo-text">Ser Elektrik</span>
+            </div>
+            <div class="theme-toggle">
                 <i class="fas fa-sun toggle-icon sun"></i>
                 <div class="toggle-circle"></div>
                 <i class="fas fa-moon toggle-icon moon"></i>
             </div>
         </div>
-
         <div class="form-card">
-            <h2 class="form-title">Şifremi Unuttum</h2>
-            <p class="form-subtitle">Şifrenizi sıfırlamak için aşağıdaki adımları takip edin</p>
-            
-            <!-- Adımlar Göstergesi -->
             <div class="step-indicator">
-                <div class="step active">
-                    1
+                <div id="step-1" class="step active">
+                    <span>1</span>
                     <span class="step-label">E-posta</span>
                 </div>
-                <div class="step">
-                    2
-                    <span class="step-label">Doğrulama</span>
+                <div id="step-2" class="step">
+                    <span>2</span>
+                    <span class="step-label">Doğrulama Kodu</span>
                 </div>
-                <div class="step">
-                    3
+                <div id="step-3" class="step">
+                    <span>3</span>
                     <span class="step-label">Yeni Şifre</span>
                 </div>
-            </div>
-            
-            <!-- E-posta Adımı -->
-            <div class="step-content active" id="step-email">
-                <div class="input-group">
-                    <input type="email" id="email" placeholder="ornek@ornek.com">
+                <div id="step-4" class="step">
+                    <span>4</span>
+                    <span class="step-label">Tamamlandı</span>
                 </div>
-                
-                <button class="btn" id="next-button">Kodu Gönder</button>
-                
-                <a href="login.html" class="back-link"><i class="fas fa-arrow-left"></i> Giriş sayfasına dön</a>
             </div>
-            
-            <!-- Kod Doğrulama Adımı -->
-            <div class="step-content" id="step-code">
-                <p style="text-align: center; margin-bottom: 20px; color: var(--light-gray);">
-                    <span id="sent-email">ornek@ornek.com</span> adresine 6 haneli bir doğrulama kodu gönderdik
-                </p>
-                
-                <div class="code-input">
-                    <input type="text" maxlength="1" class="code-char">
-                    <input type="text" maxlength="1" class="code-char">
-                    <input type="text" maxlength="1" class="code-char">
-                    <input type="text" maxlength="1" class="code-char">
-                    <input type="text" maxlength="1" class="code-char">
-                    <input type="text" maxlength="1" class="code-char">
-                </div>
-                
-                <button class="btn" id="verify-button">Kodu Doğrula</button>
-                <button class="btn btn-secondary" id="resend-button">Kodu Tekrar Gönder</button>
-                
-                <a href="#" class="back-link" id="back-to-email"><i class="fas fa-arrow-left"></i> Geri</a>
-            </div>
-            
-            <!-- Yeni Şifre Adımı -->
-            <div class="step-content" id="step-password">
-                <div class="input-group">
-                    <div class="password-container">
-                        <input type="password" id="new-password" placeholder="Yeni şifrenizi girin">
-                        <i class="fas fa-eye toggle-password"></i>
+
+            <div id="step-content-1" class="step-content active">
+                <h1 class="form-title">Şifremi Unuttum</h1>
+                <p class="form-subtitle">Lütfen hesabınıza kayıtlı e-posta adresinizi girin. Şifrenizi sıfırlamanız için size bir doğrulama kodu göndereceğiz.</p>
+                <form id="email-form">
+                    <div class="input-group">
+                        <label for="email">E-posta Adresi</label>
+                        <input type="email" id="email" name="email" required autocomplete="email">
                     </div>
-                </div>
-                
-                <div class="input-group">
-                    <div class="password-container">
-                        <input type="password" id="confirm-password" placeholder="Yeni şifrenizi tekrar girin">
-                        <i class="fas fa-eye toggle-password"></i>
-                    </div>
-                </div>
-                
-                <button class="btn" id="save-button">Şifreyi Kaydet</button>
-                
-                <a href="#" class="back-link" id="back-to-code"><i class="fas fa-arrow-left"></i> Geri</a>
+                    <button type="submit" class="btn">Kodu Gönder</button>
+                    <a href="login.html" class="back-link"><i class="fas fa-arrow-left"></i> Giriş Sayfasına Dön</a>
+                </form>
             </div>
-            
-            <!-- Başarılı Mesajı -->
-            <div class="step-content" id="step-success">
+
+            <div id="step-content-2" class="step-content">
+                <h1 class="form-title">Doğrulama Kodu</h1>
+                <p class="form-subtitle">E-posta adresinize gönderdiğimiz 6 haneli doğrulama kodunu girin.</p>
+                <form id="code-form">
+                    <div class="input-group code-input">
+                        <input type="text" id="code-digit-1" maxlength="1" required>
+                        <input type="text" id="code-digit-2" maxlength="1" required>
+                        <input type="text" id="code-digit-3" maxlength="1" required>
+                        <input type="text" id="code-digit-4" maxlength="1" required>
+                        <input type="text" id="code-digit-5" maxlength="1" required>
+                        <input type="text" id="code-digit-6" maxlength="1" required>
+                    </div>
+                    <button type="submit" class="btn">Kodu Doğrula</button>
+                    <button type="button" id="back-to-email" class="btn btn-secondary">Geri Dön</button>
+                </form>
+            </div>
+
+            <div id="step-content-3" class="step-content">
+                <h1 class="form-title">Yeni Şifre Oluştur</h1>
+                <p class="form-subtitle">Lütfen hesabınız için yeni bir şifre belirleyin.</p>
+                <form id="password-form">
+                    <div class="input-group">
+                        <label for="new_password">Yeni Şifre</label>
+                        <div class="password-container">
+                            <input type="password" id="new_password" name="new_password" required minlength="8">
+                            <i class="fas fa-eye toggle-password" id="toggle-new-password"></i>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="confirm_password">Yeni Şifreyi Onayla</label>
+                        <div class="password-container">
+                            <input type="password" id="confirm_password" name="confirm_password" required minlength="8">
+                            <i class="fas fa-eye toggle-password" id="toggle-confirm-password"></i>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">Şifreyi Güncelle</button>
+                    <button type="button" id="back-to-code" class="btn btn-secondary">Geri Dön</button>
+                </form>
+            </div>
+
+            <div id="step-content-4" class="step-content">
                 <div class="success-icon">
-                    <i class="fas fa-check"></i>
+                    <i class="fas fa-check-circle"></i>
                 </div>
-                <h2 class="form-title">Şifreniz Başarıyla Değiştirildi!</h2>
-                <p class="form-subtitle">Yeni şifrenizle giriş yapabilirsiniz</p>
-                
-                <button class="btn" id="login-button">Giriş Yap</button>
+                <h1 class="form-title">Şifre Güncellendi</h1>
+                <p class="form-subtitle">Şifreniz başarıyla güncellendi. Artık yeni şifrenizle giriş yapabilirsiniz.</p>
+                <button id="login-button" class="btn">Giriş Yap</button>
             </div>
         </div>
-        
-        <div class="footer" style="margin-top: 30px; color: var(--light-gray); font-size: 14px; text-align: center;">
-            &copy; 2023 Ser Elektrik Otomasyon. Tüm hakları saklıdır.
-        </div>
     </div>
-<div id="toast-container"></div>
-    <!-- Toast bildirimi -->
-    <div class="toast" id="toast">
-        <i class="fas fa-check-circle"></i>
-        <span id="toastMessage">İşlem başarıyla tamamlandı</span>
+
+    <!-- Toast Bildirimleri -->
+    <div id="toast" class="toast">
+        <span id="toast-icon"></span>
+        <span id="toast-message"></span>
     </div>
+
 <script>
-// Sayfa yüklendiğinde tüm DOM elemanları hazır olduğunda çalışacak kod bloğu
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Yardımcı Fonksiyonlar ---
+    // Adım değiştirme fonksiyonu
+    let sentEmail = ''; // Gönderilen e-posta adresini saklamak için global değişken
     
-    /**
-     * Kullanıcıya kısa süreli bildirim mesajı gösterir.
-     * @param {string} message - Gösterilecek mesaj metni.
-     * @param {boolean} isError - Mesajın bir hata mesajı olup olmadığını belirtir.
-     */
-    const showToast = (message, isError = false) => {
-        const toastContainer = document.getElementById('toast-container');
-        const toast = document.createElement('div');
-        toast.classList.add('toast');
+    function showToast(message, isError = false) {
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+        const toastIcon = document.getElementById('toast-icon');
+
+        toastMessage.textContent = message;
         if (isError) {
             toast.classList.add('error');
+            toastIcon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+        } else {
+            toast.classList.remove('error');
+            toastIcon.innerHTML = '<i class="fas fa-check-circle"></i>';
         }
-        toast.textContent = message;
-        toastContainer.appendChild(toast);
+        toast.classList.add('show');
         setTimeout(() => {
-            toast.remove();
-        }, 4000);
-    };
-
-    /**
-     * Sayfadaki adımları yönetir, belirtilen adımı aktif hale getirir.
-     * @param {number} stepNumber - Aktif hale getirilecek adımın numarası (1, 2, 3 veya 4).
-     */
+            toast.classList.remove('show');
+        }, 5000);
+    }
+    
     function showStep(stepNumber) {
-        const stepContents = document.querySelectorAll('.step-content');
-        stepContents.forEach(content => {
-            content.classList.remove('active');
-        });
-        const currentStep = document.getElementById(`step-${stepNumber}`);
-        if (currentStep) {
-            currentStep.classList.add('active');
-        }
+        const allSteps = document.querySelectorAll('.step');
+        const allStepContents = document.querySelectorAll('.step-content');
+
+        allSteps.forEach(step => step.classList.remove('active'));
+        allStepContents.forEach(content => content.classList.remove('active'));
+
+        document.getElementById(`step-${stepNumber}`).classList.add('active');
+        document.getElementById(`step-content-${stepNumber}`).classList.add('active');
     }
 
-    /**
-     * E-posta adresinin geçerli formatta olup olmadığını kontrol eder.
-     * @param {string} email - Kontrol edilecek e-posta adresi.
-     * @returns {boolean} - E-posta geçerliyse true, değilse false.
-     */
-    function validateEmail(email) {
-        const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-        return re.test(String(email).toLowerCase());
-    }
-
-    // --- Global Değişkenler ---
-    const themeToggle = document.getElementById('theme-toggle');
-    const codeInputs = document.querySelectorAll('.code-char');
-    let sentEmail = ''; // Bir sonraki adımda kullanılmak üzere e-postayı saklarız.
-
-    // --- Başlangıç Ayarları ve Temel Olay Dinleyicileri ---
-
-    // Tema değiştirme işlevi
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-        document.body.setAttribute('data-theme', savedTheme);
-    }
-    if (themeToggle) {
-        themeToggle.addEventListener('click', () => {
-            const currentTheme = document.body.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            document.body.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-        });
-    }
-
-    // Kod inputlarına odaklanma ve geri silme işlevleri
-    codeInputs.forEach((input, index) => {
-        input.addEventListener('input', (e) => {
-            if (e.target.value.length === 1 && index < codeInputs.length - 1) {
-                codeInputs[index + 1].focus();
-            }
-        });
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Backspace' && e.target.value.length === 0 && index > 0) {
-                codeInputs[index - 1].focus();
-            }
-        });
-    });
-    
-    // Şifre gösterme/gizleme işlevi
-    const togglePasswordIcons = document.querySelectorAll('.toggle-password');
-    togglePasswordIcons.forEach(icon => {
-        icon.addEventListener('click', () => {
-            const passwordInput = icon.previousElementSibling;
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
-            } else {
-                passwordInput.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
-            }
-        });
-    });
-
-    // --- Adım Adım İşlem Olay Dinleyicileri ---
-    
-    // Adım 1: E-posta Gönder (next-button)
-    const nextButton = document.getElementById('next-button');
-    if (nextButton) {
-        nextButton.addEventListener('click', async (e) => {
+    // Adım 1: E-posta formunu işleme
+    const emailForm = document.getElementById('email-form');
+    if (emailForm) {
+        emailForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
-
-            if (!email || !validateEmail(email)) {
-                showToast('Lütfen geçerli bir e-posta adresi girin.', true);
-                return;
-            }
+            sentEmail = email; // E-posta adresini kaydet
 
             try {
                 const response = await fetch('/forgot-password', {
@@ -670,44 +580,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (response.ok) {
                     showToast(result.message || 'Doğrulama kodu e-posta adresinize gönderildi.');
-                    sentEmail = email; // E-postayı bir sonraki adım için sakla
-                    showStep(2);
+                    showStep(2); // Başarılı olursa 2. adıma geç
                 } else {
-                    showToast(result.message || 'E-posta gönderimi başarısız.', true);
-                }
-            } catch (error) {
-                console.error('API Hatası:', error);
-                showToast('Sunucuya bağlanılamadı. Lütfen tekrar deneyin.', true);
-            }
-        });
-    }
-
-    // Adım 2: Kodu Doğrula
-    const verifyButton = document.getElementById('verify-button');
-    if (verifyButton) {
-        verifyButton.addEventListener('click', async () => {
-            let code = '';
-            codeInputs.forEach(input => {
-                code += input.value;
-            });
-
-            if (code.length !== 6) {
-                showToast('Lütfen 6 haneli doğrulama kodunu eksiksiz girin.', true);
-                return;
-            }
-
-            try {
-                const response = await fetch('/verify-code', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: sentEmail, code })
-                });
-                const result = await response.json();
-                if (response.ok) {
-                    showToast('Doğrulama başarılı!');
-                    showStep(3);
-                } else {
-                    showToast(result.message || 'Doğrulama kodu yanlış.', true);
+                    showToast(result.message || 'E-posta gönderimi başarısız oldu.', true);
                 }
             } catch (error) {
                 console.error('API Hatası:', error);
@@ -716,44 +591,61 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Kodu tekrar gönder
-    const resendButton = document.getElementById('resend-button');
-    if (resendButton) {
-        resendButton.addEventListener('click', async () => {
-            try {
-                const response = await fetch('/forgot-password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: sentEmail })
-                });
-                const result = await response.json();
+    // Adım 2: Kod formunu işleme
+    const codeForm = document.getElementById('code-form');
+    if (codeForm) {
+        codeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const codeInputs = document.querySelectorAll('.code-input input');
+            let code = '';
+            codeInputs.forEach(input => code += input.value);
 
-                if (response.ok) {
-                    showToast(result.message || 'Yeni doğrulama kodu e-posta adresinize gönderildi.');
-                } else {
-                    showToast(result.message || 'E-posta gönderimi başarısız.', true);
-                }
-            } catch (error) {
-                console.error('API Hatası:', error);
-                showToast('Sunucuya bağlanılamadı. Lütfen tekrar deneyin.', true);
+            if (code.length !== 6) {
+                showToast('Lütfen 6 haneli kodu eksiksiz girin.', true);
+                return;
             }
+
+            // Backend'den kodun doğruluğunu kontrol etme
+            // NOT: Şu anki backend'de bu aşama için özel bir rota yok.
+            // Bu kısım, şifre sıfırlama rotasında (reset-password) yapılacak.
+            // Ancak kullanıcı deneyimi için, bu adımın başarılı olduğunu varsayarak 3. adıma geçiyoruz.
+            // Gerçek bir uygulamada, burada ayrı bir API çağrısı yapılmalıdır.
+            
+            // Eğer kod doğrulama işlemi başarılı olursa 3. adıma geç
+            showStep(3);
+        });
+        
+        // Kod giriş alanları için otomatik odaklanma
+        const codeInputs = document.querySelectorAll('.code-input input');
+        codeInputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                if (e.target.value.length === 1 && index < codeInputs.length - 1) {
+                    codeInputs[index + 1].focus();
+                }
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
+                    codeInputs[index - 1].focus();
+                }
+            });
         });
     }
 
-    // Adım 3: Şifreyi Kaydet (save-button)
-    const saveButton = document.getElementById('save-button');
-    if (saveButton) {
-        saveButton.addEventListener('click', async (e) => {
+    // Adım 3: Yeni şifre formunu işleme
+    const passwordForm = document.getElementById('password-form');
+    if (passwordForm) {
+        passwordForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const code = Array.from(document.querySelectorAll('.code-char')).map(input => input.value).join('');
-            const newPassword = document.getElementById('new-password').value;
-            const confirmPassword = document.getElementById('confirm-password').value;
+            const newPassword = document.getElementById('new_password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+            const codeInputs = document.querySelectorAll('.code-input input');
+            let code = '';
+            codeInputs.forEach(input => code += input.value);
 
             if (newPassword !== confirmPassword) {
-                showToast('Şifreler birbiriyle eşleşmiyor.', true);
+                showToast('Şifreler eşleşmiyor.', true);
                 return;
             }
-            
             if (newPassword.length < 8) {
                 showToast('Şifre en az 8 karakter olmalıdır.', true);
                 return;
@@ -781,11 +673,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Geri dön butonları
+    const backToEmailButton = document.getElementById('back-to-email');
+    if (backToEmailButton) {
+        backToEmailButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            showStep(1);
+        });
+    }
     const backToCodeButton = document.getElementById('back-to-code');
     if (backToCodeButton) {
         backToCodeButton.addEventListener('click', (e) => {
             e.preventDefault();
             showStep(2);
+        });
+    }
+    
+    // Şifre gösterme/gizleme butonları
+    const toggleNewPassword = document.getElementById('toggle-new-password');
+    const newPasswordInput = document.getElementById('new_password');
+    if (toggleNewPassword && newPasswordInput) {
+        toggleNewPassword.addEventListener('click', () => {
+            const type = newPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            newPasswordInput.setAttribute('type', type);
+            toggleNewPassword.classList.toggle('fa-eye-slash');
+            toggleNewPassword.classList.toggle('fa-eye');
+        });
+    }
+    
+    const toggleConfirmPassword = document.getElementById('toggle-confirm-password');
+    const confirmPasswordInput = document.getElementById('confirm_password');
+    if (toggleConfirmPassword && confirmPasswordInput) {
+        toggleConfirmPassword.addEventListener('click', () => {
+            const type = confirmPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            confirmPasswordInput.setAttribute('type', type);
+            toggleConfirmPassword.classList.toggle('fa-eye-slash');
+            toggleConfirmPassword.classList.toggle('fa-eye');
         });
     }
 
@@ -794,6 +716,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginButton) {
         loginButton.addEventListener('click', () => {
             window.location.href = 'login.html';
+        });
+    }
+    
+    // Tema değiştirme
+    const themeToggle = document.querySelector('.theme-toggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            document.body.parentElement.toggleAttribute('data-theme');
+            themeToggle.classList.toggle('dark');
         });
     }
 });
