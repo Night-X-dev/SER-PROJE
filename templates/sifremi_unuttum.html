@@ -419,7 +419,6 @@
                 width: 80px;
             }
         }
-
     </style>
 </head>
 <body>
@@ -471,9 +470,9 @@
             </div>
 
             <div id="step-content-2" class="step-content">
-                <h1 class="form-title">Doğrulama Kodu</h1>
-                <p class="form-subtitle">E-posta adresinize gönderdiğimiz 6 haneli doğrulama kodunu girin.</p>
-                <form id="code-form">
+                <h1 class="form-title">Yeni Şifre Oluştur</h1>
+                <p class="form-subtitle">E-posta adresinize gönderdiğimiz 6 haneli doğrulama kodunu ve yeni şifrenizi girin.</p>
+                <form id="password-form">
                     <div class="input-group code-input">
                         <input type="text" id="code-digit-1" maxlength="1" required>
                         <input type="text" id="code-digit-2" maxlength="1" required>
@@ -482,15 +481,6 @@
                         <input type="text" id="code-digit-5" maxlength="1" required>
                         <input type="text" id="code-digit-6" maxlength="1" required>
                     </div>
-                    <button type="submit" class="btn">Kodu Doğrula</button>
-                    <button type="button" id="back-to-email" class="btn btn-secondary">Geri Dön</button>
-                </form>
-            </div>
-
-            <div id="step-content-3" class="step-content">
-                <h1 class="form-title">Yeni Şifre Oluştur</h1>
-                <p class="form-subtitle">Lütfen hesabınız için yeni bir şifre belirleyin.</p>
-                <form id="password-form">
                     <div class="input-group">
                         <label for="new_password">Yeni Şifre</label>
                         <div class="password-container">
@@ -506,8 +496,12 @@
                         </div>
                     </div>
                     <button type="submit" class="btn">Şifreyi Güncelle</button>
-                    <button type="button" id="back-to-code" class="btn btn-secondary">Geri Dön</button>
+                    <button type="button" id="back-to-email" class="btn btn-secondary">Geri Dön</button>
                 </form>
+            </div>
+
+            <div id="step-content-3" class="step-content">
+                <!-- Şifre sıfırlama işlemi başarılı olduktan sonra bu adıma geçilecek. -->
             </div>
 
             <div id="step-content-4" class="step-content">
@@ -591,47 +585,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Adım 2: Kod formunu işleme
-    const codeForm = document.getElementById('code-form');
-    if (codeForm) {
-        codeForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const codeInputs = document.querySelectorAll('.code-input input');
-            let code = '';
-            codeInputs.forEach(input => code += input.value);
-
-            if (code.length !== 6) {
-                showToast('Lütfen 6 haneli kodu eksiksiz girin.', true);
-                return;
-            }
-
-            // Backend'den kodun doğruluğunu kontrol etme
-            // NOT: Şu anki backend'de bu aşama için özel bir rota yok.
-            // Bu kısım, şifre sıfırlama rotasında (reset-password) yapılacak.
-            // Ancak kullanıcı deneyimi için, bu adımın başarılı olduğunu varsayarak 3. adıma geçiyoruz.
-            // Gerçek bir uygulamada, burada ayrı bir API çağrısı yapılmalıdır.
-            
-            // Eğer kod doğrulama işlemi başarılı olursa 3. adıma geç
-            showStep(3);
-        });
-        
-        // Kod giriş alanları için otomatik odaklanma
-        const codeInputs = document.querySelectorAll('.code-input input');
-        codeInputs.forEach((input, index) => {
-            input.addEventListener('input', (e) => {
-                if (e.target.value.length === 1 && index < codeInputs.length - 1) {
-                    codeInputs[index + 1].focus();
-                }
-            });
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
-                    codeInputs[index - 1].focus();
-                }
-            });
-        });
-    }
-
-    // Adım 3: Yeni şifre formunu işleme
+    // Adım 2: Yeni şifre formunu işleme
     const passwordForm = document.getElementById('password-form');
     if (passwordForm) {
         passwordForm.addEventListener('submit', async (e) => {
@@ -642,6 +596,10 @@ document.addEventListener('DOMContentLoaded', () => {
             let code = '';
             codeInputs.forEach(input => code += input.value);
 
+            if (code.length !== 6) {
+                showToast('Lütfen 6 haneli kodu eksiksiz girin.', true);
+                return;
+            }
             if (newPassword !== confirmPassword) {
                 showToast('Şifreler eşleşmiyor.', true);
                 return;
@@ -670,6 +628,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast('Bir hata oluştu, lütfen tekrar deneyin.', true);
             }
         });
+        
+        // Kod giriş alanları için otomatik odaklanma
+        const codeInputs = document.querySelectorAll('.code-input input');
+        codeInputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                if (e.target.value.length === 1 && index < codeInputs.length - 1) {
+                    codeInputs[index + 1].focus();
+                }
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
+                    codeInputs[index - 1].focus();
+                }
+            });
+        });
     }
 
     // Geri dön butonları
@@ -678,13 +651,6 @@ document.addEventListener('DOMContentLoaded', () => {
         backToEmailButton.addEventListener('click', (e) => {
             e.preventDefault();
             showStep(1);
-        });
-    }
-    const backToCodeButton = document.getElementById('back-to-code');
-    if (backToCodeButton) {
-        backToCodeButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            showStep(2);
         });
     }
     
