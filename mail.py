@@ -55,7 +55,7 @@ def get_db_connection():
 def send_email(subject, body, recipient_emails):
     """
     Belirtilen alıcılara e-posta gönderir.
-    Bu versiyon, SMTP bağlantısını daha sağlam bir şekilde kurar.
+    Bu versiyon, SMTP bağlantısını açıkça kurarak `please run connect() first` hatasını çözer.
     """
     if not recipient_emails:
         print("Hata: E-posta alıcı listesi boş.", file=sys.stderr)
@@ -71,9 +71,13 @@ def send_email(subject, body, recipient_emails):
 
     server = None
     try:
-        print("SMTP bağlantısı başlatılıyor...")
-        server = smtplib.SMTP(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT)
+        print("SMTP nesnesi oluşturuluyor...")
+        server = smtplib.SMTP()
         server.set_debuglevel(1)  # Hata ayıklama çıktısını etkinleştirme
+        
+        # Bağlantı kurma
+        print(f"SMTP sunucusuna bağlanılıyor: {EMAIL_SMTP_SERVER}:{EMAIL_SMTP_PORT}")
+        server.connect(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT)
         
         # TLS'ye yükseltme
         print("TLS'ye yükseltme başlatılıyor...")
@@ -84,7 +88,7 @@ def send_email(subject, body, recipient_emails):
         server.login(EMAIL_SENDER_ADDRESS, EMAIL_SENDER_PASSWORD)
         
         # E-posta gönderme
-        print("E-posta gönderiliyor...")
+        print(f"E-posta gönderiliyor: Konu='{subject}', Alıcılar={recipient_emails}")
         server.sendmail(EMAIL_SENDER_ADDRESS, recipient_emails, message.as_string())
         
         print(f"Başarılı: E-posta '{subject}' şu alıcılara gönderildi: {recipient_emails}")
@@ -97,8 +101,12 @@ def send_email(subject, body, recipient_emails):
         return False
     finally:
         if server:
-            print("SMTP bağlantısı kapatılıyor...")
-            server.quit()
+            try:
+                print("SMTP bağlantısı kapatılıyor...")
+                server.quit()
+            except Exception as e:
+                print(f"Uyarı: Bağlantı kapatılırken bir hata oluştu: {e}", file=sys.stderr)
+
 
 def notify_overdue_step(db_cursor, step):
     """Süresi geçmiş bir iş adımı için e-posta bildirimi gönderir."""
