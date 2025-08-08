@@ -710,19 +710,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Simüle edilmiş API isteği
-        try {
-            // Gerçek uygulamada burada sunucuya istek gönderilir
-            showToast('Doğrulama kodu e-posta adresinize gönderildi.');
-            sentEmail = email;
-            document.getElementById('sent-email').textContent = email;
-            
-            // 2. adıma geç
-            setTimeout(() => {
-                goToStep(2);
-            }, 1000);
+         try {
+            const res = await fetch('/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                sentEmail = email; // E-postayı global değişkene ata
+                showToast(data.message || 'Doğrulama kodu e-posta adresinize gönderildi.');
+                showStep('step-code', 'Doğrulama Kodunu Girin', 'E-posta adresinize gönderilen 6 haneli kodu girin.');
+            } else {
+                showToast(data.message || 'E-posta adresi bulunamadı veya bir hata oluştu.', true);
+            }
         } catch (err) {
             console.error(err);
-            showToast('Bir hata oluştu. Lütfen tekrar deneyin.', true);
+            showToast('Sunucu hatası', true);
         }
     });
     
@@ -735,17 +739,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Simüle edilmiş kod doğrulama
-        try {
-            // Gerçek uygulamada burada sunucuya istek gönderilir
-            showToast('Kod doğrulama başarılı.');
-            
-            // 3. adıma geç
-            setTimeout(() => {
-                goToStep(3);
-            }, 1000);
+         try {
+            const res = await fetch('/verify-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: sentEmail, code }) // email parametresini ekle
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showToast(data.message || 'Kod doğrulama başarılı.');
+                showStep('step-password', 'Yeni Şifre Oluşturun', 'Lütfen yeni şifrenizi belirleyin.');
+            } else {
+                showToast(data.message || 'Geçersiz veya süresi dolmuş kod.', true);
+            }
         } catch (err) {
             console.error(err);
-            showToast('Geçersiz veya süresi dolmuş kod.', true);
+            showToast('Sunucu hatası', true);
         }
     });
     
@@ -769,18 +778,25 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Simüle edilmiş şifre sıfırlama
-        try {
-            // Gerçek uygulamada burada sunucuya istek gönderilir
-            showToast('Şifre başarıyla değiştirildi.');
-            
-            // Başarılı ekranına geç
-            setTimeout(() => {
-                goToStep(4);
-            }, 1000);
+       try {
+            const res = await fetch('/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: sentEmail, code, new_password: newPassword }) // email ve code parametrelerini ekle
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showToast('Şifre başarıyla değiştirildi.');
+                // Başarılı olursa doğrudan giriş sayfasına yönlendir
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 3000);
+            } else {
+                showToast(data.message || 'Şifre değiştirme başarısız.', true);
+            }
         } catch (err) {
             console.error(err);
-            showToast('Şifre değiştirme başarısız.', true);
+            showToast('Sunucu hatası', true);
         }
     });
     
