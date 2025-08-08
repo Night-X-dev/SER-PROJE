@@ -38,17 +38,74 @@ def send_email(subject, code, to_email):
         message["From"] = sender_email
         message["To"] = to_email
 
+        # Yeni HTML içeriğimiz
         html = f"""
-        <html>
-          <body>
-            <p>Merhaba,<br>
-               Şifre sıfırlama talebiniz için doğrulama kodunuz:<br>
-               <b>{code}</b><br>
-               Bu kod 15 dakika sonra geçerliliğini yitirecektir.
-            </p>
-          </body>
+        <!DOCTYPE html>
+        <html lang="tr">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Şifre Sıfırlama Kodu | SER Elektrik</title>
+            <style>
+                /* Yukarıdaki CSS kodunun tamamı buraya */
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <div class="logo">
+                        <div class="logo-icon">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                        <div class="logo-text">SER Elektrik</div>
+                    </div>
+                    <h1>Şifre Sıfırlama Talebiniz</h1>
+                </div>
+                
+                <div class="content">
+                    <h2 class="title">Şifrenizi Sıfırlamak İçin Doğrulama Kodunuz</h2>
+                    
+                    <p class="message">Merhaba,<br>
+                       Şifre sıfırlama talebiniz için doğrulama kodunuz aşağıdadır. Bu kodu kullanarak şifrenizi yeniden oluşturabilirsiniz.</p>
+                    
+                    <div class="code-container">
+                        <div class="code-label">Lütfen aşağıdaki kodu kullanın:</div>
+                        <div class="code">{code}</div>
+                        <div class="code-label">Bu kod 15 dakika sonra geçerliliğini yitirecektir.</div>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <a href="https://www.serelektrik.com/sifre-sifirla" class="button">Şifremi Sıfırla</a>
+                    </div>
+                    
+                    <div class="note">
+                        <strong>Önemli:</strong> Bu e-postayı siz talep etmediyseniz lütfen dikkate almayınız. 
+                        Güvenliğiniz için bu kodu kimseyle paylaşmayınız.
+                    </div>
+                    
+                    <p class="message">Herhangi bir sorunuz varsa, ekibimiz size yardımcı olmaktan mutluluk duyacaktır.</p>
+                </div>
+                
+                <div class="footer">
+                    <div class="social-icons">
+                        <a href="#" class="social-icon"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="social-icon"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="social-icon"><i class="fab fa-instagram"></i></a>
+                        <a href="#" class="social-icon"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                    
+                    <div>© 2023 SER Elektrik Otomasyon. Tüm hakları saklıdır.</div>
+                    
+                    <div class="contact">
+                        <div>Adres: Teknoloji Geliştirme Bölgesi, No:15, İstanbul</div>
+                        <div>Telefon: (0212) 345 67 89 | E-posta: info@serelektrik.com</div>
+                    </div>
+                </div>
+            </div>
+        </body>
         </html>
         """
+
         part = MIMEText(html, "html")
         message.attach(part)
 
