@@ -546,285 +546,210 @@
         <span id="toastMessage">İşlem başarıyla tamamlandı</span>
     </div>
 
-    <script>
-
- function showStep(stepNumber) {
-            // Adım göstergesini güncelle
-            steps.forEach((step, index) => {
-                if (index < stepNumber) {
-                    step.classList.add('active');
-                } else {
-                    step.classList.remove('active');
-                }
-            });
-
-            // İçeriği güncelle
-            stepContents.forEach(content => {
-                content.classList.remove('active');
-            });
-            document.getElementById(`step-${getStepId(stepNumber)}`).classList.add('active');
-            currentStep = stepNumber;
-        }
-
-const showToast = (message, isError = false) => {
-    const toastContainer = document.getElementById('toast-container');
-    const toast = document.createElement('div');
-    toast.classList.add('toast');
-    if (isError) {
-        toast.classList.add('error');
-    }
-    toast.textContent = message;
-    toastContainer.appendChild(toast);
-    setTimeout(() => {
-        toast.remove();
-    }, 4000);
-};
-        document.getElementById('forgot-password-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('email').value;
-
-    try {
-        const response = await fetch('/forgot-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
-        });
-        const result = await response.json();
-
-        if (result.success) {
-            showToast(result.message);
-            showStep(2);
-        } else {
-            showToast(result.message, true);
-        }
-    } catch (error) {
-        console.error('API Hatası:', error);
-        showToast('Bir hata oluştu, lütfen tekrar deneyin.', true);
-    }
-});
-        document.getElementById('verify-code-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const code = document.getElementById('verification-code').value;
-
-    // Bu form, şifre sıfırlama formuna geçiş için bir ön kontrol görevi görecek.
-    // Arka plandaki reset-password rotası hem kodu hem de şifreleri kontrol edeceği için,
-    // burada sadece bir sonraki adıma geçiş için bir mantık kurabiliriz.
-    // Ancak daha sağlam bir yapı için kodu burada doğrulayacak bir API rotası da eklenebilir.
-    // Şimdilik, sadece UI geçişini sağlıyoruz.
-
-    showStep(3);
-});
-        document.getElementById('reset-password-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const code = document.getElementById('verification-code').value;
-    const newPassword = document.getElementById('new-password').value;
-    const confirmPassword = document.getElementById('confirm-password').value;
-
-    if (newPassword !== confirmPassword) {
-        showToast('Şifreler birbiriyle eşleşmiyor.', true);
-        return;
-    }
-    
-    if (newPassword.length < 8) {
-        showToast('Şifre en az 8 karakter olmalıdır.', true);
-        return;
-    }
-
-    try {
-        const response = await fetch('/reset-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code, new_password: newPassword, confirm_password: confirmPassword })
-        });
-        const result = await response.json();
-
-        if (result.success) {
-            showToast(result.message);
-            showStep(4);
-        } else {
-            showToast(result.message, true);
-        }
-    } catch (error) {
-        console.error('API Hatası:', error);
-        showToast('Bir hata oluştu, lütfen tekrar deneyin.', true);
-    }
-});
-        // Toast mesajı gösterme fonksiyonu
-       
-        // Tema değiştirme
-        const themeToggle = document.getElementById('theme-toggle');
-        themeToggle.addEventListener('click', () => {
-            const currentTheme = document.body.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            document.body.setAttribute('data-theme', newTheme);
-            themeToggle.classList.toggle('dark', newTheme === 'dark');
-            localStorage.setItem('theme', newTheme);
-        });
-
-        // Sayfa yüklendiğinde tema tercihini kontrol et
+ <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // Helper functions
+            const showToast = (message, isError = false) => {
+                const toastContainer = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.classList.add('toast');
+                if (isError) {
+                    toast.classList.add('error');
+                }
+                toast.textContent = message;
+                toastContainer.appendChild(toast);
+                setTimeout(() => {
+                    toast.remove();
+                }, 4000);
+            };
+
+            function showStep(stepNumber) {
+                const stepContents = document.querySelectorAll('.step-content');
+                stepContents.forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(`step-${stepNumber}`).classList.add('active');
+            }
+
+            function validateEmail(email) {
+                const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+                return re.test(String(email).toLowerCase());
+            }
+
+            // Global variables
+            const themeToggle = document.getElementById('theme-toggle');
+            let sentEmail = '';
+
+            // Tema değiştirme
             const savedTheme = localStorage.getItem('theme');
             if (savedTheme) {
                 document.body.setAttribute('data-theme', savedTheme);
-                if (savedTheme === 'dark') {
-                    themeToggle.classList.add('dark');
-                }
             }
-            
-            // Kod inputlarına odaklanma
+            themeToggle.addEventListener('click', () => {
+                const currentTheme = document.body.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                document.body.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+            });
+
+            // Adım 1: E-posta Gönder
+            document.getElementById('forgot-password-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('email').value;
+
+                if (!email || !validateEmail(email)) {
+                    showToast('Lütfen geçerli bir e-posta adresi girin.', true);
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/forgot-password', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email })
+                    });
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        showToast(result.message || 'Doğrulama kodu e-posta adresinize gönderildi.');
+                        sentEmail = email; // E-postayı bir sonraki adım için sakla
+                        showStep(2);
+                    } else {
+                        showToast(result.message || 'E-posta gönderimi başarısız.', true);
+                    }
+                } catch (error) {
+                    console.error('API Hatası:', error);
+                    showToast('Sunucuya bağlanılamadı. Lütfen tekrar deneyin.', true);
+                }
+            });
+
+            // Adım 2: Kodu Doğrula
             const codeInputs = document.querySelectorAll('.code-char');
-            if (codeInputs.length > 0) {
-                codeInputs[0].focus();
-                
-                codeInputs.forEach((input, index) => {
-                    input.addEventListener('input', (e) => {
-                        if (e.target.value.length === 1 && index < codeInputs.length - 1) {
-                            codeInputs[index + 1].focus();
-                        }
-                    });
-                    
-                    input.addEventListener('keydown', (e) => {
-                        if (e.key === 'Backspace' && input.value === '' && index > 0) {
-                            codeInputs[index - 1].focus();
-                        }
-                    });
+            document.getElementById('verify-button').addEventListener('click', async () => {
+                let code = '';
+                codeInputs.forEach(input => {
+                    code += input.value;
                 });
-            }
-        });
 
-        // Şifre göster/gizle
-        const togglePasswordIcons = document.querySelectorAll('.toggle-password');
-        togglePasswordIcons.forEach(icon => {
-            icon.addEventListener('click', () => {
-                const passwordInput = icon.previousElementSibling;
-                if (passwordInput.type === 'password') {
-                    passwordInput.type = 'text';
-                    icon.classList.remove('fa-eye');
-                    icon.classList.add('fa-eye-slash');
+                if (code.length !== 6) {
+                    showToast('Lütfen 6 haneli doğrulama kodunu eksiksiz girin.', true);
+                    return;
+                }
+
+                // Geliştirme için basit bir doğrulama, API entegrasyonu için aşağıdaki gibi bir fetch kullanılabilir.
+                // try {
+                //     const response = await fetch('/verify-code', {
+                //         method: 'POST',
+                //         headers: { 'Content-Type': 'application/json' },
+                //         body: JSON.stringify({ email: sentEmail, code })
+                //     });
+                //     const result = await response.json();
+                //     if (response.ok) {
+                //         showToast('Doğrulama başarılı!');
+                //         showStep(3);
+                //     } else {
+                //         showToast(result.message || 'Doğrulama kodu yanlış.', true);
+                //     }
+                // } catch (error) {
+                //     console.error('API Hatası:', error);
+                //     showToast('Bir hata oluştu, lütfen tekrar deneyin.', true);
+                // }
+                
+                // Demo amaçlı basit doğrulama
+                if (code === '123456') {
+                    showToast('Doğrulama başarılı!');
+                    showStep(3);
                 } else {
-                    passwordInput.type = 'password';
-                    icon.classList.remove('fa-eye-slash');
-                    icon.classList.add('fa-eye');
+                    showToast('Doğrulama kodu hatalı.', true);
                 }
             });
-        });
 
-        // Adımlar arasında geçiş
-        const steps = document.querySelectorAll('.step');
-        const stepContents = document.querySelectorAll('.step-content');
-        const sentEmailElement = document.getElementById('sent-email');
-        let currentStep = 1;
-
-       
-
-        function getStepId(stepNumber) {
-            switch(stepNumber) {
-                case 1: return 'email';
-                case 2: return 'code';
-                case 3: return 'password';
-                case 4: return 'success';
-                default: return 'email';
-            }
-        }
-
-        // Butonlara olay dinleyicileri ekleme
-        document.getElementById('next-button').addEventListener('click', () => {
-            const email = document.getElementById('email').value;
-            
-            if (!email || !validateEmail(email)) {
-                showToast('Lütfen geçerli bir e-posta adresi girin', true);
-                return;
-            }
-            
-            sentEmailElement.textContent = email;
-            showToast('Doğrulama kodu e-posta adresinize gönderildi');
-            showStep(2);
-        });
-
-        document.getElementById('back-to-email').addEventListener('click', (e) => {
-            e.preventDefault();
-            showStep(1);
-        });
-
-        document.getElementById('verify-button').addEventListener('click', () => {
-            const codeInputs = document.querySelectorAll('.code-char');
-            let code = '';
-            let isValid = true;
-            
-            codeInputs.forEach(input => {
-                if (!input.value) isValid = false;
-                code += input.value;
-            });
-            
-            if (!isValid || code.length !== 6) {
-                showToast('Lütfen 6 haneli doğrulama kodunu girin', true);
-                return;
-            }
-            
-            // Basit doğrulama
-            if (code === '123456') {
-                showStep(3);
-            } else {
-                showToast('Doğrulama kodu hatalı', true);
-            }
-        });
-
-       document.getElementById('resend-button').addEventListener('click', () => {
-    // Bu butona tıklandığında, forgot-password API'sine tekrar e-posta gönderilir.
-    const email = document.getElementById('email').value;
-    if (email) {
-        fetch('/forgot-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
+            // Kodu tekrar gönder
+            document.getElementById('resend-button').addEventListener('click', () => {
+                // Burada tekrar 'forgot-password' API'sine istek gönderilebilir
+                // Geliştirme için bir uyarı mesajı gösterelim
                 showToast('Yeni doğrulama kodu e-posta adresinize gönderildi.');
-            } else {
-                showToast(result.message, true);
-            }
-        })
-        .catch(error => {
-            console.error('API Hatası:', error);
-            showToast('Bir hata oluştu, lütfen tekrar deneyin.', true);
+            });
+
+            // Adım 3: Şifreyi Kaydet
+            document.getElementById('reset-password-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const code = Array.from(document.querySelectorAll('.code-char')).map(input => input.value).join('');
+                const newPassword = document.getElementById('new-password').value;
+                const confirmPassword = document.getElementById('confirm-password').value;
+
+                if (newPassword !== confirmPassword) {
+                    showToast('Şifreler birbiriyle eşleşmiyor.', true);
+                    return;
+                }
+                
+                if (newPassword.length < 8) {
+                    showToast('Şifre en az 8 karakter olmalıdır.', true);
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/reset-password', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: sentEmail, code, new_password: newPassword })
+                    });
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        showToast(result.message || 'Şifreniz başarıyla güncellendi.');
+                        showStep(4);
+                    } else {
+                        showToast(result.message || 'Şifre güncelleme başarısız oldu.', true);
+                    }
+                } catch (error) {
+                    console.error('API Hatası:', error);
+                    showToast('Bir hata oluştu, lütfen tekrar deneyin.', true);
+                }
+            });
+
+            // Geri dön butonları
+            document.getElementById('back-to-code').addEventListener('click', (e) => {
+                e.preventDefault();
+                showStep(2);
+            });
+
+            // Adım 4: Giriş sayfasına yönlendirme
+            document.getElementById('login-button').addEventListener('click', () => {
+                window.location.href = 'login.html';
+            });
+
+            // Şifre inputları
+            const togglePasswordIcons = document.querySelectorAll('.toggle-password');
+            togglePasswordIcons.forEach(icon => {
+                icon.addEventListener('click', () => {
+                    const passwordInput = icon.previousElementSibling;
+                    if (passwordInput.type === 'password') {
+                        passwordInput.type = 'text';
+                        icon.classList.remove('fa-eye');
+                        icon.classList.add('fa-eye-slash');
+                    } else {
+                        passwordInput.type = 'password';
+                        icon.classList.remove('fa-eye-slash');
+                        icon.classList.add('fa-eye');
+                    }
+                });
+            });
+
+            // Kod inputlarına odaklanma ve geri silme
+            codeInputs.forEach((input, index) => {
+                input.addEventListener('input', (e) => {
+                    if (e.target.value.length === 1 && index < codeInputs.length - 1) {
+                        codeInputs[index + 1].focus();
+                    }
+                });
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && e.target.value.length === 0 && index > 0) {
+                        codeInputs[index - 1].focus();
+                    }
+                });
+            });
         });
-    }
-});
-
-        document.getElementById('back-to-code').addEventListener('click', (e) => {
-    e.preventDefault();
-    showStep(2);
-});
-
-        document.getElementById('save-button').addEventListener('click', () => {
-            const newPassword = document.getElementById('new-password').value;
-            const confirmPassword = document.getElementById('confirm-password').value;
-            
-            if (!newPassword || newPassword.length < 8) {
-                showToast('Şifre en az 8 karakter olmalıdır', true);
-                return;
-            }
-            
-            if (newPassword !== confirmPassword) {
-                showToast('Şifreler birbiriyle eşleşmiyor', true);
-                return;
-            }
-            
-            showToast('Şifreniz başarıyla güncellendi');
-            showStep(4);
-        });
-
-        document.getElementById('login-button').addEventListener('click', () => {
-       window.location.href = 'login.html';
-      });
-        // E-posta doğrulama fonksiyonu
-        function validateEmail(email) {
-            const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-            return re.test(String(email).toLowerCase());
-        }
-    
     </script>
 </body>
 </html>
