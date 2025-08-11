@@ -473,7 +473,30 @@ def get_unread_notifications_count():
         if connection:
             connection.close()
 
+@app.route('/api/roles', methods=['GET'])
+def get_roles():
+    """
+    Veritabanındaki tüm rolleri çeker ve döndürür.
+    """
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Database connection failed"}), 500
 
+    try:
+        with connection.cursor() as cursor:
+            sql = "SELECT role_id, role_name FROM roles"
+            cursor.execute(sql)
+            roles = cursor.fetchall()
+            return jsonify(roles), 200
+    except Exception as e:
+        print(f"Error fetching roles: {e}")
+        return jsonify({"error": "An error occurred while fetching roles"}), 500
+    finally:
+        if connection:
+            connection.close()
 # API to mark notification as read (for notifications table)
 @app.route('/api/notifications/<int:notification_id>/read', methods=['PUT'])
 def mark_notification_as_read(notification_id):
