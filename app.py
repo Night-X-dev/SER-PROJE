@@ -62,23 +62,12 @@ def serve_index_page():
 
 @app.route('/ayarlar.html')
 def serve_ayarlar_page():
+    """Directs /ayarlar.html requests to the ayarlar.html page.
+    All logged-in users can access, but content will be hidden on the frontend based on role."""
     if 'user_id' not in session:
         return redirect(url_for('serve_login_page'))
-    
-    # Kullanıcı bilgilerini al
-    user_id = session['user_id']
-    connection = get_db_connection()
-    cursor = connection.cursor(dictionary=True)
-    cursor.execute("""
-        SELECT u.*, y.role_name 
-        FROM users u 
-        JOIN yetki y ON u.role_id = y.id 
-        WHERE u.id = %s
-    """, (user_id,))
-    current_user = cursor.fetchone()
-    connection.close()
-    
-    return render_template('ayarlar.html', current_user=current_user)
+    # Allow all logged-in users to access the settings page
+    return render_template('ayarlar.html')
 
 @app.route('/kablo_hesap.html')
 def serve_kablo_hesap_page():
