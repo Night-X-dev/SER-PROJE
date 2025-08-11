@@ -1179,7 +1179,7 @@
                 <div class="card-header">
                     <h2 class="card-title">
                         <i class="fas fa-shield-alt"></i>
-                        Rol ve İzin Yönetimi
+                        İzin Yönetimi
                     </h2>
                 </div>
                 
@@ -1683,8 +1683,130 @@
         document.addEventListener('DOMContentLoaded', function() {
             const accountSettingsForm = document.getElementById('accountSettingsForm');
             const accountSettingsMessage = document.getElementById('accountSettingsMessage');
+            const rolesTableBody = document.getElementById('roles-table-body');
+        const addRoleBtn = document.getElementById('add-role-btn');
+        const roleFormContainer = document.getElementById('role-form-container');
+        const cancelRoleFormBtn = document.getElementById('cancel-role-form-btn');
+        const saveRoleBtn = document.getElementById('save-role-btn');
+        const roleNameInput = document.getElementById('role-name');
 
+        let isEditMode = false;
+        let editingRoleId = null;
             // Confirmation Modal'ı DOM yüklendiğinde başlat
+            function fetchRolesAndUsers() {
+            // Admin rolünü hariç tutmak için fetch işlemi
+            fetch('/api/roles') // Bu API endpoint'ini backend'de oluşturmanız gerekecek
+                .then(response => response.json())
+                .then(roles => {
+                    rolesTableBody.innerHTML = ''; // Tablo içeriğini temizle
+                    roles.forEach(role => {
+                        // "Admin" rolünü listeleme
+                        if (role.name !== 'Admin') {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td><span class="role-badge role-${role.name.toLowerCase()}">${role.name}</span></td>
+                                <td>${role.user_count}</td>
+                                <td class="text-center">
+                                    <button class="action-btn edit-role-btn" data-role-id="${role.id}" title="Düzenle"><i class="fas fa-edit"></i></button>
+                                    <button class="action-btn delete-role-btn" data-role-id="${role.id}" title="Sil"><i class="fas fa-trash-alt"></i></button>
+                                </td>
+                            `;
+                            rolesTableBody.appendChild(row);
+                        }
+                    });
+
+                    // İşlemler butonlarına event listener ekleme
+                    document.querySelectorAll('.edit-role-btn').forEach(button => {
+                        button.addEventListener('click', handleEditRole);
+                    });
+                    document.querySelectorAll('.delete-role-btn').forEach(button => {
+                        button.addEventListener('click', handleDeleteRole);
+                    });
+                })
+                .catch(error => console.error('Error fetching roles:', error));
+        }
+
+        // Rol ekleme butonuna tıklama olayını yönetme
+        addRoleBtn.addEventListener('click', () => {
+            roleFormContainer.style.display = 'block';
+            isEditMode = false;
+            roleNameInput.value = '';
+            saveRoleBtn.innerHTML = '<i class="fas fa-save"></i> Kaydet';
+        });
+
+        // Formu iptal etme
+        cancelRoleFormBtn.addEventListener('click', () => {
+            roleFormContainer.style.display = 'none';
+        });
+
+        // Rolü kaydetme (ekleme veya güncelleme)
+        saveRoleBtn.addEventListener('click', () => {
+            const roleName = roleNameInput.value.trim();
+            if (!roleName) {
+                alert('Lütfen bir rol adı girin.'); // Pop-up'ı daha sonra özel bir modal ile değiştirebilirsiniz
+                return;
+            }
+
+            const url = isEditMode ? `/api/roles/${editingRoleId}` : '/api/roles';
+            const method = isEditMode ? 'PUT' : 'POST';
+
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ role_name: roleName })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('İşlem başarıyla tamamlandı.'); // Pop-up'ı daha sonra özel bir modal ile değiştirebilirsiniz
+                    roleFormContainer.style.display = 'none';
+                    fetchRolesAndUsers(); // Listeyi güncelle
+                } else {
+                    alert('Hata: ' + data.message); // Pop-up'ı daha sonra özel bir modal ile değiştirebilirsiniz
+                }
+            })
+            .catch(error => console.error('Error saving role:', error));
+        });
+
+        // Rol düzenleme
+        function handleEditRole(event) {
+            const roleId = event.currentTarget.dataset.roleId;
+            // Rol adını bulmak için basit bir yöntem
+            const roleName = event.currentTarget.closest('tr').querySelector('.role-badge').textContent.trim();
+
+            roleFormContainer.style.display = 'block';
+            isEditMode = true;
+            editingRoleId = roleId;
+            roleNameInput.value = roleName;
+            saveRoleBtn.innerHTML = '<i class="fas fa-save"></i> Güncelle';
+        }
+
+        // Rol silme
+        function handleDeleteRole(event) {
+            const roleId = event.currentTarget.dataset.roleId;
+            // Kullanıcıdan onay al
+            if (confirm('Bu rolü silmek istediğinize emin misiniz?')) { // Pop-up'ı daha sonra özel bir modal ile değiştirebilirsiniz
+                fetch(`/api/roles/${roleId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Rol başarıyla silindi.'); // Pop-up'ı daha sonra özel bir modal ile değiştirebilirsiniz
+                        fetchRolesAndUsers(); // Listeyi güncelle
+                    } else {
+                        alert('Hata: ' + data.message); // Pop-up'ı daha sonra özel bir modal ile değiştirebilirsiniz
+                    }
+                })
+                .catch(error => console.error('Error deleting role:', error));
+            }
+        }
+
+        // Sayfa yüklendiğinde rolleri çek
+        fetchRolesAndUsers();
+    });
             const confirmationModalElement = document.getElementById('confirmationModal');
             if (confirmationModalElement) {
                 confirmationBootstrapModal = new bootstrap.Modal(confirmationModalElement);
@@ -2051,7 +2173,6 @@
                     }
                 });
             }
-        });
 
         function maskPhoneInput(e) {
             let value = e.target.value.replace(/\D/g, '');

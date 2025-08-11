@@ -1035,7 +1035,7 @@ def register_user():
     email = data.get('email')
     phone = data.get('phone', '')
     password = data.get('password')
-    role = data.get('role', 'Employee') # Default position if not provided
+    role = data.get('role', 'Employee') 
     profile_picture = data.get('profile_picture')
     hide_email = data.get('hide_email', 0)
     hide_phone = data.get('hide_phone', 0)
@@ -2946,7 +2946,97 @@ def update_password():
     finally:
         if connection:
             connection.close()
+@app.route('/api/roles', methods=['POST'])
+def add_role():
+    """
+    Yeni bir rol ekler.
+    """
+    data = request.json
+    role_name = data.get('role_name')
+    if not role_name:
+        return jsonify({"success": False, "message": "Rol adı boş olamaz."}), 400
 
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            # Aynı isimde rol olup olmadığını kontrol et
+            sql_check = "SELECT * FROM roles WHERE role_name = %s"
+            cursor.execute(sql_check, (role_name,))
+            if cursor.fetchone():
+                return jsonify({"success": False, "message": "Bu rol zaten mevcut."}), 409
+
+            sql = "INSERT INTO roles (role_name) VALUES (%s)"
+            cursor.execute(sql, (role_name,))
+        connection.commit()
+        return jsonify({"success": True, "message": "Rol başarıyla eklendi."})
+    except Exception as e:
+        print(f"Error adding role: {e}")
+        return jsonify({"success": False, "message": "Rol eklenirken bir hata oluştu."}), 500
+    finally:
+        connection.close()
+
+@app.route('/api/roles/<int:role_id>', methods=['PUT'])
+def update_role(role_id):
+    """
+    Var olan bir rolü günceller.
+    """
+    data = request.json
+    role_name = data.get('role_name')
+    if not role_name:
+        return jsonify({"success": False, "message": "Rol adı boş olamaz."}), 400
+
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            # Admin rolünü güncellemeye izin verme
+            sql_check = "SELECT role_name FROM roles WHERE role_id = %s"
+            cursor.execute(sql_check, (role_id,))
+            role = cursor.fetchone()
+            if role and role['role_name'] == 'Admin':
+                return jsonify({"success": False, "message": "Admin rolü güncellenemez."}), 403
+
+            sql = "UPDATE roles SET role_name = %s WHERE role_id = %s"
+            cursor.execute(sql, (role_name, role_id))
+        connection.commit()
+        return jsonify({"success": True, "message": "Rol başarıyla güncellendi."})
+    except Exception as e:
+        print(f"Error updating role: {e}")
+        return jsonify({"success": False, "message": "Rol güncellenirken bir hata oluştu."}), 500
+    finally:
+        connection.close()
+
+@app.route('/api/roles/<int:role_id>', methods=['DELETE'])
+def delete_role(role_id):
+    """
+    Bir rolü siler.
+    Silme işleminden önce, bu role atanmış kullanıcılar varsa hata döndürür.
+    """
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            # Rolün Admin olup olmadığını kontrol et
+            sql_check_admin = "SELECT role_name FROM roles WHERE role_id = %s"
+            cursor.execute(sql_check_admin, (role_id,))
+            role = cursor.fetchone()
+            if role and role['role_name'] == 'Admin':
+                return jsonify({"success": False, "message": "Admin rolü silinemez."}), 403
+            
+            # Bu role sahip kullanıcı olup olmadığını kontrol et
+            sql_check_users = "SELECT COUNT(*) AS user_count FROM users WHERE user_role_id = %s"
+            cursor.execute(sql_check_users, (role_id,))
+            user_count = cursor.fetchone()['user_count']
+            if user_count > 0:
+                return jsonify({"success": False, "message": "Bu role atanmış kullanıcılar olduğu için rol silinemez."}), 409
+            
+            sql = "DELETE FROM roles WHERE role_id = %s"
+            cursor.execute(sql, (role_id,))
+        connection.commit()
+        return jsonify({"success": True, "message": "Rol başarıyla silindi."})
+    except Exception as e:
+        print(f"Error deleting role: {e}")
+        return jsonify({"success": False, "message": "Rol silinirken bir hata oluştu."}), 500
+    finally:
+        connection.close()
 @app.route('/api/roles', methods=['GET'])
 def get_distinct_roles():
     """Retrieves distinct roles from the users table (excluding 'Admin')."""
