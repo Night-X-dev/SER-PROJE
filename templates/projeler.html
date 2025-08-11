@@ -2350,90 +2350,90 @@ function attachProjectTableEventListeners() {
 
     // Modal açma fonksiyonu
   async function openProjectModal(projectId, mode) {
-    try {
-        console.log("openProjectModal başladı, projectId:", projectId, "mode:", mode);
-        const project = allProjectsData.find((p) => p.project_id == projectId);
-        if (!project) {
-            showToast("Proje bulunamadı!", true);
-            return;
-        }
-        
-        projectModal.style.display = "flex";
-        modalBody.innerHTML =
-        '<p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</p>';
-        
-        if (mode === "view") {
-            console.log("View modu için modal yükleniyor");
-            modalTitle.innerHTML = `<i class="fas fa-info-circle"></i> Proje Detayları: ${project.project_name}`;
-            await renderViewModal(project);
-            modalActions.innerHTML = `<button class="modal-btn modal-btn-cancel" id="cancelModalBtn">Kapat</button>`;
-            
-            if (!modalBodyClickListener) {
-                modalBodyClickListener = function(e) {
-                    if (e.target.closest('.open-location-btn')) {
-                        const btn = e.target.closest('.open-location-btn');
-                        const location = btn.dataset.location;
-                        openLocationInGoogleMaps(location);
-                    }
-                };
-                modalBody.addEventListener('click', modalBodyClickListener);
-            }
-            console.log("View modu modal hazır");
-        } else if (mode === "edit") {
-            console.log("Edit modu için modal yükleniyor");
-            modalTitle.innerHTML = `<i class="fas fa-edit"></i> Projeyi Düzenle: ${project.project_name}`;
-            await renderEditModal(project);
-            modalActions.innerHTML = `
-            <button class="modal-btn modal-btn-save" id="saveProjectBtn"><i class="fas fa-save"></i> Kaydet</button>
-            <button class="modal-btn modal-btn-cancel" id="cancelModalBtn">İptal</button>
-            `;
-            
-            // Event listener'lar ekleniyor
-            const saveProjectBtn = document.getElementById("saveProjectBtn");
-            if (saveProjectBtn) {
-                saveProjectBtn.addEventListener("click", saveProjectChanges);
-            } else {
-                console.error("saveProjectBtn bulunamadı!");
-            }
-            
-            const cancelModalBtn = document.getElementById("cancelModalBtn");
-            if (cancelModalBtn) {
-                cancelModalBtn.addEventListener("click", closeProjectModal);
-            } else {
-                console.error("cancelModalBtn bulunamadı!");
-            }
-            console.log("Edit modu modal hazır");
-        }
-        
-        // Her zaman güncel kapatma butonlarına olay dinleyicisi ekle
-        const cancelBtn = document.getElementById("cancelModalBtn");
-        if (cancelBtn) {
-            cancelBtn.addEventListener("click", closeProjectModal);
-        } else {
-            console.warn("cancelModalBtn bulunamadı, olay dinleyici eklenemedi");
-        }
-        
-        if (closeModalBtn) {
-            closeModalBtn.addEventListener("click", closeProjectModal);
-        } else {
-            console.warn("closeModalBtn bulunamadı, olay dinleyici eklenemedi");
-        }
-        
-        // Modalın dışına tıklayarak kapatma
-        projectModal.onclick = (e) => {
-            if (e.target === projectModal) {
-                closeProjectModal();
-            }
-        };
-        
-        // Esc tuşu ile kapatma
-        document.addEventListener("keydown", handleEscapeKey);
-        console.log("openProjectModal tamamlandı");
-    } catch (error) {
-        console.error("openProjectModal hatası:", error);
-        modalBody.innerHTML = `<p style="text-align: center; color: red;">Modal yüklenirken bir hata oluştu: ${error.message}</p>
-        <button class="btn" onclick="closeProjectModal()">Modali Kapat</button>`;
+  try {
+    console.log("openProjectModal başladı, projectId:", projectId, "mode:", mode);
+    const project = allProjectsData.find((p) => p.project_id == projectId);
+    if (!project) {
+      showToast("Proje bulunamadı!", true);
+      return;
     }
+    
+    projectModal.style.display = "flex";
+    modalBody.innerHTML =
+    '<p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</p>';
+    
+    if (mode === "view") {
+      console.log("View modu için modal yükleniyor");
+      modalTitle.innerHTML = `<i class="fas fa-info-circle"></i> Proje Detayları: ${project.project_name}`;
+      await renderViewModal(project);
+      modalActions.innerHTML = `<button class="modal-btn modal-btn-cancel" id="cancelModalBtn">Kapat</button>`;
+      
+      if (!modalBodyClickListener) {
+        modalBodyClickListener = function(e) {
+          if (e.target.closest('.open-location-btn')) {
+            const btn = e.target.closest('.open-location-btn');
+            const location = btn.dataset.location;
+            openLocationInGoogleMaps(location);
+          }
+        };
+        modalBody.addEventListener('click', modalBodyClickListener);
+      }
+      console.log("View modu modal hazır");
+    } else if (mode === "edit") {
+      console.log("Edit modu için modal yükleniyor");
+      modalTitle.innerHTML = `<i class="fas fa-edit"></i> Projeyi Düzenle: ${project.project_name}`;
+      await renderEditModal(project);
+      modalActions.innerHTML = `
+      <button class="modal-btn modal-btn-save" id="saveProjectBtn"><i class="fas fa-save"></i> Kaydet</button>
+      <button class="modal-btn modal-btn-cancel" id="cancelModalBtn">İptal</button>
+      `;
+      
+      // Event listener'lar ekleniyor
+      const saveProjectBtn = document.getElementById("saveProjectBtn");
+      if (saveProjectBtn) {
+        saveProjectBtn.addEventListener("click", saveProjectChanges);
+      } else {
+        console.error("saveProjectBtn bulunamadı!");
+      }
+      
+      const cancelModalBtn = document.getElementById("cancelModalBtn");
+      if (cancelModalBtn) {
+        cancelModalBtn.addEventListener("click", closeProjectModal);
+      } else {
+        console.error("cancelModalBtn bulunamadı!");
+      }
+      console.log("Edit modu modal hazır");
+    }
+    
+    // Her zaman güncel kapatma butonlarına olay dinleyicisi ekle
+    const cancelBtn = document.getElementById("cancelModalBtn");
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", closeProjectModal);
+    } else {
+      console.warn("cancelModalBtn bulunamadı, olay dinleyici eklenemedi");
+    }
+    
+    if (closeModalBtn) {
+      closeModalBtn.addEventListener("click", closeProjectModal);
+    } else {
+      console.warn("closeModalBtn bulunamadı, olay dinleyici eklenemedi");
+    }
+    
+    // Modalın dışına tıklayarak kapatma
+    projectModal.onclick = (e) => {
+      if (e.target === projectModal) {
+        closeProjectModal();
+      }
+    };
+    
+    // Esc tuşu ile kapatma
+    document.addEventListener("keydown", handleEscapeKey);
+    console.log("openProjectModal tamamlandı");
+  } catch (error) {
+    console.error("openProjectModal hatası:", error);
+    modalBody.innerHTML = `<p style="text-align: center; color: red;">Modal yüklenirken bir hata oluştu: ${error.message}</p>
+    <button class="btn" onclick="closeProjectModal()">Modali Kapat</button>`;
+  }
 }
 
 
@@ -2454,17 +2454,12 @@ function attachProjectTableEventListeners() {
         window.open(url, '_blank');
     }
 
-   async function renderViewModal(project) {
-    let locationHtml = project.project_location || "-";
-    if (project.project_location) {
-        locationHtml += ` <button class="action-btn open-location-btn" data-location="${project.project_location}" title="Haritada Aç"><i class="fas fa-map-marker-alt"></i></button>`;
-    }
-
-    const canAddProgress = await checkPermission('proje_is_ekle'); // Yetki kontrolü ekledim
-    const canCreatePdf = await checkPermission('pdf_olusturma'); // PDF oluşturma yetki kontrolü
-
-    modalBody.innerHTML = `
-        <div id="projectDetailContent">
+    async function renderViewModal(project) {
+        let locationHtml = project.project_location || "-";
+        if (project.project_location) {
+            locationHtml += ` <button class="action-btn open-location-btn" data-location="${project.project_location}" title="Haritada Aç"><i class="fas fa-map-marker-alt"></i></button>`;
+        }
+        modalBody.innerHTML = `
             <div class="detail-item">
                 <span class="detail-label">Proje Adı:</span>
                 <span class="detail-value">${project.project_name ? project.project_name.normalize('NFC') : "-"}</span>
@@ -2503,18 +2498,21 @@ function attachProjectTableEventListeners() {
             </div>
             <div class="progress-detail-section">
                 <h3 class="modal-title" style="margin-bottom: 15px;"><i class="fas fa-tasks"></i> İş Gidişatı</h3>
-                <div id="progressStepsContainer">
-                    <p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> İş adımları yükleniyor...</p>
-                </div>
+                <div id="progressStepsContainer"></div>
+                <button class="btn" style="margin-top: 15px;" id="addProgressStepBtn">
+                    <i class="fas fa-plus"></i> İş Adımı Ekle
+                </button>
             </div>
-        </div>
-        ${canAddProgress ? `<button class="btn" style="margin-top: 15px;" id="addProgressStepBtn" onclick="showAddProgressModal(${project.project_id})"><i class="fas fa-plus"></i> İş Adımı Ekle</button>` : ''}
-        ${canCreatePdf ? `<button class="btn btn-warning" style="margin-top: 15px;" id="exportPdfBtn" onclick="generateProjectPdf(${project.project_id})"><i class="fas fa-file-pdf"></i> PDF Oluştur</button>` : ''}
-    `;
-    
-    // İş adımlarını yüklemek için yeni bir fonksiyon çağırıyoruz
-    await fetchProgressSteps(project.project_id);
-}
+        `;
+        try {
+            await fetchProgressSteps(project.project_id);
+        } catch (err) {
+            const progressStepsContainer = document.getElementById("progressStepsContainer");
+            if (progressStepsContainer) {
+                progressStepsContainer.innerHTML = `<p style="color: var(--danger);">İş adımları yüklenemedi. Sunucuya ulaşılamıyor veya API hatası.</p>`;
+            }
+        }
+    }
 
     // Düzenleme modalı fonksiyonu
  async function renderEditModal(project) {
@@ -2757,76 +2755,47 @@ function attachProjectTableEventListeners() {
 
     // `isEditable` parametresi eklendi
  let successfulProgressEndpoint = null;
-   async function fetchProgressSteps(projectId) {
-    const progressStepsContainer = document.getElementById("progressStepsContainer");
-    if (!progressStepsContainer) {
-        console.error("progressStepsContainer bulunamadı!");
-        return;
-    }
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`);
-        if (!response.ok) {
-            throw new Error('API\'den iş adımları alınamadı.');
+    async function fetchProgressSteps(projectId, isEditable = false) {
+        try {
+            console.log(`İş adımları getiriliyor: Proje ID ${projectId}`);
+            
+            let baseUrl = API_BASE_URL;
+            if (baseUrl.endsWith('/')) {
+                baseUrl = baseUrl.slice(0, -1);
+            }
+            
+            const apiUrl = `${baseUrl}/api/projects/${projectId}/progress`;
+            console.log(`İş adımları için API URL: ${apiUrl}`);
+            
+            const response = await fetch(apiUrl);
+            console.log("API yanıt durumu:", response.status, response.statusText);
+            
+            if (!response.ok) {
+                console.error(`API hatası: ${response.status} ${response.statusText}`);
+                renderProgressSteps([], projectId, isEditable);
+                return;
+            }
+            
+            const data = await response.json();
+            console.log("API'den gelen iş adımları verisi:", data);
+            
+            if (!data || (!Array.isArray(data) && !Array.isArray(data.steps))) {
+                console.error("API'den geçersiz veri formatı geldi:", data);
+                renderProgressSteps([], projectId, isEditable);
+                return;
+            }
+            
+            const steps = Array.isArray(data) ? data : data.steps;
+            renderProgressSteps(steps, projectId, isEditable);
+            
+        } catch (error) {
+            console.error("İş adımlarını getirme hatası:", error);
+            renderProgressSteps([], projectId, isEditable);
+        } finally {
+            document.getElementById("projectModal").dataset.loading = "false";
+            console.log("İş adımları yüklendi. Modal hazır.");
         }
-        const progressSteps = await response.json();
-
-        if (progressSteps.length === 0) {
-            progressStepsContainer.innerHTML = '<p>Bu proje için tanımlanmış iş adımı bulunmamaktadır.</p>';
-            return;
-        }
-        
-        const progressHtml = progressSteps.map(step => {
-            const delayInfo = (step.delay_days > 0) ? `<br><span class='text-danger fw-bold'><i class="fas fa-exclamation-circle me-1"></i>${step.delay_days} gün gecikmeli!</span>` : '';
-            const postponeInfo = (step.custom_delay_days > 0) ? `<br><span class='text-warning fw-bold'><i class="fas fa-clock me-1"></i>${step.custom_delay_days} gün ertelendi</span>` : '';
-            const completedInfo = step.real_end_date ? `<br><span class="text-success"><i class="fas fa-check-circle me-1"></i>Tamamlandı: ${formatDateForDisplay(step.real_end_date)}</span>` : '';
-
-            return `
-                <div class="progress-step-item card mb-3">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <h5 class="step-title">${step.step_name || 'İş Adımı Adı'}</h5>
-                            <div class="badge rounded-pill bg-${step.status_color || 'secondary'}">${step.status_text || 'Durum Bilgisi Yok'}</div>
-                        </div>
-                        <div class="step-dates text-muted my-2">
-                            <i class="far fa-calendar-alt me-1"></i>
-                            <span class="text-secondary">${formatDateForDisplay(step.start_date)} - ${formatDateForDisplay(step.end_date)}</span>
-                            ${completedInfo}
-                            ${delayInfo}
-                            ${postponeInfo}
-                        </div>
-                        <p class="step-description">${step.description || 'Açıklama yok.'}</p>
-                        <div class="step-actions mt-3">
-                            <button class="btn btn-sm btn-info edit-step-btn" data-step-id="${step.progress_id}"><i class="fas fa-edit"></i> Düzenle</button>
-                            <button class="btn btn-sm btn-danger delete-step-btn" data-step-id="${step.progress_id}"><i class="fas fa-trash-alt"></i> Sil</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        
-        progressStepsContainer.innerHTML = progressHtml;
-
-        // Düzenleme ve silme butonlarına olay dinleyicileri ekle
-        document.querySelectorAll('.edit-step-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const stepId = e.currentTarget.dataset.stepId;
-                showEditProgressModal(stepId);
-            });
-        });
-
-        document.querySelectorAll('.delete-step-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const stepId = e.currentTarget.dataset.stepId;
-                confirmAndDeleteProgressStep(stepId);
-            });
-        });
-
-    } catch (err) {
-        console.error('İş adımları yüklenemedi:', err);
-        progressStepsContainer.innerHTML = `<p style="color: var(--danger);">İş adımları yüklenirken bir hata oluştu.</p>`;
     }
-}
 async function updateProjectDatesFromSteps(projectId) {
   try {
     console.log(`updateProjectDatesFromSteps başladı, projectId: ${projectId}`);
