@@ -1260,7 +1260,7 @@
                 </div>
             </div>
 
-        <div class="settings-card" id="roleManagementCard">
+      <div class="settings-card" id="roleManagementCard" style="display: none;">
         <div class="card-header">
             <div class="card-title">
                 <i class="fas fa-users-cog"></i>
@@ -2041,7 +2041,18 @@ async function deleteRole(roleId) {
     
         // DOM içeriği tamamen yüklendiğinde çalışacak ana kısım
         document.addEventListener('DOMContentLoaded', function() {
-
+// Sayfa yüklendiğinde
+document.addEventListener('DOMContentLoaded', function() {
+    // Kullanıcı bilgilerini al
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    
+    // Eğer kullanıcı admin ise rol yönetimi bölümünü göster
+    if (currentUser && currentUser.role_name === 'Admin') {
+        document.getElementById('roleManagementCard').style.display = 'block';
+        // Rolleri yükle
+        fetchRoles();
+    }
+});
             fetchRoles();
             const accountSettingsForm = document.getElementById('accountSettingsForm');
             const accountSettingsMessage = document.getElementById('accountSettingsMessage');
