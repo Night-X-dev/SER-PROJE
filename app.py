@@ -2964,47 +2964,49 @@ def get_yetkitable():
             connection.close()
 @app.route('/api/update-role', methods=['POST'])
 def update_role():
-    """
-    Belirtilen rolün adını günceller.
-    """
     if 'user_id' not in session:
         return jsonify({"error": "Oturum açık değil."}), 401
 
-    user_id = session['user_id']
-    connection = get_db_connection()
-    if not connection:
-        return jsonify({"error": "Veritabanı bağlantısı kurulamadı."}), 500
-
+    connection = None
     try:
-        with connection.cursor() as cursor:
-            # Kullanıcının yetki_yonetimi iznine sahip olup olmadığını kontrol et
-            sql = """
-                SELECT r.role_name FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.user_id = %s
-            """
-            cursor.execute(sql, (user_id,))
-            user_role_data = cursor.fetchone()
-
-            if not user_role_data or not check_role_permission(user_role_data['role_name'], 'yetki_yonetimi'):
-                return jsonify({"error": "Bu işlemi yapmak için yetkiniz yok."}), 403
-
         data = request.get_json()
-        yetki_id = data.get('id')
+        role_id = data.get('role_id')
         role_name = data.get('role_name')
 
-        if not yetki_id or not role_name:
-            return jsonify({"error": "Yetki ID'si veya adı boş bırakılamaz."}), 400
+        if not role_id or not role_name:
+            return jsonify({"error": "Rol ID'si veya adı boş bırakılamaz."}), 400
+
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({"error": "Veritabanı bağlantısı kurulamadı."}), 500
 
         with connection.cursor() as cursor:
-            # Rolü yetki tablosunda 'id' sütununu kullanarak güncelle
-            sql = "UPDATE yetki SET role_name = %s WHERE id = %s"
-            cursor.execute(sql, (role_name, yetki_id))
-            connection.commit()
+            # Rol adının zaten var olup olmadığını kontrol et
+            cursor.execute("SELECT id FROM yetki WHERE role_name = %s AND id != %s", 
+                         (role_name, role_id))
+            if cursor.fetchone():
+                return jsonify({"error": "Bu isimde bir rol zaten mevcut."}), 400
 
-        return jsonify({"message": "Rol başarıyla güncellendi."}), 200
+            # Rolü güncelle
+            sql = "UPDATE yetki SET role_name = %s WHERE id = %s"
+            cursor.execute(sql, (role_name, role_id))
+            
+            if cursor.rowcount == 0:
+                return jsonify({"error": "Belirtilen rol bulunamadı."}), 404
+                
+            connection.commit()
+            return jsonify({"message": "Rol başarıyla güncellendi."}), 200
 
     except pymysql.Error as e:
+        if connection:
+            connection.rollback()
         print(f"MySQL hatası: {e}")
-        return jsonify({"error": "Veritabanı hatası oluştu."}), 500
+        return jsonify({"error": "Veritabanı işlemi sırasında bir hata oluştu."}), 500
+    except Exception as e:
+        if connection:
+            connection.rollback()
+        print(f"Beklenmeyen hata: {e}")
+        return jsonify({"error": "Beklenmeyen bir hata oluştu."}), 500
     finally:
         if connection:
             connection.close()
