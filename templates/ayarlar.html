@@ -1524,32 +1524,29 @@
             const roleSelector = document.getElementById('roleSelector');
             if (!roleSelector) return; // roleSelector elementi yoksa fonksiyondan çık
 
-            fetch(`${API_BASE_URL}/api/roles`)
+            fetch('/api/roles')
                 .then(response => {
                     if (!response.ok) {
-                        return response.json().then(err => { throw new Error(err.message || 'Bilinmeyen sunucu hatası'); });
+                        throw new Error('API hatası: ' + response.statusText);
                     }
                     return response.json();
                 })
                 .then(roles => {
-                    roleSelector.innerHTML = ''; // Seçiciyi temizle
-                    const defaultOpt = document.createElement('option');
-                    defaultOpt.value = "";
-                    defaultOpt.textContent = "Bir rol seçin...";
-                    defaultOpt.disabled = true;
-                    defaultOpt.selected = true;
-                    roleSelector.appendChild(defaultOpt);
+                    const roleSelect = document.getElementById('role-select');
+                    roleSelect.innerHTML = ''; // Önceki seçenekleri temizle
 
+                    // Dönen rollerin bir dizi olduğunu ve her birinin bir nesne olduğunu varsayıyoruz
                     roles.forEach(role => {
-                        const opt = document.createElement('option');
-                        opt.value = role.toLowerCase(); // Değer olarak küçük harf kullanmak iyi bir pratik
-                        opt.textContent = role;
-                        roleSelector.appendChild(opt);
+                        const option = document.createElement('option');
+                        option.value = role.role_id;
+                        // Buradaki hata düzeltildi: role.role_name kullanıldı
+                        option.textContent = role.role_name;
+                        roleSelect.appendChild(option);
                     });
                 })
-                .catch(error => {
-                    console.error('Rolleri çekerken hata:', error);
-                    showToast(`Hata: ${error.message}`, true); // Hata durumunda toast göster
+                .catch(err => {
+                    console.error('Rolleri çekerken hata:', err);
+                    showToast('Roller yüklenirken bir hata oluştu.', true);
                 });
         }
 
