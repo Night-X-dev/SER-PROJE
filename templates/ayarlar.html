@@ -53,7 +53,147 @@
             min-height: 100vh;
             overflow-x: hidden; /* Yatay kaydırmayı engelle */
         }
+        .settings-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    padding: 1.5rem;
+}
 
+.settings-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.card-header {
+    padding: 1.25rem 1.5rem;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid transparent;
+}
+
+.btn-primary {
+    background: #0d6efd;
+    color: white;
+    border-color: #0d6efd;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid #dee2e6;
+}
+
+.permission-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+}
+
+.permission-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.section-title {
+    font-size: 1.1rem;
+    margin: 1.5rem 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.data-table th {
+    font-weight: 600;
+    background: #f8f9fa;
+}
+
+/* Responsive düzenlemeler */
+@media (max-width: 992px) {
+    .settings-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .form-row {
+        flex-direction: column;
+    }
+    
+    .form-col {
+        width: 100%;
+    }
+}
         /* Hamburger menü butonu */
         .hamburger-menu {
             display: none; /* Varsayılan olarak gizli */
@@ -1225,19 +1365,22 @@
             </div>
         </div>
     </div>
-
-          <div class="settings-card" id="rolePermissionCard">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-shield-alt"></i>
-                        Rol ve İzin Yönetimi
-                    </h2>
-                </div>
-                
+    <div class="settings-container">
+        <!-- Rol ve İzin Yönetimi -->
+        <div class="settings-card" id="rolePermissionCard">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-shield-alt"></i>
+                    Rol ve İzin Yönetimi
+                </h2>
+            </div>
+            
+            <div class="card-body">
                 <div class="form-group">
                     <label class="form-label">Rol Seçin</label>
                     <select class="form-input" id="roleSelector">
-                        </select>
+                        <option value="">Rol seçiniz</option>
+                    </select>
                 </div>
                 
                 <div class="form-group">
@@ -1263,7 +1406,6 @@
                             <input type="checkbox" id="musteri_duzenleme" name="musteri_duzenleme">
                             <label class="permission-label" for="musteri_duzenleme">Müşteri Düzenleme</label>
                         </div>
-                        <!-- Yeni Raporlar Yetkisi -->
                         <div class="permission-item">
                             <input type="checkbox" id="raporlar" name="raporlar">
                             <label class="permission-label" for="raporlar">Raporları Görüntüleme</label>
@@ -1272,23 +1414,26 @@
                 </div>
                 
                 <div class="form-actions">
-                    <button class="btn btn-outline" id="resetPermissionsBtn">
+                    <button type="button" class="btn btn-outline" id="resetPermissionsBtn">
                         <i class="fas fa-undo"></i> Sıfırla
                     </button>
-                    <button class="btn" id="savePermissionsBtn">
+                    <button type="button" class="btn btn-primary" id="savePermissionsBtn">
                         <i class="fas fa-save"></i> Kaydet
                     </button>
                 </div>
             </div>
+        </div>
+        
+        <!-- Hesap Ayarları -->
+        <div class="settings-card" id="accountSettingsCard">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-user"></i>
+                    Hesap Ayarları
+                </h2>
+            </div>
             
-           <div class="settings-card" id="accountSettingsCard">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-user"></i>
-                        Hesap Ayarları
-                    </h2>
-                </div>
-
+            <div class="card-body">
                 <form id="accountSettingsForm">
                     <div class="form-row">
                         <div class="form-col">
@@ -1304,13 +1449,16 @@
                             </div>
                         </div>
                     </div>
-
-                    <h3 class="card-title" style="margin-top: 30px; margin-bottom: 20px; font-size: 1.2em;"><i class="fas fa-key"></i> Şifre Değiştirme</h3>
+    
+                    <h3 class="section-title">
+                        <i class="fas fa-key"></i> Şifre Değiştirme
+                    </h3>
+                    
                     <div class="form-group">
                         <label class="form-label" for="currentPassword">Mevcut Şifre</label>
                         <input type="password" id="currentPassword" class="form-input" placeholder="Mevcut şifrenizi girin">
                     </div>
-
+    
                     <div class="form-row">
                         <div class="form-col">
                             <div class="form-group">
@@ -1325,30 +1473,34 @@
                             </div>
                         </div>
                     </div>
-
+    
                     <div class="form-actions">
-                        <button type="submit" class="btn" id="saveAccountBtn">
+                        <button type="submit" class="btn btn-primary" id="saveAccountBtn">
                             <i class="fas fa-save"></i> Değişiklikleri Kaydet
                         </button>
                     </div>
-                    <div id="accountSettingsMessage" style="margin-top: 10px;"></div>
+                    <div id="accountSettingsMessage" class="form-message"></div>
                 </form>
             </div>
-            
-            <div class="settings-card" id="pendingApprovalsCard" style="display:none">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-user-clock"></i>
-                        Onay Bekleyen Kullanıcılar
-                    </h2>
-                    <div class="card-actions">
-                        <button class="btn" id="refreshPendingUsersButton">
-                            <i class="fas fa-sync-alt"></i> Listeyi Yenile
-                        </button>
-                    </div>
+        </div>
+        
+        <!-- Onay Bekleyen Kullanıcılar -->
+        <div class="settings-card" id="pendingApprovalsCard">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-user-clock"></i>
+                    Onay Bekleyen Kullanıcılar
+                </h2>
+                <div class="card-actions">
+                    <button class="btn btn-icon" id="refreshPendingUsersButton" title="Listeyi Yenile">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
                 </div>
-                <div id="pendingUsersContainer">
-                    <table class="user-table" id="pendingUsersTable">
+            </div>
+            
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="data-table" id="pendingUsersTable">
                         <thead>
                             <tr>
                                 <th>Ad Soyad</th>
@@ -1364,6 +1516,8 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
             </div>
             
             <div class="footer">
