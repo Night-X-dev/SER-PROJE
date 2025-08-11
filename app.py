@@ -823,169 +823,58 @@ def update_user_profile():
         if connection:
             connection.close()
 
-@@app.route('/api/users/pending', methods=['GET'])
+@app.route('/api/pending-users', methods=['GET'])
 def get_pending_users():
-    if 'user_id' not in session:
-        return jsonify({'message': 'Yetkisiz erişim.'}), 401
-
+    """Retrieves users with 'onay' status 0."""
+    connection = None
     try:
         connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # Check if user is admin
-            cursor.execute("""
-                SELECT r.role_name 
-                FROM users u
-                JOIN roles r ON u.role_id = r.role_id
-                WHERE u.id = %s
-            """, (session['user_id'],))
-            user_role = cursor.fetchone()
-            
-            if not user_role or user_role['role_name'] != 'Admin':
-                return jsonify({'message': 'Yetkiniz yok.'}), 403
-
-            # Get all roles for the dropdown
-            cursor.execute("SELECT role_id, role_name FROM roles")
-            roles = [{'id': r['role_id'], 'name': r['role_name']} for r in cursor.fetchall()]
-
-            # Get pending users
-            cursor.execute("""
-                SELECT id, fullname, email, created_at 
-                FROM users 
-                WHERE is_approved = FALSE
-                ORDER BY created_at DESC
-            """)
-            users = cursor.fetchall()
-
-            return jsonify({
-                'users': [{
-                    'id': u['id'],
-                    'fullname': u['fullname'],
-                    'email': u['email'],
-                    'created_at': u['created_at'].isoformat() if u['created_at'] else None,
-                    'roles': roles
-                } for u in users]
-            })
-
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            sql = "SELECT id, fullname, email, phone, role, created_at FROM users WHERE onay = 0"
+            cursor.execute(sql)
+            pending_users = cursor.fetchall()
+            return jsonify(pending_users), 200
+    except pymysql.Error as e:
+        print(f"Database error while fetching pending users: {e}")
+        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"Error getting pending users: {str(e)}")
-        return jsonify({'message': 'Bekleyen kullanıcılar alınamadı.'}), 500
+        print(f"General error while fetching pending users: {e}")
+        return jsonify({'message': 'Server error, please try again later.'}), 500
     finally:
         if connection:
             connection.close()
 
-@app.route('/api/users/<int:user_id>/approve', methods=['POST'])
+@app.route('/api/users/approve/<int:user_id>', methods=['PATCH'])
 def approve_user(user_id):
-    if 'user_id' not in session:
-        return jsonify({'message': 'Yetkisiz erişim.'}), 401
-
-    data = request.get_json()
-    role_id = data.get('role_id')
-
-    if not role_id:
-        return jsonify({'success': False, 'message': 'Rol seçimi zorunludur.'}), 400
-
+    """Approves a user by setting their 'onay' status to 1."""
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Check if current user is admin
-            cursor.execute("""
-                SELECT role_name 
-                FROM users u
-                JOIN roles r ON u.role_id = r.role_id
-                WHERE u.id = %s
-            """, (session['user_id'],))
-            user_role = cursor.fetchone()
-            
-            if not user_role or user_role['role_name'] != 'Admin':
-                return jsonify({'success': False, 'message': 'Yetkiniz yok.'}), 403
-
-            # Check if role exists
-            cursor.execute("SELECT role_id FROM roles WHERE role_id = %s", (role_id,))
-            if not cursor.fetchone():
-                return jsonify({'success': False, 'message': 'Geçersiz rol.'}), 400
-
-            # Update user
-            cursor.execute("""
-                UPDATE users 
-                SET is_approved = TRUE, role_id = %s 
-                WHERE id = %s
-            """, (role_id, user_id))
-            
-            connection.commit()
-
-            # Log the approval
-            cursor.execute("SELECT fullname, email FROM users WHERE id = %s", (user_id,))
+            cursor.execute("SELECT id, onay FROM users WHERE id = %s", (user_id,))
             user = cursor.fetchone()
-            
-            log_activity(
-                user_id=session['user_id'],
-                title="Kullanıcı Onaylandı",
-                description=f"{user['fullname']} ({user['email']}) kullanıcısı onaylandı.",
-                icon="user-check"
-            )
 
-            return jsonify({'success': True, 'message': 'Kullanıcı başarıyla onaylandı.'})
-
-    except Exception as e:
-        print(f"Error approving user: {str(e)}")
-        if connection:
-            connection.rollback()
-        return jsonify({'success': False, 'message': 'Onaylama işlemi başarısız oldu.'}), 500
-    finally:
-        if connection:
-            connection.close()
-
-@app.route('/api/users/<int:user_id>/reject', methods=['DELETE'])
-def reject_user(user_id):
-    if 'user_id' not in session:
-        return jsonify({'success': False, 'message': 'Yetkisiz erişim.'}), 401
-
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # Check if current user is admin
-            cursor.execute("""
-                SELECT role_name 
-                FROM users u
-                JOIN roles r ON u.role_id = r.role_id
-                WHERE u.id = %s
-            """, (session['user_id'],))
-            user_role = cursor.fetchone()
-            
-            if not user_role or user_role['role_name'] != 'Admin':
-                return jsonify({'success': False, 'message': 'Yetkiniz yok.'}), 403
-
-            # Get user info before deletion for logging
-            cursor.execute("SELECT fullname, email FROM users WHERE id = %s", (user_id,))
-            user = cursor.fetchone()
-            
             if not user:
-                return jsonify({'success': False, 'message': 'Kullanıcı bulunamadı.'}), 404
+                return jsonify({'message': 'User not found.'}), 404
+            if user['onay'] == 1:
+                return jsonify({'message': 'User already approved.'}), 400
 
-            # Delete user
-            cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+            sql = "UPDATE users SET onay = 1 WHERE id = %s"
+            cursor.execute(sql, (user_id,))
             connection.commit()
 
-            # Log the rejection
-            log_activity(
-                user_id=session['user_id'],
-                title="Kullanıcı Reddedildi",
-                description=f"{user['fullname']} ({user['email']}) kullanıcısı reddedildi ve silindi.",
-                icon="user-times"
-            )
+        return jsonify({'message': 'User successfully approved!'}), 200
 
-            return jsonify({'success': True, 'message': 'Kullanıcı başarıyla reddedildi ve silindi.'})
-
+    except pymysql.Error as e:
+        print(f"Database error while approving user: {e}")
+        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"Error rejecting user: {str(e)}")
-        if connection:
-            connection.rollback()
-        return jsonify({'success': False, 'message': 'Reddetme işlemi başarısız oldu.'}), 500
+        print(f"General error while approving user: {e}")
+        return jsonify({'message': 'Server error, please try again later.'}), 500
     finally:
         if connection:
             connection.close()
+
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
     """Deletes a user and reassigns or deletes their associated projects and tasks."""
@@ -1140,58 +1029,45 @@ def update_role_permissions():
 # User Registration API
 @app.route('/api/register', methods=['POST'])
 def register_user():
+    """Registers a new user."""
+    data = request.get_json()
+    fullname = data.get('fullname')
+    email = data.get('email')
+    phone = data.get('phone', '')
+    password = data.get('password')
+    role = data.get('role', 'Employee') # Default position if not provided
+    profile_picture = data.get('profile_picture')
+    hide_email = data.get('hide_email', 0)
+    hide_phone = data.get('hide_phone', 0)
+
+    if not all([fullname, email, password, role]):
+        return jsonify({'message': 'Please fill in all required fields.'}), 400
+
+    connection = None
     try:
-        data = request.get_json()
-        fullname = data.get('fullname')
-        email = data.get('email')
-        password = data.get('password')
-        password_confirm = data.get('password_confirm')
-
-        if not all([fullname, email, password, password_confirm]):
-            return jsonify({'message': 'Tüm alanlar zorunludur.'}), 400
-
-        if password != password_confirm:
-            return jsonify({'message': 'Şifreler eşleşmiyor.'}), 400
-
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Check if email already exists
             cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
-            if cursor.fetchone():
-                return jsonify({'message': 'Bu e-posta adresi zaten kullanılıyor.'}), 400
+            existing_user = cursor.fetchone()
+            if existing_user:
+                return jsonify({'message': 'This email address is already in use.'}), 409
 
-            # Hash the password
-            hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-
-            # Insert new user with default role (Ziyaretçi) and not approved
-            cursor.execute("""
-                INSERT INTO users (fullname, email, password, role_id, is_approved)
-                VALUES (%s, %s, %s, 
-                    (SELECT role_id FROM roles WHERE role_name = 'Ziyaretçi'), 
-                    FALSE)
-            """, (fullname, email, hashed_password))
-            
-            user_id = cursor.lastrowid
+            hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            sql = """
+            INSERT INTO users (fullname, email, phone, password, role, profile_picture, hide_email, hide_phone)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(sql, (fullname, email, phone, hashed_password, role, profile_picture, hide_email, hide_phone))
             connection.commit()
-
-            # Log the registration
-            log_activity(
-                user_id=user_id,
-                title="Yeni Kullanıcı Kaydı",
-                description=f"{fullname} kullanıcısı kayıt oldu.",
-                icon="user-plus"
-            )
-
-            return jsonify({
-                'message': 'Kayıt başarılı! Yönetici onayı bekleniyor.',
-                'success': True
-            }), 201
-
+        return jsonify({'message': 'Registration successful!'}), 201
+    except pymysql.Error as e:
+        print(f"Database registration error: {e}")
+        if e.args[0] == 1062:
+            return jsonify({'message': 'This email address is already in use.'}), 409
+        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"Registration error: {str(e)}")
-        if connection:
-            connection.rollback()
-        return jsonify({'message': 'Kayıt sırasında bir hata oluştu.'}), 500
+        print(f"General registration error: {e}")
+        return jsonify({'message': 'Server error, please try again later.'}), 500
     finally:
         if connection:
             connection.close()
@@ -2105,7 +1981,76 @@ def log_activity(user_id, title, description, icon, is_read=0):
     finally:
         if connection:
             connection.close()
+# app.py dosyasına bu kısmı ekleyin
+@app.route('/api/project-progress/<int:progress_id>', methods=['PUT'])
+def update_progress_step(progress_id):
+    """
+    Belirli bir proje adımı kaydını günceller.
+    """
+    if 'user_id' not in session:
+        return jsonify({"error": "Oturum süresi doldu."}), 401
 
+    try:
+        data = request.json
+        title = data.get('step_name')
+        description = data.get('description')
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        real_end_date = data.get('real_end_date')
+        custom_delay_days = data.get('custom_delay_days', 0) # Varsayılan olarak 0
+
+        # Veritabanı bağlantısı
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Önceki adımın bitiş tarihini bul
+            sql_prev_step_end_date = """
+            SELECT
+                end_date
+            FROM project_progress
+            WHERE project_id = (SELECT project_id FROM project_progress WHERE progress_id = %s)
+            AND end_date IS NOT NULL
+            AND end_date < %s
+            ORDER BY end_date DESC
+            LIMIT 1
+            """
+            cursor.execute(sql_prev_step_end_date, (progress_id, start_date))
+            prev_end_date_row = cursor.fetchone()
+            
+            delay_days = 0
+            if prev_end_date_row and start_date:
+                prev_end_date_obj = datetime.date.fromisoformat(str(prev_end_date_row['end_date']))
+                start_date_obj = datetime.date.fromisoformat(str(start_date))
+                time_difference = start_date_obj - prev_end_date_obj
+                if time_difference.days > 1:
+                    delay_days = time_difference.days - 1
+            
+            # Güncelleme sorgusu
+            sql_update = """
+            UPDATE project_progress
+            SET
+                title = %s,
+                description = %s,
+                start_date = %s,
+                end_date = %s,
+                real_end_date = %s,
+                delay_days = %s,
+                custom_delay_days = %s
+            WHERE progress_id = %s
+            """
+            cursor.execute(sql_update, (title, description, start_date, end_date, real_end_date, delay_days, custom_delay_days, progress_id))
+        
+        connection.commit()
+        return jsonify({"message": "Proje adımı başarıyla güncellendi."}), 200
+
+    except Exception as e:
+        app.logger.error(f"Proje adımı güncelleme hatası: {e}")
+        traceback.print_exc()
+        return jsonify({"error": "Proje adımı güncellenirken bir hata oluştu."}), 500
+    finally:
+        if 'connection' in locals() and connection:
+            connection.close()
+
+# @app.route('/api/project-report/<int:project_id>', methods=['GET']) fonksiyonunun üstüne ekleyebilirsiniz.
 # API to add new project (uncommented and completed from previous version)
 @app.route('/api/projects', methods=['POST'])
 def add_project():
@@ -2465,7 +2410,66 @@ def send_email_async(to_emails, subject, body):
         except Exception as e:
             log_to_db(f"E-posta gönderilirken bir hata oluştu: {e}", "ERROR")
             traceback.print_exc()
+# API to update project progress step
+@app.route('/api/progress/<int:progress_id>', methods=['PUT'])
+def update_project_progress(progress_id):
+    """
+    Bir iş adımı kaydını günceller ve ilgili taraflara (proje yöneticisi ve adminler)
+    güncelleme hakkında e-posta bildirimi gönderir.
+    """
+    data = request.get_json()
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Güncellenecek iş adımını al
+            cursor.execute("""
+                SELECT
+                    pp.project_id,
+                    pp.title AS step_title,
+                    p.project_name,
+                    p.project_manager_id,
+                    u.fullname AS manager_name,
+                    u.email AS manager_email
+                FROM project_progress pp
+                JOIN projects p ON pp.project_id = p.project_id
+                JOIN users u ON p.project_manager_id = u.id
+                WHERE pp.progress_id = %s
+            """, (progress_id,))
+            step_info = cursor.fetchone()
 
+            if not step_info:
+                return jsonify({'message': 'İş adımı bulunamadı.'}), 404
+
+            # Güncelleme için SQL sorgusunu hazırla
+            update_fields = []
+            params = []
+            for key, value in data.items():
+                if key in ['title', 'description', 'start_date', 'end_date', 'real_end_date', 'status', 'delay_days', 'custom_delay_days']:
+                    update_fields.append(f"{key} = %s")
+                    params.append(value)
+            
+            if not update_fields:
+                return jsonify({'message': 'Güncellenecek alan bulunamadı.'}), 400
+
+            sql = f"UPDATE project_progress SET {', '.join(update_fields)} WHERE progress_id = %s"
+            params.append(progress_id)
+            
+            cursor.execute(sql, tuple(params))
+            connection.commit()
+
+            return jsonify({'message': 'İş adımı başarıyla güncellendi ve bildirim gönderildi.'}), 200
+
+    except pymysql.Error as e:
+        print(f"Database error while updating progress step: {e}")
+        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
+    except Exception as e:
+        print(f"General error while updating progress step: {e}")
+        traceback.print_exc()
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+    finally:
+        if connection:
+            connection.close()
 @app.route('/api/progress/<int:progress_id>', methods=['PUT'])
 def update_project_progress_step(progress_id):
     data = request.get_json()
@@ -2944,16 +2948,23 @@ def update_password():
             connection.close()
 
 @app.route('/api/roles', methods=['GET'])
-def get_roles():
+def get_distinct_roles():
+    """Retrieves distinct roles from the users table (excluding 'Admin')."""
+    connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            cursor.execute("SELECT role_id, role_name FROM roles")
-            roles = [{'id': r['role_id'], 'name': r['role_name']} for r in cursor.fetchall()]
-            return jsonify({'roles': roles})
+            sql = "SELECT DISTINCT role FROM users WHERE role != 'Admin'"
+            cursor.execute(sql)
+            roles = [row['role'] for row in cursor.fetchall()]
+
+        return jsonify(roles), 200
+    except pymysql.Error as e:
+        print(f"Database error while fetching roles: {e}")
+        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"Error getting roles: {str(e)}")
-        return jsonify({'message': 'Rol bilgileri alınamadı.'}), 500
+        print(f"General error while fetching roles: {e}")
+        return jsonify({'message': 'Server error, please try again later.'}), 500
     finally:
         if connection:
             connection.close()

@@ -1231,25 +1231,32 @@
             
             <div class="settings-card" id="pendingApprovalsCard" style="display:none">
                 <div class="card-header">
-                    <h5 class="mb-0">Onay Bekleyen Kullanıcılar</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover" id="pendingUsersTable">
-                            <thead>
-                                <tr>
-                                    <th>Ad Soyad</th>
-                                    <th>E-posta</th>
-                                    <th>Kayıt Tarihi</th>
-                                    <th>Rol</th>
-                                    <th>İşlemler</th>
-                                </tr>
-                            </thead>
-                            <tbody id="pendingUsersList">
-                                <!-- Pending users will be loaded here by JavaScript -->
-                            </tbody>
-                        </table>
+                    <h2 class="card-title">
+                        <i class="fas fa-user-clock"></i>
+                        Onay Bekleyen Kullanıcılar
+                    </h2>
+                    <div class="card-actions">
+                        <button class="btn" id="refreshPendingUsersButton">
+                            <i class="fas fa-sync-alt"></i> Listeyi Yenile
+                        </button>
                     </div>
+                </div>
+                <div id="pendingUsersContainer">
+                    <table class="user-table" id="pendingUsersTable">
+                        <thead>
+                            <tr>
+                                <th>Ad Soyad</th>
+                                <th>Email</th>
+                                <th>Telefon</th>
+                                <th>Rolü</th>
+                                <th>Kayıt Tarihi</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingUsersTableBody">
+                            <!-- Kullanıcılar buraya dinamik olarak eklenecek -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
             
@@ -1258,29 +1265,7 @@
             </div>
         </div>
     </div>
-    <div class="modal fade" id="approveUserModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Kullanıcıyı Onayla</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" id="approveUserId">
-                    <div class="mb-3">
-                        <label for="userRole" class="form-label">Rol Seçin</label>
-                        <select class="form-select" id="userRole">
-                            <!-- Roles will be populated by JavaScript -->
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-                    <button type="button" class="btn btn-primary" onclick="approveUser()">Onayla</button>
-                </div>
-            </div>
-        </div>
-    </div>
+
     <!-- Toast bildirimi (index.html'den kopyalandı) -->
     <div class="toast" id="toast">
         <i class="fas fa-check-circle"></i>
@@ -1641,7 +1626,6 @@
 
         // DOM içeriği tamamen yüklendiğinde çalışacak ana kısım
         document.addEventListener('DOMContentLoaded', function() {
-            loadPendingUsers();
             const accountSettingsForm = document.getElementById('accountSettingsForm');
             const accountSettingsMessage = document.getElementById('accountSettingsMessage');
 
@@ -2076,77 +2060,72 @@
         }
         
         function loadPendingUsers() {
-    fetch('/api/users/pending')
-        .then(r => r.json())
-        .then(data => {
-            const tbody = document.querySelector('#pendingUsersTable tbody');
-            tbody.innerHTML = data.users.map(user => `
-                <tr>
-                    <td>${user.fullname}</td>
-                    <td>${user.email}</td>
-                    <td>${new Date(user.created_at).toLocaleDateString()}</td>
-                    <td>
-                        <select class="form-select role-select" data-user-id="${user.id}">
-                            <option value="2">Ziyaretçi</option>
-                            <option value="3">Proje Yöneticisi</option>
-                            <option value="4">Ekip Üyesi</option>
-                        </select>
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-success" 
-                                onclick="approveUser(${user.id})">
-                            Onayla
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        });
-}
-
-
-// Approve user with selected role
-function approveUser(userId) {
-    const roleId = document.querySelector(`.role-select[data-user-id="${userId}"]`).value;
-    
-    fetch(`/api/users/${userId}/approve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role_id: roleId })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            alert('Kullanıcı onaylandı');
-            loadPendingUsers();
-        } else {
-            alert('Hata: ' + (data.message || 'Bilinmeyen hata'));
+            fetch(`${API_BASE_URL}/api/pending-users`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Bekleyen kullanıcılar getirilemedi.');
+                    return response.json();
+                })
+                .then(users => {
+                    const pendingUsersTableBody = document.getElementById('pendingUsersTableBody');
+                    const emptyState = document.getElementById('emptyState');
+                    if (pendingUsersTableBody) {
+                        pendingUsersTableBody.innerHTML = '';
+                        if (users.length === 0) {
+                            if (emptyState) emptyState.style.display = 'block';
+                            pendingUsersTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Onay bekleyen kullanıcı bulunmamaktadır.</td></tr>';
+                            return;
+                        } else {
+                            if (emptyState) emptyState.style.display = 'none';
+                        }
+                        users.forEach(user => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${user.fullname || 'N/A'}</td>
+                                <td>${user.email || 'N/A'}</td>
+                                <td>${user.phone || 'N/A'}</td>
+                                <td>${user.role || 'N/A'}</td>
+                                <td>${user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}</td>
+                                <td>
+                                    <div style="display: flex; gap: 5px;">
+                                        <button class="action-btn approve approve-user-btn" data-userid="${user.id}" title="Onayla">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button class="action-btn delete delete-user-btn" data-userid="${user.id}" title="Sil">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            `;
+                            pendingUsersTableBody.appendChild(row);
+                        });
+                    }
+                })
+                .catch(error => {
+                    const pendingUsersTableBody = document.getElementById('pendingUsersTableBody');
+                    if (pendingUsersTableBody) {
+                        pendingUsersTableBody.innerHTML = '<tr><td colspan="6">Kullanıcılar yüklenirken bir hata oluştu.</td></tr>';
+                    }
+                    showToast(`Bekleyen kullanıcılar yüklenirken hata oluştu: ${error.message}`, true);
+                });
         }
-    });
-}
-function rejectUser(userId) {
-    if (!confirm('Bu kullanıcıyı reddetmek istediğinize emin misiniz?')) {
-        return;
-    }
-
-    fetch(`/api/users/${userId}/reject`, {
-        method: 'DELETE'
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast('Başarılı', 'Kullanıcı başarıyla reddedildi.', 'success');
-            loadPendingUsers();
-        } else {
-            throw new Error(data.message || 'Reddetme işlemi başarısız oldu.');
+        function approveUser(userId) {
+            fetch(`${API_BASE_URL}/api/users/approve/` + userId, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => {
+                if (!response.ok) return response.json().then(err => { throw new Error(err.message || 'Kullanıcı onaylanırken hata oluştu.'); });
+                return response.json();
+            })
+            .then(data => {
+                showToast(data.message || 'Kullanıcı başarıyla onaylandı!');
+                loadPendingUsers();
+                loadUsersTable(); // Aktif kullanıcıları da güncelle
+            })
+            .catch(error => {
+                showToast('Kullanıcı onaylanırken bir hata oluştu: ' + error.message, true);
+            });
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('Hata', error.message || 'Bir hata oluştu.', 'error');
-    });
-}
-
-
         // Bu fonksiyon zaten yukarıda tanımlıydı, ancak onay bekleyen kullanıcılar için de kullanıldığı için burada bırakıldı.
         // function deleteUser(userId) { ... } 
 
