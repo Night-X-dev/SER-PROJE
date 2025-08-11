@@ -2169,23 +2169,25 @@ function renderProjectsTable(projectsToRender) {
 
         // Yardımcı fonksiyonlar:
         function dateDiffInDays(date1, date2) {
-    // Tarih formatı: YYYY-MM-DD veya DD.MM.YYYY
-    function parseDate(str) {
-        if (!str) return null;
-        if (str.includes('-')) {
-            const [y, m, d] = str.split('-');
-            return new Date(Number(y), Number(m) - 1, Number(d));
-        } else if (str.includes('.')) {
-            const [d, m, y] = str.split('.');
-            return new Date(Number(y), Number(m) - 1, Number(d));
+            // Tarih formatı: YYYY-MM-DD veya DD.MM.YYYY
+            function parseDate(str) {
+                if (!str) return null;
+                if (str.includes('-')) {
+                    // YYYY-MM-DD
+                    const [y, m, d] = str.split('-');
+                    return new Date(Number(y), Number(m) - 1, Number(d));
+                } else if (str.includes('.')) {
+                    // DD.MM.YYYY
+                    const [d, m, y] = str.split('.');
+                    return new Date(Number(y), Number(m) - 1, Number(d));
+                }
+                return null;
+            }
+            const dt1 = parseDate(date1);
+            const dt2 = parseDate(date2);
+            if (!dt1 || !dt2) return null;
+            return Math.ceil((dt2 - dt1) / (1000 * 60 * 60 * 24));
         }
-        return null;
-    }
-    const dt1 = parseDate(date1);
-    const dt2 = parseDate(date2);
-    if (!dt1 || !dt2) return null;
-    return Math.ceil((dt2 - dt1) / (1000 * 60 * 60 * 24));
-}
 
         function getTodayStr() {
             const today = new Date();
@@ -2347,58 +2349,91 @@ function attachProjectTableEventListeners() {
     }
 
     // Modal açma fonksiyonu
-    async function openProjectModal(projectId, mode = "view") {
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}`);
-        if (!response.ok) throw new Error("Proje verisi alınamadı.");
-        const project = await response.json();
-
-        // Modal başlık ve input alanlarını doldurma işlemleri...
-        document.getElementById("projectModalTitle").textContent = project.project_name || "-";
-
-        const progressContainer = document.getElementById("progressList");
-        progressContainer.innerHTML = "";
-
-        let prevEndDate = null;
-
-        project.progresses.forEach(progress => {
-            // Gecikme günü hesaplama (önceki iş bitiş - sonraki iş başlangıç)
-            let gecikmeGun = 0;
-            if (prevEndDate) {
-                let diff = dateDiffInDays(prevEndDate, progress.start_date);
-                if (diff > 1) {
-                    gecikmeGun = diff - 1;
-                }
-            }
-            prevEndDate = progress.end_date;
-
-            // Ertelenen gün (delay_days alanı varsa)
-            let ertelenenGun = progress.delay_days || 0;
-
-            const item = document.createElement("div");
-            item.classList.add("progress-detail-item");
-            item.innerHTML = `
-                <div class="progress-detail-title">${progress.title || "-"}</div>
-                <div class="progress-detail-dates">
-                    Başlangıç: ${progress.start_date || "-"} | 
-                    Bitiş: ${progress.end_date || "-"}
-                </div>
-                <div class="progress-detail-description">${progress.description || ""}</div>
-                <div class="custom-delay-info">
-                    Gecikme Günü: ${gecikmeGun} gün | Ertelenen Gün: ${ertelenenGun} gün
-                </div>
-            `;
-            progressContainer.appendChild(item);
-        });
-
-        // Modal açma
-        const modal = new bootstrap.Modal(document.getElementById("projectModal"));
-        modal.show();
-
-    } catch (error) {
-        console.error(error);
-        showToast("Proje detayları yüklenirken hata oluştu.", true);
+    async function openProjectModal(projectId, mode) {
+  try {
+    console.log("openProjectModal başladı, projectId:", projectId, "mode:", mode);
+    const project = allProjectsData.find((p) => p.project_id == projectId);
+    if (!project) {
+      showToast("Proje bulunamadı!", true);
+      return;
     }
+    
+    projectModal.style.display = "flex";
+    modalBody.innerHTML =
+    '<p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</p>';
+    
+    if (mode === "view") {
+      console.log("View modu için modal yükleniyor");
+      modalTitle.innerHTML = `<i class="fas fa-info-circle"></i> Proje Detayları: ${project.project_name}`;
+      await renderViewModal(project);
+      modalActions.innerHTML = `<button class="modal-btn modal-btn-cancel" id="cancelModalBtn">Kapat</button>`;
+      
+      if (!modalBodyClickListener) {
+        modalBodyClickListener = function(e) {
+          if (e.target.closest('.open-location-btn')) {
+            const btn = e.target.closest('.open-location-btn');
+            const location = btn.dataset.location;
+            openLocationInGoogleMaps(location);
+          }
+        };
+        modalBody.addEventListener('click', modalBodyClickListener);
+      }
+      console.log("View modu modal hazır");
+    } else if (mode === "edit") {
+      console.log("Edit modu için modal yükleniyor");
+      modalTitle.innerHTML = `<i class="fas fa-edit"></i> Projeyi Düzenle: ${project.project_name}`;
+      await renderEditModal(project);
+      modalActions.innerHTML = `
+      <button class="modal-btn modal-btn-save" id="saveProjectBtn"><i class="fas fa-save"></i> Kaydet</button>
+      <button class="modal-btn modal-btn-cancel" id="cancelModalBtn">İptal</button>
+      `;
+      
+      // Event listener'lar ekleniyor
+      const saveProjectBtn = document.getElementById("saveProjectBtn");
+      if (saveProjectBtn) {
+        saveProjectBtn.addEventListener("click", saveProjectChanges);
+      } else {
+        console.error("saveProjectBtn bulunamadı!");
+      }
+      
+      const cancelModalBtn = document.getElementById("cancelModalBtn");
+      if (cancelModalBtn) {
+        cancelModalBtn.addEventListener("click", closeProjectModal);
+      } else {
+        console.error("cancelModalBtn bulunamadı!");
+      }
+      console.log("Edit modu modal hazır");
+    }
+    
+    // Her zaman güncel kapatma butonlarına olay dinleyicisi ekle
+    const cancelBtn = document.getElementById("cancelModalBtn");
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", closeProjectModal);
+    } else {
+      console.warn("cancelModalBtn bulunamadı, olay dinleyici eklenemedi");
+    }
+    
+    if (closeModalBtn) {
+      closeModalBtn.addEventListener("click", closeProjectModal);
+    } else {
+      console.warn("closeModalBtn bulunamadı, olay dinleyici eklenemedi");
+    }
+    
+    // Modalın dışına tıklayarak kapatma
+    projectModal.onclick = (e) => {
+      if (e.target === projectModal) {
+        closeProjectModal();
+      }
+    };
+    
+    // Esc tuşu ile kapatma
+    document.addEventListener("keydown", handleEscapeKey);
+    console.log("openProjectModal tamamlandı");
+  } catch (error) {
+    console.error("openProjectModal hatası:", error);
+    modalBody.innerHTML = `<p style="text-align: center; color: red;">Modal yüklenirken bir hata oluştu: ${error.message}</p>
+    <button class="btn" onclick="closeProjectModal()">Modali Kapat</button>`;
+  }
 }
 
 
@@ -3351,6 +3386,501 @@ function addNewProgressStepForm(projectId) {
             showToast("İş adımı güncellenirken bir sorun oluştu.", true);
         }
     }
+ function showToast(message, isError = false) {
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+
+        if (!toast || !toastMessage) {
+            console.error("Toast elementleri bulunamadı!");
+            return;
+        }
+
+        toastMessage.textContent = message;
+        toast.classList.remove('success', 'error');
+        toast.classList.add(isError ? 'error' : 'success');
+
+        toast.classList.add('show');
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
+
+    // Custom Confirm Modal (alert yerine kullanılacak)
+    function showConfirmationModal(title, message, onConfirm) {
+        document.getElementById('confirmationModalLabel').textContent = title; // Başlığı ayarla
+        document.getElementById('confirmationMessage').textContent = message;
+        currentConfirmAction = onConfirm;
+        confirmationModalElement.style.zIndex = '20000'; // Modalın en üstte olmasını sağla
+        confirmationModal.show();
+    }
+
+    // Kullanıcı bilgilerini yükle ve oturum kontrolünü yap
+    function loadUserInfo() {
+        const storedUser = localStorage.getItem('currentUser');
+        if (!storedUser) {
+            console.log("LocalStorage'da kullanıcı verisi bulunamadı. Giriş sayfasına yönlendiriliyor...");
+            showToast("Oturum süreniz doldu veya giriş yapmadınız. Lütfen giriş yapın.", true);
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 2000);
+            return; // Buradan sonra işlem yapma, direkt yönlendir
+        }
+
+        try {
+            currentUser = JSON.parse(storedUser); 
+        } catch (e) {
+            console.error("Kayıtlı kullanıcı verisi bozuk:", e);
+            localStorage.removeItem('currentUser'); // Bozuk veriyi temizle
+            showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", true);
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 2000);
+            return; // Buradan sonra işlem yapma, direkt yönlendir
+        }
+
+        // Kullanıcı arayüzünü güncelleme (user-avatar.js yüklendikten sonra çağrılacak)
+        const userNameElement = document.getElementById('userName');
+        const userRoleElement = document.getElementById('userRole');
+
+        if (userNameElement) {
+            userNameElement.textContent = currentUser.fullname || currentUser.username || 'Kullanıcı';
+        }
+        if (userRoleElement) {
+            userRoleElement.textContent = currentUser.role || 'Rol Yok';
+        }
+        // updateUserAvatar DOMContentLoaded içinde çağrılacak
+    }
+
+    // loadUserInfo fonksiyonunu hemen çağırıyoruz ki currentUser değişkeni set edilsin
+    loadUserInfo();
+
+    // İki tarih arasındaki gün farkını hesaplayan yardımcı fonksiyon
+    function dateDiffInDays(date1, date2) {
+        const _MS_PER_DAY = 1000 * 60 * 60 * 24;
+        const start = Date.UTC(date1.getFullYear(), date1.getMonth(), date1.getDate());
+        const end = Date.UTC(date2.getFullYear(), date2.getMonth(), date2.getDate());
+        return Math.floor((end - start) / _MS_PER_DAY);
+    }
+
+    // Tarih formatlama yardımcı fonksiyonu
+    function formatDate(dateString) {
+        const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
+        return new Date(dateString).toLocaleDateString('tr-TR', options);
+    }
+
+    // --- DOM Yüklendiğinde Çalışacak Kod ---
+    document.addEventListener("DOMContentLoaded", function () {
+        // user-avatar.js yüklendiyse updateUserAvatar'ı çağır
+        if (currentUser && typeof updateUserAvatar === 'function') {
+            updateUserAvatar(currentUser); 
+        }
+
+        // Topbar kullanıcı profili linki için event listener
+        const userProfileLink = document.getElementById('userProfileLink');
+        if (userProfileLink) {
+            userProfileLink.addEventListener('click', () => {
+                window.location.href = 'users.html';
+            });
+        }
+
+        const logoutButton = document.getElementById("logoutButton");
+        const themeToggle = document.getElementById("theme-toggle");
+        const hamburgerMenu = document.getElementById('hamburgerMenu');
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+        const addProjectBtn = document.getElementById('addProjectBtn');
+        const projectsTableBody = document.getElementById('projectsTableBody');
+        const projectNameInput = document.getElementById('projectName');
+        const projectStatusInput = document.getElementById('projectStatus');
+        const projectPriorityInput = document.getElementById('projectPriority');
+        const projectStartDateInput = document.getElementById('projectStartDate');
+        const projectEndDateInput = document.getElementById('projectEndDate');
+        const projectManagerInput = document.getElementById('projectManager');
+        const projectMembersInput = document.getElementById('projectMembers');
+        const saveProjectBtn = document.getElementById('saveProjectBtn');
+        const projectForm = document.getElementById('projectForm');
+        const projectDetailsModal = new bootstrap.Modal(document.getElementById('projectDetailsModal'));
+        const projectProgressTableBody = document.getElementById('projectProgressTableBody');
+        const editProjectBtn = document.getElementById('editProjectBtn');
+        const deleteProjectBtn = document.getElementById('deleteProjectBtn');
+        const exportPdfBtn = document.getElementById('exportPdfBtn');
+
+        let isEditing = false;
+        let currentProjectId = null;
+        let projectChart = null;
+
+        // Tema değiştirme
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme) {
+            document.body.setAttribute("data-theme", savedTheme);
+            themeToggle.innerHTML = savedTheme === "dark" ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        }
+        themeToggle.addEventListener("click", () => {
+            const currentTheme = document.body.getAttribute("data-theme");
+            const newTheme = currentTheme === "dark" ? "light" : "dark";
+            document.body.setAttribute("data-theme", newTheme);
+            themeToggle.innerHTML = newTheme === "dark" ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+            localStorage.setItem("theme", newTheme);
+        });
+
+        // Çıkış Yap butonu
+        logoutButton.addEventListener("click", () => {
+            localStorage.removeItem("currentUser");
+            window.location.href = "login.html";
+        });
+
+        // Hamburger menü işlevselliği
+        hamburgerMenu.addEventListener('click', () => {
+            sidebar.classList.toggle('hidden');
+            mainContent.classList.toggle('expanded');
+        });
+
+        // API'den projeleri çekme fonksiyonu
+        async function fetchProjects() {
+            if (!currentUser) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/projects`, {
+                    headers: {
+                        'Authorization': `Bearer ${currentUser.token}`
+                    }
+                });
+                if (!response.ok) throw new Error('Projeler yüklenemedi');
+                allProjectsData = await response.json();
+                renderProjectsTable(allProjectsData);
+            } catch (error) {
+                console.error("Projeler yüklenirken hata oluştu:", error);
+                showToast("Projeler yüklenirken bir hata oluştu.", true);
+            }
+        }
+
+        // Projeleri tabloya render eden fonksiyon
+        function renderProjectsTable(projects) {
+            projectsTableBody.innerHTML = ''; // Tabloyu temizle
+            if (projects.length === 0) {
+                projectsTableBody.innerHTML = '<tr><td colspan="8" class="text-center">Hiç proje bulunamadı.</td></tr>';
+                return;
+            }
+
+            projects.forEach(project => {
+                const row = document.createElement('tr');
+                let combinedDelay = 0;
+                let statusBadgeHtml = getStatusBadgeHtml(project.status, combinedDelay);
+
+                // Gecikme hesaplaması
+                let totalDelayDays = 0;
+                let lastEndDate = null;
+                if (project.progress && project.progress.length > 0) {
+                    project.progress.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+                    project.progress.forEach((progress, index) => {
+                        const progressEndDate = new Date(progress.end_date);
+                        if (index > 0 && lastEndDate) {
+                            const diffDays = dateDiffInDays(lastEndDate, new Date(progress.start_date));
+                            if (diffDays > 1) {
+                                totalDelayDays += diffDays - 1;
+                            }
+                        }
+                        if (progress.delay_days) {
+                            totalDelayDays += progress.delay_days;
+                        }
+                        lastEndDate = progressEndDate;
+                    });
+                }
+                
+                project.totalDelayDays = totalDelayDays;
+                if (project.totalDelayDays > 0) {
+                    statusBadgeHtml = getStatusBadgeHtml(project.status, project.totalDelayDays);
+                }
+
+                row.innerHTML = `
+                    <td>${project.id}</td>
+                    <td>${project.name}</td>
+                    <td>${formatDate(project.start_date)}</td>
+                    <td>${formatDate(project.end_date)}</td>
+                    <td>${statusBadgeHtml}</td>
+                    <td>${project.priority}</td>
+                    <td>${project.project_manager_name || 'Atanmamış'}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="action-btn view-btn" data-id="${project.id}" title="Detaylar">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltip-text">Detaylar</span>
+                            </button>
+                            <button class="action-btn edit-btn" data-id="${project.id}" title="Düzenle">
+                                <i class="fas fa-edit"></i>
+                                <span class="tooltip-text">Düzenle</span>
+                            </button>
+                            <button class="action-btn pdf-btn" data-id="${project.id}" title="PDF Oluştur">
+                                <i class="fas fa-file-pdf"></i>
+                                <span class="tooltip-text">PDF Oluştur</span>
+                            </button>
+                            <button class="action-btn delete-btn" data-id="${project.id}" title="Sil">
+                                <i class="fas fa-trash-alt"></i>
+                                <span class="tooltip-text">Sil</span>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                projectsTableBody.appendChild(row);
+            });
+        }
+        
+        // Proje durumuna göre badge oluşturur
+        function getStatusBadgeHtml(status, delayDays) {
+            let badgeClass = '';
+            let statusText = '';
+            if (delayDays > 0) {
+                badgeClass = 'status-delayed';
+                statusText = 'Gecikmeli';
+            } else {
+                switch (status) {
+                    case 'Aktif':
+                        badgeClass = 'status-active';
+                        statusText = 'Aktif';
+                        break;
+                    case 'Tamamlandı':
+                        badgeClass = 'status-completed';
+                        statusText = 'Tamamlandı';
+                        break;
+                    case 'Beklemede':
+                        badgeClass = 'status-pending';
+                        statusText = 'Beklemede';
+                        break;
+                    case 'İptal Edildi':
+                        badgeClass = 'status-canceled';
+                        statusText = 'İptal Edildi';
+                        break;
+                    case 'Askıya Alındı':
+                        badgeClass = 'status-onhold';
+                        statusText = 'Askıya Alındı';
+                        break;
+                    default:
+                        badgeClass = 'status-pending';
+                        statusText = 'Bilinmiyor';
+                        break;
+                }
+            }
+            return `<span class="status-badge ${badgeClass}">${statusText}</span>`;
+        }
+
+        // Proje detaylarını modalda gösterir
+        async function showProjectDetails(projectId) {
+            try {
+                const project = await getProjectDetails(projectId);
+                if (!project) {
+                    showToast("Proje detayları bulunamadı.", true);
+                    return;
+                }
+
+                // Toplam gecikme günlerini hesapla
+                let totalDelayDays = 0;
+                let lastEndDate = null;
+                if (project.progress && project.progress.length > 0) {
+                    project.progress.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+                    project.progress.forEach((progress, index) => {
+                        const progressEndDate = new Date(progress.end_date);
+                        if (index > 0 && lastEndDate) {
+                            const diffDays = dateDiffInDays(lastEndDate, new Date(progress.start_date));
+                            if (diffDays > 1) {
+                                totalDelayDays += diffDays - 1;
+                            }
+                        }
+                        if (progress.delay_days) {
+                            totalDelayDays += progress.delay_days;
+                        }
+                        lastEndDate = progressEndDate;
+                    });
+                }
+                project.totalDelayDays = totalDelayDays;
+
+                document.getElementById('detailProjectId').textContent = project.id;
+                document.getElementById('detailProjectName').textContent = project.name;
+                document.getElementById('detailProjectStatus').innerHTML = getStatusBadgeHtml(project.status, project.totalDelayDays);
+                document.getElementById('detailProjectPriority').textContent = project.priority;
+                document.getElementById('detailProjectManager').textContent = project.project_manager_name || 'Atanmamış';
+                document.getElementById('detailProjectMembers').textContent = project.members.map(m => m.username).join(', ') || 'Yok';
+                document.getElementById('detailProjectStartDate').textContent = formatDate(project.start_date);
+                document.getElementById('detailProjectEndDate').textContent = formatDate(project.end_date);
+
+                // Gecikme ve Ertelenme günlerini göster
+                const delayInfoElement = document.getElementById('delayInfo');
+                if (project.totalDelayDays > 0) {
+                    delayInfoElement.innerHTML = `
+                        <p class="text-danger">Proje Toplam Gecikme Günü: <strong>${project.totalDelayDays}</strong></p>
+                    `;
+                    delayInfoElement.style.display = 'block';
+                } else {
+                    delayInfoElement.style.display = 'none';
+                }
+                
+                renderProgressTable(project.progress, project.totalDelayDays);
+                renderProjectChart(project.progress);
+
+                // Modalı göster
+                projectDetailsModal.show();
+
+            } catch (error) {
+                console.error("Proje detayları çekilirken hata oluştu:", error);
+                showToast("Proje detayları yüklenirken bir hata oluştu.", true);
+            }
+        }
+        
+        // İş gidişatını tabloya render eder
+        function renderProgressTable(progressData, totalDelay) {
+            projectProgressTableBody.innerHTML = '';
+            if (progressData && progressData.length > 0) {
+                progressData.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+                let lastEndDate = null;
+                let currentTotalDelay = 0;
+
+                progressData.forEach((progress, index) => {
+                    const row = document.createElement('tr');
+                    
+                    // Gecikme Günü hesaplaması
+                    let overdueDays = 0;
+                    if (index > 0 && lastEndDate) {
+                        const diffDays = dateDiffInDays(lastEndDate, new Date(progress.start_date));
+                        if (diffDays > 1) {
+                            overdueDays = diffDays - 1;
+                        }
+                    }
+                    
+                    // Ertelenen Gün (delay_days)
+                    const delayDays = progress.delay_days || 0;
+                    
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${progress.task_name || 'Görev Adı Yok'}</td>
+                        <td>${progress.assigned_to_name || 'Atanmamış'}</td>
+                        <td>${formatDate(progress.start_date)}</td>
+                        <td>${formatDate(progress.end_date)}</td>
+                        <td>${overdueDays}</td>
+                        <td>${delayDays}</td>
+                        <td>${progress.notes || '-'}</td>
+                    `;
+                    
+                    projectProgressTableBody.appendChild(row);
+                    lastEndDate = new Date(progress.end_date);
+                });
+            } else {
+                projectProgressTableBody.innerHTML = '<tr><td colspan="8" class="text-center">İş gidişatı bulunamadı.</td></tr>';
+            }
+        }
+
+        function renderProjectChart(progressData) {
+            const chartCanvas = document.getElementById('projectProgressChart');
+            if (projectChart) {
+                projectChart.destroy();
+            }
+
+            if (!progressData || progressData.length === 0) {
+                chartCanvas.style.display = 'none';
+                return;
+            }
+            chartCanvas.style.display = 'block';
+
+            const labels = progressData.map(p => p.task_name);
+            const data = progressData.map(p => {
+                const startDate = new Date(p.start_date);
+                const endDate = new Date(p.end_date);
+                const duration = dateDiffInDays(startDate, endDate) + 1; // Başlangıç ve bitiş tarihlerini dahil et
+                return duration;
+            });
+            const colors = progressData.map(() => `rgba(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, 0.6)`);
+            const borderColors = colors.map(c => c.replace('0.6', '1'));
+
+            projectChart = new Chart(chartCanvas, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'İş Gidişatı Süresi (Gün)',
+                        data: data,
+                        backgroundColor: colors,
+                        borderColor: borderColors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Gün'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+
+        // CRUD işlemleri
+        async function getProjectDetails(projectId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${currentUser.token}`
+                    }
+                });
+                if (!response.ok) throw new Error('Proje detayları alınamadı.');
+                return await response.json();
+            } catch (error) {
+                console.error("Proje detayları alınırken hata:", error);
+                return null;
+            }
+        }
+
+        async function saveProject(projectData, isEdit) {
+            if (!checkPermission(isEdit ? 'proje_duzenle' : 'proje_ekle')) return;
+            // ... (saveProject fonksiyonunun geri kalanı aynı kalacak)
+        }
+
+        async function deleteProject(projectId) {
+            if (!checkPermission('proje_sil')) return;
+            // ... (deleteProject fonksiyonunun geri kalanı aynı kalacak)
+        }
+        
+        async function checkPermission(permissionKey) {
+            // ... (checkPermission fonksiyonunun geri kalanı aynı kalacak)
+        }
+
+
+        // Event listeners
+        projectsTableBody.addEventListener('click', async (e) => {
+            const target = e.target.closest('.action-btn');
+            if (!target) return;
+
+            const projectId = target.dataset.id;
+
+            if (target.classList.contains('view-btn')) {
+                showProjectDetails(projectId);
+            } else if (target.classList.contains('edit-btn')) {
+                // ... (editProject logic)
+            } else if (target.classList.contains('delete-btn')) {
+                // ... (deleteProject logic)
+            } else if (target.classList.contains('pdf-btn')) {
+                // ... (exportPdf logic)
+            }
+        });
+
+        // ... (Diğer event listeners ve fonksiyonlar aynı kalacak)
+
+        // Sayfa yüklendiğinde projeleri getir
+        fetchProjects();
+    });
+
+</script>
 
     // progress_id kullanıldı
     async function deleteProgressStep(progressId, projectId) {
@@ -3607,11 +4137,10 @@ function addNewProgressStepForm(projectId) {
             } else if (typeof combinedDelay === 'number' && combinedDelay === 0) {
                 gecikmeDurumu = "0 gün";
             }
-
+          
             const rowBgColor = index % 2 === 0 ? '#ffffff' : '#f9f9f9';
-
+          
             allProjectsHtml += `
-                <tr style="background-color: ${rowBgColor};">
                     <td style="border: 1px solid #e1e5e9; padding: 8px; text-align: left;">${project.project_name ? project.project_name.normalize('NFC') : "-"}</td>
                     <td style="border: 1px solid #e1e5e9; padding: 8px; text-align: left;">${project.reference_no || "-"}</td>
                     <td style="border: 1px solid #e1e5e9; padding: 8px; text-align: left;">${project.customer_name || "-"}</td>
