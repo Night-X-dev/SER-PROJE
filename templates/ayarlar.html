@@ -1775,41 +1775,36 @@ async function fetchRoles() {
     }
 
     document.getElementById('saveNewRoleBtn').addEventListener('click', async () => {
-        const roleNameInput = document.getElementById('newRoleName');
-        const role_name = roleNameInput.value.trim();
-        const role_id = document.getElementById('newRoleModalLabel').dataset.roleId;
-
-        if (role_name === "") {
-            showToast("Rol adı boş bırakılamaz.", true);
+        const roleName = document.getElementById('roleNameInput').value;
+        if (!roleName) {
+            showToast('Lütfen bir rol adı giriniz.', true);
             return;
         }
 
-        const url = role_id ? '/api/update-role' : '/api/add-role';
-        const payload = role_id ? { role_id: role_id, role_name: role_name } : { role_name: role_name };
-
         try {
-            const response = await fetch(url, {
+            const response = await fetch('/api/add-role', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ role_name: roleName })
             });
 
             const result = await response.json();
-
-            if (response.ok) {
+            if (response.ok) {  
                 showToast(result.message);
+                // Modal'ı kapat
                 const modal = bootstrap.Modal.getInstance(document.getElementById('addRoleModal'));
                 modal.hide();
                 roleNameInput.value = ''; // Input'u temizle
                 fetchRoles(); // Başarılı olunca listeyi yenile
+                
             } else {
-                showToast(`Hata: ${result.error}`, true);
+                showToast(result.error, true);
             }
         } catch (error) {
-            console.error('Rol işlemi sırasında hata:', error);
-            showToast('Rol işlemi sırasında bir hata oluştu.', true);
+            console.error('Yeni rol eklerken hata:', error);
+            showToast('Rol eklenirken bir hata oluştu.', true);
         }
     });
         // DOM içeriği tamamen yüklendiğinde çalışacak ana kısım
