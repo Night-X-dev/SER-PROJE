@@ -246,52 +246,27 @@ def format_datetime_for_email(dt_str):
     except ValueError:
         return dt_str # Ayrıştırma başarısız olursa orijinal stringi döndür
 
-@app.route('/api/reports/project/<int:project_id>', methods=['GET'])
+@app.route('/api/project-report/<int:project_id>', methods=['GET'])
 def get_project_report_data(project_id):
     """
-    Retrieves comprehensive report data for a specific project,
-    including project details, progress steps, and calculated metrics.
+    Belirtilen proje ID'sine göre detaylı rapor verilerini getirir.
+    Bu, Proje detay sayfasında ve PDF raporunda kullanılır.
     """
-    connection = None
+    connection = get_db_connection()
+    if connection is None:
+        return jsonify({"error": "Veritabanı bağlantısı kurulamadı."}), 500
+
     try:
-        connection = get_db_connection()
-        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            # 1. Fetch Project Details
-            sql_project = """
-            SELECT
-                p.project_id,
-                p.project_name,
-                p.reference_no,
-                p.description,
-                p.contract_date,
-                p.meeting_date,
-                p.start_date,
-                p.end_date,
-                p.project_location,
-                p.status,
-                c.customer_name,
-                u.fullname AS project_manager_name,
-                c.customer_id,
-                u.id AS project_manager_user_id
-            FROM projects p
-            JOIN customers c ON p.customer_id = c.customer_id
-            JOIN users u ON p.project_manager_id = u.id
-            WHERE p.project_id = %s
-            """
+        with connection.cursor() as cursor:
+            # 1. Proje detaylarını çek
+            sql_project = "SELECT project_id, title, description, start_date, end_date, budget, status FROM projects WHERE project_id = %s"
             cursor.execute(sql_project, (project_id,))
             project_data = cursor.fetchone()
 
             if not project_data:
-                return jsonify({'message': 'Project not found.'}), 404
+                return jsonify({"error": "Proje bulunamadı."}), 404
 
-            # Convert dates to ISO format
-            for key in ['contract_date', 'meeting_date', 'start_date', 'end_date']:
-                if key in project_data and isinstance(project_data[key], datetime.date):
-                    project_data[key] = project_data[key].isoformat()
-                else:
-                    project_data[key] = None # Ensure it's null if not a date
-
-            # 2. Fetch Project Progress Steps
+            # 2. Proje ilerleme adımlarını çek
             sql_progress = """
             SELECT
                 progress_id,
@@ -314,80 +289,91 @@ def get_project_report_data(project_id):
             completed_steps_count = 0
             today = datetime.date.today()
 
-            for step in progress_steps:
-                # Calculate total delay for the step
-                step_delay_days = step['delay_days'] or 0
+            last_end_date = None # Önceki iş gidişatının bitiş tarihini tutmak için yeni eklenen değişken
+
+            # Her bir iş gidişatını döngüye al
+            for i, step in enumerate(progress_steps):
+                # Önceki adımın bitiş tarihi ile mevcut adımın başlangıç tarihi arasındaki gecikmeyi hesapla
+                step_delay_days = 0
                 step_custom_delay_days = step['custom_delay_days'] or 0
+
+                step_start_date_obj = datetime.date.fromisoformat(str(step['start_date'])) if step['start_date'] else None
+                
+                # Sadece ilk adım değilse ve bir önceki adımın bitiş tarihi varsa gecikme hesapla
+                if i > 0 and last_end_date and step_start_date_obj:
+                    time_difference = step_start_date_obj - last_end_date
+                    # Fark 1 günden büyükse gecikme oluşmuştur (Örnek: 14'ünde bitip, 16'sında başlıyorsa 1 gün gecikme var)
+                    if time_difference.days > 1:
+                        step_delay_days = time_difference.days - 1
+                        
+                # Proje gecikme günü ve ertelenen günü (custom_delay_days) topla
+                step['delay_days'] = step_delay_days # Dinamik olarak hesaplanan değeri ata
                 step_total_delay = step_delay_days + step_custom_delay_days
                 total_project_delay_days += step_total_delay
 
-                # Convert dates to ISO format
+                # Tarihleri ISO formatına çevir (Frontend tarafı için)
                 for key in ['start_date', 'end_date', 'real_end_date']:
                     if key in step and isinstance(step[key], datetime.date):
                         step[key] = step[key].isoformat()
                     else:
                         step[key] = None
 
-                # Determine step status for frontend display based on new rules
-                step_start_date = datetime.date.fromisoformat(step['start_date']) if step['start_date'] else None
-                step_end_date = datetime.date.fromisoformat(step['end_date']) if step['end_date'] else None
-                step_real_end_date = datetime.date.fromisoformat(step['real_end_date']) if step['real_end_date'] else None
-
                 # Durum belirleme mantığı güncellendi
-                if step_real_end_date: # Gerçek bitiş tarihi varsa
-                    if step_real_end_date <= step_end_date:
+                step_end_date_obj = datetime.date.fromisoformat(str(step['end_date'])) if step['end_date'] else None
+                step_real_end_date_obj = datetime.date.fromisoformat(str(step['real_end_date'])) if step['real_end_date'] else None
+
+                if step_real_end_date_obj:
+                    # Adım tamamlandıysa
+                    if step_real_end_date_obj <= step_end_date_obj:
                         step['status'] = 'Tamamlandı'
-                    elif step_real_end_date > step_end_date and step_custom_delay_days > 0:
+                    elif step_real_end_date_obj > step_end_date_obj and step_custom_delay_days > 0:
                         step['status'] = 'Ertelenmiş Bitti'
-                    elif step_real_end_date > step_end_date and step_delay_days > 0:
+                    elif step_real_end_date_obj > step_end_date_obj and step_delay_days > 0:
                         step['status'] = 'Gecikmeli Bitti'
                     else:
-                        step['status'] = 'Tamamlandı' # Gerçek bitiş var ama gecikme yoksa Tamamlandı
-                elif step_start_date and today < step_start_date:
+                        step['status'] = 'Tamamlandı'
+                # Adım henüz tamamlanmadıysa
+                elif step_start_date_obj and today < step_start_date_obj:
                     step['status'] = 'Başlamadı'
-                elif step_end_date and today > step_end_date and step_custom_delay_days > 0:
+                elif step_end_date_obj and today > step_end_date_obj and step_custom_delay_days > 0:
                     step['status'] = 'Ertelenmiş'
-                elif step_end_date and today > step_end_date and step_delay_days > 0:
+                elif step_end_date_obj and today > step_end_date_obj and step_delay_days > 0:
                     step['status'] = 'Gecikmeli'
                 else:
-                    step['status'] = 'Aktif' # Diğer durumlarda Aktif
-
-                # Tamamlanan adım sayısını güncelle
-                # Tamamlandı, Gecikmeli Bitti veya Ertelenmiş Bitti ise tamamlandı say
+                    step['status'] = 'Aktif'
+                
                 if step['status'] in ['Tamamlandı', 'Gecikmeli Bitti', 'Ertelenmiş Bitti']:
                     completed_steps_count += 1
+                
+                # Sonraki döngü için bitiş tarihini güncelle
+                last_end_date = datetime.date.fromisoformat(str(step['end_date'])) if step['end_date'] else None
 
-            # 3. Calculate Overall Completion Percentage
+            # 3. Genel Tamamlanma Yüzdesini Hesapla
             total_steps = len(progress_steps)
             completion_percentage = 0
             if total_steps > 0:
                 completion_percentage = round((completed_steps_count / total_steps) * 100)
 
-            # If project status is 'Tamamlandı' from DB, force 100% completion
             if project_data['status'] == 'Tamamlandı':
                 completion_percentage = 100
 
-            # 4. Prepare the final report data
+            # 4. Final rapor verilerini hazırla
             report_data = {
                 'project': project_data,
                 'progress_steps': progress_steps,
                 'total_project_delay_days': total_project_delay_days,
                 'completion_percentage': completion_percentage,
-                'completed_steps_count': completed_steps_count # Frontend için tamamlanan adım sayısı
+                'completed_steps_count': completed_steps_count
             }
 
             return jsonify(report_data), 200
 
-    except pymysql.Error as e:
-        print(f"Database error while fetching project report data: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error while fetching project report data: {e}")
+        app.logger.error(f"Proje rapor verisi çekme hatası: {e}")
         traceback.print_exc()
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        return jsonify({"error": "Proje rapor verisi çekilirken bir hata oluştu."}), 500
     finally:
-        if connection:
-            connection.close()
+        connection.close()
 
 
 # Helper function: Gets user role from the database
