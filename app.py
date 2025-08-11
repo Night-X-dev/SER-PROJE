@@ -476,7 +476,7 @@ def get_unread_notifications_count():
 @app.route('/api/roles', methods=['GET'])
 def get_roles():
     """
-    Veritabanındaki tüm rolleri çeker ve döndürür.
+    Veritabanındaki 'admin' olmayan tüm rolleri çeker ve döndürür.
     """
     if 'user_id' not in session:
         return jsonify({"error": "Unauthorized"}), 401
@@ -487,7 +487,8 @@ def get_roles():
 
     try:
         with connection.cursor() as cursor:
-            sql = "SELECT role_id, role_name FROM roles"
+            # 'Admin' rolünü hariç tutarak diğer rolleri çek
+            sql = "SELECT role_id, role_name FROM roles WHERE LOWER(role_name) != 'admin'"
             cursor.execute(sql)
             roles = cursor.fetchall()
             return jsonify(roles), 200
