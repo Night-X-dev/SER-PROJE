@@ -3029,7 +3029,6 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
             return null;
         }
     }
-    
       function renderProgressSteps(steps, projectId, isEditable = false) {
         if (!steps || !Array.isArray(steps)) {
             console.error("Geçersiz steps parametresi:", steps);
@@ -3173,27 +3172,26 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     });
                 });
 
-               document.querySelectorAll('.apply-delay-btn').forEach(button => {
-                    button.addEventListener('click', async (e) => {
-                        const progressId = e.currentTarget.dataset.id;
-                        // const stepIndex = parseInt(e.currentTarget.dataset.index); // Bu satırı artık kullanmıyoruz
-                        const newDelayDays = parseInt(document.getElementById(`step-${progressId}-delay`).value) || 0;
+                document.querySelectorAll('.apply-delay-btn').forEach(button => {
+    button.addEventListener('click', async (e) => {
+        const progressId = e.currentTarget.dataset.id;
+        const newDelayDays = parseInt(document.getElementById(`step-${progressId}-delay`).value) || 0;
+        const projectId = e.currentTarget.closest('[data-project-id]').dataset.projectId; // Assuming project ID is available
+        
+        if (newDelayDays > 0) {
+            const updatedStepInfo = await applyDelayToStep(progressId, newDelayDays, progressSteps, projectId); // progressSteps is the array holding all steps
+            if (updatedStepInfo && updatedStepInfo.real_end_date) {
+                document.getElementById(`step-${progressId}-real-end-display`).textContent = formatDateForDisplay(updatedStepInfo.real_end_date);
+                showToast(`Bu iş gidişatı ${newDelayDays} gün ertelenmiştir! (Gerçek Bitiş Tarihi: ${formatDateForDisplay(updatedStepInfo.real_end_date)})`);
+            } else {
+                showToast("Erteleme başarıyla uygulandı.");
+            }
+        } else {
+            showToast("Lütfen geçerli bir erteleme günü girin.", true);
+        }
+    });
+});
 
-                        if (newDelayDays > 0) {
-                            // DİKKAT: applyDelayToStep fonksiyonunu progressId ile çağırın.
-                            const updatedStepInfo = await applyDelayToStep(progressId, newDelayDays, steps, projectId);
-                            // Real end date'i doğrudan backend'den gelen değerle güncelle
-                            if (updatedStepInfo && updatedStepInfo.real_end_date) {
-                                document.getElementById(`step-${progressId}-real-end-display`).textContent = formatDateForDisplay(updatedStepInfo.real_end_date);
-                                showToast(`Bu iş gidişatı ${newDelayDays} gün ertelenmiştir! (Gerçek Bitiş Tarihi: ${formatDateForDisplay(updatedStepInfo.real_end_date)})`);
-                            } else {
-                                showToast("Erteleme başarıyla uygulandı.");
-                            }
-                        } else {
-                            showToast("Lütfen geçerli bir erteleme günü girin.", true);
-                        }
-                    });
-                });
             }
         }
 
