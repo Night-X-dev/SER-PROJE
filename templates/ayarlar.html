@@ -2041,18 +2041,22 @@ async function deleteRole(roleId) {
     
         // DOM içeriği tamamen yüklendiğinde çalışacak ana kısım
         document.addEventListener('DOMContentLoaded', function() {
-// Sayfa yüklendiğinde
-document.addEventListener('DOMContentLoaded', function() {
-    // Kullanıcı bilgilerini al
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    console.log('Current User Data:', currentUser);
     
-    // Eğer kullanıcı admin ise rol yönetimi bölümünü göster
+    // Check if user is admin
     if (currentUser && currentUser.role_name === 'Admin') {
-        document.getElementById('roleManagementCard').style.display = 'block';
-        // Rolleri yükle
-        fetchRoles();
+        console.log('Admin hesabı');
+        const roleCard = document.getElementById('roleManagementCard');
+        if (roleCard) {
+            roleCard.style.display = 'block';
+            fetchRoles();
+        }
+    } else {
+        console.log('Admin hesabı değil');
     }
-});
+
+
             fetchRoles();
             const accountSettingsForm = document.getElementById('accountSettingsForm');
             const accountSettingsMessage = document.getElementById('accountSettingsMessage');
