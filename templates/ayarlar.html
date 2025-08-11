@@ -1519,7 +1519,6 @@
             window.location.href = 'login.html';
         }
 
-        // Rol seçiciyi backend API'den dolduran fonksiyon
         async function loadRolesForUserModal() {
     // API_BASE_URL'nin global olarak tanımlandığı varsayılmıştır.
     const API_BASE_URL = window.location.origin;
@@ -1924,41 +1923,6 @@
                     });
                 });
             }
-
-            async function loadRolesForUserModal() {
-    // API_BASE_URL'nin global olarak tanımlandığı varsayılmıştır.
-    const API_BASE_URL = window.location.origin;
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/roles`);
-
-        if (!response.ok) {
-            // API'den hatalı yanıt gelirse hata fırlat
-            throw new Error(`API hatası: ${response.statusText}`);
-        }
-
-        const roles = await response.json();
-        const roleSelect = document.getElementById('newUserRole');
-
-        // Önceki seçenekleri temizle ve varsayılan seçeneği ekle
-        roleSelect.innerHTML = '<option value="">Rol Seçin</option>';
-
-        // Roller dizisi üzerinde döngü kurarak her bir rol için <option> elementi oluştur
-        roles.forEach(role => {
-            // Hata düzeltildi: API'den gelen nesnenin `role_name` özelliğini kullan
-            if (role.role_name.toLowerCase() !== 'admin') {
-                const option = document.createElement('option');
-                option.value = role.role_id;
-                option.textContent = role.role_name;
-                roleSelect.appendChild(option);
-            }
-        });
-    } catch (err) {
-        console.error('Kullanıcı rolleri yüklenirken hata:', err);
-        // Hata durumunda kullanıcıya bir bildirim göster
-        showToast('Kullanıcı rolleri yüklenirken bir hata oluştu.', true);
-    }
-}
 
             // Telefon input mask sadece bir kez eklenir
             var phoneInput = document.getElementById('newUserPhone');
