@@ -1029,45 +1029,58 @@ def update_role_permissions():
 # User Registration API
 @app.route('/api/register', methods=['POST'])
 def register_user():
-    """Registers a new user."""
-    data = request.get_json()
-    fullname = data.get('fullname')
-    email = data.get('email')
-    phone = data.get('phone', '')
-    password = data.get('password')
-    role = data.get('role', 'Employee') # Default position if not provided
-    profile_picture = data.get('profile_picture')
-    hide_email = data.get('hide_email', 0)
-    hide_phone = data.get('hide_phone', 0)
-
-    if not all([fullname, email, password, role]):
-        return jsonify({'message': 'Please fill in all required fields.'}), 400
-
-    connection = None
     try:
+        data = request.get_json()
+        fullname = data.get('fullname')
+        email = data.get('email')
+        password = data.get('password')
+        password_confirm = data.get('password_confirm')
+
+        if not all([fullname, email, password, password_confirm]):
+            return jsonify({'message': 'Tüm alanlar zorunludur.'}), 400
+
+        if password != password_confirm:
+            return jsonify({'message': 'Şifreler eşleşmiyor.'}), 400
+
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # Check if email already exists
             cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
-            existing_user = cursor.fetchone()
-            if existing_user:
-                return jsonify({'message': 'This email address is already in use.'}), 409
+            if cursor.fetchone():
+                return jsonify({'message': 'Bu e-posta adresi zaten kullanılıyor.'}), 400
 
-            hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-            sql = """
-            INSERT INTO users (fullname, email, phone, password, role, profile_picture, hide_email, hide_phone)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """
-            cursor.execute(sql, (fullname, email, phone, hashed_password, role, profile_picture, hide_email, hide_phone))
+            # Hash the password
+            hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+            # Insert new user with default role (Ziyaretçi) and not approved
+            cursor.execute("""
+                INSERT INTO users (fullname, email, password, role_id, is_approved)
+                VALUES (%s, %s, %s, 
+                    (SELECT role_id FROM roles WHERE role_name = 'Ziyaretçi'), 
+                    FALSE)
+            """, (fullname, email, hashed_password))
+            
+            user_id = cursor.lastrowid
             connection.commit()
-        return jsonify({'message': 'Registration successful!'}), 201
-    except pymysql.Error as e:
-        print(f"Database registration error: {e}")
-        if e.args[0] == 1062:
-            return jsonify({'message': 'This email address is already in use.'}), 409
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+
+            # Log the registration
+            log_activity(
+                user_id=user_id,
+                title="Yeni Kullanıcı Kaydı",
+                description=f"{fullname} kullanıcısı kayıt oldu.",
+                icon="user-plus"
+            )
+
+            return jsonify({
+                'message': 'Kayıt başarılı! Yönetici onayı bekleniyor.',
+                'success': True
+            }), 201
+
     except Exception as e:
-        print(f"General registration error: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Registration error: {str(e)}")
+        if connection:
+            connection.rollback()
+        return jsonify({'message': 'Kayıt sırasında bir hata oluştu.'}), 500
     finally:
         if connection:
             connection.close()
