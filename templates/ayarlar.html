@@ -1760,19 +1760,19 @@ async function fetchRoles() {
                         // role_name ve role_id'yi veritabanından gelen verilerle doldur.
                         // Kullanıcı sayısı için şu an placeholder kullanılıyor.
                         row.innerHTML = `
-                            <td class="text-start">${role.role_name}</td>
-                            <td class="text-center">--</td> 
-                            <td class="text-end">
-                                <div class="d-flex gap-2 justify-content-end">
-                                    <button class="action-btn" onclick="openRoleModal('edit', '${role.role_id}', '${role.role_name}')">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="action-btn text-danger border-danger" onclick="confirmAction('deleteRole', '${role.role_id}', '${role.role_name}')">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        `;
+    <td class="text-start">${role.role_name}</td>
+    <td class="text-center">--</td> 
+    <td class="text-end">
+        <div class="d-flex gap-2 justify-content-end">
+            <button class="action-btn" onclick="openRoleModal('edit', '${role.id}', '${role.role_name}')">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button class="action-btn text-danger border-danger" onclick="confirmAction('deleteRole', '${role.id}', '${role.role_name}')">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+    </td>
+`;
                         roleListBody.appendChild(row);
                     });
                 } else {
@@ -1792,13 +1792,9 @@ async function fetchRoles() {
         }
         
         function openRoleModal(mode, roleId = null, roleName = '') {
-    console.log("openRoleModal çağrıldı:", { mode, roleId, roleName }); // Debug için
-    
     if (mode === 'edit' && roleId) {
-        console.log("Düzenleme modu, roleId:", roleId); // Debug için
-        // Hidden input alanına roleId'yi kaydet
+        // Düzenleme modu
         document.getElementById('editRoleId').value = roleId;
-        // Rol adını doldur
         document.getElementById('editRoleName').value = roleName || '';
         
         // Modalı göster
@@ -1806,8 +1802,6 @@ async function fetchRoles() {
         editModal.show();
     } else {
         // Yeni rol ekleme modu
-        console.log("Yeni rol ekleme modu"); // Debug için
-        // Input alanlarını temizle
         document.getElementById('editRoleId').value = '';
         document.getElementById('editRoleName').value = '';
         

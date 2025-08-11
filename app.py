@@ -2964,73 +2964,52 @@ def get_yetkitable():
             connection.close()
 @app.route('/api/update-role', methods=['POST'])
 def update_role():
-    print("1. Fonksiyon başladı")  # Debug için
     if 'user_id' not in session:
-        print("2. Oturum yok")  # Debug için
         return jsonify({"error": "Oturum açık değil."}), 401
 
     connection = None
     try:
-        print("3. JSON verisi alınıyor")  # Debug için
         data = request.get_json()
-        print("4. Alınan veri:", data)  # Debug için
-        
         role_id = data.get('role_id')
         role_name = data.get('role_name')
-        print("5. Rol ID:", role_id, "Rol Adı:", role_name)  # Debug için
 
         if not role_id or not role_name:
-            print("6. Eksik parametre")  # Debug için
             return jsonify({"error": "Rol ID'si veya adı boş bırakılamaz."}), 400
 
-        print("7. Veritabanı bağlantısı kuruluyor")  # Debug için
         connection = get_db_connection()
         if not connection:
-            print("8. Bağlantı hatası")  # Debug için
             return jsonify({"error": "Veritabanı bağlantısı kurulamadı."}), 500
 
         with connection.cursor() as cursor:
-            print("9. Cursor oluşturuldu")  # Debug için
-            # Rol adının zaten var olup olmadığını kontrol et
-            check_sql = "SELECT id FROM yetki WHERE role_name = %s AND id != %s"
-            print("10. SQL hazır:", check_sql)  # Debug için
-            cursor.execute(check_sql, (role_name, role_id))
-            print("11. Kontrol sorgusu çalıştırıldı")  # Debug için
+            # Aynı isimde başka bir rol var mı kontrol et
+            cursor.execute("SELECT id FROM yetki WHERE role_name = %s AND id != %s", 
+                         (role_name, role_id))
             if cursor.fetchone():
-                print("12. Aynı isimde rol var")  # Debug için
                 return jsonify({"error": "Bu isimde bir rol zaten mevcut."}), 400
 
             # Rolü güncelle
-            update_sql = "UPDATE yetki SET role_name = %s WHERE id = %s"
-            print("13. Güncelleme SQL'i:", update_sql)  # Debug için
-            cursor.execute(update_sql, (role_name, role_id))
-            print("14. Güncelleme sorgusu çalıştırıldı")  # Debug için
+            sql = "UPDATE yetki SET role_name = %s WHERE id = %s"
+            cursor.execute(sql, (role_name, role_id))
             
             if cursor.rowcount == 0:
-                print("15. Güncellenecek kayıt bulunamadı")  # Debug için
                 return jsonify({"error": "Belirtilen rol bulunamadı."}), 404
                 
-            print("16. Değişiklikler kaydediliyor")  # Debug için
             connection.commit()
-            print("17. Değişiklikler kaydedildi")  # Debug için
             return jsonify({"message": "Rol başarıyla güncellendi."}), 200
 
     except pymysql.Error as e:
         if connection:
             connection.rollback()
-        print("MySQL hatası:", str(e))  # Debug için
+        print(f"MySQL hatası: {e}")
         return jsonify({"error": f"Veritabanı hatası: {str(e)}"}), 500
     except Exception as e:
         if connection:
             connection.rollback()
-        print("Beklenmeyen hata:", str(e))  # Debug için
-        import traceback
-        traceback.print_exc()  # Hata izini yazdır
+        print(f"Beklenmeyen hata: {e}")
         return jsonify({"error": f"Beklenmeyen hata: {str(e)}"}), 500
     finally:
         if connection:
             connection.close()
-            print("18. Bağlantı kapatıldı")  # Debug için
 
 @app.route('/api/roles', methods=['GET'])
 def get_distinct_roles():
