@@ -2138,7 +2138,7 @@ def log_pdf_report_api():
 # API to get project progress steps
 @app.route('/api/projects/<int:project_id>/progress', methods=['GET'])
 def get_project_progress_steps(project_id):
-    """Retrieves all progress steps for a specific project with delay calculations."""
+    """Retrieves all progress steps for a specific project."""
     connection = None
     try:
         connection = get_db_connection()
@@ -2151,7 +2151,7 @@ def get_project_progress_steps(project_id):
                 cursor.execute("ALTER TABLE project_progress ADD COLUMN custom_delay_days INT DEFAULT 0")
                 connection.commit()
 
-            # Check if 'real_end_date' column exists and add if not
+            # BURADA DEĞİŞİKLİK YAPILDI: 'real_end_date' sütununun varlığı kontrol edildi ve yoksa eklendi
             cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'real_end_date'")
             column_exists_real_end_date = cursor.fetchone() is not None
             if not column_exists_real_end_date:
@@ -2159,77 +2159,40 @@ def get_project_progress_steps(project_id):
                 cursor.execute("ALTER TABLE project_progress ADD COLUMN real_end_date DATE NULL")
                 connection.commit()
 
-            # First, get all steps for the project
             sql = """
             SELECT
-                pp.progress_id,
-                pp.project_id,
-                pp.title AS step_name,
-                pp.description,
-                pp.start_date,
-                pp.end_date,
-                pp.delay_days,
-                pp.custom_delay_days,
-                pp.real_end_date,
-                pp.created_at,
-                pp.status
-            FROM project_progress pp
-            WHERE pp.project_id = %s
-            ORDER BY pp.start_date ASC, pp.created_at ASC
+                progress_id,
+                project_id,
+                title AS step_name,
+                description,
+                start_date,
+                end_date,
+                delay_days,
+                custom_delay_days,
+                real_end_date, -- BURADA DEĞİŞİKLİK YAPILDI: Yeni eklenen sütun
+                created_at
+            FROM project_progress
+            WHERE project_id = %s
+            ORDER BY start_date ASC, created_at ASC
             """
             cursor.execute(sql, (project_id,))
             steps = cursor.fetchall()
 
-            # Get project start date for delay calculation of first step
-            cursor.execute("SELECT start_date FROM projects WHERE project_id = %s", (project_id,))
-            project_start_date = cursor.fetchone()['start_date']
+            for step in steps:
+                step['start_date'] = step['start_date'].isoformat() if isinstance(step['start_date'], datetime.date) else None
+                step['end_date'] = step['end_date'].isoformat() if isinstance(step['end_date'], datetime.date) else None
+                # BURADA DEĞİŞİKLİK YAPILDI: real_end_date'i de formatlıyoruz
+                step['real_end_date'] = step['real_end_date'].isoformat() if isinstance(step['real_end_date'], datetime.date) else None
+                step['created_at'] = step['created_at'].isoformat() if isinstance(step['created_at'], datetime.datetime) else None
+                step['custom_delay_days'] = int(step['custom_delay_days']) if step['custom_delay_days'] is not None else 0
 
-            previous_end_date = project_start_date
-            formatted_steps = []
-
-            for i, step in enumerate(steps):
-                # Calculate delay days for each step
-                current_start_date = step['start_date']
-                
-                # Calculate delay days (only business days between previous end date and current start date)
-                delay_days = 0
-                if i > 0:  # For steps after the first one
-                    if previous_end_date and current_start_date:
-                        # Calculate business days between previous end date and current start date
-                        current_date = previous_end_date + datetime.timedelta(days=1)
-                        while current_date < current_start_date:
-                            if current_date.weekday() < 5:  # Monday=0, Sunday=6
-                                delay_days += 1
-                            current_date += datetime.timedelta(days=1)
-                
-                # Update previous_end_date for next iteration
-                previous_end_date = step['end_date']
-
-                # Format the step data
-                formatted_step = {
-                    'progress_id': step['progress_id'],
-                    'project_id': step['project_id'],
-                    'step_name': step['step_name'],
-                    'title': step['step_name'],  # For backward compatibility
-                    'description': step['description'],
-                    'start_date': step['start_date'],
-                    'end_date': step['end_date'],
-                    'delay_days': delay_days,
-                    'custom_delay_days': int(step['custom_delay_days']) if step['custom_delay_days'] is not None else 0,
-                    'custom_delay': int(step['custom_delay_days']) if step['custom_delay_days'] is not None else 0,  # For backward compatibility
-                    'real_end_date': step['real_end_date'],
-                    'status': step.get('status', 'pending')
-                }
-                formatted_steps.append(formatted_step)
-
-        return jsonify(formatted_steps), 200
+        return jsonify(steps), 200
     except pymysql.Error as e:
         print(f"Database error while fetching progress steps: {e}")
-        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
+        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
     except Exception as e:
         print(f"General error while fetching progress steps: {e}")
-        traceback.print_exc()
-        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+        return jsonify({'message': 'Server error, please try again later.'}), 500
     finally:
         if connection:
             connection.close()
