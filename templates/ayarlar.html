@@ -1522,41 +1522,32 @@
         // Rol seçiciyi backend API'den dolduran fonksiyon
         async function fillRoleSelectorFromAPI() {
     const roleSelect = document.getElementById('roleSelector');
-    // Elementin varlığını kontrol et, yoksa fonksiyondan çık
     if (!roleSelect) {
         console.warn('`roleSelector` ID\'li element bulunamadı.');
         return;
     }
-
     try {
-        const response = await fetch('/api/roles');
-
+        const response = await fetch('/api/yetki_rolleri'); // Yeni API rotası
         if (!response.ok) {
-            // API'den hatalı yanıt gelirse hata fırlat
             throw new Error('API hatası: ' + response.statusText);
         }
-
-        const roles = await response.json();
-
-        // Önceki seçenekleri temizle ve varsayılan seçeneği ekle
+        const yetkiRolleri = await response.json();
+        
         roleSelect.innerHTML = '<option value="">Rol Seçin</option>';
-
-        // Dönen rollerin bir dizi olduğunu ve her birinin bir nesne olduğunu varsayıyoruz
-        // (örneğin: [{role_id: 1, role_name: "user"}, ...])
-        roles.forEach(role => {
-            // `role_name` özelliğinin "admin" olup olmadığını kontrol et
-            if (role.role_name.toLowerCase() !== 'admin') {
+        yetkiRolleri.forEach(yetki => {
+            // "admin" rolünü listelemiyoruz
+            if (yetki.role_name.toLowerCase() !== 'admin') {
                 const option = document.createElement('option');
-                option.value = role.role_id;
-                option.textContent = role.role_name;
+                option.value = yetki.yetki_id; // yetki_id'yi rol ID'si gibi kullanıyoruz
+                option.textContent = yetki.role_name; // yetki_ad yerine role_name'i kullanıyoruz
                 roleSelect.appendChild(option);
             }
         });
     } catch (err) {
         console.error('Rolleri çekerken hata:', err);
-        // Hata durumunda kullanıcıya bir bildirim göster
         showToast('Roller yüklenirken bir hata oluştu.', true);
-    }}
+    }
+}
         // Tabloyu render etme fonksiyonu
         function renderUsersTable(usersToRender) {
             const tbody = document.getElementById('usersTableBody');
@@ -2210,32 +2201,31 @@
         // function deleteUser(userId) { ... } 
 
         // Rol izinlerini yükleyen fonksiyon
-        function loadPermissionsForRole(role) {
-            fetch(`${API_BASE_URL}/api/role-permissions?role=${role}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data) {
-                        document.getElementById('proje_ekle').checked = data.proje_ekle === 1;
-                        document.getElementById('proje_duzenle').checked = data.proje_duzenle === 1;
-                        document.getElementById('proje_sil').checked = data.proje_sil === 1;
-                        document.getElementById('pdf_olusturma').checked = data.pdf_olusturma === 1;
-                        document.getElementById('musteri_duzenleme').checked = data.musteri_duzenleme === 1;
-                        document.getElementById('raporlar').checked = data.raporlar === 1;
-                    } else {
-                        // Veri yoksa tümünü sıfırla
-                        document.getElementById('proje_ekle').checked = false;
-                        document.getElementById('proje_duzenle').checked = false;
-                        document.getElementById('proje_sil').checked = false;
-                        document.getElementById('pdf_olusturma').checked = false;
-                        document.getElementById('musteri_duzenleme').checked = false;
-                        document.getElementById('raporlar').checked = false;
-                    }
-                })
-                .catch(err => {
-                    console.error('İzinleri yüklerken hata:', err);
-                    showToast('İzinler yüklenirken bir hata oluştu.', true);
-                });
+        async function loadPermissionsForRole(yetkiId) {
+    const checkboxes = document.querySelectorAll('#rolePermissionCard input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = false); // Önce tümünü sıfırla
+
+    if (!yetkiId) return;
+
+    try {
+        const response = await fetch(`/api/yetki_rolleri/${yetkiId}/permissions`); // Yeni API rotası
+        if (!response.ok) {
+            throw new Error('API hatası: ' + response.statusText);
         }
+        const data = await response.json();
+        
+        // İzinleri checkbox'lara uygula
+        for (const permission in data) {
+            const checkbox = document.getElementById(permission);
+            if (checkbox && data[permission] === 1) { 
+                checkbox.checked = true;
+            }
+        }
+    } catch (err) {
+        console.error('İzinleri yüklerken hata:', err);
+        showToast('İzinler yüklenirken bir hata oluştu.', true);
+    }
+}
     </script>
     <!-- bildirim.js dosyasını en sona ekleyin ki DOM tamamen yüklendikten sonra çalışsın -->
     <script src="static/bildirim.js"></script>
