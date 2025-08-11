@@ -246,6 +246,7 @@ def format_datetime_for_email(dt_str):
     except ValueError:
         return dt_str # Ayrıştırma başarısız olursa orijinal stringi döndür
 
+
 @app.route('/api/project-report/<int:project_id>', methods=['GET'])
 def get_project_report_data(project_id):
     """
@@ -2877,6 +2878,27 @@ def update_password():
     finally:
         if connection:
             connection.close()
+@app.route('/api/yetkitable', methods=['GET'])
+def get_yetki_table():
+    """
+    Veritabanındaki 'yetki' tablosundan tüm rolleri çeker ve döndürür.
+    """
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            sql = "SELECT role_id, role_name FROM yetki"
+            cursor.execute(sql)
+            roles = cursor.fetchall()
+            return jsonify(roles)
+    except Exception as e:
+        print(f"Hata: Roller çekilirken bir hata oluştu: {e}")
+        traceback.print_exc()
+        return jsonify({"error": "Roller yüklenirken bir hata oluştu."}), 500
+    finally:
+        if connection:
+            connection.close()
+
 
 @app.route('/api/roles', methods=['GET'])
 def get_distinct_roles():
