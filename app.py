@@ -2964,6 +2964,9 @@ def get_yetkitable():
             connection.close()
 @app.route('/api/update-role', methods=['POST'])
 def update_role():
+    """
+    Belirtilen rolün adını günceller.
+    """
     if 'user_id' not in session:
         return jsonify({"error": "Oturum açık değil."}), 401
 
@@ -2974,13 +2977,14 @@ def update_role():
 
     try:
         with connection.cursor() as cursor:
+            # Kullanıcının yetki_yonetimi iznine sahip olup olmadığını kontrol et
             sql = """
                 SELECT r.role_name FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.user_id = %s
             """
             cursor.execute(sql, (user_id,))
-            user_role = cursor.fetchone()
+            user_role_data = cursor.fetchone()
 
-            if not user_role or not check_role_permission(user_role['role_name'], 'yetki_yonetimi'):
+            if not user_role_data or not check_role_permission(user_role_data['role_name'], 'yetki_yonetimi'):
                 return jsonify({"error": "Bu işlemi yapmak için yetkiniz yok."}), 403
 
         data = request.get_json()
@@ -2991,8 +2995,9 @@ def update_role():
             return jsonify({"error": "Rol ID'si veya adı boş bırakılamaz."}), 400
 
         with connection.cursor() as cursor:
-            # Rolü güncelle
-            sql = "UPDATE yetki SET role_name = %s WHERE id = %s"
+            # Rolü yetki tablosunda güncelle
+            # Not: Kullanıcının orijinal kodundaki 'id' yerine 'role_id' kullanıldı.
+            sql = "UPDATE yetki SET role_name = %s WHERE role_id = %s"
             cursor.execute(sql, (role_name, role_id))
             connection.commit()
 
@@ -3004,6 +3009,7 @@ def update_role():
     finally:
         if connection:
             connection.close()
+
 @app.route('/api/roles', methods=['GET'])
 def get_distinct_roles():
     """Retrieves distinct roles from the users table (excluding 'Admin')."""
