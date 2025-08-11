@@ -1981,7 +1981,76 @@ def log_activity(user_id, title, description, icon, is_read=0):
     finally:
         if connection:
             connection.close()
+# app.py dosyasına bu kısmı ekleyin
+@app.route('/api/project-progress/<int:progress_id>', methods=['PUT'])
+def update_progress_step(progress_id):
+    """
+    Belirli bir proje adımı kaydını günceller.
+    """
+    if 'user_id' not in session:
+        return jsonify({"error": "Oturum süresi doldu."}), 401
 
+    try:
+        data = request.json
+        title = data.get('step_name')
+        description = data.get('description')
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        real_end_date = data.get('real_end_date')
+        custom_delay_days = data.get('custom_delay_days', 0) # Varsayılan olarak 0
+
+        # Veritabanı bağlantısı
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Önceki adımın bitiş tarihini bul
+            sql_prev_step_end_date = """
+            SELECT
+                end_date
+            FROM project_progress
+            WHERE project_id = (SELECT project_id FROM project_progress WHERE progress_id = %s)
+            AND end_date IS NOT NULL
+            AND end_date < %s
+            ORDER BY end_date DESC
+            LIMIT 1
+            """
+            cursor.execute(sql_prev_step_end_date, (progress_id, start_date))
+            prev_end_date_row = cursor.fetchone()
+            
+            delay_days = 0
+            if prev_end_date_row and start_date:
+                prev_end_date_obj = datetime.date.fromisoformat(str(prev_end_date_row['end_date']))
+                start_date_obj = datetime.date.fromisoformat(str(start_date))
+                time_difference = start_date_obj - prev_end_date_obj
+                if time_difference.days > 1:
+                    delay_days = time_difference.days - 1
+            
+            # Güncelleme sorgusu
+            sql_update = """
+            UPDATE project_progress
+            SET
+                title = %s,
+                description = %s,
+                start_date = %s,
+                end_date = %s,
+                real_end_date = %s,
+                delay_days = %s,
+                custom_delay_days = %s
+            WHERE progress_id = %s
+            """
+            cursor.execute(sql_update, (title, description, start_date, end_date, real_end_date, delay_days, custom_delay_days, progress_id))
+        
+        connection.commit()
+        return jsonify({"message": "Proje adımı başarıyla güncellendi."}), 200
+
+    except Exception as e:
+        app.logger.error(f"Proje adımı güncelleme hatası: {e}")
+        traceback.print_exc()
+        return jsonify({"error": "Proje adımı güncellenirken bir hata oluştu."}), 500
+    finally:
+        if 'connection' in locals() and connection:
+            connection.close()
+
+# @app.route('/api/project-report/<int:project_id>', methods=['GET']) fonksiyonunun üstüne ekleyebilirsiniz.
 # API to add new project (uncommented and completed from previous version)
 @app.route('/api/projects', methods=['POST'])
 def add_project():
