@@ -1708,72 +1708,84 @@
         });
 
 async function fetchRoles() {
-            const roleListBody = document.getElementById('role-list');
-            const loadingContainer = document.getElementById('loading-container');
-            const roleTableContainer = document.getElementById('role-table-container');
-            const noRolesMessage = document.getElementById('no-roles-message');
+        const roleListBody = document.getElementById('role-list');
+        const loadingContainer = document.getElementById('loading-container');
+        const roleTableContainer = document.getElementById('role-table-container');
+        const noRolesMessage = document.getElementById('no-roles-message');
 
-            // Yükleme durumunu ayarla
-            roleListBody.innerHTML = '';
-            roleTableContainer.style.display = 'none';
-            loadingContainer.style.display = 'block';
-            noRolesMessage.style.display = 'none';
+        // Yükleme durumunu ayarla
+        roleListBody.innerHTML = '';
+        roleTableContainer.style.display = 'none';
+        loadingContainer.style.display = 'block';
+        noRolesMessage.style.display = 'none';
+        
+        try {
+            // Yeni oluşturduğumuz API endpoint'ine istek gönder.
+            const response = await fetch('/api/yetkitable');
+            if (!response.ok) {
+                throw new Error('API isteği başarısız oldu: ' + response.statusText);
+            }
+            const roles = await response.json();
 
-            try {
-                // Yeni oluşturduğumuz API endpoint'ine istek gönder.
-                const response = await fetch('/api/yetkitable');
-                if (!response.ok) {
-                    throw new Error('API isteği başarısız oldu: ' + response.statusText);
-                }
-                const roles = await response.json();
+            // Yükleme bitti, kapsayıcıları ayarla
+            loadingContainer.style.display = 'none';
 
-                // Yükleme bitti, kapsayıcıları ayarla
-                loadingContainer.style.display = 'none';
-
-                if (roles && roles.length > 0) {
-                    roleTableContainer.style.display = 'block';
-                    // Gelen her rol için tabloya yeni bir satır ekle
-                    roles.forEach(role => {
-                        const row = document.createElement('tr');
-                        // role_name ve role_id'yi veritabanından gelen verilerle doldur.
-                        // Kullanıcı sayısı için şu an placeholder kullanılıyor.
-                        row.innerHTML = `
-                            <td class="text-start">${role.role_name}</td>
-                            <td class="text-center">--</td> 
-                            <td class="text-end">
-                                <div class="d-flex gap-2 justify-content-end">
-                                    <button class="action-btn" onclick="openRoleModal('edit', '${role.role_id}', '${role.role_name}')">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="action-btn text-danger border-danger" onclick="confirmAction('deleteRole', '${role.role_id}', '${role.role_name}')">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        `;
-                        roleListBody.appendChild(row);
-                    });
-                } else {
-                    // Rol yoksa "Rol yok" mesajını göster
-                    loadingContainer.style.display = 'block';
-                    noRolesMessage.style.display = 'block';
-                    document.getElementById('loading-spinner').style.display = 'none';
-                }
-            } catch (error) {
-                // Hata durumunda konsola logla ve kullanıcıya mesaj göster.
-                console.error('Rolleri çekerken bir hata oluştu:', error);
+            if (roles && roles.length > 0) {
+                roleTableContainer.style.display = 'block';
+                // Gelen her rol için tabloya yeni bir satır ekle
+                roles.forEach(role => {
+                    const row = document.createElement('tr');
+                    // role_name ve role_id'yi veritabanından gelen verilerle doldur.
+                    // Kullanıcı sayısı için şu an placeholder kullanılıyor.
+                    row.innerHTML = `
+                        <td class="text-start">${role.role_name}</td>
+                        <td class="text-center">--</td>
+                        <td class="text-end">
+                            <div class="d-flex gap-2 justify-content-end">
+                                <button class="action-btn" onclick="openRoleModal('edit', '${role.id}', '${role.role_name}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="action-btn text-danger border-danger" onclick="confirmAction('deleteRole', '${role.id}', '${role.role_name}')">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    roleListBody.appendChild(row);
+                });
+            } else {
+                // Rol yoksa "Rol yok" mesajını göster
                 loadingContainer.style.display = 'block';
-                noRolesMessage.textContent = 'Roller yüklenirken bir hata oluştu.';
                 noRolesMessage.style.display = 'block';
                 document.getElementById('loading-spinner').style.display = 'none';
             }
+        } catch (error) {
+            // Hata durumunda konsola logla ve kullanıcıya mesaj göster.
+            console.error('Rolleri çekerken bir hata oluştu:', error);
+            loadingContainer.style.display = 'block';
+            noRolesMessage.textContent = 'Roller yüklenirken bir hata oluştu.';
+            noRolesMessage.style.display = 'block';
+            document.getElementById('loading-spinner').style.display = 'none';
+        }
+    }
+        
+      function openRoleModal(mode, roleId = null, roleName = '') {
+        const modal = new bootstrap.Modal(document.getElementById('addRoleModal'));
+        const modalLabel = document.getElementById('newRoleModalLabel');
+        const roleNameInput = document.getElementById('newRoleName');
+        
+        if (mode === 'edit') {
+            modalLabel.textContent = "Rolü Düzenle";
+            modalLabel.dataset.roleId = roleId;
+            roleNameInput.value = roleName;
+        } else {
+            modalLabel.textContent = "Yeni Rol Ekle";
+            modalLabel.dataset.roleId = '';
+            roleNameInput.value = '';
         }
         
-        function openRoleModal() {
-        const modal = new bootstrap.Modal(document.getElementById('addRoleModal'));
         modal.show();
     }
-
     document.getElementById('saveNewRoleBtn').addEventListener('click', async () => {
         const roleNameInput = document.getElementById('newRoleName');
         const role_name = roleNameInput.value.trim();
