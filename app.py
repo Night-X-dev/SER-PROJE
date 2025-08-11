@@ -2988,17 +2988,16 @@ def update_role():
                 return jsonify({"error": "Bu işlemi yapmak için yetkiniz yok."}), 403
 
         data = request.get_json()
-        role_id = data.get('role_id')
+        yetki_id = data.get('id')
         role_name = data.get('role_name')
 
-        if not role_id or not role_name:
-            return jsonify({"error": "Rol ID'si veya adı boş bırakılamaz."}), 400
+        if not yetki_id or not role_name:
+            return jsonify({"error": "Yetki ID'si veya adı boş bırakılamaz."}), 400
 
         with connection.cursor() as cursor:
-            # Rolü yetki tablosunda güncelle
-            # Not: Kullanıcının orijinal kodundaki 'id' yerine 'role_id' kullanıldı.
-            sql = "UPDATE yetki SET role_name = %s WHERE role_id = %s"
-            cursor.execute(sql, (role_name, role_id))
+            # Rolü yetki tablosunda 'id' sütununu kullanarak güncelle
+            sql = "UPDATE yetki SET role_name = %s WHERE id = %s"
+            cursor.execute(sql, (role_name, yetki_id))
             connection.commit()
 
         return jsonify({"message": "Rol başarıyla güncellendi."}), 200
@@ -3009,6 +3008,7 @@ def update_role():
     finally:
         if connection:
             connection.close()
+
 
 @app.route('/api/roles', methods=['GET'])
 def get_distinct_roles():
