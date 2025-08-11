@@ -1125,12 +1125,34 @@
                 <i class="fas fa-users-cog"></i>
                 Rol Yönetimi
             </div>
-            <div class="card-actions">
-                <button class="btn" onclick="openRoleModal('add')">
-                    <i class="fas fa-plus"></i>
-                    Yeni Rol Ekle
-                </button>
+            div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>Yetkiler</h4>
+    <button class="btn btn-primary" onclick="openRoleModal()">
+        <i class="fas fa-plus me-2"></i>Yeni Rol Ekle
+    </button>
+</div>
+
+<!-- Yeni Rol Ekle Modal'ı (Yetki tablosunun hemen altına veya sayfanın sonuna ekleyebilirsiniz) -->
+<div class="modal fade" id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addRoleModalLabel">Yeni Rol Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="roleNameInput" class="form-label">Rol Adı</label>
+                    <input type="text" class="form-control" id="roleNameInput" placeholder="Örn: Yönetici, Proje Sorumlusu">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" id="saveNewRoleBtn">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
         </div>
         <div class="card-body">
             <!-- Yükleme durumu ve hata mesajı için yeni bir kapsayıcı -->
@@ -1747,6 +1769,43 @@ async function fetchRoles() {
                 document.getElementById('loading-spinner').style.display = 'none';
             }
         }
+        function openRoleModal() {
+        const modal = new bootstrap.Modal(document.getElementById('addRoleModal'));
+        modal.show();
+    }
+
+    document.getElementById('saveNewRoleBtn').addEventListener('click', async () => {
+        const roleName = document.getElementById('roleNameInput').value;
+        if (!roleName) {
+            showToast('Lütfen bir rol adı giriniz.', true);
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/add-role', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ role_name: roleName })
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                showToast(result.message);
+                // Modal'ı kapat
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addRoleModal'));
+                modal.hide();
+                // Yetki tablosunu yeniden yükle
+                loadRolesAndPermissions();
+            } else {
+                showToast(result.error, true);
+            }
+        } catch (error) {
+            console.error('Yeni rol eklerken hata:', error);
+            showToast('Rol eklenirken bir hata oluştu.', true);
+        }
+    });
         // DOM içeriği tamamen yüklendiğinde çalışacak ana kısım
         document.addEventListener('DOMContentLoaded', function() {
 

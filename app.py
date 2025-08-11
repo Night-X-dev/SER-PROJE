@@ -648,6 +648,74 @@ def delete_all_notifications():
     finally:
         connection.close()
 
+# Yeni API rotası: Rol ekleme
+@app.route('/api/add-role', methods=['POST'])
+def add_role():
+    # Sadece admin yetkisi olan kullanıcıların bu işlemi yapabilmesini sağlayın
+    if 'user_id' not in session:
+        return jsonify({"error": "Oturum açık değil."}), 401
+
+    user_id = session['user_id']
+    if not is_admin(user_id):
+        return jsonify({"error": "Bu işlemi yapmak için yetkiniz yok."}), 403
+        
+    data = request.get_json()
+    role_name = data.get('role_name')
+
+    if not role_name:
+        return jsonify({"error": "Rol adı boş bırakılamaz."}), 400
+
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Veritabanı bağlantısı kurulamadı."}), 500
+
+    try:
+        with connection.cursor() as cursor:
+            # Rolün zaten var olup olmadığını kontrol et
+            sql_check = "SELECT role_id FROM roles WHERE role_name = %s"
+            cursor.execute(sql_check, (role_name,))
+            if cursor.fetchone():
+                return jsonify({"error": "Bu isimde bir rol zaten mevcut."}), 409
+
+            # Yeni rolü ekle
+            sql_insert = "INSERT INTO roles (role_name) VALUES (%s)"
+            cursor.execute(sql_insert, (role_name,))
+            connection.commit()
+
+            return jsonify({"message": f"'{role_name}' rolü başarıyla eklendi."}), 201
+
+    except pymysql.Error as e:
+        print(f"MySQL error: {e}")
+        return jsonify({"error": "Veritabanı hatası oluştu."}), 500
+    finally:
+        connection.close()
+
+# is_admin fonksiyonu (eğer yoksa ekleyin)
+def is_admin(user_id):
+    """
+    Verilen user_id'nin admin rolüne sahip olup olmadığını kontrol eder.
+    """
+    connection = get_db_connection()
+    if not connection:
+        return False
+    try:
+        with connection.cursor() as cursor:
+            sql = """
+                SELECT r.role_name
+                FROM users u
+                JOIN roles r ON u.role_id = r.role_id
+                WHERE u.user_id = %s
+            """
+            cursor.execute(sql, (user_id,))
+            result = cursor.fetchone()
+            if result and result['role_name'] == 'Admin':
+                return True
+            return False
+    except pymysql.Error as e:
+        print(f"MySQL error in is_admin: {e}")
+        return False
+    finally:
+        connection.close()
 
 # API to add new notification (for notifications table)
 @app.route('/api/notifications', methods=['POST'])
