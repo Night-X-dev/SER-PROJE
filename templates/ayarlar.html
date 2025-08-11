@@ -1949,13 +1949,11 @@
 
         // Roller dizisi üzerinde döngü kurarak her bir rol için <option> elementi oluştur
         roles.forEach(role => {
-            // Sadece 'admin' olmayan rolleri ekle
-            if (role.toLowerCase() !== 'admin') {
+            // Hata düzeltildi: API'den gelen nesnenin `role_name` özelliğini kullan
+            if (role.role_name.toLowerCase() !== 'admin') {
                 const option = document.createElement('option');
-                // API'nin sadece rol adlarını string olarak döndürdüğü varsayılmıştır.
-                // Eğer API'den nesne dönüyorsa (örneğin {id: 1, name: "user"}), bu kısım güncellenmelidir.
-                option.value = role;
-                option.textContent = role;
+                option.value = role.role_id;
+                option.textContent = role.role_name;
                 roleSelect.appendChild(option);
             }
         });
