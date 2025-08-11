@@ -2169,25 +2169,23 @@ function renderProjectsTable(projectsToRender) {
 
         // Yardımcı fonksiyonlar:
         function dateDiffInDays(date1, date2) {
-            // Tarih formatı: YYYY-MM-DD veya DD.MM.YYYY
-            function parseDate(str) {
-                if (!str) return null;
-                if (str.includes('-')) {
-                    // YYYY-MM-DD
-                    const [y, m, d] = str.split('-');
-                    return new Date(Number(y), Number(m) - 1, Number(d));
-                } else if (str.includes('.')) {
-                    // DD.MM.YYYY
-                    const [d, m, y] = str.split('.');
-                    return new Date(Number(y), Number(m) - 1, Number(d));
-                }
-                return null;
-            }
-            const dt1 = parseDate(date1);
-            const dt2 = parseDate(date2);
-            if (!dt1 || !dt2) return null;
-            return Math.ceil((dt2 - dt1) / (1000 * 60 * 60 * 24));
+    // Tarih formatı: YYYY-MM-DD veya DD.MM.YYYY
+    function parseDate(str) {
+        if (!str) return null;
+        if (str.includes('-')) {
+            const [y, m, d] = str.split('-');
+            return new Date(Number(y), Number(m) - 1, Number(d));
+        } else if (str.includes('.')) {
+            const [d, m, y] = str.split('.');
+            return new Date(Number(y), Number(m) - 1, Number(d));
         }
+        return null;
+    }
+    const dt1 = parseDate(date1);
+    const dt2 = parseDate(date2);
+    if (!dt1 || !dt2) return null;
+    return Math.ceil((dt2 - dt1) / (1000 * 60 * 60 * 24));
+}
 
         function getTodayStr() {
             const today = new Date();
@@ -2349,91 +2347,58 @@ function attachProjectTableEventListeners() {
     }
 
     // Modal açma fonksiyonu
-    async function openProjectModal(projectId, mode) {
-  try {
-    console.log("openProjectModal başladı, projectId:", projectId, "mode:", mode);
-    const project = allProjectsData.find((p) => p.project_id == projectId);
-    if (!project) {
-      showToast("Proje bulunamadı!", true);
-      return;
+    async function openProjectModal(projectId, mode = "view") {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}`);
+        if (!response.ok) throw new Error("Proje verisi alınamadı.");
+        const project = await response.json();
+
+        // Modal başlık ve input alanlarını doldurma işlemleri...
+        document.getElementById("projectModalTitle").textContent = project.project_name || "-";
+
+        const progressContainer = document.getElementById("progressList");
+        progressContainer.innerHTML = "";
+
+        let prevEndDate = null;
+
+        project.progresses.forEach(progress => {
+            // Gecikme günü hesaplama (önceki iş bitiş - sonraki iş başlangıç)
+            let gecikmeGun = 0;
+            if (prevEndDate) {
+                let diff = dateDiffInDays(prevEndDate, progress.start_date);
+                if (diff > 1) {
+                    gecikmeGun = diff - 1;
+                }
+            }
+            prevEndDate = progress.end_date;
+
+            // Ertelenen gün (delay_days alanı varsa)
+            let ertelenenGun = progress.delay_days || 0;
+
+            const item = document.createElement("div");
+            item.classList.add("progress-detail-item");
+            item.innerHTML = `
+                <div class="progress-detail-title">${progress.title || "-"}</div>
+                <div class="progress-detail-dates">
+                    Başlangıç: ${progress.start_date || "-"} | 
+                    Bitiş: ${progress.end_date || "-"}
+                </div>
+                <div class="progress-detail-description">${progress.description || ""}</div>
+                <div class="custom-delay-info">
+                    Gecikme Günü: ${gecikmeGun} gün | Ertelenen Gün: ${ertelenenGun} gün
+                </div>
+            `;
+            progressContainer.appendChild(item);
+        });
+
+        // Modal açma
+        const modal = new bootstrap.Modal(document.getElementById("projectModal"));
+        modal.show();
+
+    } catch (error) {
+        console.error(error);
+        showToast("Proje detayları yüklenirken hata oluştu.", true);
     }
-    
-    projectModal.style.display = "flex";
-    modalBody.innerHTML =
-    '<p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</p>';
-    
-    if (mode === "view") {
-      console.log("View modu için modal yükleniyor");
-      modalTitle.innerHTML = `<i class="fas fa-info-circle"></i> Proje Detayları: ${project.project_name}`;
-      await renderViewModal(project);
-      modalActions.innerHTML = `<button class="modal-btn modal-btn-cancel" id="cancelModalBtn">Kapat</button>`;
-      
-      if (!modalBodyClickListener) {
-        modalBodyClickListener = function(e) {
-          if (e.target.closest('.open-location-btn')) {
-            const btn = e.target.closest('.open-location-btn');
-            const location = btn.dataset.location;
-            openLocationInGoogleMaps(location);
-          }
-        };
-        modalBody.addEventListener('click', modalBodyClickListener);
-      }
-      console.log("View modu modal hazır");
-    } else if (mode === "edit") {
-      console.log("Edit modu için modal yükleniyor");
-      modalTitle.innerHTML = `<i class="fas fa-edit"></i> Projeyi Düzenle: ${project.project_name}`;
-      await renderEditModal(project);
-      modalActions.innerHTML = `
-      <button class="modal-btn modal-btn-save" id="saveProjectBtn"><i class="fas fa-save"></i> Kaydet</button>
-      <button class="modal-btn modal-btn-cancel" id="cancelModalBtn">İptal</button>
-      `;
-      
-      // Event listener'lar ekleniyor
-      const saveProjectBtn = document.getElementById("saveProjectBtn");
-      if (saveProjectBtn) {
-        saveProjectBtn.addEventListener("click", saveProjectChanges);
-      } else {
-        console.error("saveProjectBtn bulunamadı!");
-      }
-      
-      const cancelModalBtn = document.getElementById("cancelModalBtn");
-      if (cancelModalBtn) {
-        cancelModalBtn.addEventListener("click", closeProjectModal);
-      } else {
-        console.error("cancelModalBtn bulunamadı!");
-      }
-      console.log("Edit modu modal hazır");
-    }
-    
-    // Her zaman güncel kapatma butonlarına olay dinleyicisi ekle
-    const cancelBtn = document.getElementById("cancelModalBtn");
-    if (cancelBtn) {
-      cancelBtn.addEventListener("click", closeProjectModal);
-    } else {
-      console.warn("cancelModalBtn bulunamadı, olay dinleyici eklenemedi");
-    }
-    
-    if (closeModalBtn) {
-      closeModalBtn.addEventListener("click", closeProjectModal);
-    } else {
-      console.warn("closeModalBtn bulunamadı, olay dinleyici eklenemedi");
-    }
-    
-    // Modalın dışına tıklayarak kapatma
-    projectModal.onclick = (e) => {
-      if (e.target === projectModal) {
-        closeProjectModal();
-      }
-    };
-    
-    // Esc tuşu ile kapatma
-    document.addEventListener("keydown", handleEscapeKey);
-    console.log("openProjectModal tamamlandı");
-  } catch (error) {
-    console.error("openProjectModal hatası:", error);
-    modalBody.innerHTML = `<p style="text-align: center; color: red;">Modal yüklenirken bir hata oluştu: ${error.message}</p>
-    <button class="btn" onclick="closeProjectModal()">Modali Kapat</button>`;
-  }
 }
 
 
