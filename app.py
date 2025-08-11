@@ -2962,7 +2962,48 @@ def get_yetkitable():
     finally:
         if connection:
             connection.close()
+@app.route('/api/update-role', methods=['POST'])
+def update_role():
+    if 'user_id' not in session:
+        return jsonify({"error": "Oturum açık değil."}), 401
 
+    user_id = session['user_id']
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Veritabanı bağlantısı kurulamadı."}), 500
+
+    try:
+        with connection.cursor() as cursor:
+            sql = """
+                SELECT r.role_name FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.user_id = %s
+            """
+            cursor.execute(sql, (user_id,))
+            user_role = cursor.fetchone()
+
+            if not user_role or not check_role_permission(user_role['role_name'], 'yetki_yonetimi'):
+                return jsonify({"error": "Bu işlemi yapmak için yetkiniz yok."}), 403
+
+        data = request.get_json()
+        role_id = data.get('role_id')
+        role_name = data.get('role_name')
+
+        if not role_id or not role_name:
+            return jsonify({"error": "Rol ID'si veya adı boş bırakılamaz."}), 400
+
+        with connection.cursor() as cursor:
+            # Rolü güncelle
+            sql = "UPDATE yetki SET role_name = %s WHERE id = %s"
+            cursor.execute(sql, (role_name, role_id))
+            connection.commit()
+
+        return jsonify({"message": "Rol başarıyla güncellendi."}), 200
+
+    except pymysql.Error as e:
+        print(f"MySQL hatası: {e}")
+        return jsonify({"error": "Veritabanı hatası oluştu."}), 500
+    finally:
+        if connection:
+            connection.close()
 @app.route('/api/roles', methods=['GET'])
 def get_distinct_roles():
     """Retrieves distinct roles from the users table (excluding 'Admin')."""
