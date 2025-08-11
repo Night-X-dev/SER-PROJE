@@ -1120,106 +1120,68 @@
                 </div>
             </div>
             <div class="settings-card">
-    <div class="settings-card">
-    <div class="card-header">
-        <div class="card-title">
-            <i class="fas fa-users-cog"></i>
-            Rol Yönetimi
-        </div>
-        <div class="card-actions">
-            <button class="btn" onclick="openRoleModal('add')">
-                <i class="fas fa-plus"></i>
-                Yeni Rol Ekle
-            </button>
-        </div>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="user-table">
-                <thead>
-                    <tr>
-                        <th class="text-start">Rol Adı</th>
-                        <th class="text-center">Kullanıcı Sayısı</th>
-                        <th class="text-end">İşlemler</th>
-                    </tr>
-                </thead>
-                <tbody id="role-list">
-                    <!-- Örnek Rol Satırları -->
-                    <tr data-role-id="1">
-                        <td class="text-start"><span class="role-badge role-admin">Admin</span></td>
-                        <td class="text-center">5</td>
-                        <td class="text-end">
-                            <div class="d-flex gap-2 justify-content-end">
-                                <button class="action-btn" onclick="openRoleModal('edit', '1', 'Admin')">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="action-btn text-danger border-danger" onclick="confirmAction('deleteRole', '1')">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr data-role-id="2">
-                        <td class="text-start"><span class="role-badge role-manager">Yönetici</span></td>
-                        <td class="text-center">12</td>
-                        <td class="text-end">
-                            <div class="d-flex gap-2 justify-content-end">
-                                <button class="action-btn" onclick="openRoleModal('edit', '2', 'Yönetici')">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="action-btn text-danger border-danger" onclick="confirmAction('deleteRole', '2')">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr data-role-id="3">
-                        <td class="text-start"><span class="role-badge role-user">Kullanıcı</span></td>
-                        <td class="text-center">85</td>
-                        <td class="text-end">
-                            <div class="d-flex gap-2 justify-content-end">
-                                <button class="action-btn" onclick="openRoleModal('edit', '3', 'Kullanıcı')">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="action-btn text-danger border-danger" onclick="confirmAction('deleteRole', '3')">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- Rol Ekle/Düzenle Modal'ı -->
-<div class="modal fade" id="roleModal" tabindex="-1" aria-labelledby="roleModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="roleModalLabel">
-                    <i class="fas fa-user-tag"></i>
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fas fa-users-cog"></i>
+                Rol Yönetimi
+            </div>
+            <div class="card-actions">
+                <button class="btn" onclick="openRoleModal('add')">
+                    <i class="fas fa-plus"></i>
                     Yeni Rol Ekle
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </button>
             </div>
-            <div class="modal-body">
-                <form id="roleForm">
-                    <input type="hidden" id="roleId" name="roleId">
-                    <div class="form-group">
-                        <label for="roleName" class="form-label">Rol Adı</label>
-                        <input type="text" class="form-input" id="roleName" name="roleName" placeholder="Rol adını giriniz..." required>
-                    </div>
-                </form>
+        </div>
+        <div class="card-body">
+            <!-- Yükleme durumu ve hata mesajı için yeni bir kapsayıcı -->
+            <div id="loading-container" class="text-center py-5">
+                <div id="loading-spinner" class="loader mx-auto my-3" style="display: none;"></div>
+                <span id="no-roles-message" style="display: none;"></span>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline" data-bs-dismiss="modal">İptal</button>
-                <button type="submit" class="btn" id="saveRoleBtn" form="roleForm">Kaydet</button>
+            <div class="table-responsive" id="role-table-container" style="display: none;">
+                <table class="user-table">
+                    <thead>
+                        <tr>
+                            <th class="text-start">Rol Adı</th>
+                            <th class="text-center">Kullanıcı Sayısı</th>
+                            <th class="text-end">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody id="role-list">
+                        <!-- Rol verileri buraya dinamik olarak eklenecek -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
-</div>
+
+    <!-- Rol Ekle/Düzenle Modal'ı -->
+    <div class="modal fade" id="roleModal" tabindex="-1" aria-labelledby="roleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="roleModalLabel">
+                        <i class="fas fa-user-tag"></i>
+                        Yeni Rol Ekle
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="roleForm">
+                        <input type="hidden" id="roleId" name="roleId">
+                        <div class="form-group">
+                            <label for="roleName" class="form-label">Rol Adı</label>
+                            <input type="text" class="form-input" id="roleName" name="roleName" placeholder="Rol adını giriniz..." required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn" id="saveRoleBtn" form="roleForm">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
           <div class="settings-card" id="rolePermissionCard">
                 <div class="card-header">
