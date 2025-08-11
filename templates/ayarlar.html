@@ -1792,16 +1792,26 @@ async function fetchRoles() {
         }
         
         function openRoleModal(mode, roleId = null, roleName = '') {
+    console.log("openRoleModal çağrıldı:", { mode, roleId, roleName }); // Debug için
+    
     if (mode === 'edit' && roleId) {
-        // Düzenleme formunu doldur
+        console.log("Düzenleme modu, roleId:", roleId); // Debug için
+        // Hidden input alanına roleId'yi kaydet
         document.getElementById('editRoleId').value = roleId;
+        // Rol adını doldur
         document.getElementById('editRoleName').value = roleName || '';
         
-        // Düzenleme modalını göster
+        // Modalı göster
         const editModal = new bootstrap.Modal(document.getElementById('editRoleModal'));
         editModal.show();
     } else {
-        // Yeni rol ekleme modalını göster
+        // Yeni rol ekleme modu
+        console.log("Yeni rol ekleme modu"); // Debug için
+        // Input alanlarını temizle
+        document.getElementById('editRoleId').value = '';
+        document.getElementById('editRoleName').value = '';
+        
+        // Modalı göster
         const addModal = new bootstrap.Modal(document.getElementById('addRoleModal'));
         addModal.show();
     }
@@ -2380,8 +2390,16 @@ async function fetchRoles() {
     const roleId = document.getElementById('editRoleId').value;
     const roleName = document.getElementById('editRoleName').value;
     
+    console.log("Gönderilen veriler:", { roleId, roleName }); // Debug için
+    
     if (!roleName) {
         showToast('Lütfen bir rol adı giriniz.', true);
+        return;
+    }
+    
+    if (!roleId) {
+        console.error("Hata: roleId tanımsız veya geçersiz");
+        showToast('Rol ID bilgisi bulunamadı. Lütfen sayfayı yenileyip tekrar deneyin.', true);
         return;
     }
 
@@ -2392,7 +2410,7 @@ async function fetchRoles() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ 
-                role_id: roleId,
+                role_id: parseInt(roleId, 10), // Sayıya dönüştür
                 role_name: roleName 
             })
         });
@@ -2400,10 +2418,8 @@ async function fetchRoles() {
         const result = await response.json();
         if (response.ok) {
             showToast(result.message);
-            // Modalı kapat
             const modal = bootstrap.Modal.getInstance(document.getElementById('editRoleModal'));
             modal.hide();
-            // Rolleri yenile
             fetchRoles();
         } else {
             throw new Error(result.error || 'Rol güncellenirken bir hata oluştu.');
