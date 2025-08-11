@@ -2041,27 +2041,24 @@ async function deleteRole(roleId) {
     
         // DOM içeriği tamamen yüklendiğinde çalışacak ana kısım
         document.addEventListener('DOMContentLoaded', function() {
-            // Add this at the beginning of your DOMContentLoaded event
-console.log('LocalStorage currentUser:', localStorage.getItem('currentUser'));
-document.addEventListener('DOMContentLoaded', function() {
+            console.log('LocalStorage currentUser:', localStorage.getItem('currentUser'));
+    
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
     console.log('Current User Data:', currentUser);
     
-    // Changed from currentUser.role_name to currentUser.role
+    // Admin kontrolü
     if (currentUser && currentUser.role === 'Admin') {
-        console.log('Admin hesabı');
+        console.log('Admin hesabı tespit edildi');
         const roleCard = document.getElementById('roleManagementCard');
         if (roleCard) {
+            console.log('Rol yönetimi kartı bulundu, gösteriliyor');
             roleCard.style.display = 'block';
-            fetchRoles();
+        } else {
+            console.log('HATA: roleManagementCard elementi bulunamadı!');
         }
     } else {
-        console.log('Admin hesabı değil');
+        console.log('Admin hesabı değil veya kullanıcı girişi yok');
     }
-
-    // Rest of your code...
-});
-
 
             fetchRoles();
             const accountSettingsForm = document.getElementById('accountSettingsForm');
