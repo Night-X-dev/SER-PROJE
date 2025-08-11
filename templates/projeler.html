@@ -2205,15 +2205,14 @@ function renderProjectsTable(projectsToRender) {
             elapsedDays = (typeof elapsedDays === "number" && !isNaN(elapsedDays)) ? (elapsedDays >= 0 ? elapsedDays : 0) : '-';
 
             // Gecikme Durumu (total_delay_days zaten backend'den geliyor)
-             let combinedDelay = project.total_delay_days || 0;
-        let customDelay = project.total_custom_delay || 0; // Yeni eklenen satır
-        let gecikmeDurumu = "-";
-        
-        if (combinedDelay > 0 || customDelay > 0) {
-            gecikmeDurumu = `${combinedDelay} gün (${customDelay} gün ertelendi)`;
-        } else if (typeof combinedDelay === 'number' && combinedDelay === 0) {
-            gecikmeDurumu = "0 gün";
-        }
+            let combinedDelay = project.total_delay_days || 0;
+            let gecikmeDurumu = "-";
+            if (combinedDelay > 0) {
+                gecikmeDurumu = combinedDelay + " gün";
+            } else if (typeof combinedDelay === 'number' && combinedDelay === 0) {
+                gecikmeDurumu = "0 gün";
+            }
+
             // İlk ve son iş gidişatı tarihlerini kullan (varsa)
             const displayStartDate = project.first_progress_start || project.start_date;
             const displayEndDate = project.last_progress_end || project.end_date;
@@ -2350,7 +2349,7 @@ function attachProjectTableEventListeners() {
     }
 
     // Modal açma fonksiyonu
-  async function openProjectModal(projectId, mode) {
+    async function openProjectModal(projectId, mode) {
   try {
     console.log("openProjectModal başladı, projectId:", projectId, "mode:", mode);
     const project = allProjectsData.find((p) => p.project_id == projectId);
@@ -3120,7 +3119,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     ` : ``;
 
                 stepElement.innerHTML = `
-                  <div class="progress-item-header">
+                    <div class="progress-item-header">
                         <div class="input-group" style="flex: 1;">
                             ${isEditable ? '<label for="step-' + step.progress_id + '-name">Adım Başlığı</label>' : ''}
                             ${titleContent}
@@ -3417,7 +3416,6 @@ function addNewProgressStepForm(projectId) {
 
     // PDF Oluşturma Fonksiyonları (progress_id kullanıldı)
     async function generateProjectPdf(project) {
-        // 1. Progress adımlarını çek
         let progressSteps = [];
         try {
             const response = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
@@ -3428,7 +3426,6 @@ function addNewProgressStepForm(projectId) {
             // Progress adımları olmadan da PDF oluşturulabilir
         }
 
-        // 2. PDF içeriğini detaylı ve görsel olarak hazırla
         const pdfContent = document.createElement('div');
         pdfContent.className = 'pdf-report-content';
         pdfContent.innerHTML = `
@@ -3452,7 +3449,13 @@ function addNewProgressStepForm(projectId) {
                 ${progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => `
                     <div style="margin-bottom:12px;">
                         <div style="font-weight:bold;font-size:15px;">${step.step_name || ''}</div>
-                        <div style="font-size:13px; color:#555;">Başlangıç: ${formatDateForDisplay(step.start_date || '-')} - Bitiş: ${formatDateForDisplay(step.end_date || '-')} ${(step.delay_days > 0) ? `<span class='pdf-delay-text'>(${step.delay_days} gün gecikmeli)</span>` : ''}</div>
+                        <div style="font-size:13px; color:#555;">
+                            Başlangıç: ${formatDateForDisplay(step.start_date || '-')} - 
+                            Bitiş: ${formatDateForDisplay(step.end_date || '-')}
+                            ${(step.real_end_date && step.end_date !== step.real_end_date) ? ` (Gerçek Bitiş: ${formatDateForDisplay(step.real_end_date)})` : ''}
+                            ${(step.delay_days > 0) ? `<span class='pdf-delay-text'>(${step.delay_days} gün gecikmeli)</span>` : ''}
+                            ${(step.custom_delay_days > 0) ? `<span class='pdf-delay-text'> (${step.custom_delay_days} gün ertelendi)</span>` : ''}
+                        </div>
                         <div style="font-size:13px;">${step.description || ''}</div>
                     </div>
                 `).join('')}
@@ -3462,14 +3465,12 @@ function addNewProgressStepForm(projectId) {
             </div>
         `;
 
-        // Yeni pencere aç
         const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
         if (!newWindow) {
             showToast("PDF önizlemesi için yeni pencere açılamadı. Tarayıcınızın pop-up engelleyicisini kontrol edin.", true);
             return;
         }
 
-        // Yeni pencereye PDF içeriğini ve gerekli CSS'i ekle
         newWindow.document.write(`
             <!DOCTYPE html>
             <html lang="tr">
@@ -3481,12 +3482,12 @@ function addNewProgressStepForm(projectId) {
                 <style>
                     body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; }
                     .pdf-container {
-                        width: 210mm; /* A4 genişliği */
-                        min-height: 297mm; /* A4 yüksekliği */
+                        width: 210mm;
+                        min-height: 297mm;
                         margin: 20px auto;
                         background: #fff;
                         box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                        padding: 20mm; /* Kenar boşlukları */
+                        padding: 20mm;
                         box-sizing: border-box;
                     }
                     .pdf-report-content {
@@ -3537,9 +3538,8 @@ function addNewProgressStepForm(projectId) {
             </body>
             </html>
         `);
-        newWindow.document.close(); // Yazma işlemini bitir
+        newWindow.document.close();
 
-        // Yeni pencere yüklendiğinde aktivite kaydı
         newWindow.onload = () => {
             showToast(`${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi hazır.`);
             addActivity(
@@ -3550,9 +3550,7 @@ function addNewProgressStepForm(projectId) {
                 "pdf_preview"
             );
         };
-        console.log(progressSteps);
     }
-    
 
     // Tüm projeleri PDF olarak dışa aktar
      async function exportAllProjectsToPdf() {
