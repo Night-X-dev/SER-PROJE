@@ -1807,44 +1807,7 @@ async function fetchRoles() {
             showToast('Rol eklenirken bir hata oluştu.', true);
         }
     });
-     document.getElementById('updateRoleForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const roleId = document.getElementById('updateRoleId').value;
-        const roleName = document.getElementById('updateRoleName').value;
-
-        // Rolü güncellemek için API çağrısı
-        try {
-            const response = await fetch('/api/update-role', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    id: roleId,
-                    role_name: roleName
-                })
-            });
-            
-            const result = await response.json();
-            
-            if (response.ok) {
-                console.log('Başarılı:', result.message);
-                alert(`Başarılı: ${result.message}`);
-                
-                // Güncelleme sonrası modalı kapat ve tabloyu yeniden yükle
-                const modal = bootstrap.Modal.getInstance(document.getElementById('updateRoleModal'));
-                modal.hide();
-                loadRoles(); // Tabloyu güncelleyerek değişikliği göster
-            } else {
-                console.error('Hata:', result.error);
-                alert(`Hata: ${result.error}`);
-            }
-        } catch (error) {
-            console.error('API çağrısı sırasında hata oluştu:', error);
-            alert('Bir ağ hatası oluştu. Lütfen tekrar deneyin.');
-        }
-    });
+    
         // DOM içeriği tamamen yüklendiğinde çalışacak ana kısım
         document.addEventListener('DOMContentLoaded', function() {
 
