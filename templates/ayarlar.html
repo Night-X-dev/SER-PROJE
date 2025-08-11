@@ -1566,7 +1566,38 @@
         }
 
         // Rol seçiciyi backend API'den dolduran fonksiyon
-       
+        function fillRoleSelectorFromAPI() {
+            const roleSelector = document.getElementById('roleSelector');
+            if (!roleSelector) return; // roleSelector elementi yoksa fonksiyondan çık
+
+            fetch(`${API_BASE_URL}/api/roles`)
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => { throw new Error(err.message || 'Bilinmeyen sunucu hatası'); });
+                    }
+                    return response.json();
+                })
+                .then(roles => {
+                    roleSelector.innerHTML = ''; // Seçiciyi temizle
+                    const defaultOpt = document.createElement('option');
+                    defaultOpt.value = "";
+                    defaultOpt.textContent = "Bir rol seçin...";
+                    defaultOpt.disabled = true;
+                    defaultOpt.selected = true;
+                    roleSelector.appendChild(defaultOpt);
+
+                    roles.forEach(role => {
+                        const opt = document.createElement('option');
+                        opt.value = role.toLowerCase(); // Değer olarak küçük harf kullanmak iyi bir pratik
+                        opt.textContent = role;
+                        roleSelector.appendChild(opt);
+                    });
+                })
+                .catch(error => {
+                    console.error('Rolleri çekerken hata:', error);
+                    showToast(`Hata: ${error.message}`, true); // Hata durumunda toast göster
+                });
+        }
 
         // Tabloyu render etme fonksiyonu
         function renderUsersTable(usersToRender) {
