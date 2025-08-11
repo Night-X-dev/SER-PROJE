@@ -672,13 +672,13 @@ def add_role():
     try:
         with connection.cursor() as cursor:
             # Rolün zaten var olup olmadığını kontrol et
-            sql_check = "SELECT role_id FROM roles WHERE role_name = %s"
+            sql_check = "SELECT role_id FROM yetki WHERE role_name = %s"
             cursor.execute(sql_check, (role_name,))
             if cursor.fetchone():
                 return jsonify({"error": "Bu isimde bir rol zaten mevcut."}), 409
 
             # Yeni rolü ekle
-            sql_insert = "INSERT INTO roles (role_name) VALUES (%s)"
+            sql_insert = "INSERT INTO yetki (role_name) VALUES (%s)"
             cursor.execute(sql_insert, (role_name,))
             connection.commit()
 
