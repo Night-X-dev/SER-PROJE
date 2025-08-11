@@ -2341,66 +2341,7 @@ def send_email_async(to_emails, subject, body):
         except Exception as e:
             log_to_db(f"E-posta gönderilirken bir hata oluştu: {e}", "ERROR")
             traceback.print_exc()
-# API to update project progress step
-@app.route('/api/progress/<int:progress_id>', methods=['PUT'])
-def update_project_progress(progress_id):
-    """
-    Bir iş adımı kaydını günceller ve ilgili taraflara (proje yöneticisi ve adminler)
-    güncelleme hakkında e-posta bildirimi gönderir.
-    """
-    data = request.get_json()
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # Güncellenecek iş adımını al
-            cursor.execute("""
-                SELECT
-                    pp.project_id,
-                    pp.title AS step_title,
-                    p.project_name,
-                    p.project_manager_id,
-                    u.fullname AS manager_name,
-                    u.email AS manager_email
-                FROM project_progress pp
-                JOIN projects p ON pp.project_id = p.project_id
-                JOIN users u ON p.project_manager_id = u.id
-                WHERE pp.progress_id = %s
-            """, (progress_id,))
-            step_info = cursor.fetchone()
 
-            if not step_info:
-                return jsonify({'message': 'İş adımı bulunamadı.'}), 404
-
-            # Güncelleme için SQL sorgusunu hazırla
-            update_fields = []
-            params = []
-            for key, value in data.items():
-                if key in ['title', 'description', 'start_date', 'end_date', 'real_end_date', 'status', 'delay_days', 'custom_delay_days']:
-                    update_fields.append(f"{key} = %s")
-                    params.append(value)
-            
-            if not update_fields:
-                return jsonify({'message': 'Güncellenecek alan bulunamadı.'}), 400
-
-            sql = f"UPDATE project_progress SET {', '.join(update_fields)} WHERE progress_id = %s"
-            params.append(progress_id)
-            
-            cursor.execute(sql, tuple(params))
-            connection.commit()
-
-            return jsonify({'message': 'İş adımı başarıyla güncellendi ve bildirim gönderildi.'}), 200
-
-    except pymysql.Error as e:
-        print(f"Database error while updating progress step: {e}")
-        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
-    except Exception as e:
-        print(f"General error while updating progress step: {e}")
-        traceback.print_exc()
-        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
-    finally:
-        if connection:
-            connection.close()
 @app.route('/api/progress/<int:progress_id>', methods=['PUT'])
 def update_project_progress_step(progress_id):
     data = request.get_json()
