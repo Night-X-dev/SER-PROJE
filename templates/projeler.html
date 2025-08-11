@@ -3029,55 +3029,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
             return null;
         }
     }
-    // projeler.html dosyasındaki <script> etiketleri arasına ekleyin
-async function saveProgressStep(stepId, projectId) {
-    // Modal içindeki form elemanlarını seçme
-    const modal = document.getElementById('projectEditModal');
-    const stepElement = modal.querySelector(`[data-progress-id='${stepId}']`);
-
-    // Formdan verileri toplama
-    const title = stepElement.querySelector('.step-name-input').value;
-    const description = stepElement.querySelector('.step-description-textarea').value;
-    const startDate = stepElement.querySelector('.step-start-date-input').value;
-    const endDate = stepElement.querySelector('.step-end-date-input').value;
-    const customDelayDays = parseInt(stepElement.querySelector('.custom-delay-days-input').value) || 0;
-    const realEndDate = stepElement.querySelector('.real-end-date-input').value || null;
-
-    const updatedStep = {
-        step_name: title,
-        description: description,
-        start_date: startDate,
-        end_date: endDate,
-        real_end_date: realEndDate,
-        custom_delay_days: customDelayDays
-    };
-
-    try {
-        const response = await fetch(`/api/project-progress/${stepId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(updatedStep),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-        }
-
-        console.log(`FETCH_DEBUG: İş adımı ${stepId} başarıyla güncellendi.`);
-        
-        // Modal'ı kapat ve projeleri yeniden yükle
-        const modalInstance = bootstrap.Modal.getInstance(modal);
-        modalInstance.hide();
-        loadProjects(); // Proje tablosunu yeniden yükle
-
-    } catch (error) {
-        console.error('Hata:', error);
-        alert('İş adımı kaydedilirken bir hata oluştu: ' + error.message);
-    }
-}
+    
       function renderProgressSteps(steps, projectId, isEditable = false) {
         if (!steps || !Array.isArray(steps)) {
             console.error("Geçersiz steps parametresi:", steps);
