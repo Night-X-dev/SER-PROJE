@@ -1151,6 +1151,28 @@
         </div>
     </div>
 </div>
+<!-- Rol Düzenleme Modalı -->
+<div class="modal fade" id="editRoleModal" tabindex="-1" aria-labelledby="editRoleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editRoleModalLabel">Rol Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editRoleId">
+                <div class="mb-3">
+                    <label for="editRoleName" class="form-label">Rol Adı</label>
+                    <input type="text" class="form-control" id="editRoleName" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" id="saveEditRoleBtn">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
  <div class="card-body">
             <!-- Yükleme durumu ve hata mesajı için yeni bir kapsayıcı -->
             <div id="loading-container" class="text-center py-5">
@@ -1769,10 +1791,21 @@ async function fetchRoles() {
             }
         }
         
-        function openRoleModal() {
-        const modal = new bootstrap.Modal(document.getElementById('addRoleModal'));
-        modal.show();
+        function openRoleModal(mode, roleId = null, roleName = '') {
+    if (mode === 'edit' && roleId) {
+        // Düzenleme formunu doldur
+        document.getElementById('editRoleId').value = roleId;
+        document.getElementById('editRoleName').value = roleName || '';
+        
+        // Düzenleme modalını göster
+        const editModal = new bootstrap.Modal(document.getElementById('editRoleModal'));
+        editModal.show();
+    } else {
+        // Yeni rol ekleme modalını göster
+        const addModal = new bootstrap.Modal(document.getElementById('addRoleModal'));
+        addModal.show();
     }
+}
 
     document.getElementById('saveNewRoleBtn').addEventListener('click', async () => {
         const roleName = document.getElementById('roleNameInput').value;
@@ -2343,6 +2376,43 @@ async function fetchRoles() {
                     showToast('İzinler yüklenirken bir hata oluştu.', true);
                 });
         }
+        document.getElementById('saveEditRoleBtn').addEventListener('click', async () => {
+    const roleId = document.getElementById('editRoleId').value;
+    const roleName = document.getElementById('editRoleName').value;
+    
+    if (!roleName) {
+        showToast('Lütfen bir rol adı giriniz.', true);
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/update-role', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                role_id: roleId,
+                role_name: roleName 
+            })
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            showToast(result.message);
+            // Modalı kapat
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editRoleModal'));
+            modal.hide();
+            // Rolleri yenile
+            fetchRoles();
+        } else {
+            throw new Error(result.error || 'Rol güncellenirken bir hata oluştu.');
+        }
+    } catch (error) {
+        console.error('Rol güncellenirken hata:', error);
+        showToast(error.message, true);
+    }
+});
     </script>
     <!-- bildirim.js dosyasını en sona ekleyin ki DOM tamamen yüklendikten sonra çalışsın -->
     <script src="static/bildirim.js"></script>
