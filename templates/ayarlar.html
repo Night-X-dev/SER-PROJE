@@ -1520,31 +1520,27 @@
         }
 
         // Rol seçiciyi backend API'den dolduran fonksiyon
-        async function fillRoleSelectorFromAPI() {
-    const roleSelect = document.getElementById('role-select');
-    // Elementin varlığını kontrol et, yoksa fonksiyondan çık
-    if (!roleSelect) {
-        console.warn('`role-select` ID\'li element bulunamadı.');
-        return;
-    }
+        async function loadRolesForUserModal() {
+    // API_BASE_URL'nin global olarak tanımlandığı varsayılmıştır.
+    const API_BASE_URL = window.location.origin;
 
     try {
-        const response = await fetch('/api/roles');
+        const response = await fetch(`${API_BASE_URL}/api/roles`);
 
         if (!response.ok) {
             // API'den hatalı yanıt gelirse hata fırlat
-            throw new Error('API hatası: ' + response.statusText);
+            throw new Error(`API hatası: ${response.statusText}`);
         }
 
         const roles = await response.json();
+        const roleSelect = document.getElementById('newUserRole');
 
         // Önceki seçenekleri temizle ve varsayılan seçeneği ekle
         roleSelect.innerHTML = '<option value="">Rol Seçin</option>';
 
-        // Dönen rollerin bir dizi olduğunu ve her birinin bir nesne olduğunu varsayıyoruz
-        // (örneğin: [{role_id: 1, role_name: "user"}, ...])
+        // Roller dizisi üzerinde döngü kurarak her bir rol için <option> elementi oluştur
         roles.forEach(role => {
-            // `role_name` özelliğinin "admin" olup olmadığını kontrol et
+            // API'den gelen nesnenin `role_name` özelliğini kullan
             if (role.role_name.toLowerCase() !== 'admin') {
                 const option = document.createElement('option');
                 option.value = role.role_id;
@@ -1553,10 +1549,11 @@
             }
         });
     } catch (err) {
-        console.error('Rolleri çekerken hata:', err);
+        console.error('Kullanıcı rolleri yüklenirken hata:', err);
         // Hata durumunda kullanıcıya bir bildirim göster
-        showToast('Roller yüklenirken bir hata oluştu.', true);
-    }}
+        showToast('Kullanıcı rolleri yüklenirken bir hata oluştu.', true);
+    }
+}
         // Tabloyu render etme fonksiyonu
         function renderUsersTable(usersToRender) {
             const tbody = document.getElementById('usersTableBody');
