@@ -420,7 +420,6 @@ def check_role_permission(role_name, permission_key):
         if connection:
             connection.close()
 
-
 # API to mark all notifications as read (for notifications table)
 @app.route('/api/notifications/mark_all_read', methods=['PUT'])
 def mark_all_notifications_as_read():
@@ -648,37 +647,82 @@ def delete_all_notifications():
     finally:
         connection.close()
 
-# Yeni API rotası: Rol ekleme
-@app.route('/api/add-role', methods=['POST'])
-def add_role():
-    # Sadece admin yetkisi olan kullanıcıların bu işlemi yapabilmesini sağlayın
+
+@app.route('/api/has-permission/<string:permission_key>', methods=['GET'])
+def has_permission(permission_key):
+    # Oturum açık değilse yetki yok demektir.
     if 'user_id' not in session:
-        return jsonify({"error": "Oturum açık değil."}), 401
+        return jsonify({"has_permission": False}), 401
 
     user_id = session['user_id']
-    if not is_admin(user_id):
-        return jsonify({"error": "Bu işlemi yapmak için yetkiniz yok."}), 403
-        
-    data = request.get_json()
-    role_name = data.get('role_name')
-
-    if not role_name:
-        return jsonify({"error": "Rol adı boş bırakılamaz."}), 400
-
     connection = get_db_connection()
     if not connection:
         return jsonify({"error": "Veritabanı bağlantısı kurulamadı."}), 500
 
     try:
         with connection.cursor() as cursor:
+            # Kullanıcının rol adını al
+            sql = """
+                SELECT r.role_name
+                FROM users u
+                JOIN roles r ON u.role_id = r.role_id
+                WHERE u.user_id = %s
+            """
+            cursor.execute(sql, (user_id,))
+            user_role = cursor.fetchone()
+
+            if user_role:
+                role_name = user_role['role_name']
+                # Gönderdiğiniz `check_role_permission` fonksiyonunu kullanarak yetkiyi kontrol et
+                has_perm = check_role_permission(role_name, permission_key)
+                return jsonify({"has_permission": has_perm}), 200
+            else:
+                return jsonify({"has_permission": False}), 200
+    except Exception as e:
+        print(f"Error checking user permission: {e}")
+        return jsonify({"error": "Yetki kontrolü sırasında hata oluştu."}), 500
+    finally:
+        if connection:
+            connection.close()
+# Yeni API rotası: Rol ekleme
+@app.route('/api/add-role', methods=['POST'])
+def add_role():
+    # Yetki kontrolünü burada tekrar yapıyoruz, çünkü istemci tarafı atlanabilir
+    if 'user_id' not in session:
+        return jsonify({"error": "Oturum açık değil."}), 401
+
+    user_id = session['user_id']
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({"error": "Veritabanı bağlantısı kurulamadı."}), 500
+    
+    with connection.cursor() as cursor:
+        sql = """
+            SELECT r.role_name FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.user_id = %s
+        """
+        cursor.execute(sql, (user_id,))
+        user_role = cursor.fetchone()
+        
+        if not user_role or not check_role_permission(user_role['role_name'], 'yetki_yonetimi'):
+             return jsonify({"error": "Bu işlemi yapmak için yetkiniz yok."}), 403
+
+
+    data = request.get_json()
+    role_name = data.get('role_name')
+
+    if not role_name:
+        return jsonify({"error": "Rol adı boş bırakılamaz."}), 400
+
+    try:
+        with connection.cursor() as cursor:
             # Rolün zaten var olup olmadığını kontrol et
-            sql_check = "SELECT id FROM yetki WHERE role_name = %s"
+            sql_check = "SELECT role_id FROM roles WHERE role_name = %s"
             cursor.execute(sql_check, (role_name,))
             if cursor.fetchone():
                 return jsonify({"error": "Bu isimde bir rol zaten mevcut."}), 409
 
             # Yeni rolü ekle
-            sql_insert = "INSERT INTO yetki (role_name) VALUES (%s)"
+            sql_insert = "INSERT INTO roles (role_name) VALUES (%s)"
             cursor.execute(sql_insert, (role_name,))
             connection.commit()
 
