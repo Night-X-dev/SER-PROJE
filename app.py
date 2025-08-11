@@ -3011,6 +3011,47 @@ def update_role():
         if connection:
             connection.close()
 
+@app.route('/api/delete-role/<int:role_id>', methods=['DELETE'])
+def delete_role(role_id):
+    if 'user_id' not in session:
+        return jsonify({"error": "Oturum açık değil."}), 401
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({"error": "Veritabanı bağlantısı kurulamadı."}), 500
+
+        with connection.cursor() as cursor:
+            # Önce bu rolü kullanan kullanıcı var mı kontrol et
+            cursor.execute("SELECT COUNT(*) as user_count FROM users WHERE role_id = %s", (role_id,))
+            result = cursor.fetchone()
+            
+            if result and result['user_count'] > 0:
+                return jsonify({"error": "Bu rolü kullanan kullanıcılar olduğu için silinemez."}), 400
+
+            # Rolü sil
+            cursor.execute("DELETE FROM yetki WHERE id = %s", (role_id,))
+            
+            if cursor.rowcount == 0:
+                return jsonify({"error": "Silinecek rol bulunamadı."}), 404
+                
+            connection.commit()
+            return jsonify({"message": "Rol başarıyla silindi."}), 200
+
+    except pymysql.Error as e:
+        if connection:
+            connection.rollback()
+        print(f"MySQL hatası: {e}")
+        return jsonify({"error": f"Veritabanı hatası: {str(e)}"}), 500
+    except Exception as e:
+        if connection:
+            connection.rollback()
+        print(f"Beklenmeyen hata: {e}")
+        return jsonify({"error": f"Beklenmeyen hata: {str(e)}"}), 500
+    finally:
+        if connection:
+            connection.close()
 @app.route('/api/roles', methods=['GET'])
 def get_distinct_roles():
     """Retrieves distinct roles from the users table (excluding 'Admin')."""

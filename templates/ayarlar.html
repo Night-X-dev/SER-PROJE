@@ -1767,9 +1767,10 @@ async function fetchRoles() {
             <button class="action-btn" onclick="openRoleModal('edit', '${role.id}', '${role.role_name}')">
                 <i class="fas fa-edit"></i>
             </button>
-            <button class="action-btn text-danger border-danger" onclick="confirmAction('deleteRole', '${role.id}', '${role.role_name}')">
-                <i class="fas fa-trash-alt"></i>
-            </button>
+<button class="action-btn text-danger border-danger" 
+        onclick="confirmAction('deleteRole', '${role.id}', '${role.role_name}')">
+    <i class="fas fa-trash-alt"></i>
+</button>
         </div>
     </td>
 `;
@@ -1844,6 +1845,44 @@ async function fetchRoles() {
             showToast('Rol eklenirken bir hata oluştu.', true);
         }
     });
+    // Onay penceresi gösteren fonksiyon
+function confirmAction(action, id, name) {
+    if (action === 'deleteRole') {
+        if (confirm(`"${name}" adlı rolü silmek istediğinize emin misiniz?`)) {
+            deleteRole(id);
+        }
+    }
+}
+
+// Rol silme işlemi
+async function deleteRole(roleId) {
+    if (!roleId) {
+        showToast('Rol ID bulunamadı!', true);
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/delete-role/${roleId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+            showToast(result.message);
+            // Rolleri yenile
+            fetchRoles();
+        } else {
+            throw new Error(result.error || 'Rol silinirken bir hata oluştu.');
+        }
+    } catch (error) {
+        console.error('Rol silinirken hata:', error);
+        showToast(error.message, true);
+    }
+}
     
         // DOM içeriği tamamen yüklendiğinde çalışacak ana kısım
         document.addEventListener('DOMContentLoaded', function() {
