@@ -2910,88 +2910,125 @@ async function updateProjectDatesFromSteps(projectId) {
     showToast("Proje tarihleri güncellenirken bir hata oluştu", true);
   }
 }
-// Function to apply a custom delay to a specific progress step
-// Bu fonksiyon, bir iş adımına özel bir erteleme süresi uygulamak için kullanılır.
-async function applyDelayToStep(progressId, newDelayDays, projectId) {
-    console.log(`Erteleme uygulaması başlatıldı. progress_id: ${progressId}, yeni gecikme: ${newDelayDays} gün`);
-    showLoading(); // Show loading indicator
-
-    try {
-        const payload = {
-            project_id: projectId,
-            progress_id: progressId, // Use the unique ID
-            newly_added_custom_delay: newDelayDays
-        };
-
-        const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}/delay`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${getUserToken()}`
-            },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`API hatası: ${response.status} - ${errorText}`);
+async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projectId) {
+        if (newlyAddedDelayDays <= 0) {
+            showToast("Erteleme günü en az 1 olmalıdır.", true);
+            return null; // Hata durumunda null döndür
         }
 
-        const updatedStep = await response.json();
-        console.log(`İş adımı başarıyla güncellendi.`, updatedStep);
-        showToast("Erteleme başarıyla uygulandı.");
-        fetchProgressSteps(projectId);
-        return updatedStep;
-    } catch (error) {
-        console.error('Erteleme uygulama hatası:', error);
-        showToast(`Erteleme uygulama hatası: ${error.message}`, true);
-    } finally {
-        hideLoading(); // Hide loading indicator
-    }
-}
-function getUserToken() {
-    return localStorage.getItem('userToken'); // Anahtar adını projenize göre ayarlayın.
-}
-function showLoading() {
-    const loadingOverlay = document.createElement('div');
-    loadingOverlay.id = 'loading-overlay';
-    loadingOverlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-    `;
-    loadingOverlay.innerHTML = `
-        <div style="
-            width: 50px;
-            height: 50px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        "></div>
-        <style>
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-        </style>
-    `;
-    document.body.appendChild(loadingOverlay);
-}
+        try {
+            console.log(`${stepIndex}. adıma ${newlyAddedDelayDays} gün erteleme uygulanıyor.`);
 
-function hideLoading() {
-    const loadingOverlay = document.getElementById('loading-overlay');
-    if (loadingOverlay) {
-        loadingOverlay.remove();
+            // İlk olarak, hedef adımın kendi custom_delay_days değerini güncelle
+            const currentStep = allSteps[stepIndex];
+            const currentProgressId = currentStep.progress_id;
+
+            // Mevcut step'in güncel değerlerini al
+            const currentStepName = document.getElementById(`step-${currentProgressId}-name`).value;
+            const currentStepDescription = document.getElementById(`step-${currentProgressId}-desc`).value;
+            const currentStepStartDate = document.getElementById(`step-${currentProgressId}-start`).value;
+            const originalCurrentStepEndDate = document.getElementById(`step-${currentProgressId}-end`).value; // Orijinal bitiş tarihini al
+
+            // Gecikme eklenen adımın kendi bitiş tarihini güncelle
+            const newCurrentStepEndDate = new Date(originalCurrentStepEndDate);
+            newCurrentStepEndDate.setDate(newCurrentStepEndDate.getDate() + newlyAddedDelayDays);
+
+            const targetStepData = {
+                step_name: currentStepName,
+                description: currentStepDescription,
+                start_date: currentStepStartDate,
+                // Güncellenmiş bitiş tarihini kullan
+                end_date: newCurrentStepEndDate.toISOString().split('T')[0], 
+                // Bu, backend'de mevcut custom_delay_days'e eklenecek
+                newly_added_custom_delay: newlyAddedDelayDays 
+            };
+
+            // Frontend input'unu da hemen güncelle
+            document.getElementById(`step-${currentProgressId}-end`).value = newCurrentStepEndDate.toISOString().split('T')[0];
+
+            // Hedef adımı backend'de güncelle
+            const targetStepResponse = await fetch(`${API_BASE_URL}/api/progress/${currentProgressId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(targetStepData)
+            });
+
+            const targetStepResponseData = await targetStepResponse.json();
+            if (!targetStepResponse.ok) {
+                throw new Error(targetStepResponseData.message || 'Hedef iş adımı güncellenemedi.');
+            }
+            // Burada toast mesajını kaldırıyoruz, çünkü renderProgressSteps'ten sonra gösterilecek.
+            // showToast(`"${targetStepData.step_name}" iş adımına ${newlyAddedDelayDays} gün erteleme eklendi.`);
+
+            // Şimdi, sonraki adımların tarihlerini güncelle ve backend'e gönder
+            // Bu döngü, gecikme uygulanan adımdan sonraki her adımı etkileyecek
+            for (let i = stepIndex + 1; i < allSteps.length; i++) {
+                const step = allSteps[i];
+                const progressId = step.progress_id;
+
+                const startDateInput = document.getElementById(`step-${progressId}-start`);
+                const endDateInput = document.getElementById(`step-${progressId}-end`);
+                const stepNameInput = document.getElementById(`step-${progressId}-name`);
+                const descriptionInput = document.getElementById(`step-${progressId}-desc`);
+
+                if (!startDateInput || !endDateInput || !stepNameInput || !descriptionInput) {
+                    console.error(`${i}. adım için gerekli inputlar bulunamadı`);
+                    continue;
+                }
+
+                // Mevcut başlangıç ve bitiş tarihlerini Date objelerine çevir
+                const currentStartDate = new Date(startDateInput.value);
+                const currentEndDate = new Date(endDateInput.value);
+
+                // Yeni başlangıç ve bitiş tarihlerini hesapla (gecikme günlerini ekle)
+                // setDate metodu, tarihi doğrudan değiştirir, bu yüzden yeni bir Date objesi oluşturmak önemlidir.
+                const newStartDate = new Date(currentStartDate);
+                newStartDate.setDate(newStartDate.getDate() + newlyAddedDelayDays);
+
+                const newEndDate = new Date(currentEndDate);
+                newEndDate.setDate(newEndDate.getDate() + newlyAddedDelayDays);
+
+                // Frontend inputlarını güncelle
+                startDateInput.value = newStartDate.toISOString().split('T')[0];
+                endDateInput.value = newEndDate.toISOString().split('T')[0];
+
+                // Backend'e göndermek için payload oluştur
+                const subsequentStepData = {
+                    step_name: stepNameInput.value,
+                    description: descriptionInput.value,
+                    start_date: newStartDate.toISOString().split('T')[0],
+                    end_date: newEndDate.toISOString().split('T')[0],
+                    // Bu adımlara yeni bir custom delay eklemiyoruz, sadece tarihlerini kaydırıyoruz.
+                    newly_added_custom_delay: 0 
+                };
+
+                // Sonraki adımı backend'de güncelle
+                const subsequentStepResponse = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(subsequentStepData)
+                });
+
+                const subsequentStepResponseData = await subsequentStepResponse.json();
+                if (!subsequentStepResponse.ok) {
+                    console.error(`Sonraki iş adımı (${stepNameInput.value}) güncellenemedi:`, subsequentStepResponseData.message);
+                    showToast(`"${stepNameInput.value}" iş adımı güncellenirken hata: ${subsequentStepResponseData.message}`, true);
+                } else {
+                    console.log(`"${stepNameInput.value}" iş adımı başarıyla güncellendi.`);
+                }
+            }
+
+            // İş adımlarını ve projeyi yeniden yükle
+            await fetchProgressSteps(projectId, true);
+            await fetchProjects();
+
+            return targetStepResponseData; // Return the response data for the toast
+        } catch (error) {
+            console.error("Erteleme uygulama hatası:", error);
+            showToast("Erteleme uygulanırken bir hata oluştu: " + error.message, true);
+            return null;
+        }
     }
-}
       function renderProgressSteps(steps, projectId, isEditable = false) {
         if (!steps || !Array.isArray(steps)) {
             console.error("Geçersiz steps parametresi:", steps);
@@ -3015,7 +3052,6 @@ function hideLoading() {
                 const stepElement = document.createElement("div");
                 stepElement.className = "progress-detail-item";
                 stepElement.dataset.stepIndex = index;
-                stepElement.dataset.projectId = projectId; // Bu satırı ekleyin
 
                 const titleContent = isEditable ?
                     `<input type="text" id="step-${step.progress_id}-name" class="progress-step-name-input" value="${step.step_name || step.title || ''}" placeholder="Adım Adı" required>` :
@@ -3137,34 +3173,25 @@ function hideLoading() {
                 });
 
                 document.querySelectorAll('.apply-delay-btn').forEach(button => {
-    button.addEventListener('click', async (e) => {
-          const progressId = e.currentTarget.dataset.id;
-        const newDelayDays = parseInt(document.getElementById(`step-${progressId}-delay`).value) || 0;
-        
-        // Bu satırın null dönme ihtimaline karşı kontrol ekleniyor
-        // Adding a check for the possibility of this returning null
-        const stepElement = e.currentTarget.closest('.progress-detail-item');
-        if (!stepElement) {
-            showToast("İş adımı bulunamadı.", true);
-            return;
-        }
+                    button.addEventListener('click', async (e) => {
+                        const progressId = e.currentTarget.dataset.id;
+                        const stepIndex = parseInt(e.currentTarget.dataset.index);
+                        const newDelayDays = parseInt(document.getElementById(`step-${progressId}-delay`).value) || 0;
 
-        const projectId = stepElement.dataset.projectId;
-
-        if (newDelayDays > 0) {
-            const updatedStepInfo = await applyDelayToStep(progressId, newDelayDays, projectId);
-            if (updatedStepInfo && updatedStepInfo.real_end_date) {
-                document.getElementById(`step-${progressId}-real-end-display`).textContent = formatDateForDisplay(updatedStepInfo.real_end_date);
-                showToast(`Bu iş gidişatı ${newDelayDays} gün ertelenmiştir! (Gerçek Bitiş Tarihi: ${formatDateForDisplay(updatedStepInfo.real_end_date)})`);
-            } else {
-                showToast("Erteleme başarıyla uygulandı.");
-            }
-        } else {
-            showToast("Lütfen geçerli bir erteleme günü girin.", true);
-        }
-    });
-});
-
+                        if (newDelayDays > 0) {
+                            const updatedStepInfo = await applyDelayToStep(stepIndex, newDelayDays, steps, projectId);
+                            // Real end date'i doğrudan backend'den gelen değerle güncelle
+                            if (updatedStepInfo && updatedStepInfo.real_end_date) {
+                                document.getElementById(`step-${progressId}-real-end-display`).textContent = formatDateForDisplay(updatedStepInfo.real_end_date);
+                                showToast(`Bu iş gidişatı ${newDelayDays} gün ertelenmiştir! (Gerçek Bitiş Tarihi: ${formatDateForDisplay(updatedStepInfo.real_end_date)})`);
+                            } else {
+                                showToast("Erteleme başarıyla uygulandı.");
+                            }
+                        } else {
+                            showToast("Lütfen geçerli bir erteleme günü girin.", true);
+                        }
+                    });
+                });
             }
         }
 
@@ -3388,142 +3415,142 @@ function addNewProgressStepForm(projectId) {
     }
 
     // PDF Oluşturma Fonksiyonları (progress_id kullanıldı)
-      async function generateProjectPdf(project) {
-          let progressSteps = [];
-          try {
-              const response = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
-              if (response.ok) {
-                  progressSteps = await response.json();
-              }
-          } catch (e) {
-              // Progress adımları olmadan da PDF oluşturulabilir
-          }
+    async function generateProjectPdf(project) {
+        let progressSteps = [];
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
+            if (response.ok) {
+                progressSteps = await response.json();
+            }
+        } catch (e) {
+            // Progress adımları olmadan da PDF oluşturulabilir
+        }
 
-          const pdfContent = document.createElement('div');
-          pdfContent.className = 'pdf-report-content';
-          pdfContent.innerHTML = `
-              <div class="pdf-header">
-                  <h1 style='font-size:28px;color:#005c9d;margin-bottom:5px;'>Ser Elektrik Otomasyon</h1>
-                  <h2 style='font-size:22px;color:#0980d3;margin-bottom:15px;'>Proje Detaylı Raporu</h2>
-              </div>
-              <table class="pdf-info-table" style="width:100%;margin-bottom:20px;font-size:15px;">
-                  <tr><th>Proje Adı</th><td>${project.project_name ? project.project_name.normalize('NFC') : "-"}</td></tr>
-                  <tr><th>Referans No</th><td>${project.reference_no || '-'}</td></tr>
-                  <tr><th>Müşteri</th><td>${project.customer_name || '-'}</td></tr>
-                  <tr><th>Konum</th><td>${project.project_location || '-'}</td></tr>
-                  <tr><th>Durum</th><td>${project.display_status || '-'}</td></tr>
-                  <tr><th>Başlangıç Tarihi</th><td>${formatDateForDisplay(project.start_date || '-')}</td></tr>
-                  <tr><th>Bitiş Tarihi</th><td>${formatDateForDisplay(project.end_date || '-')}</td></tr>
-                  <tr><th>Yönetici</th><td>${project.project_manager_name || '-'}</td></tr>
-                  <tr><th>Açıklama</th><td>${project.description || '-'}</td></tr>
-              </table>
-              <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
-              <div>
-                  ${progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => `
-                      <div style="margin-bottom:12px;">
-                          <div style="font-weight:bold;font-size:15px;">${step.step_name || ''}</div>
-                          <div style="font-size:13px; color:#555;">
-                              Başlangıç: ${formatDateForDisplay(step.start_date || '-')} - 
-                              Bitiş: ${formatDateForDisplay(step.end_date || '-')}
-                              ${(step.real_end_date && step.end_date !== step.real_end_date) ? ` (Gerçek Bitiş: ${formatDateForDisplay(step.real_end_date)})` : ''}
-                              ${(step.delay_days > 0) ? `<span class='pdf-delay-text'>(${step.delay_days} gün gecikmeli)</span>` : ''}
-                              ${(step.custom_delay_days > 0) ? `<span class='pdf-delay-text'> (${step.custom_delay_days} gün ertelendi)</span>` : ''}
-                          </div>
-                          <div style="font-size:13px;">${step.description || ''}</div>
-                      </div>
-                  `).join('')}
-              </div>
-              <div class="pdf-footer" style='margin-top:40px; font-size:12px; color:#6c757d; border-top:1px solid #eee; padding-top:15px;'>
-                  © 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır.
-              </div>
-          `;
+        const pdfContent = document.createElement('div');
+        pdfContent.className = 'pdf-report-content';
+        pdfContent.innerHTML = `
+            <div class="pdf-header">
+                <h1 style='font-size:28px;color:#005c9d;margin-bottom:5px;'>Ser Elektrik Otomasyon</h1>
+                <h2 style='font-size:22px;color:#0980d3;margin-bottom:15px;'>Proje Detaylı Raporu</h2>
+            </div>
+            <table class="pdf-info-table" style="width:100%;margin-bottom:20px;font-size:15px;">
+                <tr><th>Proje Adı</th><td>${project.project_name ? project.project_name.normalize('NFC') : "-"}</td></tr>
+                <tr><th>Referans No</th><td>${project.reference_no || '-'}</td></tr>
+                <tr><th>Müşteri</th><td>${project.customer_name || '-'}</td></tr>
+                <tr><th>Konum</th><td>${project.project_location || '-'}</td></tr>
+                <tr><th>Durum</th><td>${project.display_status || '-'}</td></tr>
+                <tr><th>Başlangıç Tarihi</th><td>${formatDateForDisplay(project.start_date || '-')}</td></tr>
+                <tr><th>Bitiş Tarihi</th><td>${formatDateForDisplay(project.end_date || '-')}</td></tr>
+                <tr><th>Yönetici</th><td>${project.project_manager_name || '-'}</td></tr>
+                <tr><th>Açıklama</th><td>${project.description || '-'}</td></tr>
+            </table>
+            <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
+            <div>
+                ${progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => `
+                    <div style="margin-bottom:12px;">
+                        <div style="font-weight:bold;font-size:15px;">${step.step_name || ''}</div>
+                        <div style="font-size:13px; color:#555;">
+                            Başlangıç: ${formatDateForDisplay(step.start_date || '-')} - 
+                            Bitiş: ${formatDateForDisplay(step.end_date || '-')}
+                            ${(step.real_end_date && step.end_date !== step.real_end_date) ? ` (Gerçek Bitiş: ${formatDateForDisplay(step.real_end_date)})` : ''}
+                            ${(step.delay_days > 0) ? `<span class='pdf-delay-text'>(${step.delay_days} gün gecikmeli)</span>` : ''}
+                            ${(step.custom_delay_days > 0) ? `<span class='pdf-delay-text'> (${step.custom_delay_days} gün ertelendi)</span>` : ''}
+                        </div>
+                        <div style="font-size:13px;">${step.description || ''}</div>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="pdf-footer" style='margin-top:40px; font-size:12px; color:#6c757d; border-top:1px solid #eee; padding-top:15px;'>
+                © 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır.
+            </div>
+        `;
 
-          const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
-          if (!newWindow) {
-              showToast("PDF önizlemesi için yeni pencere açılamadı. Tarayıcınızın pop-up engelleyicisini kontrol edin.", true);
-              return;
-          }
+        const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
+        if (!newWindow) {
+            showToast("PDF önizlemesi için yeni pencere açılamadı. Tarayıcınızın pop-up engelleyicisini kontrol edin.", true);
+            return;
+        }
 
-          newWindow.document.write(`
-              <!DOCTYPE html>
-              <html lang="tr">
-              <head>
-                  <meta charset="UTF-8">
-                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                  <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
-                  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-                  <style>
-                      body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; }
-                      .pdf-container {
-                          width: 210mm;
-                          min-height: 297mm;
-                          margin: 20px auto;
-                          background: #fff;
-                          box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                          padding: 20mm;
-                          box-sizing: border-box;
-                      }
-                      .pdf-report-content {
-                          font-family: "Segoe UI", Arial, sans-serif;
-                          color: #333;
-                          box-sizing: border-box;
-                      }
-                      .pdf-header h1 { color: #005c9d; font-size: 28px; margin-bottom: 5px; }
-                      .pdf-header h2 { color: #0980d3; font-size: 22px; margin-bottom: 15px; }
-                      .pdf-info-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 15px; }
-                      .pdf-info-table th, .pdf-info-table td { padding: 8px; border: 1px solid #e1e5e9; text-align: left; }
-                      .pdf-info-table th { background-color: #f0f4f8; color: #5e6870; width: 30%; }
-                      .pdf-section-title { color: #005c9d; border-bottom: 1px solid #e1e5e9; padding-bottom: 5px; margin-bottom: 15px; font-size: 18px; }
-                      .pdf-delay-text { color: red; font-weight: bold; }
-                      .pdf-footer { text-align: center; font-size: 12px; color: #6c757d; margin-top: 40px; border-top: 1px solid #eee; padding-top: 15px; }
-                      .print-button-container {
-                          text-align: center;
-                          margin-top: 20px;
-                          padding-bottom: 20px;
-                      }
-                      .print-button {
-                          background-color: #005c9d;
-                          color: white;
-                          padding: 10px 20px;
-                          border: none;
-                          border-radius: 8px;
-                          font-size: 16px;
-                          cursor: pointer;
-                          transition: background-color 0.3s ease;
-                      }
-                      .print-button:hover {
-                          background-color: #0980d3;
-                      }
-                      @media print {
-                          .print-button-container { display: none; }
-                          body { background-color: #fff; }
-                          .pdf-container { margin: 0; box-shadow: none; padding: 0; }
-                      }
-                  </style>
-              </head>
-              <body>
-                  <div class="pdf-container">
-                      ${pdfContent.innerHTML}
-                  </div>
-                  <div class="print-button-container">
-                      <button class="print-button" onclick="window.print()"><i class="fas fa-print"></i> PDF Kaydet / Yazdır</button>
-                  </div>
-              </body>
-              </html>
-          `);
-          newWindow.document.close();
+        newWindow.document.write(`
+            <!DOCTYPE html>
+            <html lang="tr">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                <style>
+                    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; }
+                    .pdf-container {
+                        width: 210mm;
+                        min-height: 297mm;
+                        margin: 20px auto;
+                        background: #fff;
+                        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                        padding: 20mm;
+                        box-sizing: border-box;
+                    }
+                    .pdf-report-content {
+                        font-family: "Segoe UI", Arial, sans-serif;
+                        color: #333;
+                        box-sizing: border-box;
+                    }
+                    .pdf-header h1 { color: #005c9d; font-size: 28px; margin-bottom: 5px; }
+                    .pdf-header h2 { color: #0980d3; font-size: 22px; margin-bottom: 15px; }
+                    .pdf-info-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 15px; }
+                    .pdf-info-table th, .pdf-info-table td { padding: 8px; border: 1px solid #e1e5e9; text-align: left; }
+                    .pdf-info-table th { background-color: #f0f4f8; color: #5e6870; width: 30%; }
+                    .pdf-section-title { color: #005c9d; border-bottom: 1px solid #e1e5e9; padding-bottom: 5px; margin-bottom: 15px; font-size: 18px; }
+                    .pdf-delay-text { color: red; font-weight: bold; }
+                    .pdf-footer { text-align: center; font-size: 12px; color: #6c757d; margin-top: 40px; border-top: 1px solid #eee; padding-top: 15px; }
+                    .print-button-container {
+                        text-align: center;
+                        margin-top: 20px;
+                        padding-bottom: 20px;
+                    }
+                    .print-button {
+                        background-color: #005c9d;
+                        color: white;
+                        padding: 10px 20px;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        cursor: pointer;
+                        transition: background-color 0.3s ease;
+                    }
+                    .print-button:hover {
+                        background-color: #0980d3;
+                    }
+                    @media print {
+                        .print-button-container { display: none; }
+                        body { background-color: #fff; }
+                        .pdf-container { margin: 0; box-shadow: none; padding: 0; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="pdf-container">
+                    ${pdfContent.innerHTML}
+                </div>
+                <div class="print-button-container">
+                    <button class="print-button" onclick="window.print()"><i class="fas fa-print"></i> PDF Kaydet / Yazdır</button>
+                </div>
+            </body>
+            </html>
+        `);
+        newWindow.document.close();
 
-          newWindow.onload = () => {
-              showToast(`${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi hazır.`);
-              addActivity(
-                  "PDF Raporu Önizlendi",
-                  `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi açıldı.`,
-                  project.project_id,
-                  "fas fa-file-pdf",
-                  "pdf_preview"
-              );
-          };
-      }
+        newWindow.onload = () => {
+            showToast(`${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi hazır.`);
+            addActivity(
+                "PDF Raporu Önizlendi",
+                `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi açıldı.`,
+                project.project_id,
+                "fas fa-file-pdf",
+                "pdf_preview"
+            );
+        };
+    }
 
     // Tüm projeleri PDF olarak dışa aktar
      async function exportAllProjectsToPdf() {
