@@ -655,10 +655,6 @@ def add_role():
     if 'user_id' not in session:
         return jsonify({"error": "Oturum açık değil."}), 401
 
-    user_id = session['user_id']
-    if not is_admin(user_id):
-        return jsonify({"error": "Bu işlemi yapmak için yetkiniz yok."}), 403
-        
     data = request.get_json()
     role_name = data.get('role_name')
 
