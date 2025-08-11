@@ -2657,7 +2657,24 @@ function attachProjectTableEventListeners() {
     return [];
   }
 }
-
+async function getProjectProgresses(projectId) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/project-progresses?project_id=${projectId}`);
+            if (!response.ok) {
+                if (response.status === 404) {
+                    showToast('Bu proje için iş gidişat adımı bulunamadı.', false);
+                    return [];
+                }
+                throw new Error('İş gidişat adımları çekilirken hata oluştu.');
+            }
+            const progresses = await response.json();
+            return progresses;
+        } catch (error) {
+            console.error('API çağrısı sırasında hata:', error);
+            showToast('İş gidişat adımları yüklenemedi. Lütfen tekrar deneyin.', true);
+            return [];
+        }
+    }
     // Proje Yöneticilerini API'den çeken fonksiyon
    async function fetchProjectManagersForSelect() {
   try {
@@ -3119,22 +3136,20 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     ` : ``;
 
                 stepElement.innerHTML = `
-                   <div class="progress-item-header">
-    <div class="input-group" style="flex: 1;">
-        <label for="step-{{ step.progress_id }}-name">Adım Başlığı</label>
-        <input type="text" id="step-{{ step.progress_id }}-name" class="progress-step-name-input" value="{{ step.step_name || '' }}" placeholder="Adım Adı" required>
-    </div>
-    <div class="progress-dates" style="margin-left: 20px;">
-        <span>
-            <label for="step-{{ step.progress_id }}-start">Başlangıç:</label>
-            <input type="date" id="step-{{ step.progress_id }}-start" class="progress-datepicker" value="{{ formatDateForInput(step.start_date || '') }}" required>
-        </span>
-        <span>
-            <label for="step-{{ step.progress_id }}-end">Bitiş:</label>
-            <input type="date" id="step-{{ step.progress_id }}-end" class="progress-datepicker" value="{{ formatDateForInput(step.end_date || '') }}" required>
-        </span>
-        {{ delayDisplay }}
-    </div>
+                  <div class="progress-item-header">
+                        <div class="input-group" style="flex: 1;">
+                            ${isEditable ? '<label for="step-' + step.progress_id + '-name">Adım Başlığı</label>' : ''}
+                            ${titleContent}
+                        </div>
+                        <div class="progress-dates" style="margin-left: ${isEditable ? '20px' : '0'};">
+                            <span>
+                                ${startDateContent}
+                            </span>
+                            <span>
+                                ${endDateContent}
+                            </span>
+                        </div>
+                    </div>
                     ${delayInfoHtml}
                     <div class="input-group">
                         ${isEditable ? '<label for="step-' + step.progress_id + '-desc">Açıklama</label>' : ''}
