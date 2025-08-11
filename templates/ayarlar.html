@@ -1449,8 +1449,7 @@
         let currentPage = 1;
         const rowsPerPage = 10; // Sayfa başına gösterilecek kullanıcı sayısı
 
-        // API Base URL'i buraya gelecek - Lütfen kendi Render Flask uygulamanızın URL'si ile değiştirin
-        // http://37.148.213.89:8000// Bu satır kaldırıldı
+        
 
         // Tüm kullanıcıları API'den çeken ve tabloyu dolduran fonksiyon
         function loadUsersTable() {
@@ -1693,38 +1692,7 @@
         let isEditMode = false;
         let editingRoleId = null;
             // Confirmation Modal'ı DOM yüklendiğinde başlat
-            function fetchRolesAndUsers() {
-            // Admin rolünü hariç tutmak için fetch işlemi
-            fetch('/api/roles') // Bu API endpoint'ini backend'de oluşturmanız gerekecek
-                .then(response => response.json())
-                .then(roles => {
-                    rolesTableBody.innerHTML = ''; // Tablo içeriğini temizle
-                    roles.forEach(role => {
-                        // "Admin" rolünü listeleme
-                        if (role.name !== 'Admin') {
-                            const row = document.createElement('tr');
-                            row.innerHTML = `
-                                <td><span class="role-badge role-${role.name.toLowerCase()}">${role.name}</span></td>
-                                <td>${role.user_count}</td>
-                                <td class="text-center">
-                                    <button class="action-btn edit-role-btn" data-role-id="${role.id}" title="Düzenle"><i class="fas fa-edit"></i></button>
-                                    <button class="action-btn delete-role-btn" data-role-id="${role.id}" title="Sil"><i class="fas fa-trash-alt"></i></button>
-                                </td>
-                            `;
-                            rolesTableBody.appendChild(row);
-                        }
-                    });
-
-                    // İşlemler butonlarına event listener ekleme
-                    document.querySelectorAll('.edit-role-btn').forEach(button => {
-                        button.addEventListener('click', handleEditRole);
-                    });
-                    document.querySelectorAll('.delete-role-btn').forEach(button => {
-                        button.addEventListener('click', handleDeleteRole);
-                    });
-                })
-                .catch(error => console.error('Error fetching roles:', error));
-        }
+           
 
         // Rol ekleme butonuna tıklama olayını yönetme
         addRoleBtn.addEventListener('click', () => {
@@ -1966,7 +1934,38 @@
  document.getElementById('userProfileLink').addEventListener('click', function() {
                 window.location.href = 'users.html';
             });
-        
+            function fetchRolesAndUsers() {
+            // Admin rolünü hariç tutmak için fetch işlemi
+            fetch('/api/roles') // Bu API endpoint'ini backend'de oluşturmanız gerekecek
+                .then(response => response.json())
+                .then(roles => {
+                    rolesTableBody.innerHTML = ''; // Tablo içeriğini temizle
+                    roles.forEach(role => {
+                        // "Admin" rolünü listeleme
+                        if (role.name !== 'Admin') {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td><span class="role-badge role-${role.name.toLowerCase()}">${role.name}</span></td>
+                                <td>${role.user_count}</td>
+                                <td class="text-center">
+                                    <button class="action-btn edit-role-btn" data-role-id="${role.id}" title="Düzenle"><i class="fas fa-edit"></i></button>
+                                    <button class="action-btn delete-role-btn" data-role-id="${role.id}" title="Sil"><i class="fas fa-trash-alt"></i></button>
+                                </td>
+                            `;
+                            rolesTableBody.appendChild(row);
+                        }
+                    });
+
+                    // İşlemler butonlarına event listener ekleme
+                    document.querySelectorAll('.edit-role-btn').forEach(button => {
+                        button.addEventListener('click', handleEditRole);
+                    });
+                    document.querySelectorAll('.delete-role-btn').forEach(button => {
+                        button.addEventListener('click', handleDeleteRole);
+                    });
+                })
+                .catch(error => console.error('Error fetching roles:', error));
+        }
             // Hamburger menü işlevselliği
             const hamburgerMenu = document.getElementById('hamburgerMenu');
             const sidebar = document.getElementById('sidebar');
