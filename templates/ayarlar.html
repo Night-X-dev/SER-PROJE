@@ -1772,48 +1772,7 @@ async function fetchRoles() {
         const modal = new bootstrap.Modal(document.getElementById('addRoleModal'));
         modal.show();
     }
-function loadRolesAndPermissions() {
-        showLoading(true);
-        const urlParams = new URLSearchParams(window.location.search);
-        const roleId = urlParams.get('roleId');
 
-        // Rol yetkileri yüklenirken "Yeni Rol Ekle" butonunu varsayılan olarak gizle
-        const addRoleButton = document.getElementById('addRoleButton');
-        if (addRoleButton) {
-            addRoleButton.style.display = 'none';
-        }
-
-        if (!roleId) {
-            // Eğer roleId yoksa, tüm rollerin listesini yükle (bu bölüm zaten mevcut olmalı)
-            fetch('/api/roles')
-                .then(response => response.json())
-                .then(roles => {
-                    // ... (mevcut rollerin listesini yükleme kodu) ...
-                })
-                .catch(err => console.error('Roller yüklenirken hata:', err));
-        } else {
-            // Eğer roleId varsa, o role ait yetkileri yükle
-            fetch(`/api/permissions?roleId=${roleId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Yetkiler yüklenemedi.');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data) {
-                        // Yetkileri yükle...
-                    } else {
-                        // Yetki yoksa...
-                    }
-                })
-                .catch(err => {
-                    console.error('İzinleri yüklerken hata:', err);
-                    showToast('İzinler yüklenirken bir hata oluştu.', true);
-                })
-                .finally(() => showLoading(false));
-        }
-    }
     document.getElementById('saveNewRoleBtn').addEventListener('click', async () => {
         const roleName = document.getElementById('roleNameInput').value;
         if (!roleName) {
