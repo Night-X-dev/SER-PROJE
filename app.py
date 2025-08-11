@@ -2942,23 +2942,31 @@ def update_password():
     finally:
         if connection:
             connection.close()
-@app.route('/api/yetkitable', methods=['GET'])
+@app.route('/api/yetkitable')
 def get_yetkitable():
+    """Retrieves all roles except 'Admin' from the yetki table."""
+    if 'user_id' not in session:
+        return jsonify({"error": "Oturum açık değil."}), 401
+
     connection = None
     try:
         connection = get_db_connection()
-        with connection.cursor() as cursor:
-            sql = "SELECT id, role_name FROM yetki"
+        if not connection:
+            return jsonify({"error": "Veritabanı bağlantısı kurulamadı."}), 500
+
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            # Admin rolünü hariç tutarak tüm rolleri getir
+            sql = "SELECT * FROM yetki WHERE role_name != 'Admin' ORDER BY id"
             cursor.execute(sql)
             roles = cursor.fetchall()
+            return jsonify(roles)
 
-        # Rolleri başarıyla çektiyseniz, JSON olarak döndürün
-        return jsonify(roles), 200
+    except pymysql.Error as e:
+        print(f"MySQL hatası: {e}")
+        return jsonify({"error": "Veritabanı hatası oluştu."}), 500
     except Exception as e:
-        print(f"Rolleri çekerken bir hata oluştu: {e}")
-        traceback.print_exc()
-        # Hata durumunda 500 INTERNAL SERVER ERROR döndürün
-        return jsonify({"error": "Roller yüklenirken bir hata oluştu."}), 500
+        print(f"Beklenmeyen hata: {e}")
+        return jsonify({"error": "Beklenmeyen bir hata oluştu."}), 500
     finally:
         if connection:
             connection.close()
