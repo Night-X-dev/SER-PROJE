@@ -2972,6 +2972,7 @@ async function applyDelayToStep(progressId, newDelayDays, projectId) {
                 const stepElement = document.createElement("div");
                 stepElement.className = "progress-detail-item";
                 stepElement.dataset.stepIndex = index;
+                stepElement.dataset.projectId = projectId; // Bu satırı ekleyin
 
                 const titleContent = isEditable ?
                     `<input type="text" id="step-${step.progress_id}-name" class="progress-step-name-input" value="${step.step_name || step.title || ''}" placeholder="Adım Adı" required>` :
@@ -3094,23 +3095,21 @@ async function applyDelayToStep(progressId, newDelayDays, projectId) {
 
                 document.querySelectorAll('.apply-delay-btn').forEach(button => {
     button.addEventListener('click', async (e) => {
-        const progressId = e.currentTarget.dataset.id;
+          const progressId = e.currentTarget.dataset.id;
         const newDelayDays = parseInt(document.getElementById(`step-${progressId}-delay`).value) || 0;
         
         // Bu satırın null dönme ihtimaline karşı kontrol ekleniyor
         // Adding a check for the possibility of this returning null
-        const projectElement = e.currentTarget.closest('[data-project-id]');
-        if (!projectElement) {
-            showToast("Proje ID'si bulunamadı. Lütfen sayfanın doğru yüklendiğinden emin olun.", true);
+        const stepElement = e.currentTarget.closest('.progress-detail-item');
+        if (!stepElement) {
+            showToast("İş adımı bulunamadı.", true);
             return;
         }
 
-        const projectId = projectElement.dataset.projectId;
-        
+        const projectId = stepElement.dataset.projectId;
+
         if (newDelayDays > 0) {
-            // Updated call to applyDelayToStep, no longer passing the 'steps' array
-            // applyDelayToStep çağrısı güncellendi, artık 'steps' dizisi geçmiyor.
-            const updatedStepInfo = await applyDelayToStep(progressId, newDelayDays, projectId); 
+            const updatedStepInfo = await applyDelayToStep(progressId, newDelayDays, projectId);
             if (updatedStepInfo && updatedStepInfo.real_end_date) {
                 document.getElementById(`step-${progressId}-real-end-display`).textContent = formatDateForDisplay(updatedStepInfo.real_end_date);
                 showToast(`Bu iş gidişatı ${newDelayDays} gün ertelenmiştir! (Gerçek Bitiş Tarihi: ${formatDateForDisplay(updatedStepInfo.real_end_date)})`);
