@@ -2879,26 +2879,25 @@ def update_password():
         if connection:
             connection.close()
 @app.route('/api/yetkitable', methods=['GET'])
-def get_yetki_table():
-    """
-    Veritabanındaki 'yetki' tablosundan tüm rolleri çeker ve döndürür.
-    """
+def get_yetkitable():
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            sql = "SELECT role_id, role_name FROM yetki"
+            sql = "SELECT role_id, role_name FROM roles"
             cursor.execute(sql)
             roles = cursor.fetchall()
-            return jsonify(roles)
+
+        # Rolleri başarıyla çektiyseniz, JSON olarak döndürün
+        return jsonify(roles), 200
     except Exception as e:
-        print(f"Hata: Roller çekilirken bir hata oluştu: {e}")
+        print(f"Rolleri çekerken bir hata oluştu: {e}")
         traceback.print_exc()
+        # Hata durumunda 500 INTERNAL SERVER ERROR döndürün
         return jsonify({"error": "Roller yüklenirken bir hata oluştu."}), 500
     finally:
         if connection:
             connection.close()
-
 
 @app.route('/api/roles', methods=['GET'])
 def get_distinct_roles():
