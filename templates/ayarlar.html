@@ -1246,6 +1246,7 @@
                         </tbody>
                     </table>
                 </div>
+    {% if current_user.role.role_name == 'Admin' %}
                 
                 <!-- Pagination -->
                 <div class="pagination">
@@ -1259,6 +1260,7 @@
                     </div>
                 </div>
             </div>
+
         <div class="settings-card" id="roleManagementCard">
         <div class="card-header">
             <div class="card-title">
@@ -1268,6 +1270,8 @@
     <button class="btn btn-primary" onclick="openRoleModal()">
         <i class="fas fa-plus me-2"></i>Yeni Rol Ekle
     </button>
+    {% endif %}
+
 </div>
 
 <!-- Yeni Rol Ekle Modal'ı (Yetki tablosunun hemen altına veya sayfanın sonuna ekleyebilirsiniz) -->
@@ -2044,7 +2048,12 @@ async function deleteRole(roleId) {
             fetchRoles();
             const accountSettingsForm = document.getElementById('accountSettingsForm');
             const accountSettingsMessage = document.getElementById('accountSettingsMessage');
-            
+            const currentUserRole = '{{ current_user.role.role_name if current_user and current_user.role else "" }}';
+    const roleManagementDiv = document.getElementById('rolePermissionCard');
+    
+    if (roleManagementDiv && currentUserRole !== 'Admin') {
+        roleManagementDiv.style.display = 'none';
+    }
 
             // Confirmation Modal'ı DOM yüklendiğinde başlat
             const confirmationModalElement = document.getElementById('confirmationModal');
