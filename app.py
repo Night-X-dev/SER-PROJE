@@ -1635,8 +1635,6 @@ def send_email_notification(recipient_email, subject, body):
     message["From"] = sender_email
     message["To"] = recipient_email
 
-    # HTML içeriği olarak e-posta gövdesi
-    # 'body' değişkeninin içinde "Merhaba," olmamasına dikkat edin.
     html_body = f"""\
     <html>
       <head>
