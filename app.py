@@ -2948,7 +2948,7 @@ def get_yetkitable():
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            sql = "SELECT role_id, role_name FROM roles"
+            sql = "SELECT id, role_name FROM yetki"
             cursor.execute(sql)
             roles = cursor.fetchall()
 
