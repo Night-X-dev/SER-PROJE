@@ -26,10 +26,6 @@ app = Flask(__name__)
 # THIS SHOULD BE A SECURE AND UNPREDICTABLE STRING!
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex")
 
-# Initialize CSRF protection
-csrf = CSRFProtect()
-csrf.init_app(app)
-
 PRIORITY_TRANSLATIONS = {
     "low": "Düşük Öncelik",
     "medium": "Orta Öncelik",
