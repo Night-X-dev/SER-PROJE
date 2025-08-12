@@ -1301,17 +1301,16 @@
 </div>
 
 <!-- Add/Edit Header Modal -->
-<!-- Add/Edit Header Modal -->
-<div class="modal fade" id="addHeaderModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="headerModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addHeaderModalLabel">Yeni Başlık Ekle</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title" id="headerModalLabel">Yeni İş Gidişat Başlığı</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
             </div>
             <form id="headerForm">
-                <input type="hidden" id="headerId" value="">
                 <div class="modal-body">
+                    <input type="hidden" id="headerId">
                     <div class="mb-3">
                         <label for="headerTitle" class="form-label">Başlık *</label>
                         <input type="text" class="form-control" id="headerTitle" required>
@@ -3051,88 +3050,34 @@ row.innerHTML = `
         });
     }
 
-    function editHeader(headerId) {
-    const apiUrl = `${window.location.origin}/api/work-progress-headers/${headerId}`.replace(/([^:]\/)\/+/g, '$1');
-    const modalTitle = document.getElementById('addHeaderModalLabel');
-    
-    if (!modalTitle) {
-        console.error('Modal title element not found');
-        showToast('Bir hata oluştu: Modal başlığı bulunamadı', true);
-        return;
-    }
-    
-    fetch(apiUrl, {
+    // Edit header
+    function editHeader(id) {
+    fetch(`${API_BASE_URL}/api/work-progress-headers/${id}`, {
         method: 'GET',
         headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         }
     })
-    .then(async response => {
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.error || 'Başlık getirilemedi');
-        }
-        return data;
-    })
-    .then(header => {
-        // Populate the edit form
-        const titleInput = document.getElementById('headerTitle');
-        const descInput = document.getElementById('headerDescription');
-        const activeInput = document.getElementById('headerIsActive');
-        
-        if (!titleInput || !descInput || !activeInput) {
-            throw new Error('Form alanları bulunamadı');
-        }
-        
-        document.getElementById('headerId').value = header.id;
-        titleInput.value = header.title;
-        descInput.value = header.description || '';
-        activeInput.checked = header.is_active;
-        
-        // Change modal title and show
-        modalTitle.textContent = 'Başlığı Düzenle';
-        const modal = new bootstrap.Modal(document.getElementById('addHeaderModal'));
-        modal.show();
-    })
-    .catch(error => {
-        console.error('Error in editHeader:', error);
-        showToast(error.message || 'Başlık bilgileri alınırken bir hata oluştu', true);
-    });
-}
-
-function updateHeader(headerId, title, description, isActive) {
-    const apiUrl = `${window.location.origin}/api/work-progress-headers/${headerId}`.replace(/([^:]\/)\/+/g, '$1');
-    
-    fetch(apiUrl, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            title: title,
-            description: description,
-            is_active: isActive
-        })
-    })
     .then(response => {
         if (!response.ok) {
-            return response.json().then(err => { throw err; });
+            return response.text().then(text => {
+                throw new Error(text || 'Başlık getirilemedi');
+            });
         }
         return response.json();
     })
-    .then(data => {
-        showToast('Başlık başarıyla güncellendi');
-        // Close the modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('addHeaderModal'));
-        if (modal) modal.hide();
-        // Refresh the headers list
-        loadHeaders();
+    .then(header => {
+        headerModalLabel.textContent = 'Başlığı Düzenle';
+        document.getElementById('headerId').value = header.id;
+        document.getElementById('headerTitle').value = header.title;
+        document.getElementById('headerDescription').value = header.description || '';
+        document.getElementById('headerIsActive').checked = header.is_active;
+        headerModal.show();
     })
     .catch(error => {
-        console.error('Error updating header:', error);
-        showToast(error.error || 'Başlık güncellenirken bir hata oluştu', true);
+        console.error('Error fetching header:', error);
+        showToast('Başlık bilgileri alınırken bir hata oluştu: ' + error.message, true);
     });
 }
 
