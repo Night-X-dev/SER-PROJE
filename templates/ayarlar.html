@@ -2390,18 +2390,52 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             function loadRolesForUserModal() {
-                fetch(`${API_BASE_URL}/api/roles`)
-                    .then(res => res.json())
-                    .then(roles => {
-                        const roleSelect = document.getElementById('newUserRole');
-                        roleSelect.innerHTML = '<option value="">Rol Seçin</option>';
-                        roles.forEach(role => {
-                            if (role.toLowerCase() !== 'admin') {
-                                roleSelect.innerHTML += `<option value="${role}">${role}</option>`;
-                            }
-                        });
-                    });
+    fetch(`${API_BASE_URL}/api/yetkitable`)
+        .then(res => {
+            if (!res.ok) throw new Error('Roller yüklenirken hata oluştu');
+            return res.json();
+        })
+        .then(roles => {
+            const roleSelect = document.getElementById('newUserRole');
+            if (!roleSelect) return;
+            
+            // Save current value
+            const currentValue = roleSelect.value;
+            
+            // Clear and add default option
+            roleSelect.innerHTML = '<option value="">Rol Seçin</option>';
+            
+            // Add roles from the database
+            roles.forEach(role => {
+                const option = document.createElement('option');
+                option.value = role.role_name;
+                option.textContent = role.role_name;
+                roleSelect.appendChild(option);
+            });
+            
+            // Restore previous value if it exists in the new options
+            if (currentValue) {
+                const optionExists = Array.from(roleSelect.options).some(opt => opt.value === currentValue);
+                if (optionExists) {
+                    roleSelect.value = currentValue;
+                }
             }
+        })
+        .catch(error => {
+            console.error('Roller yüklenirken hata:', error);
+            showToast('Roller yüklenirken bir hata oluştu', true);
+        });
+}
+
+// Call this function when the modal is shown
+document.addEventListener('DOMContentLoaded', function() {
+    const addUserModal = document.getElementById('addUserModal');
+    if (addUserModal) {
+        addUserModal.addEventListener('shown.bs.modal', function() {
+            loadRolesForUserModal();
+        });
+    }
+});
 
             // Telefon input mask sadece bir kez eklenir
             var phoneInput = document.getElementById('newUserPhone');
@@ -2789,9 +2823,6 @@ function approveUser(userId) {
                     const role = document.getElementById('editRole').value;
                     
                     try {
-                        // Get CSRF token from meta tag
-                        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-                        
                         console.log('Sending update request with data:', {
                             fullname: fullName,
                             email: email,
@@ -2801,8 +2832,7 @@ function approveUser(userId) {
                         const response = await fetch(`/api/users/${userId}`, {
                             method: 'PUT',
                             headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': csrfToken,
+                                'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
                                 fullname: fullName,

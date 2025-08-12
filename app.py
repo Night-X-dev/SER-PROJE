@@ -249,7 +249,67 @@ def format_datetime_for_email(dt_str):
     except ValueError:
         return dt_str # Ayrıştırma başarısız olursa orijinal stringi döndür
 
+@app.route('/api/update_user_profile', methods=['POST'])
+def update_user_profile():
+    if 'user_id' not in session:
+        return jsonify({"error": "Oturum bulunamadı"}), 401
 
+    data = request.get_json()
+    user_id = session.get('user_id')
+    
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                # Check if user exists
+                cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+                if not cursor.fetchone():
+                    return jsonify({"error": "Kullanıcı bulunamadı"}), 404
+                
+                # Build update query based on provided fields
+                update_fields = []
+                update_values = []
+                
+                if 'fullname' in data:
+                    update_fields.append("fullname = %s")
+                    update_values.append(data['fullname'])
+                
+                if 'email' in data:
+                    cursor.execute("SELECT id FROM users WHERE email = %s AND id != %s", 
+                                 (data['email'], user_id))
+                    if cursor.fetchone():
+                        return jsonify({"error": "Bu e-posta adresi zaten kullanılıyor"}), 400
+                    update_fields.append("email = %s")
+                    update_values.append(data['email'])
+                
+                # Handle password change if provided
+                if 'currentPassword' in data and 'newPassword' in data:
+                    cursor.execute("SELECT password FROM users WHERE id = %s", (user_id,))
+                    user = cursor.fetchone()
+                    if not user or not check_password_hash(user['password'], data['currentPassword']):
+                        return jsonify({"error": "Mevcut şifre yanlış"}), 400
+                    
+                    hashed_password = generate_password_hash(data['newPassword'])
+                    update_fields.append("password = %s")
+                    update_values.append(hashed_password)
+                
+                if not update_fields:
+                    return jsonify({"error": "Güncellenecek alan bulunamadı"}), 400
+                
+                # Execute update
+                update_query = f"UPDATE users SET {', '.join(update_fields)} WHERE id = %s"
+                update_values.append(user_id)
+                cursor.execute(update_query, tuple(update_values))
+                conn.commit()
+                
+                # Update session if email was changed
+                if 'email' in data:
+                    session['email'] = data['email']
+                
+                return jsonify({"message": "Profil başarıyla güncellendi"}), 200
+                
+    except Exception as e:
+        print(f"Error updating user profile: {str(e)}")
+        return jsonify({"error": "Profil güncelleme sırasında bir hata oluştu"}), 500
 @app.route('/api/project-report/<int:project_id>', methods=['GET'])
 def get_project_report_data(project_id):
     """
