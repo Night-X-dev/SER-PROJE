@@ -1749,6 +1749,19 @@
 
     // --- DOM Yüklendiğinde Çalışacak Kod ---
     document.addEventListener("DOMContentLoaded", function () {
+      async function fetchWorkProgressHeaders() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/work-progress-headers/active`);
+        if (!response.ok) throw new Error('Başlıklar alınamadı');
+
+        const headers = await response.json();
+        return headers; // [{ id, title }, ...]
+    } catch (error) {
+        console.error("Başlık listesi alınamadı:", error);
+        return [];
+    }
+}
+
         // user-avatar.js yüklendiyse updateUserAvatar'ı çağır
         if (currentUser && typeof updateUserAvatar === 'function') {
             updateUserAvatar(currentUser); 
@@ -3207,7 +3220,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
         }
     }
 
-function addNewProgressStepForm(projectId) {
+    async function addNewProgressStepForm(projectId) {
   console.log("addNewProgressStepForm başladı, projectId:", projectId);
   const progressStepsContainer = document.getElementById("progressStepsContainer");
   if (!progressStepsContainer) {
@@ -3215,118 +3228,101 @@ function addNewProgressStepForm(projectId) {
     showToast("İş adımı eklenemiyor: Form container bulunamadı", true);
     return;
   }
-  
+
   // Zaten bir ekleme formu varsa yeni bir tane daha açma
   if (document.getElementById('newProgressForm')) {
     console.log("Zaten açık bir ekleme formu var, yeni form açılmayacak.");
     showToast("Zaten açık bir ekleme formu var.", false);
     return;
   }
-  
+
+  // API'den başlıkları çek
+  let headersList = [];
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/work-progress-headers/active`);
+    if (!res.ok) throw new Error("Başlıklar alınamadı");
+    headersList = await res.json();
+  } catch (err) {
+    console.error("Başlık listesi alınamadı:", err);
+    showToast("Başlıklar alınırken hata oluştu", true);
+    return;
+  }
+
   console.log("Yeni form oluşturuluyor");
   const formElement = document.createElement('div');
   formElement.id = 'newProgressForm';
-  formElement.className = 'progress-detail-item'; // Mevcut öğe stilini kullan
+  formElement.className = 'progress-detail-item';
   formElement.innerHTML = `
-  <div class="progress-item-header">
-    <div class="input-group" style="flex: 1;">
-      <label for="newStepName">Adım Başlığı</label>
-      <input type="text" id="newStepName" class="progress-step-name-input" placeholder="İş gidişat başlığı" required>
+    <div class="progress-item-header">
+      <div class="input-group" style="flex: 1;">
+        <label for="newStepName">Adım Başlığı</label>
+        <select id="newStepName" class="form-select" required>
+          <option value="">Başlık seçiniz...</option>
+          ${headersList.map(h => `<option value="${h.id}">${h.title}</option>`).join('')}
+        </select>
+      </div>
+      <div class="progress-dates" style="margin-left: 20px;">
+        <span>
+          <label for="newStepStartDate">Başlangıç:</label>
+          <input type="date" id="newStepStartDate" class="progress-datepicker" required>
+        </span>
+        <span>
+          <label for="newStepEndDate">Bitiş:</label>
+          <input type="date" id="newStepEndDate" class="progress-datepicker" required>
+        </span>
+      </div>
     </div>
-    <div class="progress-dates" style="margin-left: 20px;">
-      <span>
-        <label for="newStepStartDate">Başlangıç:</label>
-        <input type="date" id="newStepStartDate" class="progress-datepicker" required>
-      </span>
-      <span>
-        <label for="newStepEndDate">Bitiş:</label>
-        <input type="date" id="newStepEndDate" class="progress-datepicker" required>
-      </span>
+    <div class="input-group">
+      <label for="newStepDescription">Açıklama</label>
+      <textarea id="newStepDescription" class="progress-description-textarea" placeholder="İş gidişat açıklaması"></textarea>
     </div>
-  </div>
-  <div class="input-group">
-    <label for="newStepDescription">Açıklama</label>
-    <textarea id="newStepDescription" class="progress-description-textarea" placeholder="İş gidişat açıklaması"></textarea>
-  </div>
-  <div class="progress-actions">
-    <button type="button" class="action-btn modal-btn-cancel" id="cancelAddProgressBtn"><i class="fas fa-times"></i> İptal</button>
-    <button type="button" class="action-btn modal-btn-save" id="saveNewProgressBtn"><i class="fas fa-plus"></i> Ekle</button>
-  </div>
+    <div class="progress-actions">
+      <button type="button" class="action-btn modal-btn-cancel" id="cancelAddProgressBtn"><i class="fas fa-times"></i> İptal</button>
+      <button type="button" class="action-btn modal-btn-save" id="saveNewProgressBtn"><i class="fas fa-plus"></i> Ekle</button>
+    </div>
   `;
 
   progressStepsContainer.appendChild(formElement);
-  console.log("Form elementi DOM'a eklendi");
-  
-  // Yeni form için olay dinleyicileri
+
+  // Butonlar
   const saveNewProgressBtn = document.getElementById('saveNewProgressBtn');
   const cancelAddProgressBtn = document.getElementById('cancelAddProgressBtn');
-  
-  if (!saveNewProgressBtn) {
-    console.error("saveNewProgressBtn elementi bulunamadı!");
-    showToast("İş adımı eklenemiyor: Kaydet butonu bulunamadı", true);
-    return;
-  }
-  
-  if (!cancelAddProgressBtn) {
-    console.error("cancelAddProgressBtn elementi bulunamadı!");
-    showToast("İş adımı eklenemiyor: İptal butonu bulunamadı", true);
-    return;
-  }
-  
-  console.log("Butonlara event listener'lar ekleniyor");
+
   saveNewProgressBtn.addEventListener('click', async () => {
     console.log("Kaydet butonuna tıklandı");
-    const stepName = document.getElementById('newStepName').value;
+    const stepNameSelect = document.getElementById('newStepName');
+    const headerId = stepNameSelect.value;
     const startDate = document.getElementById('newStepStartDate').value;
     const endDate = document.getElementById('newStepEndDate').value;
     const description = document.getElementById('newStepDescription').value;
-    
-    console.log("Form değerleri:", { stepName, startDate, endDate, description });
-    
-    if (!stepName || !startDate || !endDate) {
+
+    if (!headerId || !startDate || !endDate) {
       showToast("Lütfen tüm zorunlu alanları doldurun.", true);
       return;
     }
-    
+
     try {
-      console.log("API isteği gönderiliyor:", `${API_BASE_URL}/api/projects/${projectId}/progress`);
       const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          step_name: stepName, 
-          start_date: startDate, 
-          end_date: endDate, 
+        body: JSON.stringify({
+          header_id: headerId,
+          start_date: startDate,
+          end_date: endDate,
           description: description,
-          user_id: currentUser.id // user_id'yi ekle
+          user_id: currentUser.id
         })
       });
-      
-      console.log("API yanıtı alındı:", response.status);
+
       const data = await response.json();
-      
       if (response.ok) {
         showToast("İş adımı başarıyla eklendi.");
-        formElement.remove(); // Formu kapat
-        console.log("Form kapatıldı, iş adımları yenileniyor");
-        
-        // İş adımları ekledikten sonra proje tarihlerini manuel olarak güncelle
+        formElement.remove();
         await updateProjectDatesFromSteps(projectId);
-        
-        fetchProgressSteps(projectId, true); // Adımları yeniden yükle
-        fetchProjects(); // Projeler listesini de güncelle
-        
-        // Proje formundaki bitiş tarihini güncelle (eğer son eklenen adımın tarihi daha sonraysa)
-        // UI'yi hemen güncellemek için
-        const editEndDateInput = document.getElementById('editEndDate');
-        if (editEndDateInput) {
-          const currentEndDate = editEndDateInput.value;
-          if (!currentEndDate || new Date(endDate) > new Date(currentEndDate)) {
-            editEndDateInput.value = endDate;
-          }
-        }
-        
-        addActivity('İş Adımı Eklendi', `Proje ID: ${projectId} için "${stepName}" iş adımı eklendi.`, projectId, 'fas fa-tasks', 'progress_add');
+        fetchProgressSteps(projectId, true);
+        fetchProjects();
+
+        addActivity('İş Adımı Eklendi', `Proje ID: ${projectId} için başlık ID ${headerId} ile iş adımı eklendi.`, projectId, 'fas fa-tasks', 'progress_add');
       } else {
         showToast(`Hata: ${data.message}`, true);
       }
@@ -3335,15 +3331,14 @@ function addNewProgressStepForm(projectId) {
       showToast("İş adımı eklenirken bir sorun oluştu: " + error.message, true);
     }
   });
-  
+
   cancelAddProgressBtn.addEventListener('click', () => {
     console.log("İptal butonuna tıklandı");
-    formElement.remove(); // Formu kaldır
+    formElement.remove();
     showToast("İş adımı ekleme iptal edildi.", false);
   });
-  
-  console.log("addNewProgressStepForm tamamlandı");
 }
+
 
   async function editProgressStep(progressId, projectId, updatedStepData) {
         try {
