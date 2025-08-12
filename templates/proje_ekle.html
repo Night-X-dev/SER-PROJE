@@ -1378,36 +1378,73 @@
             // --- Dinamik İş Gidişatı Ekleme/Yönetme ---
             let progressStepCounter = 0; // Her adıma benzersiz ID vermek için
 
-            function addProgressItem(itemData = {}) {
-                const newItem = document.createElement('div');
-                newItem.className = 'progress-item';
-                const currentId = `progress-${progressStepCounter++}`;
+            async function addProgressItem(itemData = {}) {
+    const newItem = document.createElement('div');
+    newItem.className = 'progress-item';
+    const currentId = `progress-${progressStepCounter++}`;
 
-                newItem.innerHTML = `
-                    <div class="progress-item-header">
-                        <div class="input-group" style="flex: 1;">
-                            <label for="${currentId}-title">Başlık</label>
-                            <input type="text" id="${currentId}-title" value="${itemData.title || ''}" placeholder="İş gidişat başlığı" required>
-                        </div>
-                        <div class="progress-dates" style="margin-left: 20px;">
-                            <span><i class="far fa-calendar-alt"></i> 
-                                <input type="text" id="${currentId}-start" class="datepicker progress-datepicker" placeholder="Başlangıç" value="${itemData.startDate || ''}" required>
-                            </span>
-                            <span><i class="far fa-calendar-alt"></i> 
-                                <input type="text" id="${currentId}-end" class="datepicker progress-datepicker" placeholder="Bitiş" value="${itemData.endDate || ''}" required>
-                            </span>
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        <label for="${currentId}-desc">Açıklama</label>
-                        <textarea id="${currentId}-desc" class="progress-description-textarea" placeholder="İş gidişat açıklaması">${itemData.description || ''}</textarea>
-                    </div>
-                    <div class="progress-actions">
-                        <button type="button" class="action-btn delete-progress-btn"><i class="fas fa-trash"></i> Sil</button>
-                    </div>
-                `;
+    newItem.innerHTML = `
+        <div class="progress-item-header">
+            <div class="input-group" style="flex: 1;">
+                <label for="${currentId}-title">Başlık</label>
+                <select id="${currentId}-title" class="form-select" required>
+                    <option value="">Başlık seçiniz...</option>
+                </select>
+            </div>
+            <div class="progress-dates" style="margin-left: 20px;">
+                <span><i class="far fa-calendar-alt"></i> 
+                    <input type="text" id="${currentId}-start" class="datepicker progress-datepicker" placeholder="Başlangıç" value="${itemData.startDate || ''}" required>
+                </span>
+                <span><i class="far fa-calendar-alt"></i> 
+                    <input type="text" id="${currentId}-end" class="datepicker progress-datepicker" placeholder="Bitiş" value="${itemData.endDate || ''}" required>
+                </span>
+            </div>
+        </div>
+        <div class="input-group">
+            <label for="${currentId}-desc">Açıklama</label>
+            <textarea id="${currentId}-desc" class="progress-description-textarea" placeholder="İş gidişat açıklaması">${itemData.description || ''}</textarea>
+        </div>
+        <div class="progress-actions">
+            <button type="button" class="action-btn delete-progress-btn"><i class="fas fa-trash"></i> Sil</button>
+        </div>
+    `;
 
-                progressList.appendChild(newItem);
+    // Listeye ekle
+    document.querySelector('.progress-list').appendChild(newItem);
+
+    // Tarih seçiciyi başlat
+    flatpickr(newItem.querySelectorAll('.progress-datepicker'), {
+        dateFormat: "Y-m-d",
+        locale: "tr",
+        allowInput: true
+    });
+
+    // Silme butonu
+    newItem.querySelector('.delete-progress-btn').addEventListener('click', () => {
+        newItem.remove();
+    });
+
+    // API'den başlıkları çek ve select'e ekle
+    try {
+        const res = await fetch('/api/work-progress-headers/active');
+        if (!res.ok) throw new Error("Başlıklar alınamadı");
+        const headers = await res.json();
+
+        const selectEl = newItem.querySelector(`#${currentId}-title`);
+        selectEl.innerHTML = '<option value="">Başlık seçiniz...</option>';
+
+        headers.forEach(h => {
+            const opt = document.createElement('option');
+            opt.value = h.id;
+            opt.textContent = h.title;
+            selectEl.appendChild(opt);
+        });
+        if (itemData.headerId) {
+            selectEl.value = itemData.headerId; 
+        }
+    } catch (err) {
+        console.error('Başlık listesi yüklenemedi:', err);
+    }
 
                 // Yeni eklenen tarih seçicileri başlat
                 flatpickr(newItem.querySelectorAll('.progress-datepicker'), dateOptions);
