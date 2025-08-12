@@ -3092,27 +3092,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                             <span id="step-${step.progress_id}-real-end-display" style="font-weight: bold;">${realEndDateValue}</span>
                         </span>
                     </div>` : '';
-// renderProgressSteps fonksiyonunda, iş adımı oluşturulurken checkbox'ı ekleyin
-const completedCheckbox = isEditable ?
-    `<div class="form-check">
-        <input type="checkbox" class="form-check-input completed-checkbox" 
-               id="step-${step.progress_id}-completed" 
-               ${step.status === 'tamamlandi' ? 'checked' : ''}
-               data-id="${step.progress_id}">
-        <label class="form-check-label" for="step-${step.progress_id}-completed">Tamamlandı</label>
-    </div>` :
-    `<span class="badge ${step.status === 'tamamlandi' ? 'bg-success' : 'bg-secondary'}">
-        ${step.status === 'tamamlandi' ? 'Tamamlandı' : 'Devam Ediyor'}
-    </span>`;
 
-// İş adımı HTML'ine checkbox'ı ekleyin
-stepElement.innerHTML = `
-    <!-- Diğer içerikler... -->
-    <div class="progress-actions">
-        ${completedCheckbox}
-        <!-- Diğer butonlar... -->
-    </div>
-`;
                 let delayInfoHtml = '';
 
                 // Hesaplanan gecikme (delay_days)
@@ -3141,13 +3121,34 @@ stepElement.innerHTML = `
                     `<textarea id="step-${step.progress_id}-desc" class="progress-description-textarea" placeholder="Açıklama">${step.description || ''}</textarea>` :
                     `<div class="progress-detail-description">Açıklama: ${step.description || 'Yok'}</div>`;
 
-                const actionsContent = isEditable ?
-                    `
-                    <div class="progress-actions">
-                        <button type="button" class="action-btn save-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Kaydet"><i class="fas fa-save"></i> Kaydet</button>
-                        <button type="button" class="action-btn delete-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Sil"><i class="fas fa-trash"></i> Sil</button>
-                    </div>
-                    ` : ``;
+                // Önce mevcut actionsContent değişkenini bulun ve şu şekilde güncelleyin:
+const actionsContent = isEditable ?
+    `
+    <div class="progress-actions d-flex justify-content-between align-items-center">
+        <div class="form-check form-switch me-3">
+            <input class="form-check-input complete-step-checkbox" type="checkbox" 
+                   id="complete-${step.progress_id}" 
+                   ${step.status === 'tamamlandi' ? 'checked' : ''}
+                   data-id="${step.progress_id}">
+            <label class="form-check-label" for="complete-${step.progress_id}">
+                ${step.status === 'tamamlandi' ? 'Tamamlandı' : 'Tamamla'}
+            </label>
+        </div>
+        <div>
+            <button type="button" class="action-btn save-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Kaydet">
+                <i class="fas fa-save"></i> Kaydet
+            </button>
+            <button type="button" class="action-btn delete-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Sil">
+                <i class="fas fa-trash"></i> Sil
+            </button>
+        </div>
+    </div>
+    ` : 
+    `<div class="progress-actions text-end">
+        <span class="badge ${step.status === 'tamamlandi' ? 'bg-success' : 'bg-warning text-dark'}">
+            ${step.status === 'tamamlandi' ? 'Tamamlandı' : 'Devam Ediyor'}
+        </span>
+    </div>`;
 
                 stepElement.innerHTML = `
                     <div class="progress-item-header">
@@ -3194,41 +3195,6 @@ stepElement.innerHTML = `
                         });
                     });
                 });
-                document.querySelectorAll('.completed-checkbox').forEach(checkbox => {
-    checkbox.addEventListener('change', async function() {
-        const progressId = this.dataset.id;
-        const isChecked = this.checked;
-        
-        if (isChecked) {
-            const confirmed = confirm('Bu iş gidişatını tamamlandı olarak işaretlemek istediğinize emin misiniz? Bu işlem geri alınamaz!');
-            if (!confirmed) {
-                this.checked = false;
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}/complete`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ completed: true })
-                });
-
-                if (response.ok) {
-                    showToast('İş gidişatı tamamlandı olarak işaretlendi.');
-                    fetchProgressSteps(projectId, true);
-                } else {
-                    const data = await response.json();
-                    showToast(`Hata: ${data.message}`, true);
-                    this.checked = false;
-                }
-            } catch (error) {
-                console.error('Tamamlama işlemi sırasında hata:', error);
-                showToast('Bir hata oluştu, lütfen tekrar deneyin.', true);
-                this.checked = false;
-            }
-        }
-    });
-});
 
                 document.querySelectorAll('.delete-progress-btn').forEach(button => {
                     button.addEventListener('click', (e) => {
