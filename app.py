@@ -64,34 +64,7 @@ def serve_ayarlar_page():
     All logged-in users can access, but content will be hidden on the frontend based on role."""
     if 'user_id' not in session:
         return redirect(url_for('serve_login_page'))
-    
-    # Get user info to pass to the template
-    try:
-        connection = get_db_connection()
-        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            # Get user details
-            cursor.execute("SELECT * FROM users WHERE id = %s", (session['user_id'],))
-            user = cursor.fetchone()
-            
-            if not user:
-                session.clear()
-                return redirect(url_for('serve_login_page'))
-                
-            # Get roles for dropdown
-            cursor.execute("SELECT * FROM yetki ORDER BY role_name")
-            roles = cursor.fetchall()
-            
-            return render_template('ayarlar.html', 
-                                user=user, 
-                                roles=roles,
-                                current_role=user.get('role', ''))
-                                
-    except Exception as e:
-        print(f"[ERROR] Error in serve_ayarlar_page: {str(e)}")
-        return jsonify({"error": "Sayfa yüklenirken bir hata oluştu."}), 500
-    finally:
-        if 'connection' in locals() and connection:
-            connection.close()
+    # Allow all logged-in users to access the settings page
     return render_template('ayarlar.html')
 
 @app.route('/kablo_hesap.html')
@@ -2897,7 +2870,10 @@ def add_user():
     finally:
         if connection:
             connection.close()
-# Removed duplicate route - using serve_ayarlar_page instead
+@app.route('/ayarlar')
+def ayarlar_page():
+    """Renders the settings page."""
+    return render_template('ayarlar.html')
 @app.route('/api/user/email', methods=['PUT'])
 def update_email():
     """Kullanıcının e-posta adresini günceller."""
