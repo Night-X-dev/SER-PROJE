@@ -2972,37 +2972,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load headers from API
     function loadHeaders() {
-    // Make sure there's no double slash in the URL
-    const apiUrl = `${window.location.origin}/api/work-progress-headers`.replace(/([^:]\/)\/+/g, '$1');
-    
-    fetch(apiUrl, {
-        method: 'GET',
-        headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.text().then(text => {
-                console.error('Server response:', text);
-                throw new Error(`HTTP error! status: ${response.status}`);
-            });
-        }
-        return response.json();
-    })
-    .then(headers => {
-        if (headers.error) {
-            throw new Error(headers.error);
-        }
-        renderHeaders(headers);
-    })
-    .catch(error => {
-        console.error('Error loading headers:', error);
-        showToast('Başlıklar yüklenirken bir hata oluştu: ' + error.message, true);
-    });
-}
-
+        const apiUrl = `${window.location.origin}/api/work-progress-headers`.replace(/([^:]\/)\/+/g, '$1');
+        
+        fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    console.error('Server response:', text);
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                });
+            }
+            return response.json();
+        })
+        .then(headers => {
+            renderHeaders(headers);
+        })
+        .catch(error => {
+            console.error('Error loading headers:', error);
+            if (typeof showToast === 'function') {
+                showToast('Başlıklar yüklenirken bir hata oluştu', true);
+            }
+        });
+    }
     // Render headers in the table
     function renderHeaders(headers) {
         if (!headersTableBody) return;
