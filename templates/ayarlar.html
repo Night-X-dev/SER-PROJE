@@ -1855,7 +1855,7 @@
             
             // Edit butonlarına tıklama olayı ekle
             document.querySelectorAll('.edit-user-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
+                btn.addEventListener('click', async function() {
                     const userId = this.getAttribute('data-userid');
                     const row = this.closest('tr');
                     const fullName = row.cells[0].textContent;
@@ -1867,25 +1867,34 @@
                     document.getElementById('editFullName').value = fullName;
                     document.getElementById('editEmail').value = email;
                     
-                    // Rol seçeneğini ayarla (modal açıldığında diğer roller yüklenecek)
-                    const editUserModal = new bootstrap.Modal(document.getElementById('editUserModal'));
-                    editUserModal.show();
-                    
-                    // Mevcut rolü seçili yap
-                    const roleSelect = document.getElementById('editRole');
-                    if (roleSelect) {
-                        // Rol yüklendikten sonra seçili yap
-                        const checkRole = setInterval(() => {
-                            if (roleSelect.options.length > 1) {
-                                for (let i = 0; i < roleSelect.options.length; i++) {
-                                    if (roleSelect.options[i].value === role) {
-                                        roleSelect.selectedIndex = i;
-                                        break;
-                                    }
+                    // Rolleri yükle ve modalı aç
+                    try {
+                        const response = await fetch('/api/yetkitable');
+                        if (response.ok) {
+                            const roles = await response.json();
+                            const roleSelect = document.getElementById('editRole');
+                            roleSelect.innerHTML = '<option value="">Rol Seçiniz</option>';
+                            
+                            // Rolleri dropdown'a ekle
+                            roles.forEach(r => {
+                                const option = document.createElement('option');
+                                option.value = r.role_name;
+                                option.textContent = r.role_name;
+                                if (r.role_name === role) {
+                                    option.selected = true;
                                 }
-                                clearInterval(checkRole);
-                            }
-                        }, 100);
+                                roleSelect.appendChild(option);
+                            });
+                            
+                            // Modalı göster
+                            const editUserModal = new bootstrap.Modal(document.getElementById('editUserModal'));
+                            editUserModal.show();
+                        } else {
+                            throw new Error('Roller yüklenirken hata oluştu');
+                        }
+                    } catch (error) {
+                        console.error('Hata:', error);
+                        showToast('Rol bilgileri yüklenirken bir hata oluştu', true);
                     }
                 });
             });
@@ -2749,5 +2758,68 @@ function approveUser(userId) {
     <script src="static/bildirim.js"></script>
     <!-- user-avatar.js dosyasını buraya dahil ediyoruz -->
     <script src="static/user-avatar.js"></script>
+    <script>
+        // CSRF token helper function
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Edit user form submission handler
+        document.addEventListener('DOMContentLoaded', function() {
+            const editUserForm = document.getElementById('editUserForm');
+            
+            if (editUserForm) {
+                editUserForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const userId = document.getElementById('editUserId').value;
+                    const fullName = document.getElementById('editFullName').value;
+                    const email = document.getElementById('editEmail').value;
+                    const role = document.getElementById('editRole').value;
+                    
+                    try {
+                        const response = await fetch(`/api/users/${userId}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken') || ''
+                            },
+                            body: JSON.stringify({
+                                fullname: fullName,
+                                email: email,
+                                role: role
+                            }),
+                            credentials: 'same-origin'
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (response.ok) {
+                            showToast('Kullanıcı başarıyla güncellendi');
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+                            if (modal) modal.hide();
+                            loadUsersTable(); // Refresh the table
+                        } else {
+                            throw new Error(result.message || 'Kullanıcı güncellenirken bir hata oluştu');
+                        }
+                    } catch (error) {
+                        console.error('Kullanıcı güncelleme hatası:', error);
+                        showToast(error.message || 'Kullanıcı güncellenirken bir hata oluştu', true);
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>
