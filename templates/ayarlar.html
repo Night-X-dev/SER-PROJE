@@ -3051,8 +3051,10 @@ row.innerHTML = `
     }
 
     // Edit header
-    function editHeader(id) {
-    fetch(`${API_BASE_URL}/api/work-progress-headers/${id}`, {
+    function editHeader(headerId) {
+    const apiUrl = `${window.location.origin}/api/work-progress-headers/${headerId}`.replace(/([^:]\/)\/+/g, '$1');
+    
+    fetch(apiUrl, {
         method: 'GET',
         headers: {
             'Accept': 'application/json',
@@ -3061,23 +3063,60 @@ row.innerHTML = `
     })
     .then(response => {
         if (!response.ok) {
-            return response.text().then(text => {
-                throw new Error(text || 'Başlık getirilemedi');
-            });
+            return response.json().then(err => { throw err; });
         }
         return response.json();
     })
     .then(header => {
-        headerModalLabel.textContent = 'Başlığı Düzenle';
+        // Populate the edit form
         document.getElementById('headerId').value = header.id;
         document.getElementById('headerTitle').value = header.title;
         document.getElementById('headerDescription').value = header.description || '';
         document.getElementById('headerIsActive').checked = header.is_active;
-        headerModal.show();
+        
+        // Change modal title and show
+        document.getElementById('addHeaderModalLabel').textContent = 'Başlığı Düzenle';
+        const modal = new bootstrap.Modal(document.getElementById('addHeaderModal'));
+        modal.show();
     })
     .catch(error => {
         console.error('Error fetching header:', error);
-        showToast('Başlık bilgileri alınırken bir hata oluştu: ' + error.message, true);
+        showToast(error.error || 'Başlık bilgileri alınırken bir hata oluştu', true);
+    });
+}
+
+function updateHeader(headerId, title, description, isActive) {
+    const apiUrl = `${window.location.origin}/api/work-progress-headers/${headerId}`.replace(/([^:]\/)\/+/g, '$1');
+    
+    fetch(apiUrl, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            title: title,
+            description: description,
+            is_active: isActive
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
+    .then(data => {
+        showToast('Başlık başarıyla güncellendi');
+        // Close the modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('addHeaderModal'));
+        if (modal) modal.hide();
+        // Refresh the headers list
+        loadHeaders();
+    })
+    .catch(error => {
+        console.error('Error updating header:', error);
+        showToast(error.error || 'Başlık güncellenirken bir hata oluştu', true);
     });
 }
 
