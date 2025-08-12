@@ -1,6 +1,8 @@
 # app.py
-from flask import Flask, logging, request, jsonify, render_template, session, redirect, url_for
+from flask import Flask, logging, request, jsonify, render_template, session, redirect, url_for, g
+from flask_seasurf import SeaSurf
 from flask_cors import CORS
+from flask_wtf.csrf import CSRFProtect, generate_csrf
 import pymysql.cursors
 import bcrypt
 import os
@@ -23,6 +25,9 @@ app = Flask(__name__)
 # Session management secret key
 # THIS SHOULD BE A SECURE AND UNPREDICTABLE STRING!
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex")
+
+# Initialize CSRF protection
+csrf = CSRFProtect(app)
 
 PRIORITY_TRANSLATIONS = {
     "low": "Düşük Öncelik",
