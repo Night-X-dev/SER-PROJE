@@ -3847,3 +3847,24 @@ def create_work_progress_header():
     except Exception as e:
         print(f"Error creating work progress header: {str(e)}")
         return jsonify({"error": "Başlık eklenirken bir hata oluştu"}), 500
+
+@app.route('/api/work-progress-headers/<int:header_id>', methods=['DELETE'])
+def delete_work_progress_header(header_id):
+    if 'user_id' not in session:
+        return jsonify({"error": "Oturum açık değil"}), 401
+
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                # First check if the header exists
+                cursor.execute("SELECT id FROM work_progress_headers WHERE id = %s", (header_id,))
+                if not cursor.fetchone():
+                    return jsonify({"error": "Başlık bulunamadı"}), 404
+
+                # Delete the header
+                cursor.execute("DELETE FROM work_progress_headers WHERE id = %s", (header_id,))
+                conn.commit()
+                return jsonify({"message": "Başlık başarıyla silindi"}), 200
+    except Exception as e:
+        print(f"Error deleting work progress header: {str(e)}")
+        return jsonify({"error": "Başlık silinirken bir hata oluştu"}), 500
