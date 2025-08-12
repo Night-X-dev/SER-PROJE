@@ -26,18 +26,9 @@ app = Flask(__name__)
 # THIS SHOULD BE A SECURE AND UNPREDICTABLE STRING!
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex")
 
-# Configure CSRF protection
-app.config['WTF_CSRF_ENABLED'] = True
-app.config['WTF_CSRF_SECRET_KEY'] = os.getenv("CSRF_SECRET_KEY", "anothersupersecretkey")
-app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour in seconds
-
 # Initialize CSRF protection
-csrf = CSRFProtect(app)
-
-# Make csrf_token available in all templates
-@app.context_processor
-def inject_csrf_token():
-    return dict(csrf_token=generate_csrf)
+csrf = CSRFProtect()
+csrf.init_app(app)
 
 PRIORITY_TRANSLATIONS = {
     "low": "Düşük Öncelik",
@@ -80,49 +71,10 @@ def serve_index_page():
 def serve_ayarlar_page():
     """Directs /ayarlar.html requests to the ayarlar.html page.
     All logged-in users can access, but content will be hidden on the frontend based on role."""
-    try:
-        if 'user_id' not in session:
-            print("[DEBUG] No user in session, redirecting to login")
-            return redirect(url_for('serve_login_page'))
-            
-        print(f"[DEBUG] Rendering ayarlar.html for user_id: {session.get('user_id')}")
-        
-        # Get user data
-        connection = get_db_connection()
-        if not connection:
-            print("[ERROR] Database connection failed")
-            return "Database connection error", 500
-            
-        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            # Get user details
-            cursor.execute("SELECT * FROM users WHERE id = %s", (session['user_id'],))
-            user = cursor.fetchone()
-            if not user:
-                print("[ERROR] User not found in database")
-                session.clear()
-                return redirect(url_for('serve_login_page'))
-                
-            # Get roles for dropdown
-            cursor.execute("SELECT * FROM yetki ORDER BY role_name")
-            roles = cursor.fetchall()
-            print(f"[DEBUG] Found {len(roles)} roles")
-            
-            return render_template('ayarlar.html',
-                                user=user,
-                                roles=roles,
-                                current_user=user)  # Pass user data to template
-                                
-    except pymysql.Error as e:
-        print(f"[ERROR] Database error in serve_ayarlar_page: {str(e)}")
-        return f"Database error: {str(e)}", 500
-    except Exception as e:
-        print(f"[ERROR] Unexpected error in serve_ayarlar_page: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return f"An unexpected error occurred: {str(e)}", 500
-    finally:
-        if 'connection' in locals() and connection:
-            connection.close()
+    if 'user_id' not in session:
+        return redirect(url_for('serve_login_page'))
+    # Allow all logged-in users to access the settings page
+    return render_template('ayarlar.html')
 
 @app.route('/kablo_hesap.html')
 def serve_kablo_hesap_page():
