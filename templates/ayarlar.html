@@ -1483,11 +1483,45 @@
                     </div>
                     <div id="accountSettingsMessage" class="form-message"></div>
                 </form>
-            </div>
-        </div>
         
         <!-- Second Row - Full width for pending users -->
         <div class="settings-row">
+            <!-- Kullanıcı Düzenleme Modalı -->
+            <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editUserModalLabel">Kullanıcı Bilgilerini Düzenle</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="editUserForm">
+                                <input type="hidden" id="editUserId">
+                                <div class="form-group">
+                                    <label for="editFullName">Ad Soyad</label>
+                                    <input type="text" id="editFullName" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="editEmail">Email</label>
+                                    <input type="email" id="editEmail" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="editRole">Rol</label>
+                                    <select id="editRole" class="form-control" required>
+                                        <option value="">Rol Seçiniz</option>
+                                        <!-- Roller buraya yüklenecek -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" id="cancelEditUser" data-bs-dismiss="modal">İptal</button>
+                                <button type="submit" class="btn btn-primary">Kaydet</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Onay Bekleyen Kullanıcılar -->
             <div class="settings-card" id="pendingApprovalsCard" style="width: 100%;">
             <div class="card-header">
@@ -1794,6 +1828,9 @@
                     <td data-label="Rol"><span class="role-badge ${badgeClass}">${user.role || ''}</span></td>
                     <td data-label="İşlemler">
                         <div style="display: flex; gap: 10px;">
+                            <button class="action-btn edit-user-btn" data-userid="${user.id}" title="Düzenle">
+                                <i class="fas fa-edit"></i>
+                            </button>
                             <button class="action-btn delete-user-btn" data-userid="${user.id}" title="Sil">
                                 <i class="fas fa-trash"></i>
                             </button>
@@ -1813,6 +1850,43 @@
                     showConfirmModal(`Kullanıcı Sil`, `${userName} kullanıcısını silmek istediğinize emin misiniz?`, () => {
                         deleteUser(userId, userName);
                     });
+                });
+            });
+            
+            // Edit butonlarına tıklama olayı ekle
+            document.querySelectorAll('.edit-user-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const userId = this.getAttribute('data-userid');
+                    const row = this.closest('tr');
+                    const fullName = row.cells[0].textContent;
+                    const email = row.cells[1].textContent;
+                    const role = row.cells[2].querySelector('.role-badge').textContent.trim();
+                    
+                    // Modal alanlarını doldur
+                    document.getElementById('editUserId').value = userId;
+                    document.getElementById('editFullName').value = fullName;
+                    document.getElementById('editEmail').value = email;
+                    
+                    // Rol seçeneğini ayarla (modal açıldığında diğer roller yüklenecek)
+                    const editUserModal = new bootstrap.Modal(document.getElementById('editUserModal'));
+                    editUserModal.show();
+                    
+                    // Mevcut rolü seçili yap
+                    const roleSelect = document.getElementById('editRole');
+                    if (roleSelect) {
+                        // Rol yüklendikten sonra seçili yap
+                        const checkRole = setInterval(() => {
+                            if (roleSelect.options.length > 1) {
+                                for (let i = 0; i < roleSelect.options.length; i++) {
+                                    if (roleSelect.options[i].value === role) {
+                                        roleSelect.selectedIndex = i;
+                                        break;
+                                    }
+                                }
+                                clearInterval(checkRole);
+                            }
+                        }, 100);
+                    }
                 });
             });
             updatePagination(usersToRender.length, currentPage, Math.ceil(usersToRender.length / rowsPerPage));
@@ -2041,14 +2115,14 @@ async function deleteRole(roleId) {
         showToast(error.message, true);
     }
 }
-    
-        // DOM içeriği tamamen yüklendiğinde çalışacak ana kısım
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('LocalStorage currentUser:', localStorage.getItem('currentUser'));
-    
+
+// DOM içeriği tamamen yüklendiğinde çalışacak ana kısım
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('LocalStorage currentUser:', localStorage.getItem('currentUser'));
+
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
     console.log('Current User Data:', currentUser);
-    
+
     // Admin kontrolü
     if (currentUser && currentUser.role === 'Admin') {
         console.log('Admin hesabı tespit edildi');
