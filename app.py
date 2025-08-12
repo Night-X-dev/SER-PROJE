@@ -3885,7 +3885,6 @@ def get_active_work_progress_headers():
         return jsonify({"error": "Başlıklar getirilirken bir hata oluştu"}), 500
 
 @app.route('/api/progress/<int:progress_id>/complete', methods=['POST'])
-@login_required
 def complete_progress(progress_id):
     try:
         data = request.get_json()
