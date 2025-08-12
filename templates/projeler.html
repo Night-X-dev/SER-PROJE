@@ -3229,7 +3229,6 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
     return;
   }
 
-  // Zaten bir ekleme formu varsa yeni bir tane daha açma
   if (document.getElementById('newProgressForm')) {
     console.log("Zaten açık bir ekleme formu var, yeni form açılmayacak.");
     showToast("Zaten açık bir ekleme formu var.", false);
@@ -3248,15 +3247,14 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
     return;
   }
 
-  console.log("Yeni form oluşturuluyor");
   const formElement = document.createElement('div');
   formElement.id = 'newProgressForm';
   formElement.className = 'progress-detail-item';
   formElement.innerHTML = `
     <div class="progress-item-header">
       <div class="input-group" style="flex: 1;">
-        <label for="newStepName">Adım Başlığı</label>
-        <select id="newStepName" class="form-select" required>
+        <label for="newStepHeader">Başlık</label>
+        <select id="newStepHeader" class="form-select" required>
           <option value="">Başlık seçiniz...</option>
           ${headersList.map(h => `<option value="${h.id}">${h.title}</option>`).join('')}
         </select>
@@ -3284,14 +3282,8 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
 
   progressStepsContainer.appendChild(formElement);
 
-  // Butonlar
-  const saveNewProgressBtn = document.getElementById('saveNewProgressBtn');
-  const cancelAddProgressBtn = document.getElementById('cancelAddProgressBtn');
-
-  saveNewProgressBtn.addEventListener('click', async () => {
-    console.log("Kaydet butonuna tıklandı");
-    const stepNameSelect = document.getElementById('newStepName');
-    const headerId = stepNameSelect.value;
+  document.getElementById('saveNewProgressBtn').addEventListener('click', async () => {
+    const headerId = document.getElementById('newStepHeader').value;
     const startDate = document.getElementById('newStepStartDate').value;
     const endDate = document.getElementById('newStepEndDate').value;
     const description = document.getElementById('newStepDescription').value;
@@ -3321,7 +3313,6 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
         await updateProjectDatesFromSteps(projectId);
         fetchProgressSteps(projectId, true);
         fetchProjects();
-
         addActivity('İş Adımı Eklendi', `Proje ID: ${projectId} için başlık ID ${headerId} ile iş adımı eklendi.`, projectId, 'fas fa-tasks', 'progress_add');
       } else {
         showToast(`Hata: ${data.message}`, true);
@@ -3332,12 +3323,12 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
     }
   });
 
-  cancelAddProgressBtn.addEventListener('click', () => {
-    console.log("İptal butonuna tıklandı");
+  document.getElementById('cancelAddProgressBtn').addEventListener('click', () => {
     formElement.remove();
     showToast("İş adımı ekleme iptal edildi.", false);
   });
 }
+
 
 
   async function editProgressStep(progressId, projectId, updatedStepData) {
