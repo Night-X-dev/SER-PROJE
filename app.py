@@ -1,7 +1,6 @@
 # app.py
-from flask import Flask, logging, request, jsonify, render_template, session, redirect, url_for, g
+from flask import Flask, logging, request, jsonify, render_template, session, redirect, url_for
 from flask_cors import CORS
-from flask_wtf.csrf import CSRFProtect, generate_csrf
 import pymysql.cursors
 import bcrypt
 import os
@@ -24,13 +23,6 @@ app = Flask(__name__)
 # Session management secret key
 # THIS SHOULD BE A SECURE AND UNPREDICTABLE STRING!
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex")
-app.config['WTF_CSRF_ENABLED'] = True
-app.config['WTF_CSRF_SECRET_KEY'] = os.getenv("CSRF_SECRET_KEY", "anothersupersecretkey")
-app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour in seconds
-
-# Initialize CSRF protection
-csrf = CSRFProtect()
-csrf.init_app(app)
 
 PRIORITY_TRANSLATIONS = {
     "low": "Düşük Öncelik",
@@ -67,92 +59,40 @@ def serve_index_page():
     return render_template('index.html')
 
 @app.route('/ayarlar.html')
-@csrf.exempt  # Temporarily exempt this route from CSRF for testing
 def serve_ayarlar_page():
     """Directs /ayarlar.html requests to the ayarlar.html page.
     All logged-in users can access, but content will be hidden on the frontend based on role."""
-    print("\n[DEBUG] serve_ayarlar_page called")
-    
     if 'user_id' not in session:
-        print("[ERROR] No user in session")
         return redirect(url_for('serve_login_page'))
     
-    print(f"[DEBUG] User ID in session: {session['user_id']}")
-    
-    connection = None
+    # Get user info to pass to the template
     try:
-        # 1. Get database connection
-        print("[DEBUG] Getting database connection...")
         connection = get_db_connection()
-        if not connection:
-            print("[ERROR] Failed to get database connection")
-            return jsonify({"error": "Veritabanı bağlantısı kurulamadı."}), 500
-            
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            # 2. Get user details
-            print("[DEBUG] Fetching user details...")
+            # Get user details
             cursor.execute("SELECT * FROM users WHERE id = %s", (session['user_id'],))
             user = cursor.fetchone()
-            print(f"[DEBUG] User details: {user}")
             
             if not user:
-                print("[ERROR] User not found in database")
                 session.clear()
                 return redirect(url_for('serve_login_page'))
                 
-            # 3. Get roles for dropdown
-            print("[DEBUG] Fetching roles...")
-            cursor.execute("SHOW TABLES LIKE 'yetki'")
-            table_exists = cursor.fetchone()
-            
-            if not table_exists:
-                print("[ERROR] 'yetki' table does not exist")
-                return jsonify({"error": "Roles table not found."}), 500
-                
+            # Get roles for dropdown
             cursor.execute("SELECT * FROM yetki ORDER BY role_name")
             roles = cursor.fetchall()
-            print(f"[DEBUG] Found {len(roles)} roles")
             
-            # 4. Render template with data
-            print("[DEBUG] Rendering template...")
             return render_template('ayarlar.html', 
                                 user=user, 
                                 roles=roles,
                                 current_role=user.get('role', ''))
                                 
-    except pymysql.Error as db_err:
-        error_msg = f"Database error: {str(db_err)}"
-        print(f"[ERROR] {error_msg}")
-        return jsonify({
-            "error": "Veritabanı hatası oluştu.",
-            "details": str(db_err)
-        }), 500
-        
     except Exception as e:
-        import traceback
-        error_trace = traceback.format_exc()
-        print(f"[ERROR] Unexpected error in serve_ayarlar_page: {str(e)}")
-        print(f"[DEBUG] Traceback:\n{error_trace}")
-        
-        # Check if the error is template-related
-        if 'TemplateNotFound' in str(e):
-            return jsonify({
-                "error": "Template dosyası bulunamadı.",
-                "template": "ayarlar.html"
-            }), 500
-            
-        return jsonify({
-            "error": "Beklenmeyen bir hata oluştu.",
-            "details": str(e)
-        }), 500
-        
+        print(f"[ERROR] Error in serve_ayarlar_page: {str(e)}")
+        return jsonify({"error": "Sayfa yüklenirken bir hata oluştu."}), 500
     finally:
-        if connection:
-            try:
-                connection.close()
-                print("[DEBUG] Database connection closed")
-            except Exception as close_err:
-                print(f"[WARNING] Error closing connection: {str(close_err)}")
+        if 'connection' in locals() and connection:
+            connection.close()
+    return render_template('ayarlar.html')
 
 @app.route('/kablo_hesap.html')
 def serve_kablo_hesap_page():
