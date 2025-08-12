@@ -2743,26 +2743,7 @@ function attachProjectTableEventListeners() {
             // İş adımlarını yükle - fetchProgressSteps
             await fetchProgressSteps(project.project_id, true);
             console.log("İş adımları yüklendi. Modal hazır.");
-            if (projectEditModal) {
-            projectEditModal.addEventListener('shown.bs.modal', function() {
-                // Tüm tamamlanmış adımları seç
-                const completedSteps = document.querySelectorAll('#progress-steps-container .progress-step[data-is-completed="1"]');
-
-                completedSteps.forEach(step => {
-                    // Adım içerisindeki tüm form elemanlarını pasif hale getir
-                    const formElements = step.querySelectorAll('input, select, textarea');
-                    formElements.forEach(element => {
-                        element.disabled = true;
-                    });
-
-                    // Checkbox'ı seçili hale getir
-                    const checkbox = step.querySelector('input[type="checkbox"]');
-                    if (checkbox) {
-                        checkbox.checked = true;
-                    }
-                });
-            });
-        }
+            
 
         } catch (error) {
             console.error("renderEditModal ile ilgili bir hata oluştu:", error);
