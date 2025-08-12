@@ -3194,6 +3194,41 @@ stepElement.innerHTML = `
                         });
                     });
                 });
+                document.querySelectorAll('.completed-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', async function() {
+        const progressId = this.dataset.id;
+        const isChecked = this.checked;
+        
+        if (isChecked) {
+            const confirmed = confirm('Bu iş gidişatını tamamlandı olarak işaretlemek istediğinize emin misiniz? Bu işlem geri alınamaz!');
+            if (!confirmed) {
+                this.checked = false;
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}/complete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ completed: true })
+                });
+
+                if (response.ok) {
+                    showToast('İş gidişatı tamamlandı olarak işaretlendi.');
+                    fetchProgressSteps(projectId, true);
+                } else {
+                    const data = await response.json();
+                    showToast(`Hata: ${data.message}`, true);
+                    this.checked = false;
+                }
+            } catch (error) {
+                console.error('Tamamlama işlemi sırasında hata:', error);
+                showToast('Bir hata oluştu, lütfen tekrar deneyin.', true);
+                this.checked = false;
+            }
+        }
+    });
+});
 
                 document.querySelectorAll('.delete-progress-btn').forEach(button => {
                     button.addEventListener('click', (e) => {
