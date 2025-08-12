@@ -1164,7 +1164,33 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/tr.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-
+// Form gönderim işlemi
+document.addEventListener('DOMContentLoaded', function() {
+    const formElement = document.querySelector('form'); // veya formunuzun ID'sini kullanın: document.getElementById('form-id')
+    if (formElement) {
+        formElement.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const progressItems = [];
+            document.querySelectorAll('.progress-item').forEach(item => {
+                const id = item.id.replace('progress-', '');
+                const titleSelect = item.querySelector('[id$="-title"]');
+                
+                if (titleSelect) {
+                    progressItems.push({
+                        header_id: titleSelect.value,
+                        header_title: titleSelect.options[titleSelect.selectedIndex]?.text || '',
+                        // Diğer alanlar...
+                    });
+                }
+            });
+            
+            // Form verisini gönder...
+            console.log('Gönderilecek veri:', progressItems);
+            // Burada form verisini sunucuya gönderme işlemini yapabilirsiniz
+        });
+    }
+});
         let confirmCallback = null; 
         let currentUser = null; // Mevcut kullanıcı bilgisi
 
@@ -1445,32 +1471,30 @@ formElement.addEventListener('submit', function(e) {
                 const currentId = `progress-${progressStepCounter++}`;
 
                 newItem.innerHTML = `
-                    <div class="progress-item-header">
-                        <div class="input-group" style="flex: 1;">
-                                <label for="${currentId}-title">Başlık</label>
-                                    <select id="${currentId}-title" class="form-select" required>
-                                   <option value="">Başlık seçiniz...</option>
-                                   </select>
-                        </div>
-                            <input type="text" id="${currentId}-title" value="${itemData.title || ''}" placeholder="İş gidişat başlığı" required>
-                        </div>
-                        <div class="progress-dates" style="margin-left: 20px;">
-                            <span><i class="far fa-calendar-alt"></i> 
-                                <input type="text" id="${currentId}-start" class="datepicker progress-datepicker" placeholder="Başlangıç" value="${itemData.startDate || ''}" required>
-                            </span>
-                            <span><i class="far fa-calendar-alt"></i> 
-                                <input type="text" id="${currentId}-end" class="datepicker progress-datepicker" placeholder="Bitiş" value="${itemData.endDate || ''}" required>
-                            </span>
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        <label for="${currentId}-desc">Açıklama</label>
-                        <textarea id="${currentId}-desc" class="progress-description-textarea" placeholder="İş gidişat açıklaması">${itemData.description || ''}</textarea>
-                    </div>
-                    <div class="progress-actions">
-                        <button type="button" class="action-btn delete-progress-btn"><i class="fas fa-trash"></i> Sil</button>
-                    </div>
-                `;
+    <div class="progress-item-header">
+        <div class="input-group" style="flex: 1;">
+            <label for="${currentId}-title">Başlık</label>
+            <select id="${currentId}-title" class="form-select" required>
+                <option value="">Başlık seçiniz...</option>
+            </select>
+        </div>
+        <div class="progress-dates" style="margin-left: 20px;">
+            <span><i class="far fa-calendar-alt"></i> 
+                <input type="text" id="${currentId}-start" class="datepicker progress-datepicker" placeholder="Başlangıç" value="${itemData.startDate || ''}" required>
+            </span>
+            <span><i class="far fa-calendar-alt"></i> 
+                <input type="text" id="${currentId}-end" class="datepicker progress-datepicker" placeholder="Bitiş" value="${itemData.endDate || ''}" required>
+            </span>
+        </div>
+    </div>
+    <div class="input-group">
+        <label for="${currentId}-desc">Açıklama</label>
+        <textarea id="${currentId}-desc" class="progress-description-textarea" placeholder="İş gidişat açıklaması">${itemData.description || ''}</textarea>
+    </div>
+    <div class="progress-actions">
+        <button type="button" class="action-btn delete-progress-btn"><i class="fas fa-trash"></i> Sil</button>
+    </div>
+`;
 
                 progressList.appendChild(newItem);
 
