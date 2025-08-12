@@ -113,7 +113,105 @@
         font-size: 20px;
         margin-right: 12px;
       }
+/* Checkbox Stilleri */
+.checkbox-wrapper-46 {
+    margin-right: 15px;
+    display: flex;
+    align-items: center;
+}
 
+.checkbox-wrapper-46 input[type="checkbox"] {
+    display: none;
+    visibility: hidden;
+}
+
+.checkbox-wrapper-46 .cbx {
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    margin: 0;
+}
+
+.checkbox-wrapper-46 .cbx span:first-child {
+    position: relative;
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    transform: scale(1);
+    vertical-align: middle;
+    border: 1px solid #9098a9;
+    transition: all 0.2s ease;
+    margin-right: 8px;
+}
+
+.checkbox-wrapper-46 .cbx span:first-child svg {
+    position: absolute;
+    top: 3px;
+    left: 2px;
+    fill: none;
+    stroke: #ffffff;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 16px;
+    stroke-dashoffset: 16px;
+    transition: all 0.3s ease;
+    transition-delay: 0.1s;
+    transform: translate3d(0, 0, 0);
+}
+
+.checkbox-wrapper-46 .cbx:hover span:first-child {
+    border-color: #506eec;
+}
+
+.checkbox-wrapper-46 .inp-cbx:checked + .cbx span:first-child {
+    background: #506eec;
+    border-color: #506eec;
+    animation: wave-46 0.4s ease;
+}
+
+.checkbox-wrapper-46 .inp-cbx:checked + .cbx span:first-child svg {
+    stroke-dashoffset: 0;
+}
+
+.checkbox-wrapper-46 .inp-cbx:checked + .cbx span:first-child:before {
+    transform: scale(3.5);
+    opacity: 0;
+    transition: all 0.6s ease;
+}
+
+@keyframes wave-46 {
+    50% {
+        transform: scale(0.9);
+    }
+}
+
+/* Mevcut stillerle uyumluluk için */
+.progress-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.action-btn {
+    margin-left: 5px;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.action-btn i {
+    margin-right: 5px;
+}
+</style>
       .logo-text {
         font-size: 20px;
         font-weight: 700;
@@ -3122,16 +3220,23 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     `<div class="progress-detail-description">Açıklama: ${step.description || 'Yok'}</div>`;
 
                 // Önce mevcut actionsContent değişkenini bulun ve şu şekilde güncelleyin:
+// actionsContent değişkenini şu şekilde güncelleyin:
 const actionsContent = isEditable ?
     `
     <div class="progress-actions d-flex justify-content-between align-items-center">
-        <div class="form-check form-switch me-3">
-            <input class="form-check-input complete-step-checkbox" type="checkbox" 
+        <div class="checkbox-wrapper-46 me-3">
+            <input type="checkbox" 
                    id="complete-${step.progress_id}" 
+                   class="inp-cbx complete-step-checkbox"
                    ${step.status === 'tamamlandi' ? 'checked' : ''}
-                   data-id="${step.progress_id}">
-            <label class="form-check-label" for="complete-${step.progress_id}">
-                ${step.status === 'tamamlandi' ? 'Tamamlandı' : 'Tamamla'}
+                   data-id="${step.progress_id}" />
+            <label for="complete-${step.progress_id}" class="cbx">
+                <span>
+                    <svg viewBox="0 0 12 10" height="10px" width="12px">
+                        <polyline points="1.5 6 4.5 9 10.5 1"></polyline>
+                    </svg>
+                </span>
+                <span>${step.status === 'tamamlandi' ? 'Tamamlandı' : 'Tamamla'}</span>
             </label>
         </div>
         <div>
