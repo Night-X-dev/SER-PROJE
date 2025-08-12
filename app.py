@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 import urllib.parse
 import re
 import traceback # Import traceback for detailed error logging
+
+# E-posta göndermek için gerekli kütüphaneler
 import smtplib
 import ssl
 from email.mime.text import MIMEText
@@ -2970,9 +2972,6 @@ def update_user(user_id):
         # Check if user is admin (temporarily disabled for testing)
         # if session.get('role') != 'Admin':
         #     return jsonify({"error": "Bu işlem için yetkiniz yok."}), 403
-    except Exception as e:
-        print(f"JSON veri okunurken hata: {e}")
-        return jsonify({"error": "Geçersiz istek verisi."}), 400
 
     connection = None
     try:
