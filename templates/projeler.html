@@ -3092,7 +3092,27 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                             <span id="step-${step.progress_id}-real-end-display" style="font-weight: bold;">${realEndDateValue}</span>
                         </span>
                     </div>` : '';
+// renderProgressSteps fonksiyonunda, iş adımı oluşturulurken checkbox'ı ekleyin
+const completedCheckbox = isEditable ?
+    `<div class="form-check">
+        <input type="checkbox" class="form-check-input completed-checkbox" 
+               id="step-${step.progress_id}-completed" 
+               ${step.status === 'tamamlandi' ? 'checked' : ''}
+               data-id="${step.progress_id}">
+        <label class="form-check-label" for="step-${step.progress_id}-completed">Tamamlandı</label>
+    </div>` :
+    `<span class="badge ${step.status === 'tamamlandi' ? 'bg-success' : 'bg-secondary'}">
+        ${step.status === 'tamamlandi' ? 'Tamamlandı' : 'Devam Ediyor'}
+    </span>`;
 
+// İş adımı HTML'ine checkbox'ı ekleyin
+stepElement.innerHTML = `
+    <!-- Diğer içerikler... -->
+    <div class="progress-actions">
+        ${completedCheckbox}
+        <!-- Diğer butonlar... -->
+    </div>
+`;
                 let delayInfoHtml = '';
 
                 // Hesaplanan gecikme (delay_days)
