@@ -1104,7 +1104,7 @@ def register_user():
         email = data.get('email')
         phone = data.get('phone')
         password = data.get('password')
-        role = 'ziyaretci'  # Kullanıcının seçtiği rolü dikkate alma, varsayılan olarak 'ziyaretci' ata
+        role = 'Ziyaretçi'  # Kullanıcının seçtiği rolü dikkate alma, varsayılan olarak 'ziyaretci' ata
 
         if not all([fullname, email, phone, password]):
             return jsonify({'message': 'Tüm alanları doldurmanız gerekmektedir.'}), 400
