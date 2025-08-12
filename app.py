@@ -1094,49 +1094,53 @@ def update_role_permissions():
 # User Registration API
 @app.route('/api/register', methods=['POST'])
 def register_user():
-    """Registers a new user."""
-    data = request.get_json()
-    fullname = data.get('fullname')
-    email = data.get('email')
-    phone = data.get('phone', '')
-    password = data.get('password')
-    role = data.get('role', 'Employee') # Default position if not provided
-    profile_picture = data.get('profile_picture')
-    hide_email = data.get('hide_email', 0)
-    hide_phone = data.get('hide_phone', 0)
-
-    if not all([fullname, email, password, role]):
-        return jsonify({'message': 'Please fill in all required fields.'}), 400
-
-    connection = None
+    """
+    Kullanıcı kaydı için API endpoint'i.
+    Kullanıcının seçtiği rol yerine varsayılan olarak 'ziyaretci' rolü atar.
+    """
     try:
+        data = request.get_json()
+        fullname = data.get('fullname')
+        email = data.get('email')
+        phone = data.get('phone')
+        password = data.get('password')
+        role = 'ziyaretci'  # Kullanıcının seçtiği rolü dikkate alma, varsayılan olarak 'ziyaretci' ata
+
+        if not all([fullname, email, phone, password]):
+            return jsonify({'message': 'Tüm alanları doldurmanız gerekmektedir.'}), 400
+
+        # E-posta formatı ve telefon numarası formatı için basit kontrol
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            return jsonify({'message': 'Geçerli bir e-posta adresi girin.'}), 400
+        
+        # Parola hash'leme
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
         connection = get_db_connection()
+        if connection is None:
+            return jsonify({'message': 'Veritabanı bağlantısı kurulamadı.'}), 500
+
         with connection.cursor() as cursor:
-            cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
-            existing_user = cursor.fetchone()
-            if existing_user:
-                return jsonify({'message': 'This email address is already in use.'}), 409
+            # E-posta adresinin zaten var olup olmadığını kontrol et
+            sql_check = "SELECT id FROM users WHERE email = %s"
+            cursor.execute(sql_check, (email,))
+            if cursor.fetchone():
+                return jsonify({'message': 'Bu e-posta adresi zaten kayıtlı.'}), 409
 
-            hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-            sql = """
-            INSERT INTO users (fullname, email, phone, password, role, profile_picture, hide_email, hide_phone)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """
-            cursor.execute(sql, (fullname, email, phone, hashed_password, role, profile_picture, hide_email, hide_phone))
+            # Yeni kullanıcıyı kaydet
+            sql_insert = "INSERT INTO users (fullname, email, phone, password, role) VALUES (%s, %s, %s, %s, %s)"
+            cursor.execute(sql_insert, (fullname, email, phone, hashed_password, role))
             connection.commit()
-        return jsonify({'message': 'Registration successful!'}), 201
-    except pymysql.Error as e:
-        print(f"Database registration error: {e}")
-        if e.args[0] == 1062:
-            return jsonify({'message': 'This email address is already in use.'}), 409
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
-    except Exception as e:
-        print(f"General registration error: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
-    finally:
-        if connection:
-            connection.close()
 
+        return jsonify({'message': 'Kayıt başarılı! Yöneticinin onayı bekleniyor.'}), 201
+
+    except Exception as e:
+        app.logger.error(f"Kullanıcı kayıt hatası: {e}")
+        traceback.print_exc()
+        return jsonify({'message': 'Kayıt sırasında bir hata oluştu.'}), 500
+    finally:
+        if 'connection' in locals() and connection.open:
+            connection.close()
 
 @app.route('/api/login', methods=['POST'])
 def login_user():
