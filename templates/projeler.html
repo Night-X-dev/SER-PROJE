@@ -4157,36 +4157,84 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+const progressStepsContainer = document.querySelector('#progress-steps-container');
+        if (progressStepsContainer) {
+            progressStepsContainer.addEventListener('change', function(e) {
+                if (e.target && e.target.matches('input[type="checkbox"]')) {
+                    handleCheckboxChange(e.target);
+                }
+            });
+        }
 
-async function updateProgressStatus(progressId, isChecked) {
-    const checkbox = document.querySelector(`#complete-${progressId}`);
-    try {
-        const response = await fetch(`/api/progress/${progressId}/complete`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
+        async function handleCheckboxChange(checkbox) {
+            const progressId = checkbox.dataset.progressId;
+            const isChecked = checkbox.checked;
+
+            if (isChecked) {
+                if (confirm('Bu adımı tamamlamak istediğinizden emin misiniz? (Bu işlem geri alınamaz)')) {
+                    await updateProgressStatus(progressId, true);
+                } else {
+                    checkbox.checked = false;
+                }
+            } else {
+                await updateProgressStatus(progressId, false);
+            }}
+            async function updateProgressStatus(progressId, isChecked) {
+        const checkbox = document.querySelector(`#complete-${progressId}`);
+        try {
+            const response = await fetch(`/api/progress/${progressId}/complete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+            
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || 'Bir hata oluştu');
             }
-        });
 
-        const result = await response.json();
-        
-        if (!response.ok || !result.success) {
-            throw new Error(result.message || 'Bir hata oluştu');
+            showToast('Başarılı', 'İşlem başarıyla tamamlandı', 'success');
+            
+            // Refresh the progress steps
+            const projectId = document.querySelector('.project-details')?.dataset.projectId;
+            if (projectId) {
+                // fetchProgressSteps fonksiyonunun burada çağrıldığını varsayıyoruz.
+                // Eğer bu fonksiyon yoksa, bu satırı kaldırabilirsiniz.
+                // await fetchProgressSteps(projectId);
+            }
+        } catch (error) {
+            console.error('Hata:', error);
+            showToast('Hata', error.message || 'İşlem sırasında bir hata oluştu', 'error');
+            checkbox.checked = !isChecked;
         }
-
-        showToast('Başarılı', 'İşlem başarıyla tamamlandı', 'success');
-        
-        // Refresh the progress steps
-        const projectId = document.querySelector('.project-details')?.dataset.projectId;
-        if (projectId) {
-            await fetchProgressSteps(projectId);
-        }
-    } catch (error) {
-        console.error('Hata:', error);
-        showToast('Hata', error.message || 'İşlem sırasında bir hata oluştu', 'error');
-        checkbox.checked = !isChecked;
     }
-}
+    function showToast(title, message, type) {
+        const toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            // Eğer toast-container yoksa, bir tane oluştur
+            const newToastContainer = document.createElement('div');
+            newToastContainer.id = 'toast-container';
+            document.body.appendChild(newToastContainer);
+        }
+        
+        // Bootstrap'in kendi Toast bileşenini kullandığını varsayarak...
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        document.getElementById('toast-container').appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast, { delay: 5000 });
+        bsToast.show();
+    }
 </script>
     <script src="static/bildirim.js"></script>
     <script src="static/user-avatar.js"></script>
