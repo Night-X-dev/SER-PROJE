@@ -3887,15 +3887,25 @@ def get_active_work_progress_headers():
 
 @app.route('/api/progress/<int:progress_id>/complete', methods=['POST'])
 def complete_progress(progress_id):
+    conn = None
+    cursor = None
     try:
-        cursor = get_db_connection().cursor()
+        conn = get_db_connection()
+        cursor = conn.cursor()
         cursor.execute("""
             UPDATE project_progress 
             SET is_completed = 1
             WHERE progress_id = %s
         """, (progress_id,))
-        get_db_connection().commit()
+        conn.commit()
         return jsonify({'success': True, 'message': 'İşlem başarılı'})
     except Exception as e:
         print(f"Hata: {str(e)}")
+        if conn:
+            conn.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()

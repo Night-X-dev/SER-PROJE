@@ -1077,7 +1077,13 @@
         color: red;
         font-weight: bold;
       }
+      .toast-success {
+    background-color: #28a745 !important; /* Green for success */
+}
 
+.toast-error {
+    background-color: #dc3545 !important; /* Red for error */
+}
       /* Toast Message Styling (Fix for visual issues) */
       .toast {
         position: fixed;
@@ -3330,7 +3336,26 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 });
             }
         }
+// Remove any existing click handlers
+document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
+    checkbox.onclick = null;
+});
 
+// Add new click handler
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.complete-step-checkbox')) {
+        e.preventDefault();
+        const checkbox = e.target.closest('.complete-step-checkbox');
+        const progressId = checkbox.dataset.id;
+        const isChecked = checkbox.checked;
+        
+        if (confirm('Bu iş gidişatını tamamlandı olarak işaretlemek istediğinize emin misiniz?')) {
+            updateProgressStatus(progressId, isChecked);
+        } else {
+            checkbox.checked = !isChecked;
+        }
+    }
+});
         const addProgressStepButton = document.getElementById("addProgressStepBtn");
         if (addProgressStepButton) {
             addProgressStepButton.onclick = null;
@@ -4135,11 +4160,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function updateProgressStatus(progressId, isChecked) {
     const checkbox = document.querySelector(`#complete-${progressId}`);
-    if (!confirm('Bu iş gidişatını tamamlandı olarak işaretlemek istediğinize emin misiniz?')) {
-        checkbox.checked = !isChecked;
-        return;
-    }
-
     try {
         const response = await fetch(`/api/progress/${progressId}/complete`, {
             method: 'POST',
@@ -4148,19 +4168,18 @@ async function updateProgressStatus(progressId, isChecked) {
             }
         });
 
-        if (!response.ok) {
-            throw new Error('Sunucu hatası');
+        const result = await response.json();
+        
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || 'Bir hata oluştu');
         }
 
-        const result = await response.json();
-        if (result.success) {
-            showToast('Başarılı', 'İşlem başarıyla tamamlandı', 'success');
-            const projectId = document.querySelector('.project-details')?.dataset.projectId;
-            if (projectId) {
-                await fetchProgressSteps(projectId);
-            }
-        } else {
-            throw new Error(result.message || 'Bir hata oluştu');
+        showToast('Başarılı', 'İşlem başarıyla tamamlandı', 'success');
+        
+        // Refresh the progress steps
+        const projectId = document.querySelector('.project-details')?.dataset.projectId;
+        if (projectId) {
+            await fetchProgressSteps(projectId);
         }
     } catch (error) {
         console.error('Hata:', error);
