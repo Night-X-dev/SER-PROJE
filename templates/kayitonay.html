@@ -699,28 +699,47 @@ const refreshPendingUsersButton = document.getElementById('refreshPendingUsersBu
 
         // 1. Onay Bekleyen Kullanıcıları Yükleme Fonksiyonu
         function loadPendingUsers() {
-            fetch(`${API_BASE_URL}/pending-users`)
+    // First, fetch the available roles
+    fetch(`${API_BASE_URL}/api/yetkitable`)
+        .then(response => {
+            if (!response.ok) throw new Error('Roller getirilemedi.');
+            return response.json();
+        })
+        .then(roles => {
+            // Now fetch the pending users
+            return fetch(`${API_BASE_URL}/api/pending-users`)
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Bekleyen kullanıcılar getirilemedi.');
-                    }
+                    if (!response.ok) throw new Error('Bekleyen kullanıcılar getirilemedi.');
                     return response.json();
                 })
                 .then(users => {
-                    if (pendingUsersTableBody) { // null kontrolü ekledik
-                        pendingUsersTableBody.innerHTML = ''; // Tabloyu temizle
+                    const pendingUsersTableBody = document.getElementById('pendingUsersTableBody');
+                    const emptyState = document.getElementById('emptyState');
+                    if (pendingUsersTableBody) {
+                        pendingUsersTableBody.innerHTML = '';
                         if (users.length === 0) {
-                            pendingUsersTableBody.innerHTML = '<tr><td colspan="6">Onay bekleyen kullanıcı bulunmamaktadır.</td></tr>';
+                            if (emptyState) emptyState.style.display = 'block';
+                            pendingUsersTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Onay bekleyen kullanıcı bulunmamaktadır.</td></tr>';
                             return;
+                        } else {
+                            if (emptyState) emptyState.style.display = 'none';
                         }
-
                         users.forEach(user => {
                             const row = document.createElement('tr');
+                            
+                            // Create role select dropdown
+                            let roleSelect = '<select class="form-select role-select" data-userid="' + user.id + '">';
+                            roles.forEach(role => {
+                                const selected = (role.role_name === user.role) ? 'selected' : '';
+                                roleSelect += `<option value="${role.role_name}" ${selected}>${role.role_name}</option>`;
+                            });
+                            roleSelect += '</select>';
+                            
                             row.innerHTML = `
                                 <td>${user.fullname || 'N/A'}</td>
                                 <td>${user.email || 'N/A'}</td>
                                 <td>${user.phone || 'N/A'}</td>
-                                <td>${user.role || 'N/A'}</td>
+                                <td>${roleSelect}</td>
                                 <td>${user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}</td>
                                 <td>
                                     <div style="display: flex; gap: 5px;">
@@ -736,15 +755,16 @@ const refreshPendingUsersButton = document.getElementById('refreshPendingUsersBu
                             pendingUsersTableBody.appendChild(row);
                         });
                     }
-                })
-                .catch(error => {
-                    console.error('Kullanıcıları yüklerken hata oluştu:', error);
-                    if (pendingUsersTableBody) {
-                        pendingUsersTableBody.innerHTML = '<tr><td colspan="6">Kullanıcılar yüklenirken bir hata oluştu.</td></tr>';
-                    }
                 });
-        }
-
+        })
+        .catch(error => {
+            const pendingUsersTableBody = document.getElementById('pendingUsersTableBody');
+            if (pendingUsersTableBody) {
+                pendingUsersTableBody.innerHTML = '<tr><td colspan="7">Kullanıcılar yüklenirken bir hata oluştu.</td></tr>';
+            }
+            showToast(`Bekleyen kullanıcılar yüklenirken hata oluştu: ${error.message}`, true);
+        });
+}
         // 2. Kullanıcıyı Onaylama Fonksiyonu - DOMContentLoaded içine taşıdık
         function approveUser(userId) { // Artık 'window.' kullanmaya gerek yok, çünkü doğru kapsamda
             if (confirm('Bu kullanıcıyı onaylamak istediğinizden emin misiniz?')) {

@@ -911,31 +911,38 @@ def get_pending_users():
 
 @app.route('/api/users/approve/<int:user_id>', methods=['PATCH'])
 def approve_user(user_id):
-    """Approves a user by setting their 'onay' status to 1."""
+    """Approves a user by setting their 'onay' status to 1 and updating their role."""
     connection = None
     try:
+        # Get the selected role from the request headers
+        selected_role = request.headers.get('X-Selected-Role')
+        if not selected_role:
+            return jsonify({'message': 'Rol seçimi bulunamadı.'}), 400
+
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # First, verify the user exists and is pending approval
             cursor.execute("SELECT id, onay FROM users WHERE id = %s", (user_id,))
             user = cursor.fetchone()
 
             if not user:
-                return jsonify({'message': 'User not found.'}), 404
+                return jsonify({'message': 'Kullanıcı bulunamadı.'}), 404
             if user['onay'] == 1:
-                return jsonify({'message': 'User already approved.'}), 400
+                return jsonify({'message': 'Bu kullanıcı zaten onaylanmış.'}), 400
 
-            sql = "UPDATE users SET onay = 1 WHERE id = %s"
-            cursor.execute(sql, (user_id,))
+            # Update the user's status and role
+            sql = "UPDATE users SET onay = 1, role = %s WHERE id = %s"
+            cursor.execute(sql, (selected_role, user_id))
             connection.commit()
 
-        return jsonify({'message': 'User successfully approved!'}), 200
+            return jsonify({'message': 'Kullanıcı başarıyla onaylandı ve rolü güncellendi.'}), 200
 
     except pymysql.Error as e:
-        print(f"Database error while approving user: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Veritabanı hatası: {e}")
+        return jsonify({'message': f'Veritabanı hatası: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error while approving user: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Genel hata: {e}")
+        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()

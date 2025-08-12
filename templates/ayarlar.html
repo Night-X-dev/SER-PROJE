@@ -2494,7 +2494,15 @@ async function deleteRole(roleId) {
         }
         
         function loadPendingUsers() {
-            fetch(`${API_BASE_URL}/api/pending-users`)
+    // First, fetch the available roles
+    fetch(`${API_BASE_URL}/api/yetkitable`)
+        .then(response => {
+            if (!response.ok) throw new Error('Roller getirilemedi.');
+            return response.json();
+        })
+        .then(roles => {
+            // Now fetch the pending users
+            return fetch(`${API_BASE_URL}/api/pending-users`)
                 .then(response => {
                     if (!response.ok) throw new Error('Bekleyen kullanıcılar getirilemedi.');
                     return response.json();
@@ -2506,18 +2514,27 @@ async function deleteRole(roleId) {
                         pendingUsersTableBody.innerHTML = '';
                         if (users.length === 0) {
                             if (emptyState) emptyState.style.display = 'block';
-                            pendingUsersTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Onay bekleyen kullanıcı bulunmamaktadır.</td></tr>';
+                            pendingUsersTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Onay bekleyen kullanıcı bulunmamaktadır.</td></tr>';
                             return;
                         } else {
                             if (emptyState) emptyState.style.display = 'none';
                         }
                         users.forEach(user => {
                             const row = document.createElement('tr');
+                            
+                            // Create role select dropdown
+                            let roleSelect = '<select class="form-select role-select" data-userid="' + user.id + '">';
+                            roles.forEach(role => {
+                                const selected = (role.role_name === user.role) ? 'selected' : '';
+                                roleSelect += `<option value="${role.role_name}" ${selected}>${role.role_name}</option>`;
+                            });
+                            roleSelect += '</select>';
+                            
                             row.innerHTML = `
                                 <td>${user.fullname || 'N/A'}</td>
                                 <td>${user.email || 'N/A'}</td>
                                 <td>${user.phone || 'N/A'}</td>
-                                <td>${user.role || 'N/A'}</td>
+                                <td>${roleSelect}</td>
                                 <td>${user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}</td>
                                 <td>
                                     <div style="display: flex; gap: 5px;">
@@ -2533,33 +2550,50 @@ async function deleteRole(roleId) {
                             pendingUsersTableBody.appendChild(row);
                         });
                     }
-                })
-                .catch(error => {
-                    const pendingUsersTableBody = document.getElementById('pendingUsersTableBody');
-                    if (pendingUsersTableBody) {
-                        pendingUsersTableBody.innerHTML = '<tr><td colspan="6">Kullanıcılar yüklenirken bir hata oluştu.</td></tr>';
-                    }
-                    showToast(`Bekleyen kullanıcılar yüklenirken hata oluştu: ${error.message}`, true);
                 });
+        })
+        .catch(error => {
+            const pendingUsersTableBody = document.getElementById('pendingUsersTableBody');
+            if (pendingUsersTableBody) {
+                pendingUsersTableBody.innerHTML = '<tr><td colspan="7">Kullanıcılar yüklenirken bir hata oluştu.</td></tr>';
+            }
+            showToast(`Bekleyen kullanıcılar yüklenirken hata oluştu: ${error.message}`, true);
+        });
+}
+function approveUser(userId) {
+    // Find the selected role for this user
+    const roleSelect = document.querySelector(`.role-select[data-userid="${userId}"]`);
+    if (!roleSelect) {
+        showToast('Lütfen bir rol seçiniz.', true);
+        return;
+    }
+    
+    const selectedRole = roleSelect.value;
+    if (!selectedRole) {
+        showToast('Lütfen bir rol seçiniz.', true);
+        return;
+    }
+
+    fetch(`${API_BASE_URL}/api/users/approve/` + userId, {
+        method: 'PATCH',
+        headers: { 
+            'Content-Type': 'application/json',
+            'X-Selected-Role': selectedRole  // Send the selected role in the header
         }
-        function approveUser(userId) {
-            fetch(`${API_BASE_URL}/api/users/approve/` + userId, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' }
-            })
-            .then(response => {
-                if (!response.ok) return response.json().then(err => { throw new Error(err.message || 'Kullanıcı onaylanırken hata oluştu.'); });
-                return response.json();
-            })
-            .then(data => {
-                showToast(data.message || 'Kullanıcı başarıyla onaylandı!');
-                loadPendingUsers();
-                loadUsersTable(); // Aktif kullanıcıları da güncelle
-            })
-            .catch(error => {
-                showToast('Kullanıcı onaylanırken bir hata oluştu: ' + error.message, true);
-            });
-        }
+    })
+    .then(response => {
+        if (!response.ok) return response.json().then(err => { throw new Error(err.message || 'Kullanıcı onaylanırken hata oluştu.'); });
+        return response.json();
+    })
+    .then(data => {
+        showToast(data.message || 'Kullanıcı başarıyla onaylandı!');
+        loadPendingUsers();
+        loadUsersTable(); // Refresh the users table
+    })
+    .catch(error => {
+        showToast('Kullanıcı onaylanırken bir hata oluştu: ' + error.message, true);
+    });
+}
         // Bu fonksiyon zaten yukarıda tanımlıydı, ancak onay bekleyen kullanıcılar için de kullanıldığı için burada bırakıldı.
         // function deleteUser(userId) { ... } 
 
