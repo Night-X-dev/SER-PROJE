@@ -4134,6 +4134,8 @@ document.addEventListener('DOMContentLoaded', function() {
 // Durum güncelleme fonksiyonu
 async function updateProgressStatus(progressId, isCompleted) {
     try {
+        console.log(`İstek gönderiliyor: /api/progress/${progressId}/complete`, { is_completed: isCompleted });
+        
         const response = await fetch(`/api/progress/${progressId}/complete`, {
             method: 'POST',
             headers: {
@@ -4142,13 +4144,23 @@ async function updateProgressStatus(progressId, isCompleted) {
             body: JSON.stringify({ is_completed: isCompleted })
         });
 
-        const result = await response.json();
+        // Önce yanıtı metin olarak alalım
+        const responseText = await response.text();
+        console.log("Ham yanıt:", responseText);
         
-        if (!response.ok) {
-            throw new Error(result.message || 'Bir hata oluştu');
+        // JSON'a çevirmeyi dene
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (e) {
+            console.error("JSON parse hatası:", e);
+            throw new Error('Geçersiz yanıt alındı');
         }
 
-        // Başarılı mesajı göster
+        if (!response.ok) {
+            throw new Error(result.message || 'Sunucu hatası');
+        }
+
         showToast('Başarılı', result.message || 'İşlem başarılı', 'success');
         
         // Sayfayı yenile

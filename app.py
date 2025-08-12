@@ -3887,14 +3887,21 @@ def get_active_work_progress_headers():
 @app.route('/api/progress/<int:progress_id>/complete', methods=['POST'])
 def complete_progress(progress_id):
     try:
+        print(f"İstek alındı - Progress ID: {progress_id}")  # Log ekliyoruz
+        
         if 'user_id' not in session:
+            print("Hata: Kullanıcı oturumu yok")
             return jsonify({'success': False, 'message': 'Oturum bulunamadı'}), 401
 
         data = request.get_json()
+        print(f"Gelen veri: {data}")  # Gelen veriyi logluyoruz
+        
         if not data:
+            print("Hata: Geçersiz veri")
             return jsonify({'success': False, 'message': 'Geçersiz veri'}), 400
 
         is_completed = data.get('is_completed', True)
+        print(f"İşlem: is_completed={is_completed}")  # İşlem durumunu logluyoruz
         
         cursor = mysql.connection.cursor()
         cursor.execute("""
@@ -3904,6 +3911,7 @@ def complete_progress(progress_id):
         """, (1 if is_completed else 0, progress_id))
         
         mysql.connection.commit()
+        print("İşlem başarılı")  # Başarılı logu
         return jsonify({
             'success': True, 
             'message': 'Durum güncellendi',
@@ -3911,7 +3919,7 @@ def complete_progress(progress_id):
         })
     
     except Exception as e:
-        print(f"Hata oluştu: {str(e)}")
+        print(f"Hata oluştu: {str(e)}")  # Hata detayını logluyoruz
         mysql.connection.rollback()
         return jsonify({
             'success': False, 
