@@ -2953,6 +2953,78 @@ def update_password():
     finally:
         if connection:
             connection.close()
+@app.route('/api/users/<int:user_id>', methods=['PUT'])
+def update_user(user_id):
+    """Update user information including role."""
+    if 'user_id' not in session:
+        return jsonify({"error": "Oturum açık değil."}), 401
+
+    # Only allow admins to update user roles
+    if session.get('role') != 'Admin':
+        return jsonify({"error": "Bu işlem için yetkiniz yok."}), 403
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Geçersiz veri."}), 400
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({"error": "Veritabanı bağlantısı kurulamadı."}), 500
+
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            # Check if user exists
+            cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+            if not cursor.fetchone():
+                return jsonify({"error": "Kullanıcı bulunamadı."}), 404
+
+            # Update user fields
+            update_fields = []
+            update_values = []
+            
+            if 'fullname' in data:
+                update_fields.append("fullname = %s")
+                update_values.append(data['fullname'])
+                
+            if 'email' in data:
+                update_fields.append("email = %s")
+                update_values.append(data['email'])
+                
+            if 'role' in data:
+                # Verify the role exists
+                cursor.execute("SELECT id FROM yetki WHERE role_name = %s", (data['role'],))
+                if not cursor.fetchone():
+                    return jsonify({"error": "Geçersiz rol."}), 400
+                update_fields.append("role = %s")
+                update_values.append(data['role'])
+
+            if not update_fields:
+                return jsonify({"message": "Güncellenecek alan bulunamadı."}), 200
+
+            # Add user_id to the values list
+            update_values.append(user_id)
+            
+            # Build and execute the update query
+            update_query = f"UPDATE users SET {', '.join(update_fields)} WHERE id = %s"
+            cursor.execute(update_query, update_values)
+            connection.commit()
+
+            return jsonify({"message": "Kullanıcı başarıyla güncellendi."}), 200
+
+    except pymysql.Error as e:
+        connection.rollback()
+        print(f"Veritabanı hatası: {e}")
+        return jsonify({"error": "Veritabanı hatası oluştu."}), 500
+    except Exception as e:
+        if connection:
+            connection.rollback()
+        print(f"Beklenmeyen hata: {e}")
+        return jsonify({"error": "Beklenmeyen bir hata oluştu."}), 500
+    finally:
+        if connection:
+            connection.close()
+
 @app.route('/api/yetkitable')
 def get_yetkitable():
     """Retrieves all roles except 'Admin' from the yetki table."""
