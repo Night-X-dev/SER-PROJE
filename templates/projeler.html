@@ -4157,21 +4157,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+const progressStepsContainer = document.querySelector('#progress-steps-container');
+        if (progressStepsContainer) {
+            progressStepsContainer.addEventListener('change', function(e) {
+                // Sadece checkbox'ları hedefle
+                if (e.target && e.target.matches('input[type="checkbox"]')) {
+                    const checkbox = e.target;
+                    const progressId = checkbox.dataset.progressId;
+                    const isChecked = checkbox.checked;
 
-        async function handleCheckboxChange(checkbox) {
-            const progressId = checkbox.dataset.progressId;
-            const isChecked = checkbox.checked;
-
-            if (isChecked) {
-                if (confirm('Bu adımı tamamlamak istediğinizden emin misiniz? (Bu işlem geri alınamaz)')) {
-                    await updateProgressStatus(progressId, true);
-                } else {
-                    checkbox.checked = false;
+                    if (isChecked) {
+                        if (confirm('Bu adımı tamamlamak istediğinizden emin misiniz? (Bu işlem geri alınamaz)')) {
+                            // Onaylanırsa API'ye isteği gönder
+                            updateProgressStatus(progressId, true);
+                        } else {
+                            // Onaylanmazsa checkbox'ı eski haline getir
+                            checkbox.checked = false;
+                        }
+                    } else {
+                        // İşaret kaldırıldığında doğrudan API'ye istek gönder
+                        updateProgressStatus(progressId, false);
+                    }
                 }
-            } else {
-                await updateProgressStatus(progressId, false);
-            }}
-            async function updateProgressStatus(progressId, isChecked) {
+            });
+        }
+        async function updateProgressStatus(progressId, isChecked) {
         const checkbox = document.querySelector(`#complete-${progressId}`);
         try {
             const response = await fetch(`/api/progress/${progressId}/complete`, {
