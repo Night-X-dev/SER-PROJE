@@ -3885,15 +3885,12 @@ def get_active_work_progress_headers():
         return jsonify({"error": "Başlıklar getirilirken bir hata oluştu"}), 500
 
 @app.route('/api/progress/<int:progress_id>/complete', methods=['POST'])
+@login_required
 def complete_progress(progress_id):
-    if 'user_id' not in session:
-        return jsonify({'success': False, 'message': 'Oturum bulunamadı'}), 401
-
     try:
         data = request.get_json()
         is_completed = data.get('is_completed', True)
         
-        # İlerleme adımını güncelle
         cursor = mysql.connection.cursor()
         cursor.execute("""
             UPDATE project_progress 
@@ -3903,6 +3900,11 @@ def complete_progress(progress_id):
         
         mysql.connection.commit()
         return jsonify({'success': True, 'message': 'Durum güncellendi'})
+    
     except Exception as e:
+        print(f"Hata oluştu: {str(e)}")  # Hata mesajını logla
         mysql.connection.rollback()
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({
+            'success': False, 
+            'message': f'Bir hata oluştu: {str(e)}'
+        }), 500
