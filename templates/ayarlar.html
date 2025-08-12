@@ -2939,6 +2939,8 @@ function approveUser(userId) {
                 });
             }
         });
+        // Add this at the very beginning of your JavaScript code
+const API_BASE_URL = window.location.origin; // This will use the current domain
 
         // Work Progress Headers Management
 document.addEventListener('DOMContentLoaded', function() {
@@ -2971,7 +2973,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load headers from API
     function loadHeaders() {
-    fetch(`${API_BASE_URL}/api/work-progress-headers`, {
+    // Make sure there's no double slash in the URL
+    const apiUrl = `${window.location.origin}/api/work-progress-headers`.replace(/([^:]\/)\/+/g, '$1');
+    
+    fetch(apiUrl, {
         method: 'GET',
         headers: {
             'Accept': 'application/json',
