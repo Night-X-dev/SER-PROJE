@@ -3869,6 +3869,7 @@ def delete_work_progress_header(header_id):
         print(f"Error deleting work progress header: {str(e)}")
         return jsonify({"error": "Başlık silinirken bir hata oluştu"}), 500
 @app.route('/api/work-progress-headers/<int:header_id>', methods=['PUT'])
+@app.route('/api/work-progress-headers/<int:header_id>', methods=['PUT'])
 def update_work_progress_header(header_id):
     if 'user_id' not in session:
         return jsonify({"error": "Oturum açık değil"}), 401
@@ -3906,3 +3907,20 @@ def update_work_progress_header(header_id):
     except Exception as e:
         print(f"Error updating work progress header: {str(e)}")
         return jsonify({"error": "Başlık güncellenirken bir hata oluştu"}), 500
+@app.route('/api/work-progress-headers/<int:header_id>', methods=['GET'])
+def get_work_progress_header(header_id):
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+                cursor.execute("""
+                    SELECT id, title, description, is_active, created_at, updated_at
+                    FROM work_progress_headers
+                    WHERE id = %s
+                """, (header_id,))
+                header = cursor.fetchone()
+                if not header:
+                    return jsonify({"error": "Başlık bulunamadı"}), 404
+                return jsonify(header)
+    except Exception as e:
+        print(f"Error fetching work progress header: {str(e)}")
+        return jsonify({"error": "Başlık getirilirken bir hata oluştu"}), 500

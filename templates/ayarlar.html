@@ -3061,11 +3061,12 @@ row.innerHTML = `
             'Content-Type': 'application/json'
         }
     })
-    .then(response => {
+    .then(async response => {
+        const data = await response.json();
         if (!response.ok) {
-            return response.json().then(err => { throw err; });
+            throw new Error(data.error || 'Başlık getirilemedi');
         }
-        return response.json();
+        return data;
     })
     .then(header => {
         // Populate the edit form
@@ -3081,7 +3082,7 @@ row.innerHTML = `
     })
     .catch(error => {
         console.error('Error fetching header:', error);
-        showToast(error.error || 'Başlık bilgileri alınırken bir hata oluştu', true);
+        showToast(error.message || 'Başlık bilgileri alınırken bir hata oluştu', true);
     });
 }
 
