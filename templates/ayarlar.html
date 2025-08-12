@@ -1301,16 +1301,17 @@
 </div>
 
 <!-- Add/Edit Header Modal -->
-<div class="modal fade" id="headerModal" tabindex="-1" aria-hidden="true">
+<!-- Add/Edit Header Modal -->
+<div class="modal fade" id="addHeaderModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="headerModalLabel">Yeni İş Gidişat Başlığı</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                <h5 class="modal-title" id="addHeaderModalLabel">Yeni Başlık Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="headerForm">
+                <input type="hidden" id="headerId" value="">
                 <div class="modal-body">
-                    <input type="hidden" id="headerId">
                     <div class="mb-3">
                         <label for="headerTitle" class="form-label">Başlık *</label>
                         <input type="text" class="form-control" id="headerTitle" required>
@@ -3050,9 +3051,15 @@ row.innerHTML = `
         });
     }
 
-    // Edit header
     function editHeader(headerId) {
     const apiUrl = `${window.location.origin}/api/work-progress-headers/${headerId}`.replace(/([^:]\/)\/+/g, '$1');
+    const modalTitle = document.getElementById('addHeaderModalLabel');
+    
+    if (!modalTitle) {
+        console.error('Modal title element not found');
+        showToast('Bir hata oluştu: Modal başlığı bulunamadı', true);
+        return;
+    }
     
     fetch(apiUrl, {
         method: 'GET',
@@ -3070,18 +3077,26 @@ row.innerHTML = `
     })
     .then(header => {
         // Populate the edit form
+        const titleInput = document.getElementById('headerTitle');
+        const descInput = document.getElementById('headerDescription');
+        const activeInput = document.getElementById('headerIsActive');
+        
+        if (!titleInput || !descInput || !activeInput) {
+            throw new Error('Form alanları bulunamadı');
+        }
+        
         document.getElementById('headerId').value = header.id;
-        document.getElementById('headerTitle').value = header.title;
-        document.getElementById('headerDescription').value = header.description || '';
-        document.getElementById('headerIsActive').checked = header.is_active;
+        titleInput.value = header.title;
+        descInput.value = header.description || '';
+        activeInput.checked = header.is_active;
         
         // Change modal title and show
-        document.getElementById('addHeaderModalLabel').textContent = 'Başlığı Düzenle';
+        modalTitle.textContent = 'Başlığı Düzenle';
         const modal = new bootstrap.Modal(document.getElementById('addHeaderModal'));
         modal.show();
     })
     .catch(error => {
-        console.error('Error fetching header:', error);
+        console.error('Error in editHeader:', error);
         showToast(error.message || 'Başlık bilgileri alınırken bir hata oluştu', true);
     });
 }
