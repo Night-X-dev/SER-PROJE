@@ -3814,3 +3814,36 @@ def list_work_progress_headers():
         print(f"Error listing work progress headers: {str(e)}")
         return jsonify({"error": "İş gidişat başlıkları listelenirken bir hata oluştu"}), 500
 
+# Endpoint to add a new work progress header
+@app.route('/api/work-progress-headers', methods=['POST'])
+def create_work_progress_header():
+    if 'user_id' not in session:
+        return jsonify({"error": "Oturum açık değil"}), 401
+
+    data = request.get_json()
+    if not data or 'title' not in data:
+        return jsonify({"error": "Başlık alanı zorunludur"}), 400
+
+    title = data.get('title', '').strip()
+    description = data.get('description', '').strip()
+    is_active = data.get('is_active', True)
+
+    if not title:
+        return jsonify({"error": "Başlık boş olamaz"}), 400
+
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO work_progress_headers 
+                    (title, description, is_active, created_by)
+                    VALUES (%s, %s, %s, %s)
+                """, (title, description, is_active, session['user_id']))
+                conn.commit()
+                return jsonify({
+                    "message": "Başlık başarıyla eklendi",
+                    "id": cursor.lastrowid
+                }), 201
+    except Exception as e:
+        print(f"Error creating work progress header: {str(e)}")
+        return jsonify({"error": "Başlık eklenirken bir hata oluştu"}), 500
