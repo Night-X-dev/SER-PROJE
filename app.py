@@ -92,7 +92,6 @@ def serve_ayarlar_page():
     finally:
         if 'connection' in locals() and connection:
             connection.close()
-    return render_template('ayarlar.html')
 
 @app.route('/kablo_hesap.html')
 def serve_kablo_hesap_page():
