@@ -46,7 +46,10 @@ def serve_login_page():
 def serve_forgot_password_page():
     """Directs /sifremi_unuttum.html requests to the sifremi_unuttum.html page."""
     return render_template('sifremi_unuttum.html')
-
+@app.route('/ayarlar')
+def ayarlar_page():
+    """Renders the settings page."""
+    return render_template('ayarlar.html')
 @app.route('/logout')
 def logout():
     """
@@ -2767,10 +2770,7 @@ def add_user():
     finally:
         if connection:
             connection.close()
-@app.route('/ayarlar')
-def ayarlar_page():
-    """Renders the settings page."""
-    return render_template('ayarlar.html')
+
 @app.route('/api/user/email', methods=['PUT'])
 def update_email():
     """Kullanıcının e-posta adresini günceller."""
