@@ -1507,12 +1507,12 @@
     }
 
     progressSteps.push({
-        headerId: titleSelect.value,
-        headerTitle: titleSelect.options[titleSelect.selectedIndex]?.text || '',
-      description: descTextarea.value.trim(),
-      startDate: startInput.value,
-      endDate: endInput.value
-    });
+    header_id: titleSelect.value, // backend snake_case
+    description: descTextarea?.value.trim() || '',
+    startDate: startInput.value,
+    endDate: endInput.value
+});
+
   });
 
   if (progressValidationFailed) return;
@@ -1548,6 +1548,8 @@
     projectLocation: projectLocation || null,
     progressSteps: progressSteps
   };
+  console.log(JSON.stringify(progressSteps, null, 2));
+
 
                 try {
                     const projectResponse = await fetch(`${API_BASE_URL}/api/projects`, {
