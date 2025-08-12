@@ -4105,6 +4105,62 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
             return false;
         }
     }
+    // Sayfa yüklendiğinde event listener'ları ekle
+document.addEventListener('DOMContentLoaded', function() {
+    // Mevcut event delegation kodu
+    document.addEventListener('click', function(e) {
+        // Mevcut click handler'lar...
+        
+        // Tamamlama checkbox'ı için
+        if (e.target.closest('.complete-step-checkbox')) {
+            const checkbox = e.target.closest('.complete-step-checkbox');
+            const progressId = checkbox.dataset.id;
+            const isChecked = checkbox.checked;
+            
+            if (isChecked) {
+                if (confirm('Bu iş gidişatını tamamlandı olarak işaretlemek istediğinize emin misiniz? (Bu işlem geri alınamaz)')) {
+                    updateProgressStatus(progressId, true);
+                } else {
+                    checkbox.checked = false;
+                }
+            } else {
+                // Eğer kullanıcı işareti kaldırmak isterse
+                updateProgressStatus(progressId, false);
+            }
+        }
+    });
+});
+
+// Durum güncelleme fonksiyonu
+async function updateProgressStatus(progressId, isCompleted) {
+    try {
+        const response = await fetch(`/api/progress/${progressId}/complete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ is_completed: isCompleted })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+            // Başarılı mesajı göster
+            showToast('Başarılı', 'İş gidişatı durumu güncellendi', 'success');
+            
+            // Sayfayı yenile
+            const projectId = document.querySelector('.project-details')?.dataset.projectId;
+            if (projectId) {
+                await fetchProgressSteps(projectId);
+            }
+        } else {
+            showToast('Hata', result.message || 'Bir hata oluştu', 'error');
+        }
+    } catch (error) {
+        console.error('Durum güncelleme hatası:', error);
+        showToast('Hata', 'İşlem sırasında bir hata oluştu', 'error');
+    }
+}
 </script>
     <script src="static/bildirim.js"></script>
     <script src="static/user-avatar.js"></script>

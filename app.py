@@ -3884,3 +3884,25 @@ def get_active_work_progress_headers():
         print(f"Error fetching active work progress headers: {str(e)}")
         return jsonify({"error": "Başlıklar getirilirken bir hata oluştu"}), 500
 
+@app.route('/api/progress/<int:progress_id>/complete', methods=['POST'])
+def complete_progress(progress_id):
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Oturum bulunamadı'}), 401
+
+    try:
+        data = request.get_json()
+        is_completed = data.get('is_completed', True)
+        
+        # İlerleme adımını güncelle
+        cursor = mysql.connection.cursor()
+        cursor.execute("""
+            UPDATE project_progress 
+            SET is_completed = %s
+            WHERE progress_id = %s
+        """, (1 if is_completed else 0, progress_id))
+        
+        mysql.connection.commit()
+        return jsonify({'success': True, 'message': 'Durum güncellendi'})
+    except Exception as e:
+        mysql.connection.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
