@@ -3221,30 +3221,30 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     const actionsContent = isEditable ?
     `
     <div class="progress-actions d-flex justify-content-between align-items-center">
-        <div class="checkbox-wrapper-46 me-3">
-            <input type="checkbox" 
-                   id="complete-${step.progress_id}" 
-                   class="inp-cbx complete-step-checkbox"
-                   ${step.status === 'tamamlandi' ? 'checked' : ''}
-                   data-id="${step.progress_id}" />
-            <label for="complete-${step.progress_id}" class="cbx">
-                <span>
-                    <svg viewBox="0 0 12 10" height="10px" width="12px">
-                        <polyline points="1.5 6 4.5 9 10.5 1"></polyline>
-                    </svg>
-                </span>
-                <span>Tamamlandı</span>
-            </label>
-        </div>
-        <div>
-            <button type="button" class="action-btn save-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Kaydet">
-                <i class="fas fa-save"></i> Kaydet
-            </button>
-            <button type="button" class="action-btn delete-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Sil">
-                <i class="fas fa-trash"></i> Sil
-            </button>
-        </div>
+    <div class="checkbox-wrapper-46 me-3">
+        <input type="checkbox" 
+               id="complete-${step.progress_id}" 
+               class="inp-cbx complete-step-checkbox"
+               ${step.is_completed ? 'checked' : ''}
+               data-id="${step.progress_id}" />
+        <label for="complete-${step.progress_id}" class="cbx">
+            <span>
+                <svg viewBox="0 0 12 10" height="10px" width="12px">
+                    <polyline points="1.5 6 4.5 9 10.5 1"></polyline>
+                </svg>
+            </span>
+            <span>Tamamlandı</span>
+        </label>
     </div>
+    <div>
+        <button type="button" class="action-btn save-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Kaydet">
+            <i class="fas fa-save"></i> Kaydet
+        </button>
+        <button type="button" class="action-btn delete-progress-btn" data-id="${step.progress_id}" data-project-id="${projectId}" title="Sil">
+            <i class="fas fa-trash"></i> Sil
+        </button>
+    </div>
+</div>
     ` : 
     `<div class="progress-actions text-end">
         <span class="badge ${step.status === 'tamamlandi' ? 'bg-success' : 'bg-warning text-dark'}">
@@ -4137,28 +4137,37 @@ async function updateProgressStatus(progressId, isCompleted) {
         const response = await fetch(`/api/progress/${progressId}/complete`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({ is_completed: isCompleted })
         });
 
         const result = await response.json();
         
-        if (result.success) {
-            // Başarılı mesajı göster
-            showToast('Başarılı', 'İş gidişatı durumu güncellendi', 'success');
-            
-            // Sayfayı yenile
-            const projectId = document.querySelector('.project-details')?.dataset.projectId;
-            if (projectId) {
-                await fetchProgressSteps(projectId);
-            }
-        } else {
-            showToast('Hata', result.message || 'Bir hata oluştu', 'error');
+        if (!response.ok) {
+            throw new Error(result.message || 'Bir hata oluştu');
         }
+
+        // Başarılı mesajı göster
+        showToast('Başarılı', result.message || 'İşlem başarılı', 'success');
+        
+        // Sayfayı yenile
+        const projectId = document.querySelector('.project-details')?.dataset.projectId;
+        if (projectId) {
+            await fetchProgressSteps(projectId);
+        }
+
+        return result;
     } catch (error) {
         console.error('Durum güncelleme hatası:', error);
-        showToast('Hata', 'İşlem sırasında bir hata oluştu', 'error');
+        showToast('Hata', error.message || 'İşlem sırasında bir hata oluştu', 'error');
+        
+        // Checkbox'ı eski haline getir
+        const checkbox = document.querySelector(`#complete-${progressId}`);
+        if (checkbox) {
+            checkbox.checked = !isCompleted;
+        }
+        throw error;
     }
 }
 </script>
