@@ -3227,6 +3227,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                class="inp-cbx complete-step-checkbox"
                ${step.is_completed ? 'checked' : ''}
                data-id="${step.progress_id}" />
+               onchange="updateProgressStatus(${step.progress_id}, this.checked)" />
         <label for="complete-${step.progress_id}" class="cbx">
             <span>
                 <svg viewBox="0 0 12 10" height="10px" width="12px">
@@ -4134,52 +4135,36 @@ document.addEventListener('DOMContentLoaded', function() {
 // Durum güncelleme fonksiyonu
 async function updateProgressStatus(progressId, isCompleted) {
     try {
-        console.log(`İstek gönderiliyor: /api/progress/${progressId}/complete`, { is_completed: isCompleted });
-        
-        const response = await fetch(`/api/progress/${progressId}/complete`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ is_completed: isCompleted })
-        });
+        if (confirm('Bu iş gidişatını tamamlandı olarak işaretlemek istediğinize emin misiniz?')) {
+            const response = await fetch(`/api/progress/${progressId}/complete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
 
-        // Önce yanıtı metin olarak alalım
-        const responseText = await response.text();
-        console.log("Ham yanıt:", responseText);
-        
-        // JSON'a çevirmeyi dene
-        let result;
-        try {
-            result = JSON.parse(responseText);
-        } catch (e) {
-            console.error("JSON parse hatası:", e);
-            throw new Error('Geçersiz yanıt alındı');
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast('Başarılı', 'İşlem başarıyla tamamlandı', 'success');
+                // Sayfayı yenile
+                const projectId = document.querySelector('.project-details')?.dataset.projectId;
+                if (projectId) {
+                    await fetchProgressSteps(projectId);
+                }
+            } else {
+                throw new Error(result.message || 'Bir hata oluştu');
+            }
+        } else {
+            // Kullanıcı iptal etti, checkbox'ı eski haline getir
+            const checkbox = document.querySelector(`#complete-${progressId}`);
+            if (checkbox) checkbox.checked = false;
         }
-
-        if (!response.ok) {
-            throw new Error(result.message || 'Sunucu hatası');
-        }
-
-        showToast('Başarılı', result.message || 'İşlem başarılı', 'success');
-        
-        // Sayfayı yenile
-        const projectId = document.querySelector('.project-details')?.dataset.projectId;
-        if (projectId) {
-            await fetchProgressSteps(projectId);
-        }
-
-        return result;
     } catch (error) {
-        console.error('Durum güncelleme hatası:', error);
+        console.error('Hata:', error);
         showToast('Hata', error.message || 'İşlem sırasında bir hata oluştu', 'error');
-        
-        // Checkbox'ı eski haline getir
         const checkbox = document.querySelector(`#complete-${progressId}`);
-        if (checkbox) {
-            checkbox.checked = !isCompleted;
-        }
-        throw error;
+        if (checkbox) checkbox.checked = false;
     }
 }
 </script>
