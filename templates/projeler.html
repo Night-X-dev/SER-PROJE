@@ -3224,9 +3224,10 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
     <div class="checkbox-wrapper-46 me-3">
         <input type="checkbox" 
                id="complete-${step.progress_id}" 
-               class="inp-cbx complete-step-checkbox"
-               ${step.is_completed ? 'checked' : ''}
-               data-id="${step.progress_id}" />
+        class="inp-cbx complete-step-checkbox"
+        ${step.is_completed ? 'checked' : ''}
+        onchange="updateProgressStatus(${step.progress_id}, this.checked)"
+        data-id="${step.progress_id}" />
                
         <label for="complete-${step.progress_id}" class="cbx">
             <span>
@@ -4132,39 +4133,39 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Durum güncelleme fonksiyonu
-async function updateProgressStatus(progressId, isCompleted) {
-    try {
-        if (confirm('Bu iş gidişatını tamamlandı olarak işaretlemek istediğinize emin misiniz?')) {
-            const response = await fetch(`/api/progress/${progressId}/complete`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
+async function updateProgressStatus(progressId, isChecked) {
+    const checkbox = document.querySelector(`#complete-${progressId}`);
+    if (!confirm('Bu iş gidişatını tamamlandı olarak işaretlemek istediğinize emin misiniz?')) {
+        checkbox.checked = !isChecked;
+        return;
+    }
 
-            const result = await response.json();
-            
-            if (result.success) {
-                showToast('Başarılı', 'İşlem başarıyla tamamlandı', 'success');
-                // Sayfayı yenile
-                const projectId = document.querySelector('.project-details')?.dataset.projectId;
-                if (projectId) {
-                    await fetchProgressSteps(projectId);
-                }
-            } else {
-                throw new Error(result.message || 'Bir hata oluştu');
+    try {
+        const response = await fetch(`/api/progress/${progressId}/complete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Sunucu hatası');
+        }
+
+        const result = await response.json();
+        if (result.success) {
+            showToast('Başarılı', 'İşlem başarıyla tamamlandı', 'success');
+            const projectId = document.querySelector('.project-details')?.dataset.projectId;
+            if (projectId) {
+                await fetchProgressSteps(projectId);
             }
         } else {
-            // Kullanıcı iptal etti, checkbox'ı eski haline getir
-            const checkbox = document.querySelector(`#complete-${progressId}`);
-            if (checkbox) checkbox.checked = false;
+            throw new Error(result.message || 'Bir hata oluştu');
         }
     } catch (error) {
         console.error('Hata:', error);
         showToast('Hata', error.message || 'İşlem sırasında bir hata oluştu', 'error');
-        const checkbox = document.querySelector(`#complete-${progressId}`);
-        if (checkbox) checkbox.checked = false;
+        checkbox.checked = !isChecked;
     }
 }
 </script>
