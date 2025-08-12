@@ -1762,8 +1762,31 @@
                 });
         }
 
+        // Kullanıcı rolünü güncelleme fonksiyonu
+        async function updateUserRole(userId, newRole) {
+            try {
+                const response = await fetch(`/api/users/${userId}/role`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ role: newRole })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Rol güncellenirken bir hata oluştu');
+                }
+
+                showToast('Kullanıcı rolü başarıyla güncellendi');
+                loadUsersTable(); // Tabloyu yenile
+            } catch (error) {
+                console.error('Rol güncelleme hatası:', error);
+                showToast('Rol güncellenirken bir hata oluştu', true);
+            }
+        }
+
         // Tabloyu render etme fonksiyonu
-        function renderUsersTable(usersToRender) {
+        async function renderUsersTable(usersToRender) {
             const tbody = document.getElementById('usersTableBody');
             if (!tbody) {
                 console.error("usersTableBody bulunamadı!");
@@ -1777,6 +1800,18 @@
                 return;
             }
 
+            // Rolleri çek
+            let roles = [];
+            try {
+                const response = await fetch('/api/yetkitable');
+                if (response.ok) {
+                    const data = await response.json();
+                    roles = data.roles || [];
+                }
+            } catch (error) {
+                console.error('Roller çekilirken hata oluştu:', error);
+            }
+
             const startIndex = (currentPage - 1) * rowsPerPage;
             const endIndex = startIndex + rowsPerPage;
             const paginatedUsers = usersToRender.slice(startIndex, endIndex);
@@ -1788,10 +1823,19 @@
                 if (user.role && user.role.toLowerCase().includes('admin')) badgeClass = 'role-admin';
                 else if (user.role && (user.role.toLowerCase().includes('yönetici') || user.role.toLowerCase().includes('manager'))) badgeClass = 'role-manager';
 
+                // Rol dropdown'ı oluştur
+                let roleOptions = roles.map(role => 
+                    `<option value="${role.rol_adi}" ${user.role === role.rol_adi ? 'selected' : ''}>${role.rol_adi}</option>`
+                ).join('');
+
                 tr.innerHTML = `
                     <td data-label="Ad Soyad">${user.fullname || user.username || ''}</td>
                     <td data-label="Email">${user.email || ''}</td>
-                    <td data-label="Rol"><span class="role-badge ${badgeClass}">${user.role || ''}</span></td>
+                    <td data-label="Rol">
+                        <select class="role-select form-select form-select-sm" data-userid="${user.id}" style="min-width: 120px;">
+                            ${roleOptions}
+                        </select>
+                    </td>
                     <td data-label="İşlemler">
                         <div style="display: flex; gap: 10px;">
                             <button class="action-btn delete-user-btn" data-userid="${user.id}" title="Sil">
@@ -1813,6 +1857,20 @@
                     showConfirmModal(`Kullanıcı Sil`, `${userName} kullanıcısını silmek istediğinize emin misiniz?`, () => {
                         deleteUser(userId, userName);
                     });
+                });
+            });
+
+            // Rol değişikliklerini dinle
+            document.querySelectorAll('.role-select').forEach(select => {
+                select.addEventListener('change', function() {
+                    const userId = this.getAttribute('data-userid');
+                    const newRole = this.value;
+                    
+                    showConfirmModal(
+                        'Rol Değişikliği', 
+                        `Bu kullanıcının rolünü "${newRole}" olarak değiştirmek istediğinize emin misiniz?`,
+                        () => updateUserRole(userId, newRole)
+                    );
                 });
             });
             updatePagination(usersToRender.length, currentPage, Math.ceil(usersToRender.length / rowsPerPage));
