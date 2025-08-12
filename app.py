@@ -3884,8 +3884,6 @@ def get_active_work_progress_headers():
         print(f"Error fetching active work progress headers: {str(e)}")
         return jsonify({"error": "Başlıklar getirilirken bir hata oluştu"}), 500
 
-from flask import jsonify, request, session
-from app import mysql  # mysql bağlantısını import ettiğiniz yerden alın
 
 @app.route('/api/progress/<int:progress_id>/complete', methods=['POST'])
 def complete_progress(progress_id):
