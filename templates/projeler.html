@@ -2630,6 +2630,7 @@ function attachProjectTableEventListeners() {
 
     // Düzenleme modalı fonksiyonu
  async function renderEditModal(project) {
+
         try {
             console.log("renderEditModal başladı, proje:", project.project_id);
             // Modalı "Yükleniyor" mesajıyla güncelle
@@ -2742,6 +2743,26 @@ function attachProjectTableEventListeners() {
             // İş adımlarını yükle - fetchProgressSteps
             await fetchProgressSteps(project.project_id, true);
             console.log("İş adımları yüklendi. Modal hazır.");
+            if (projectEditModal) {
+            projectEditModal.addEventListener('shown.bs.modal', function() {
+                // Tüm tamamlanmış adımları seç
+                const completedSteps = document.querySelectorAll('#progress-steps-container .progress-step[data-is-completed="1"]');
+
+                completedSteps.forEach(step => {
+                    // Adım içerisindeki tüm form elemanlarını pasif hale getir
+                    const formElements = step.querySelectorAll('input, select, textarea');
+                    formElements.forEach(element => {
+                        element.disabled = true;
+                    });
+
+                    // Checkbox'ı seçili hale getir
+                    const checkbox = step.querySelector('input[type="checkbox"]');
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+            });
+        }
 
         } catch (error) {
             console.error("renderEditModal ile ilgili bir hata oluştu:", error);
@@ -4186,7 +4207,17 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
 
             showToast('Başarılı', 'İşlem başarıyla tamamlandı', 'success');
             
-            // Refresh the progress steps
+            if (isChecked) {
+                const stepElement = document.querySelector(`.progress-step[data-progress-id="${progressId}"]`);
+                if (stepElement) {
+                    stepElement.setAttribute('data-is-completed', '1');
+                    const formElements = stepElement.querySelectorAll('input, select, textarea');
+                    formElements.forEach(element => {
+                        element.disabled = true;
+                    });
+                }
+            }
+            
             const projectId = document.querySelector('.project-details')?.dataset.projectId;
             if (projectId) {
                 // fetchProgressSteps fonksiyonunun burada çağrıldığını varsayıyoruz.
