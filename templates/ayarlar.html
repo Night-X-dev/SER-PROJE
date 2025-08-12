@@ -1662,21 +1662,31 @@
         // http://37.148.213.89:8000// Bu satır kaldırıldı
 
         // Tüm kullanıcıları API'den çeken ve tabloyu dolduran fonksiyon
-        function loadUsersTable() {
-            fetch(`${API_BASE_URL}/api/users`)
-            .then(res => res.json())
-            .then(users => {
-                allUsersData = users;
-                applyFiltersAndRenderTable(); // Filtreleri uygula ve tabloyu render et
-            })
-            .catch(err => {
-                console.error("Kullanıcılar yüklenirken hata:", err);
-                showToast("Kullanıcılar yüklenemedi", true); // Hata durumunda toast göster
-                const tbody = document.getElementById('usersTableBody');
-                if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--danger);">Kullanıcılar yüklenemedi. Sunucuya bağlanılamadı veya bir hata oluştu.</td></tr>';
-                }
-            });
+        async function loadUsersTable() {
+            try {
+                // Kullanıcıları ve rolleri paralel olarak yükle
+                const [usersResponse, rolesResponse] = await Promise.all([
+                    fetch('/api/users').then(res => res.json()),
+                    fetch('/api/yetkitable').then(res => res.json())
+                ]);
+                
+                // Kullanıcı verilerini işle
+                allUsersData = Array.isArray(usersResponse) ? usersResponse : [];
+                filteredUsers = [...allUsersData];
+                
+                // Rolleri işle
+                const roles = Array.isArray(rolesResponse) ? rolesResponse : [];
+                
+                // Rolleri global değişkene kaydet (isteğe bağlı)
+                window.availableRoles = roles;
+                
+                // Tabloyu render et
+                await renderUsersTable(filteredUsers);
+                
+            } catch (error) {
+                console.error('Veri yüklenirken hata oluştu:', error);
+                showToast('Veriler yüklenirken bir hata oluştu', true);
+            }
         }
 
         // Kullanıcı silme fonksiyonu
@@ -1733,7 +1743,7 @@
             const roleSelector = document.getElementById('roleSelector');
             if (!roleSelector) return; // roleSelector elementi yoksa fonksiyondan çık
 
-            fetch(`${API_BASE_URL}/api/yetkitable`)
+            fetch(`${API_BASE_URL}/api/roles`)
                 .then(response => {
                     if (!response.ok) {
                         return response.json().then(err => { throw new Error(err.message || 'Bilinmeyen sunucu hatası'); });
@@ -1785,6 +1795,21 @@
             }
         }
 
+        // Rolleri getirme fonksiyonu
+        async function fetchRoles() {
+            try {
+                const response = await fetch('/api/yetkitable');
+                if (response.ok) {
+                    const data = await response.json();
+                    return Array.isArray(data) ? data : [];
+                }
+                return [];
+            } catch (error) {
+                console.error('Roller çekilirken hata oluştu:', error);
+                return [];
+            }
+        }
+
         // Tabloyu render etme fonksiyonu
         async function renderUsersTable(usersToRender) {
             const tbody = document.getElementById('usersTableBody');
@@ -1801,16 +1826,7 @@
             }
 
             // Rolleri çek
-            let roles = [];
-            try {
-                const response = await fetch('/api/yetkitable');
-                if (response.ok) {
-                    const data = await response.json();
-                    roles = data.roles || [];
-                }
-            } catch (error) {
-                console.error('Roller çekilirken hata oluştu:', error);
-            }
+            const roles = await fetchRoles();
 
             const startIndex = (currentPage - 1) * rowsPerPage;
             const endIndex = startIndex + rowsPerPage;
@@ -1824,9 +1840,15 @@
                 else if (user.role && (user.role.toLowerCase().includes('yönetici') || user.role.toLowerCase().includes('manager'))) badgeClass = 'role-manager';
 
                 // Rol dropdown'ı oluştur
-                let roleOptions = roles.map(role => 
-                    `<option value="${role.rol_adi}" ${user.role === role.rol_adi ? 'selected' : ''}>${role.rol_adi}</option>`
-                ).join('');
+                let roleOptions = '';
+                if (roles && roles.length > 0) {
+                    roleOptions = roles.map(role => 
+                        `<option value="${role.rol_adi}" ${user.role === role.rol_adi ? 'selected' : ''}>${role.rol_adi}</option>`
+                    ).join('');
+                } else {
+                    // Eğer roller yüklenemediyse, sadece mevcut rolü göster
+                    roleOptions = `<option value="${user.role || ''}" selected>${user.role || 'Rol Yok'}</option>`;
+                }
 
                 tr.innerHTML = `
                     <td data-label="Ad Soyad">${user.fullname || user.username || ''}</td>
