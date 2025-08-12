@@ -3798,23 +3798,21 @@ def check_and_notify_completed_steps():
         if connection:
             connection.close()
 
-@app.route('/api/work-progress-headers/<int:header_id>', methods=['GET'])
-def get_work_progress_header(header_id):
+@app.route('/api/work-progress-headers', methods=['GET'])
+def get_work_progress_headers():
     try:
         with get_db_connection() as conn:
             with conn.cursor(pymysql.cursors.DictCursor) as cursor:
                 cursor.execute("""
                     SELECT id, title, description, is_active, created_at, updated_at
                     FROM work_progress_headers
-                    WHERE id = %s
-                """, (header_id,))
-                header = cursor.fetchone()
-                if not header:
-                    return jsonify({"error": "Başlık bulunamadı"}), 404
-                return jsonify(header)
+                    ORDER BY title
+                """)
+                headers = cursor.fetchall()
+                return jsonify(headers)
     except Exception as e:
-        print(f"Error fetching work progress header: {str(e)}")
-        return jsonify({"error": "Başlık getirilirken bir hata oluştu"}), 500
+        print(f"Error fetching work progress headers: {str(e)}")
+        return jsonify({"error": "İş gidişat başlıkları getirilirken bir hata oluştu"}), 500
 
 @app.route('/api/work-progress-headers', methods=['POST'])
 def create_work_progress_header():

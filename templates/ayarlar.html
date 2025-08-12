@@ -2974,19 +2974,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load headers from API
     function loadHeaders() {
-        fetch(`${API_BASE_URL}/api/work-progress-headers`)
-            .then(response => response.json())
-            .then(headers => {
-                if (headers.error) {
-                    throw new Error(headers.error);
-                }
-                renderHeaders(headers);
-            })
-            .catch(error => {
-                console.error('Error loading headers:', error);
-                showToast('Başlıklar yüklenirken bir hata oluştu', true);
+    fetch(`${API_BASE_URL}/api/work-progress-headers`, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                console.error('Server response:', text);
+                throw new Error(`HTTP error! status: ${response.status}`);
             });
-    }
+        }
+        return response.json();
+    })
+    .then(headers => {
+        if (headers.error) {
+            throw new Error(headers.error);
+        }
+        renderHeaders(headers);
+    })
+    .catch(error => {
+        console.error('Error loading headers:', error);
+        showToast('Başlıklar yüklenirken bir hata oluştu: ' + error.message, true);
+    });
+}
 
     // Render headers in the table
     function renderHeaders(headers) {
