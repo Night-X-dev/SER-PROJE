@@ -1496,23 +1496,29 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
                         </div>
                         <div class="modal-body">
-                            <form id="editUserForm">
-                                <input type="hidden" id="editUserId">
-                                <div class="form-group">
-                                    <label for="editFullName">Ad Soyad</label>
-                                    <input type="text" id="editFullName" class="form-control" required>
+                            <form id="editUserForm" class="needs-validation" novalidate>
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" id="editUserId" name="userId" value="">
+                                <div class="mb-3">
+                                    <label for="editFullName" class="form-label">Ad Soyad</label>
+                                    <input type="text" class="form-control" id="editFullName" name="fullName" required>
                                 </div>
-                                <div class="form-group">
-                                    <label for="editEmail">Email</label>
-                                    <input type="email" id="editEmail" class="form-control" required>
+                                <div class="mb-3">
+                                    <label for="editEmail" class="form-label">E-posta</label>
+                                    <input type="email" class="form-control" id="editEmail" name="email" required>
                                 </div>
-                                <div class="form-group">
-                                    <label for="editRole">Rol</label>
-                                    <select id="editRole" class="form-control" required>
-                                        <option value="">Rol Seçiniz</option>
-                                        <!-- Roller buraya yüklenecek -->
+                                <div class="mb-3">
+                                    <label for="editRole" class="form-label">Rol</label>
+                                    <select class="form-select" id="editRole" name="role" required>
+                                        {% if roles %}
+                                            {% for role in roles %}
+                                                <option value="{{ role.role_name }}" {% if role.role_name == current_user.role %}selected{% endif %}>
+                                                    {{ role.role_name }}
+                                                </option>
+                                            {% endfor %}
+                                        {% endif %}
                                     </select>
-                                </div>
+                                </div>    
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" id="cancelEditUser" data-bs-dismiss="modal">İptal</button>

@@ -26,6 +26,19 @@ app = Flask(__name__)
 # THIS SHOULD BE A SECURE AND UNPREDICTABLE STRING!
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex")
 
+# Configure CSRF protection
+app.config['WTF_CSRF_ENABLED'] = True
+app.config['WTF_CSRF_SECRET_KEY'] = os.getenv("CSRF_SECRET_KEY", "anothersupersecretkey")
+app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour in seconds
+
+# Initialize CSRF protection
+csrf = CSRFProtect(app)
+
+# Make csrf_token available in all templates
+@app.context_processor
+def inject_csrf_token():
+    return dict(csrf_token=generate_csrf)
+
 PRIORITY_TRANSLATIONS = {
     "low": "Düşük Öncelik",
     "medium": "Orta Öncelik",
