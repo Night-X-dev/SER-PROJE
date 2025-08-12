@@ -11,8 +11,6 @@ from dotenv import load_dotenv
 import urllib.parse
 import re
 import traceback # Import traceback for detailed error logging
-
-# E-posta göndermek için gerekli kütüphaneler
 import smtplib
 import ssl
 from email.mime.text import MIMEText
@@ -2956,59 +2954,75 @@ def update_password():
 @app.route('/api/users/<int:user_id>', methods=['PUT'])
 def update_user(user_id):
     """Update user information including role."""
+    print(f"[DEBUG] Update user request received for user_id: {user_id}")
+    
     # Check if user is logged in
     if 'user_id' not in session:
+        print("[ERROR] Kullanıcı oturumu bulunamadı")
         return jsonify({"error": "Oturum açık değil."}), 401
 
     # Get JSON data from request
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True)
+        print(f"[DEBUG] Request data: {data}")
+        
         if not data:
+            print("[ERROR] Boş veri")
             return jsonify({"error": "Geçersiz veri."}), 400
             
         # Debug log
-        print(f"Updating user {user_id} with data: {data}")
+        print(f"[DEBUG] Updating user {user_id} with data: {data}")
         
         # Check if user is admin (temporarily disabled for testing)
-        # if session.get('role') != 'Admin':
-        #     return jsonify({"error": "Bu işlem için yetkiniz yok."}), 403
+        if 'role' in data and session.get('role') != 'Admin':
+            print("[ERROR] Yetkisiz işlem girişimi")
+            return jsonify({"error": "Bu işlem için yetkiniz yok."}), 403
+            
     except Exception as e:
-        print(f"JSON veri okunurken hata: {e}")
-        return jsonify({"error": "Geçersiz istek verisi."}), 400
+        print(f"[ERROR] JSON veri okunurken hata: {str(e)}")
+        return jsonify({"error": "Geçersiz istek verisi.", "details": str(e)}), 400
 
     connection = None
     try:
         connection = get_db_connection()
         if not connection:
+            print("[ERROR] Veritabanı bağlantısı kurulamadı")
             return jsonify({"error": "Veritabanı bağlantısı kurulamadı."}), 500
 
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
             # Check if user exists
-            cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
-            if not cursor.fetchone():
+            cursor.execute("SELECT id, role FROM users WHERE id = %s", (user_id,))
+            user = cursor.fetchone()
+            if not user:
+                print(f"[ERROR] Kullanıcı bulunamadı: {user_id}")
                 return jsonify({"error": "Kullanıcı bulunamadı."}), 404
 
             # Update user fields
             update_fields = []
             update_values = []
             
-            if 'fullname' in data:
+            if 'fullname' in data and data['fullname']:
                 update_fields.append("fullname = %s")
-                update_values.append(data['fullname'])
+                update_values.append(data['fullname'].strip())
                 
-            if 'email' in data:
+            if 'email' in data and data['email']:
+                # Basic email validation
+                if '@' not in data['email']:
+                    return jsonify({"error": "Geçersiz e-posta adresi."}), 400
                 update_fields.append("email = %s")
-                update_values.append(data['email'])
+                update_values.append(data['email'].strip())
                 
-            if 'role' in data:
+            if 'role' in data and data['role']:
                 # Verify the role exists
                 cursor.execute("SELECT id FROM yetki WHERE role_name = %s", (data['role'],))
                 if not cursor.fetchone():
+                    print(f"[ERROR] Geçersiz rol: {data['role']}")
                     return jsonify({"error": "Geçersiz rol."}), 400
                 update_fields.append("role = %s")
-                update_values.append(data['role'])
+                update_values.append(data['role'].strip())
 
             if not update_fields:
+                print("[WARNING] Güncellenecek alan bulunamadı")
                 return jsonify({"message": "Güncellenecek alan bulunamadı."}), 200
 
             # Add user_id to the values list
@@ -3016,23 +3030,38 @@ def update_user(user_id):
             
             # Build and execute the update query
             update_query = f"UPDATE users SET {', '.join(update_fields)} WHERE id = %s"
+            print(f"[DEBUG] Executing query: {update_query} with values: {update_values}")
+            
             cursor.execute(update_query, update_values)
             connection.commit()
-
-            return jsonify({"message": "Kullanıcı başarıyla güncellendi."}), 200
+            
+            print(f"[SUCCESS] Kullanıcı güncellendi: {user_id}")
+            return jsonify({
+                "success": True,
+                "message": "Kullanıcı başarıyla güncellendi.",
+                "updated_fields": [field.split(' = ')[0] for field in update_fields]
+            }), 200
 
     except pymysql.Error as e:
-        connection.rollback()
-        print(f"Veritabanı hatası: {e}")
-        return jsonify({"error": "Veritabanı hatası oluştu."}), 500
+        if connection:
+            connection.rollback()
+        error_msg = f"Veritabanı hatası: {str(e)}"
+        print(f"[ERROR] {error_msg}")
+        return jsonify({"error": "Veritabanı işlemi sırasında bir hata oluştu.", "details": str(e)}), 500
+        
     except Exception as e:
         if connection:
             connection.rollback()
-        print(f"Beklenmeyen hata: {e}")
-        return jsonify({"error": "Beklenmeyen bir hata oluştu."}), 500
+        error_msg = f"Beklenmeyen hata: {str(e)}"
+        print(f"[ERROR] {error_msg}")
+        return jsonify({"error": "İşlem sırasında bir hata oluştu.", "details": str(e)}), 500
+        
     finally:
         if connection:
-            connection.close()
+            try:
+                connection.close()
+            except Exception as e:
+                print(f"[WARNING] Veritabanı bağlantısı kapatılırken hata: {str(e)}")
 
 @app.route('/api/yetkitable')
 def get_yetkitable():
