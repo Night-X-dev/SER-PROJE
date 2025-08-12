@@ -3924,3 +3924,20 @@ def get_work_progress_header(header_id):
     except Exception as e:
         print(f"Error fetching work progress header: {str(e)}")
         return jsonify({"error": "Başlık getirilirken bir hata oluştu"}), 500
+# In app.py
+@app.route('/api/work-progress-headers/active', methods=['GET'])
+def get_active_work_progress_headers():
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+                cursor.execute("""
+                    SELECT id, title 
+                    FROM work_progress_headers 
+                    WHERE is_active = 1
+                    ORDER BY title
+                """)
+                headers = cursor.fetchall()
+                return jsonify(headers)
+    except Exception as e:
+        print(f"Error fetching active work progress headers: {str(e)}")
+        return jsonify({"error": "Başlıklar getirilirken bir hata oluştu"}), 500
