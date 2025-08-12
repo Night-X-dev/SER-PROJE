@@ -2793,6 +2793,12 @@ function approveUser(userId) {
                         // Get CSRF token from meta tag
                         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
                         
+                        console.log('Sending update request with data:', {
+                            fullname: fullName,
+                            email: email,
+                            role: role
+                        });
+
                         const response = await fetch(`/api/users/${userId}`, {
                             method: 'PUT',
                             headers: {
@@ -2807,17 +2813,29 @@ function approveUser(userId) {
                             }),
                             credentials: 'same-origin'
                         });
+
+                        console.log('Response status:', response.status);
+                        const responseData = await response.text();
+                        console.log('Raw response:', responseData);
                         
-                        const result = await response.json();
-                        
-                        if (response.ok) {
-                            showToast('Kullanıcı başarıyla güncellendi');
-                            const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
-                            if (modal) modal.hide();
-                            loadUsersTable(); // Refresh the table
-                        } else {
-                            throw new Error(result.message || 'Kullanıcı güncellenirken bir hata oluştu');
+                        let result;
+                        try {
+                            result = responseData ? JSON.parse(responseData) : {};
+                        } catch (e) {
+                            console.error('Error parsing response as JSON:', e);
+                            throw new Error(`Geçersiz yanıt: ${responseData.substring(0, 100)}...`);
                         }
+                        
+                        if (!response.ok) {
+                            const errorMessage = result.error || result.message || `Sunucu hatası: ${response.status}`;
+                            console.error('Update failed:', errorMessage);
+                            throw new Error(errorMessage);
+                        }
+                        
+                        showToast('Kullanıcı başarıyla güncellendi');
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+                        if (modal) modal.hide();
+                        loadUsersTable(); // Refresh the table
                     } catch (error) {
                         console.error('Kullanıcı güncelleme hatası:', error);
                         showToast(error.message || 'Kullanıcı güncellenirken bir hata oluştu', true);

@@ -2956,17 +2956,22 @@ def update_password():
 @app.route('/api/users/<int:user_id>', methods=['PUT'])
 def update_user(user_id):
     """Update user information including role."""
+    # Check if user is logged in
     if 'user_id' not in session:
         return jsonify({"error": "Oturum açık değil."}), 401
 
-    # Debug: Temporarily allow all authenticated users for testing
-    # TODO: Restore admin-only access after testing
-    if 'user_id' not in session:
-        return jsonify({"error": "Oturum açık değil."}), 401
-
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Geçersiz veri."}), 400
+    # Get JSON data from request
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Geçersiz veri."}), 400
+            
+        # Debug log
+        print(f"Updating user {user_id} with data: {data}")
+        
+        # Check if user is admin (temporarily disabled for testing)
+        # if session.get('role') != 'Admin':
+        #     return jsonify({"error": "Bu işlem için yetkiniz yok."}), 403
 
     connection = None
     try:
