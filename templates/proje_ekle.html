@@ -1500,7 +1500,14 @@ formElement.addEventListener('submit', function(e) {
 
                 // Yeni eklenen tarih seçicileri başlat
                 flatpickr(newItem.querySelectorAll('.progress-datepicker'), dateOptions);
+                const newProgressItem = progressContainer.lastElementChild;
+            const newDropdown = newProgressItem.querySelector('select[name="progressTitle"]');
+            if (newDropdown) {
+                fetchProgressHeaders(document.getElementById('projectForm'));
+            }
 
+            // Yeni eklenen eleman için takvimleri başlat
+            initDatePickers(newProgressItem);
                 // Sil butonu için olay dinleyicisi
                 newItem.querySelector('.delete-progress-btn').addEventListener('click', () => {
                     newItem.remove();
@@ -1614,6 +1621,8 @@ formElement.addEventListener('submit', function(e) {
                     if (projectResponse.ok) {
                         showToast(projectResult.message || 'Proje başarıyla eklendi!', false);
                         // Proje başarıyla eklendikten sonra:
+                        document.getElementById('projectForm').reset();
+
                         addActivity(
                           "Proje Eklendi",
                           `${projectName} adlı proje başarıyla eklendi.`,
@@ -1750,7 +1759,7 @@ async function checkPermission(permissionKey) {
         return false;
     }
 }
-
+const formElement = document.getElementById('projectForm');
 window.addEventListener('DOMContentLoaded', function() {
     checkPermission('proje_ekle');
 });
