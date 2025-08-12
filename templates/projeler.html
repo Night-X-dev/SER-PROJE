@@ -2464,92 +2464,108 @@ function attachProjectTableEventListeners() {
 
     // Modal açma fonksiyonu
     async function openProjectModal(projectId, mode) {
-  try {
-    console.log("openProjectModal başladı, projectId:", projectId, "mode:", mode);
-    const project = allProjectsData.find((p) => p.project_id == projectId);
-    if (!project) {
-      showToast("Proje bulunamadı!", true);
-      return;
+        try {
+            console.log("openProjectModal başladı, projectId:", projectId, "mode:", mode);
+            // allProjectsData değişkeninin tanımlı ve güncel olduğunu varsayıyoruz.
+            const project = allProjectsData.find((p) => p.project_id == projectId);
+            if (!project) {
+                showToast("Proje bulunamadı!", "error");
+                return;
+            }
+            
+            // Modal DOM elemanlarını seç
+            const projectModal = document.getElementById("projectModal");
+            const modalTitle = document.querySelector("#projectModal .modal-title");
+            const modalBody = document.querySelector("#projectModal .modal-body");
+            const modalActions = document.querySelector("#projectModal .modal-actions");
+            
+            projectModal.style.display = "flex";
+            modalBody.innerHTML =
+            '<p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</p>';
+            
+            if (mode === "view") {
+                console.log("View modu için modal yükleniyor");
+                modalTitle.innerHTML = `<i class="fas fa-info-circle"></i> Proje Detayları: ${project.project_name}`;
+                // renderViewModal fonksiyonunu çağırıyoruz.
+                await renderViewModal(project);
+                modalActions.innerHTML = `<button class="modal-btn modal-btn-cancel" id="cancelModalBtn">Kapat</button>`;
+                
+                // Event listener'lar ekleniyor
+                // modalBodyClickListener'ı renderViewModal'dan sonra ekliyoruz.
+                const newModalBodyClickListener = function(e) {
+                    if (e.target.closest('.open-location-btn')) {
+                        const btn = e.target.closest('.open-location-btn');
+                        const location = btn.dataset.location;
+                        openLocationInGoogleMaps(location);
+                    }
+                };
+                // Eski listener'ı kaldır, yenisini ekle
+                if (modalBodyClickListener) {
+                     modalBody.removeEventListener('click', modalBodyClickListener);
+                }
+                modalBodyClickListener = newModalBodyClickListener;
+                modalBody.addEventListener('click', modalBodyClickListener);
+                console.log("View modu modal hazır");
+            } else if (mode === "edit") {
+                console.log("Edit modu için modal yükleniyor");
+                modalTitle.innerHTML = `<i class="fas fa-edit"></i> Projeyi Düzenle: ${project.project_name}`;
+                // renderEditModal fonksiyonunu çağırıyoruz.
+                await renderEditModal(project);
+                modalActions.innerHTML = `
+                <button class="modal-btn modal-btn-save" id="saveProjectBtn"><i class="fas fa-save"></i> Kaydet</button>
+                <button class="modal-btn modal-btn-cancel" id="cancelModalBtn">İptal</button>
+                `;
+                
+                // Event listener'lar ekleniyor
+                const saveProjectBtn = document.getElementById("saveProjectBtn");
+                if (saveProjectBtn) {
+                    // saveProjectChanges fonksiyonunun tanımlı olduğunu varsayıyoruz.
+                    saveProjectBtn.addEventListener("click", saveProjectChanges);
+                } else {
+                    console.error("saveProjectBtn bulunamadı!");
+                }
+                
+                const cancelModalBtn = document.getElementById("cancelModalBtn");
+                if (cancelModalBtn) {
+                    // closeProjectModal fonksiyonunun tanımlı olduğunu varsayıyoruz.
+                    cancelModalBtn.addEventListener("click", closeProjectModal);
+                } else {
+                    console.error("cancelModalBtn bulunamadı!");
+                }
+                console.log("Edit modu modal hazır");
+            }
+            
+            const cancelBtn = document.getElementById("cancelModalBtn");
+            if (cancelBtn) {
+                cancelBtn.addEventListener("click", closeProjectModal);
+            } else {
+                console.warn("cancelModalBtn bulunamadı, olay dinleyici eklenemedi");
+            }
+            
+            const closeModalBtn = document.getElementById("closeModalBtn");
+            if (closeModalBtn) {
+                closeModalBtn.addEventListener("click", closeProjectModal);
+            } else {
+                console.warn("closeModalBtn bulunamadı, olay dinleyici eklenemedi");
+            }
+            
+            // Modalın dışına tıklayarak kapatma
+            projectModal.onclick = (e) => {
+                if (e.target === projectModal) {
+                    closeProjectModal();
+                }
+            };
+            
+            // Esc tuşu ile kapatma
+            document.addEventListener("keydown", handleEscapeKey);
+            console.log("openProjectModal tamamlandı");
+        } catch (error) {
+            console.error("openProjectModal hatası:", error);
+            const modalBody = document.querySelector("#projectModal .modal-body");
+            modalBody.innerHTML = `<p style="text-align: center; color: red;">Modal yüklenirken bir hata oluştu: ${error.message}</p>
+            <button class="btn" onclick="closeProjectModal()">Modali Kapat</button>`;
+        }
     }
-    
-    projectModal.style.display = "flex";
-    modalBody.innerHTML =
-    '<p style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Yükleniyor...</p>';
-    
-    if (mode === "view") {
-      console.log("View modu için modal yükleniyor");
-      modalTitle.innerHTML = `<i class="fas fa-info-circle"></i> Proje Detayları: ${project.project_name}`;
-      await renderViewModal(project);
-      modalActions.innerHTML = `<button class="modal-btn modal-btn-cancel" id="cancelModalBtn">Kapat</button>`;
-      
-      if (!modalBodyClickListener) {
-        modalBodyClickListener = function(e) {
-          if (e.target.closest('.open-location-btn')) {
-            const btn = e.target.closest('.open-location-btn');
-            const location = btn.dataset.location;
-            openLocationInGoogleMaps(location);
-          }
-        };
-        modalBody.addEventListener('click', modalBodyClickListener);
-      }
-      console.log("View modu modal hazır");
-    } else if (mode === "edit") {
-      console.log("Edit modu için modal yükleniyor");
-      modalTitle.innerHTML = `<i class="fas fa-edit"></i> Projeyi Düzenle: ${project.project_name}`;
-      await renderEditModal(project);
-      modalActions.innerHTML = `
-      <button class="modal-btn modal-btn-save" id="saveProjectBtn"><i class="fas fa-save"></i> Kaydet</button>
-      <button class="modal-btn modal-btn-cancel" id="cancelModalBtn">İptal</button>
-      `;
-      
-      // Event listener'lar ekleniyor
-      const saveProjectBtn = document.getElementById("saveProjectBtn");
-      if (saveProjectBtn) {
-        saveProjectBtn.addEventListener("click", saveProjectChanges);
-      } else {
-        console.error("saveProjectBtn bulunamadı!");
-      }
-      
-      const cancelModalBtn = document.getElementById("cancelModalBtn");
-      if (cancelModalBtn) {
-        cancelModalBtn.addEventListener("click", closeProjectModal);
-      } else {
-        console.error("cancelModalBtn bulunamadı!");
-      }
-      console.log("Edit modu modal hazır");
-    }
-    
-    // Her zaman güncel kapatma butonlarına olay dinleyicisi ekle
-    const cancelBtn = document.getElementById("cancelModalBtn");
-    if (cancelBtn) {
-      cancelBtn.addEventListener("click", closeProjectModal);
-    } else {
-      console.warn("cancelModalBtn bulunamadı, olay dinleyici eklenemedi");
-    }
-    
-    if (closeModalBtn) {
-      closeModalBtn.addEventListener("click", closeProjectModal);
-    } else {
-      console.warn("closeModalBtn bulunamadı, olay dinleyici eklenemedi");
-    }
-    
-    // Modalın dışına tıklayarak kapatma
-    projectModal.onclick = (e) => {
-      if (e.target === projectModal) {
-        closeProjectModal();
-      }
-    };
-    
-    // Esc tuşu ile kapatma
-    document.addEventListener("keydown", handleEscapeKey);
-    console.log("openProjectModal tamamlandı");
-  } catch (error) {
-    console.error("openProjectModal hatası:", error);
-    modalBody.innerHTML = `<p style="text-align: center; color: red;">Modal yüklenirken bir hata oluştu: ${error.message}</p>
-    <button class="btn" onclick="closeProjectModal()">Modali Kapat</button>`;
-  }
-}
-
 
     function handleEscapeKey(e) {
         if (e.key === "Escape" && projectModal.style.display === "flex") {
