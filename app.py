@@ -3888,13 +3888,13 @@ def get_active_work_progress_headers():
 @app.route('/api/progress/<int:progress_id>/complete', methods=['POST'])
 def complete_progress(progress_id):
     try:
-        cursor = mysql.connection.cursor()
+        cursor = get_db_connection().cursor()
         cursor.execute("""
             UPDATE project_progress 
             SET is_completed = 1
             WHERE progress_id = %s
         """, (progress_id,))
-        mysql.connection.commit()
+        get_db_connection().commit()
         return jsonify({'success': True, 'message': 'İşlem başarılı'})
     except Exception as e:
         print(f"Hata: {str(e)}")
