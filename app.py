@@ -3798,3 +3798,85 @@ def check_and_notify_completed_steps():
         if connection:
             connection.close()
 
+@app.route('/api/work-progress-headers', methods=['GET'])
+def get_work_progress_headers():
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+                cursor.execute("""
+                    SELECT id, title, description, is_active, created_at, updated_at
+                    FROM work_progress_headers
+                    ORDER BY title
+                """)
+                headers = cursor.fetchall()
+                return jsonify(headers)
+    except Exception as e:
+        print(f"Error fetching work progress headers: {str(e)}")
+        return jsonify({"error": "İş gidişat başlıkları getirilirken bir hata oluştu"}), 500
+
+@app.route('/api/work-progress-headers', methods=['POST'])
+def create_work_progress_header():
+    if 'user_id' not in session:
+        return jsonify({"error": "Yetkisiz erişim"}), 401
+    
+    data = request.get_json()
+    title = data.get('title')
+    description = data.get('description', '')
+    
+    if not title:
+        return jsonify({"error": "Başlık alanı zorunludur"}), 400
+    
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO work_progress_headers (title, description, created_by)
+                    VALUES (%s, %s, %s)
+                """, (title, description, session['user_id']))
+                conn.commit()
+                return jsonify({"message": "Başlık başarıyla eklendi", "id": cursor.lastrowid}), 201
+    except Exception as e:
+        print(f"Error creating work progress header: {str(e)}")
+        return jsonify({"error": "Başlık eklenirken bir hata oluştu"}), 500
+
+@app.route('/api/work-progress-headers/<int:header_id>', methods=['PUT'])
+def update_work_progress_header(header_id):
+    if 'user_id' not in session:
+        return jsonify({"error": "Yetkisiz erişim"}), 401
+    
+    data = request.get_json()
+    title = data.get('title')
+    description = data.get('description')
+    is_active = data.get('is_active')
+    
+    if not title:
+        return jsonify({"error": "Başlık alanı zorunludur"}), 400
+    
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    UPDATE work_progress_headers
+                    SET title = %s, description = %s, is_active = %s, updated_at = NOW()
+                    WHERE id = %s
+                """, (title, description, is_active, header_id))
+                conn.commit()
+                return jsonify({"message": "Başlık başarıyla güncellendi"}), 200
+    except Exception as e:
+        print(f"Error updating work progress header: {str(e)}")
+        return jsonify({"error": "Başlık güncellenirken bir hata oluştu"}), 500
+
+@app.route('/api/work-progress-headers/<int:header_id>', methods=['DELETE'])
+def delete_work_progress_header(header_id):
+    if 'user_id' not in session:
+        return jsonify({"error": "Yetkisiz erişim"}), 401
+    
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("DELETE FROM work_progress_headers WHERE id = %s", (header_id,))
+                conn.commit()
+                return jsonify({"message": "Başlık başarıyla silindi"}), 200
+    except Exception as e:
+        print(f"Error deleting work progress header: {str(e)}")
+        return jsonify({"error": "Başlık silinirken bir hata oluştu"}), 500
