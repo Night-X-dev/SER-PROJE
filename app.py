@@ -3868,3 +3868,41 @@ def delete_work_progress_header(header_id):
     except Exception as e:
         print(f"Error deleting work progress header: {str(e)}")
         return jsonify({"error": "Başlık silinirken bir hata oluştu"}), 500
+@app.route('/api/work-progress-headers/<int:header_id>', methods=['PUT'])
+def update_work_progress_header(header_id):
+    if 'user_id' not in session:
+        return jsonify({"error": "Oturum açık değil"}), 401
+
+    data = request.get_json()
+    if not data or 'title' not in data:
+        return jsonify({"error": "Başlık alanı zorunludur"}), 400
+
+    title = data.get('title', '').strip()
+    description = data.get('description', '').strip()
+    is_active = data.get('is_active', True)
+
+    if not title:
+        return jsonify({"error": "Başlık boş olamaz"}), 400
+
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                # Check if header exists
+                cursor.execute("SELECT id FROM work_progress_headers WHERE id = %s", (header_id,))
+                if not cursor.fetchone():
+                    return jsonify({"error": "Başlık bulunamadı"}), 404
+
+                # Update the header
+                cursor.execute("""
+                    UPDATE work_progress_headers 
+                    SET title = %s, 
+                        description = %s, 
+                        is_active = %s,
+                        updated_at = NOW()
+                    WHERE id = %s
+                """, (title, description, is_active, header_id))
+                conn.commit()
+                return jsonify({"message": "Başlık başarıyla güncellendi"}), 200
+    except Exception as e:
+        print(f"Error updating work progress header: {str(e)}")
+        return jsonify({"error": "Başlık güncellenirken bir hata oluştu"}), 500
