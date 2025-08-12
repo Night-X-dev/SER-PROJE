@@ -3287,6 +3287,9 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
     const startDate = document.getElementById('newStepStartDate').value;
     const endDate = document.getElementById('newStepEndDate').value;
     const description = document.getElementById('newStepDescription').value;
+    const headerSelect = document.getElementById('newStepHeader');
+    const stepName = headerSelect.options[headerSelect.selectedIndex].text;
+
 
     if (!headerId || !startDate || !endDate) {
       showToast("Lütfen tüm zorunlu alanları doldurun.", true);
@@ -3298,12 +3301,13 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          header_id: headerId,
-          start_date: startDate,
-          end_date: endDate,
-          description: description,
-          user_id: currentUser.id
-        })
+  header_id: headerId,
+  step_name: stepName, // Backend'in beklediği alan
+  start_date: startDate,
+  end_date: endDate,
+  description: description,
+  user_id: currentUser.id
+})
       });
 
       const data = await response.json();
