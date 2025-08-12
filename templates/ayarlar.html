@@ -92,7 +92,17 @@
 .form-group {
     margin-bottom: 1.25rem;
 }
+/* Add this to your existing CSS */
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    border-radius: 0.2rem;
+}
 
+.gap-2 {
+    gap: 0.5rem;
+}
 .form-label {
     display: block;
     margin-bottom: 0.5rem;
@@ -2995,23 +3005,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
         headers.forEach(header => {
             const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${escapeHtml(header.title)}</td>
-                <td>${header.description ? escapeHtml(header.description) : '-'}</td>
-                <td>
-                    <span class="badge ${header.is_active ? 'bg-success' : 'bg-secondary'}">
-                        ${header.is_active ? 'Aktif' : 'Pasif'}
-                    </span>
-                </td>
-                <td>
-                    <button class="btn btn-sm btn-outline-primary edit-header" data-id="${header.id}">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger delete-header" data-id="${header.id}">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            `;
+            // In the renderHeaders function, update the buttons HTML:
+row.innerHTML = `
+    <td>${escapeHtml(header.title)}</td>
+    <td>${header.description ? escapeHtml(header.description) : '-'}</td>
+    <td>
+        <span class="badge ${header.is_active ? 'bg-success' : 'bg-secondary'}">
+            ${header.is_active ? 'Aktif' : 'Pasif'}
+        </span>
+    </td>
+    <td class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-primary edit-header" data-id="${header.id}">
+            <i class="fas fa-edit"></i> Düzenle
+        </button>
+        <button class="btn btn-sm btn-outline-danger delete-header" data-id="${header.id}">
+            <i class="fas fa-trash"></i> Sil
+        </button>
+    </td>
+`;
             headersTableBody.appendChild(row);
         });
 
@@ -3033,26 +3044,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Edit header
     function editHeader(id) {
-        fetch(`${API_BASE_URL}/api/work-progress-headers/${id}`)
-            .then(response => response.json())
-            .then(header => {
-                if (header.error) {
-                    throw new Error(header.error);
-                }
-                
-                headerModalLabel.textContent = 'Başlığı Düzenle';
-                document.getElementById('headerId').value = header.id;
-                document.getElementById('headerTitle').value = header.title;
-                document.getElementById('headerDescription').value = header.description || '';
-                document.getElementById('headerIsActive').checked = header.is_active;
-                
-                headerModal.show();
-            })
-            .catch(error => {
-                console.error('Error fetching header:', error);
-                showToast('Başlık bilgileri alınırken bir hata oluştu', true);
+    fetch(`${API_BASE_URL}/api/work-progress-headers/${id}`, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                throw new Error(text || 'Başlık getirilemedi');
             });
-    }
+        }
+        return response.json();
+    })
+    .then(header => {
+        headerModalLabel.textContent = 'Başlığı Düzenle';
+        document.getElementById('headerId').value = header.id;
+        document.getElementById('headerTitle').value = header.title;
+        document.getElementById('headerDescription').value = header.description || '';
+        document.getElementById('headerIsActive').checked = header.is_active;
+        headerModal.show();
+    })
+    .catch(error => {
+        console.error('Error fetching header:', error);
+        showToast('Başlık bilgileri alınırken bir hata oluştu: ' + error.message, true);
+    });
+}
 
     // Save header (create or update)
     function saveHeader() {
@@ -3093,27 +3112,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Delete header
     function deleteHeader(id) {
-        if (!confirm('Bu başlığı silmek istediğinize emin misiniz?')) {
-            return;
-        }
-        
-        fetch(`${API_BASE_URL}/api/work-progress-headers/${id}`, {
-            method: 'DELETE'
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                throw new Error(data.error);
-            }
-            
-            showToast('Başlık silindi');
-            loadHeaders();
-        })
-        .catch(error => {
-            console.error('Error deleting header:', error);
-            showToast('Başlık silinirken bir hata oluştu: ' + error.message, true);
-        });
+    if (!confirm('Bu başlığı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
+        return;
     }
+    
+    fetch(`${API_BASE_URL}/api/work-progress-headers/${id}`, {
+        method: 'DELETE',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                throw new Error(text || 'Silme işlemi başarısız oldu');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        showToast('Başlık başarıyla silindi');
+        loadHeaders();
+    })
+    .catch(error => {
+        console.error('Error deleting header:', error);
+        showToast('Başlık silinirken bir hata oluştu: ' + error.message, true);
+    });
+}
 
     // Helper function to escape HTML
     function escapeHtml(unsafe) {
