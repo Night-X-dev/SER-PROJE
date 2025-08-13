@@ -1995,17 +1995,20 @@
                     document.getElementById('editFullName').value = fullName;
                     document.getElementById('editEmail').value = email;
                     
-                    // Rolleri yükle ve modalı aç
+                    // Tüm rolleri yükle ve modalı aç
                     try {
-                        const response = await fetch('/api/yetkitable');
+                        // Tüm rolleri getir
+                        const response = await fetch('/api/yetkitable?all=true');
                         if (response.ok) {
                             const roles = await response.json();
                             const roleSelect = document.getElementById('editRole');
                             roleSelect.innerHTML = '<option value="">Rol Seçiniz</option>';
                             
+                            console.log('Tüm roller:', roles); // Debug için
+                            
                             // Rolleri dropdown'a ekle (Admin hariç)
                             roles.forEach(r => {
-                                if (r.role_name.toLowerCase() !== 'admin') {
+                                if (r.role_name && r.role_name.toLowerCase() !== 'admin') {
                                     const option = document.createElement('option');
                                     option.value = r.role_name;
                                     option.textContent = r.role_name;
