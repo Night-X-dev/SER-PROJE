@@ -809,6 +809,7 @@
         padding-top: 20px;
       }
 
+      /* Dropdown Styles */
       .header-select-wrapper {
         margin-bottom: 15px;
         width: 100%;
@@ -827,18 +828,19 @@
         pointer-events: none;
         color: #6c757d;
         transition: transform 0.2s ease;
+        z-index: 2;
       }
 
-      .header-dropdown {
+      .header-dropdown, #newStepHeader {
         -webkit-appearance: none;
         -moz-appearance: none;
         appearance: none;
-        background-color: #fff;
-        border: 1px solid #ced4da;
+        background-color: var(--input-bg);
+        border: 1px solid var(--border-color);
         border-radius: 6px;
         padding: 10px 40px 10px 15px;
         font-size: 14px;
-        color: #495057;
+        color: var(--text-color);
         width: 100%;
         height: 42px;
         transition: all 0.2s ease;
@@ -846,31 +848,51 @@
         background-image: none;
       }
 
-      .header-dropdown:focus {
-        border-color: #80bdff;
-        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+      .header-dropdown:focus, #newStepHeader:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
         outline: none;
       }
 
-      .header-dropdown:hover {
-        border-color: #adb5bd;
+      .header-dropdown:hover, #newStepHeader:hover {
+        border-color: var(--primary-hover);
       }
 
-      .header-dropdown option {
+      .header-dropdown option, #newStepHeader option {
         padding: 10px;
-        background: #fff;
+        background: var(--card-bg);
+        color: var(--text-color);
       }
 
-      .header-dropdown:focus + .select-arrow {
+      .header-dropdown:focus + .select-arrow, #newStepHeader:focus + .select-arrow {
         transform: translateY(-50%) rotate(180deg);
+        color: var(--primary-color);
       }
 
       .form-label {
         display: block;
         margin-bottom: 8px;
         font-weight: 500;
-        color: #495057;
+        color: var(--text-muted);
         font-size: 13px;
+      }
+
+      /* Dark Mode Specific Styles */
+      [data-theme="dark"] .header-dropdown,
+      [data-theme="dark"] #newStepHeader {
+        background-color: var(--input-bg);
+        border-color: var(--border-color);
+        color: var(--text-color);
+      }
+
+      [data-theme="dark"] .header-dropdown:focus,
+      [data-theme="dark"] #newStepHeader:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
+      }
+
+      [data-theme="dark"] .select-arrow {
+        color: var(--text-muted);
       }
 
       .progress-detail-item {
@@ -3242,7 +3264,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                         <div class="header-select-wrapper">
                             <label for="step-${step.progress_id}-header" class="form-label">Başlık</label>
                             <div class="select-container">
-                                <select id="step-${step.progress_id}-header" class="form-select header-dropdown" required>
+                                <select id="step-${step.progress_id}-header" class="header-dropdown" required>
                                     <option value="">Başlık seçiniz...</option>
                                     <!-- Headers will be loaded dynamically -->
                                 </select>
@@ -3519,13 +3541,18 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
   formElement.className = 'progress-detail-item';
   formElement.innerHTML = `
     <div class="progress-item-header">
-      <div class="input-group" style="flex: 1;">
-  <label for="newStepHeader">Başlık</label>
-  <select id="newStepHeader" class="form-select" required>
-    <option value="">Başlık seçiniz...</option>
-    ${headersList.map(h => `<option value="${h.id}">${h.title}</option>`).join('')}
-  </select>
-</div>
+                    <div class="header-select-wrapper" style="flex: 1;">
+                        <label for="newStepHeader" class="form-label">Başlık</label>
+                        <div class="select-container">
+                            <select id="newStepHeader" class="header-dropdown" required>
+                                <option value="">Başlık seçiniz...</option>
+                                ${headersList.map(h => `<option value="${h.id}">${h.title}</option>`).join('')}
+                            </select>
+                            <div class="select-arrow">
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                        </div>
+                    </div>
 
       <div class="progress-dates" style="margin-left: 20px;">
         <span>
