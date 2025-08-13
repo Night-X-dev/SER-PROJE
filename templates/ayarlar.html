@@ -2003,15 +2003,17 @@
                             const roleSelect = document.getElementById('editRole');
                             roleSelect.innerHTML = '<option value="">Rol Seçiniz</option>';
                             
-                            // Rolleri dropdown'a ekle
+                            // Rolleri dropdown'a ekle (Admin hariç)
                             roles.forEach(r => {
-                                const option = document.createElement('option');
-                                option.value = r.role_name;
-                                option.textContent = r.role_name;
-                                if (r.role_name === role) {
-                                    option.selected = true;
+                                if (r.role_name.toLowerCase() !== 'admin') {
+                                    const option = document.createElement('option');
+                                    option.value = r.role_name;
+                                    option.textContent = r.role_name;
+                                    if (r.role_name === role) {
+                                        option.selected = true;
+                                    }
+                                    roleSelect.appendChild(option);
                                 }
-                                roleSelect.appendChild(option);
                             });
                             
                             // Modalı göster
