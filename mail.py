@@ -154,7 +154,7 @@ def main():
                 SELECT pp.progress_id, pp.end_date, pp.project_id, pp.title, p.project_name
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
-                WHERE pp.is_complete = 1
+                WHERE pp.is_completed = 1
             """
             cursor.execute(sql)
             steps_to_notify = cursor.fetchall()
