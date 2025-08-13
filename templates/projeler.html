@@ -3264,6 +3264,13 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
             }
             return;
         }
+        
+        // Container'a project-id özelliği ekle
+        const container = document.getElementById('progressStepsContainer');
+        if (container) {
+            container.setAttribute('data-project-id', projectId);
+            container.setAttribute('data-loading', 'false');
+        }
 
         const progressStepsContainer = document.getElementById("progressStepsContainer");
         if (!progressStepsContainer) return;
@@ -4423,12 +4430,15 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
             // Tüm olası proje ID'si kaynaklarını kontrol et
             let projectId;
             
-            // 1. Önce iş adımından dene
-            if (!projectId && stepElement.closest('.project-details')) {
-                projectId = stepElement.closest('.project-details').dataset.projectId;
+            // 1. Progress adımları container'ından al
+            if (!projectId) {
+                const container = document.getElementById('progressStepsContainer');
+                if (container) {
+                    projectId = container.getAttribute('data-project-id');
+                }
             }
             
-            // 2. Modal'dan dene
+            // 2. Modal'dan al
             if (!projectId) {
                 const modal = document.querySelector('#projectModal');
                 if (modal) {
@@ -4436,23 +4446,35 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
                 }
             }
             
-            // 3. URL'den dene
+            // 3. URL'den al
             if (!projectId) {
-                const urlParams = new URLSearchParams(window.location.search);
-                projectId = urlParams.get('project_id');
+                const urlMatch = window.location.pathname.match(/\/projects\/(\d+)/);
+                if (urlMatch && urlMatch[1]) {
+                    projectId = urlMatch[1];
+                } else {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    projectId = urlParams.get('project_id');
+                }
             }
             
-            // 4. Sayfadaki gizli input'tan dene
+            // 4. Sayfadaki gizli input'tan al
             if (!projectId) {
                 const hiddenProjectId = document.querySelector('input[name="project_id"]');
-                if (hiddenProjectId) {
+                if (hiddenProjectId && hiddenProjectId.value) {
                     projectId = hiddenProjectId.value;
                 }
             }
             
-            // 5. Progress adımından dene
-            if (!projectId && stepElement.dataset.projectId) {
-                projectId = stepElement.dataset.projectId;
+            // 5. İş adımının veri özelliklerinden al
+            if (!projectId) {
+                // Önce kendisinde ara
+                if (stepElement.dataset.projectId) {
+                    projectId = stepElement.dataset.projectId;
+                }
+                // Sonra üst elementlerde ara
+                else if (stepElement.closest('[data-project-id]')) {
+                    projectId = stepElement.closest('[data-project-id]').dataset.projectId;
+                }
             }
             
             if (!projectId) {
