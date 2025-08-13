@@ -4420,22 +4420,49 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
                 return;
             }
             
-            // Proje ID'sini bulmak için farklı yöntemler dene
+            // Tüm olası proje ID'si kaynaklarını kontrol et
             let projectId;
-            const modal = document.querySelector('#projectModal');
-            if (modal) {
-                projectId = modal.dataset.projectId;
+            
+            // 1. Önce iş adımından dene
+            if (!projectId && stepElement.closest('.project-details')) {
+                projectId = stepElement.closest('.project-details').dataset.projectId;
             }
             
-            // URL'den proje ID'sini almayı dene
+            // 2. Modal'dan dene
+            if (!projectId) {
+                const modal = document.querySelector('#projectModal');
+                if (modal) {
+                    projectId = modal.dataset.projectId;
+                }
+            }
+            
+            // 3. URL'den dene
             if (!projectId) {
                 const urlParams = new URLSearchParams(window.location.search);
                 projectId = urlParams.get('project_id');
             }
             
+            // 4. Sayfadaki gizli input'tan dene
             if (!projectId) {
-                console.error('Proje ID bulunamadı');
-                showToast('Hata', 'Proje bilgisine ulaşılamadı', 'error');
+                const hiddenProjectId = document.querySelector('input[name="project_id"]');
+                if (hiddenProjectId) {
+                    projectId = hiddenProjectId.value;
+                }
+            }
+            
+            // 5. Progress adımından dene
+            if (!projectId && stepElement.dataset.projectId) {
+                projectId = stepElement.dataset.projectId;
+            }
+            
+            if (!projectId) {
+                console.error('Proje ID bulunamadı', {
+                    stepElement: stepElement,
+                    modal: !!document.querySelector('#projectModal'),
+                    urlParams: window.location.search,
+                    hiddenInput: document.querySelector('input[name="project_id"]')
+                });
+                showToast('Hata', 'Proje bilgisine ulaşılamadı. Lütfen sayfayı yenileyip tekrar deneyin.', 'error');
                 checkbox.checked = !isChecked; // Checkbox durumunu geri al
                 return;
             }
