@@ -4428,66 +4428,79 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
             }
             
             // Tüm olası proje ID'si kaynaklarını kontrol et
-            let projectId;
+            let foundProjectId = null;
             
             // 1. Progress adımları container'ından al
-            if (!projectId) {
+            if (!foundProjectId) {
                 const container = document.getElementById('progressStepsContainer');
                 if (container) {
-                    projectId = container.getAttribute('data-project-id');
+                    foundProjectId = container.getAttribute('data-project-id');
+                    console.log('progressStepsContainer dan alındı:', foundProjectId);
                 }
             }
             
             // 2. Modal'dan al
-            if (!projectId) {
+            if (!foundProjectId) {
                 const modal = document.querySelector('#projectModal');
-                if (modal) {
-                    projectId = modal.dataset.projectId;
+                if (modal && modal.dataset.projectId) {
+                    foundProjectId = modal.dataset.projectId;
+                    console.log('Modal dan alındı:', foundProjectId);
                 }
             }
             
             // 3. URL'den al
-            if (!projectId) {
+            if (!foundProjectId) {
                 const urlMatch = window.location.pathname.match(/\/projects\/(\d+)/);
                 if (urlMatch && urlMatch[1]) {
-                    projectId = urlMatch[1];
+                    foundProjectId = urlMatch[1];
+                    console.log('URL path den alındı:', foundProjectId);
                 } else {
                     const urlParams = new URLSearchParams(window.location.search);
-                    projectId = urlParams.get('project_id');
+                    foundProjectId = urlParams.get('project_id');
+                    console.log('URL parametresinden alındı:', foundProjectId);
                 }
             }
             
             // 4. Sayfadaki gizli input'tan al
-            if (!projectId) {
+            if (!foundProjectId) {
                 const hiddenProjectId = document.querySelector('input[name="project_id"]');
                 if (hiddenProjectId && hiddenProjectId.value) {
-                    projectId = hiddenProjectId.value;
+                    foundProjectId = hiddenProjectId.value;
+                    console.log('Gizli input tan alındı:', foundProjectId);
                 }
             }
             
             // 5. İş adımının veri özelliklerinden al
-            if (!projectId) {
+            if (!foundProjectId) {
                 // Önce kendisinde ara
                 if (stepElement.dataset.projectId) {
-                    projectId = stepElement.dataset.projectId;
+                    foundProjectId = stepElement.dataset.projectId;
+                    console.log('Step elementinden alındı (data-project-id):', foundProjectId);
                 }
                 // Sonra üst elementlerde ara
-                else if (stepElement.closest('[data-project-id]')) {
-                    projectId = stepElement.closest('[data-project-id]').dataset.projectId;
+                else {
+                    const parentWithId = stepElement.closest('[data-project-id]');
+                    if (parentWithId) {
+                        foundProjectId = parentWithId.dataset.projectId;
+                        console.log('Üst elementten alındı (data-project-id):', foundProjectId);
+                    }
                 }
             }
             
-            if (!projectId) {
+            if (!foundProjectId) {
                 console.error('Proje ID bulunamadı', {
                     stepElement: stepElement,
                     modal: !!document.querySelector('#projectModal'),
                     urlParams: window.location.search,
-                    hiddenInput: document.querySelector('input[name="project_id"]')
+                    hiddenInput: document.querySelector('input[name="project_id"]'),
+                    container: document.getElementById('progressStepsContainer')
                 });
                 showToast('Hata', 'Proje bilgisine ulaşılamadı. Lütfen sayfayı yenileyip tekrar deneyin.', 'error');
                 checkbox.checked = !isChecked; // Checkbox durumunu geri al
                 return;
             }
+            
+            const projectId = foundProjectId; // Artık güvenle atayabiliriz
             
             try {
                 const response = await fetch(`/api/progress/${progressId}/complete`, {
