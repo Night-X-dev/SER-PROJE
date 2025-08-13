@@ -2160,14 +2160,17 @@ async function fetchRoles() {
                 if (!response.ok) {
                     throw new Error('API isteği başarısız oldu: ' + response.statusText);
                 }
-                const roles = await response.json();
+                let roles = await response.json();
+
+                // Admin rolünü filtrele
+                roles = roles.filter(role => role.role_name.toLowerCase() !== 'admin');
 
                 // Yükleme bitti, kapsayıcıları ayarla
                 loadingContainer.style.display = 'none';
 
                 if (roles && roles.length > 0) {
                     roleTableContainer.style.display = 'block';
-                    // Gelen her rol için tabloya yeni bir satır ekle
+                    // Gelen her rol için tabloa yeni bir satır ekle
                     roles.forEach(role => {
                         const row = document.createElement('tr');
                         // role_name ve role_id'yi veritabanından gelen verilerle doldur.
