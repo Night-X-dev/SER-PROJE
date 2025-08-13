@@ -3944,5 +3944,3 @@ def complete_progress_step(progress_id):
     finally:
         if connection:
             connection.close()
-        if conn:
-            conn.close()
