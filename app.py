@@ -3896,26 +3896,53 @@ def get_active_work_progress_headers():
 
 
 @app.route('/api/progress/<int:progress_id>/complete', methods=['POST'])
-def complete_progress(progress_id):
-    conn = None
-    cursor = None
+def complete_progress_step(progress_id):
+    data = request.get_json()
+    is_completed = data.get('is_completed', False)
+    project_id = data.get('project_id')
+    
+    if not project_id:
+        return jsonify({'success': False, 'message': 'Proje ID zorunludur'}), 400
+    
+    connection = None
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE project_progress 
-            SET is_completed = 1
-            WHERE progress_id = %s
-        """, (progress_id,))
-        conn.commit()
-        return jsonify({'success': True, 'message': 'İşlem başarılı'})
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # İş adımının gerçekten bu projeye ait olduğunu kontrol et
+            cursor.execute(
+                "SELECT progress_id FROM project_progress WHERE progress_id = %s AND project_id = %s",
+                (progress_id, project_id)
+            )
+            if not cursor.fetchone():
+                return jsonify({'success': False, 'message': 'Geçersiz iş adımı veya proje ID'}), 404
+            
+            # İş adımını güncelle
+            cursor.execute(
+                "UPDATE project_progress SET is_completed = %s WHERE progress_id = %s",
+                (1 if is_completed else 0, progress_id)
+            )
+            
+            # Proje durumunu güncelle
+            determine_and_update_project_status(cursor, project_id)
+            
+            connection.commit()
+            return jsonify({
+                'success': True, 
+                'message': 'İş adımı başarıyla güncellendi',
+                'is_completed': is_completed
+            })
+            
     except Exception as e:
-        print(f"Hata: {str(e)}")
-        if conn:
-            conn.rollback()
-        return jsonify({'success': False, 'message': str(e)}), 500
+        print(f"İş adımı güncellenirken hata: {e}")
+        if connection:
+            connection.rollback()
+        return jsonify({
+            'success': False, 
+            'message': f'İş adımı güncellenirken bir hata oluştu: {str(e)}'
+        }), 500
+        
     finally:
-        if cursor:
-            cursor.close()
+        if connection:
+            connection.close()
         if conn:
             conn.close()

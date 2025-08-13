@@ -4409,11 +4409,34 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
         }
         async function updateProgressStatus(progressId, isChecked) {
             const checkbox = document.querySelector(`#complete-${progressId}`);
+            if (!checkbox) {
+                console.error('Checkbox bulunamadı');
+                return;
+            }
+            
             const stepElement = checkbox.closest('.progress-detail-item');
-            const projectId = document.querySelector('.project-details')?.dataset.projectId;
+            if (!stepElement) {
+                console.error('İş adımı bulunamadı');
+                return;
+            }
+            
+            // Proje ID'sini bulmak için farklı yöntemler dene
+            let projectId;
+            const modal = document.querySelector('#projectModal');
+            if (modal) {
+                projectId = modal.dataset.projectId;
+            }
+            
+            // URL'den proje ID'sini almayı dene
+            if (!projectId) {
+                const urlParams = new URLSearchParams(window.location.search);
+                projectId = urlParams.get('project_id');
+            }
             
             if (!projectId) {
-                console.error('Project ID not found');
+                console.error('Proje ID bulunamadı');
+                showToast('Hata', 'Proje bilgisine ulaşılamadı', 'error');
+                checkbox.checked = !isChecked; // Checkbox durumunu geri al
                 return;
             }
             
@@ -4421,9 +4444,13 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
                 const response = await fetch(`/api/progress/${progressId}/complete`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
                     },
-                    body: JSON.stringify({ is_completed: isChecked })
+                    body: JSON.stringify({ 
+                        is_completed: isChecked,
+                        project_id: projectId
+                    })
                 });
 
                 const result = await response.json();
@@ -4432,21 +4459,23 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
                     throw new Error(result.message || 'Bir hata oluştu');
                 }
                 
-                // Update the UI to reflect the new completion status
+                // İşlem başarılıysa UI'ı güncelle
                 if (isChecked) {
-                    // If marking as completed
+                    // Tamamlandı olarak işaretlendi
                     stepElement.classList.add('completed-step');
                     stepElement.setAttribute('data-completed', 'true');
                     
-                    // Disable all form elements in this step
+                    // Tüm form elemanlarını devre dışı bırak
                     const formElements = stepElement.querySelectorAll('input, select, textarea, button, .btn-edit, .btn-delete');
                     formElements.forEach(element => {
-                        element.disabled = true;
-                        element.style.pointerEvents = 'none';
-                        element.style.opacity = '0.6';
+                        if (element !== checkbox) { // Checkbox hariç
+                            element.disabled = true;
+                            element.style.pointerEvents = 'none';
+                            element.style.opacity = '0.6';
+                        }
                     });
                     
-                    // Disable any links
+                    // Bağlantıları devre dışı bırak
                     const links = stepElement.querySelectorAll('a');
                     links.forEach(link => {
                         link.style.pointerEvents = 'none';
@@ -4458,7 +4487,7 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
                         };
                     });
                     
-                    // Update the checkbox label
+                    // Checkbox etiketini güncelle
                     const label = checkbox.nextElementSibling;
                     if (label && label.classList.contains('form-check-label')) {
                         label.textContent = 'Tamamlandı';
@@ -4466,22 +4495,25 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
                         label.style.fontWeight = 'bold';
                     }
                     
-                    // Add a visual indicator
-                    const completedBadge = document.createElement('span');
-                    completedBadge.className = 'badge bg-success ms-2';
-                    completedBadge.textContent = 'Tamamlandı';
-                    const titleElement = stepElement.querySelector('.progress-detail-title');
-                    if (titleElement && !titleElement.querySelector('.badge')) {
-                        titleElement.appendChild(completedBadge);
+                    // Tamamlandı rozeti ekle (eğer yoksa)
+                    let badge = stepElement.querySelector('.progress-detail-title .badge');
+                    if (!badge) {
+                        badge = document.createElement('span');
+                        badge.className = 'badge bg-success ms-2';
+                        badge.textContent = 'Tamamlandı';
+                        const titleElement = stepElement.querySelector('.progress-detail-title');
+                        if (titleElement) {
+                            titleElement.appendChild(badge);
+                        }
                     }
                     
                     showToast('Başarılı', 'İş adımı tamamlandı olarak işaretlendi', 'success');
                 } else {
-                    // If unmarking as completed
+                    // Tamamlanmadı olarak işaretlendi
                     stepElement.classList.remove('completed-step');
                     stepElement.removeAttribute('data-completed');
                     
-                    // Re-enable all form elements in this step
+                    // Tüm form elemanlarını tekrar etkinleştir
                     const formElements = stepElement.querySelectorAll('input, select, textarea, button, .btn-edit, .btn-delete');
                     formElements.forEach(element => {
                         element.disabled = false;
@@ -4489,7 +4521,7 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
                         element.style.opacity = '';
                     });
                     
-                    // Re-enable any links
+                    // Bağlantıları tekrar etkinleştir
                     const links = stepElement.querySelectorAll('a');
                     links.forEach(link => {
                         link.style.pointerEvents = '';
@@ -4498,7 +4530,7 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
                         link.onclick = null;
                     });
                     
-                    // Update the checkbox label
+                    // Checkbox etiketini sıfırla
                     const label = checkbox.nextElementSibling;
                     if (label && label.classList.contains('form-check-label')) {
                         label.textContent = 'Tamamlandı olarak işaretle';
@@ -4506,13 +4538,18 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
                         label.style.fontWeight = '';
                     }
                     
-                    // Remove the visual indicator
+                    // Tamamlandı rozetini kaldır
                     const badge = stepElement.querySelector('.progress-detail-title .badge');
                     if (badge) {
                         badge.remove();
                     }
                     
                     showToast('Başarılı', 'İş adımı tamamlanmadı olarak işaretlendi', 'success');
+                }
+                
+                // Proje detaylarını güncelle
+                if (projectId) {
+                    updateProjectDatesFromSteps(projectId);
                 }
 
             showToast('Başarılı', 'İşlem başarıyla tamamlandı', 'success');
