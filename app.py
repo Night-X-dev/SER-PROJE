@@ -2163,6 +2163,14 @@ def get_project_progress_steps(project_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # Check if 'is_completed' column exists and add if not
+            cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'is_completed'")
+            column_exists = cursor.fetchone() is not None
+            if not column_exists:
+                print("is_completed sütunu bulunamadı, ekleniyor...")
+                cursor.execute("ALTER TABLE project_progress ADD COLUMN is_completed TINYINT(1) DEFAULT 0")
+                connection.commit()
+
             # Check if 'custom_delay_days' column exists and add if not
             cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'custom_delay_days'")
             column_exists_custom_delay = cursor.fetchone() is not None
@@ -2171,7 +2179,7 @@ def get_project_progress_steps(project_id):
                 cursor.execute("ALTER TABLE project_progress ADD COLUMN custom_delay_days INT DEFAULT 0")
                 connection.commit()
 
-            # BURADA DEĞİŞİKLİK YAPILDI: 'real_end_date' sütununun varlığı kontrol edildi ve yoksa eklendi
+            # Check if 'real_end_date' column exists and add if not
             cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'real_end_date'")
             column_exists_real_end_date = cursor.fetchone() is not None
             if not column_exists_real_end_date:
@@ -2189,7 +2197,8 @@ def get_project_progress_steps(project_id):
                 end_date,
                 delay_days,
                 custom_delay_days,
-                real_end_date, -- BURADA DEĞİŞİKLİK YAPILDI: Yeni eklenen sütun
+                real_end_date,
+                is_completed,  # Added this line
                 created_at
             FROM project_progress
             WHERE project_id = %s
@@ -2201,10 +2210,10 @@ def get_project_progress_steps(project_id):
             for step in steps:
                 step['start_date'] = step['start_date'].isoformat() if isinstance(step['start_date'], datetime.date) else None
                 step['end_date'] = step['end_date'].isoformat() if isinstance(step['end_date'], datetime.date) else None
-                # BURADA DEĞİŞİKLİK YAPILDI: real_end_date'i de formatlıyoruz
                 step['real_end_date'] = step['real_end_date'].isoformat() if isinstance(step['real_end_date'], datetime.date) else None
                 step['created_at'] = step['created_at'].isoformat() if isinstance(step['created_at'], datetime.datetime) else None
                 step['custom_delay_days'] = int(step['custom_delay_days']) if step['custom_delay_days'] is not None else 0
+                step['is_completed'] = bool(step['is_completed'])  # Convert TINYINT to boolean
 
         return jsonify(steps), 200
     except pymysql.Error as e:
@@ -2212,6 +2221,7 @@ def get_project_progress_steps(project_id):
         return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
     except Exception as e:
         print(f"General error while fetching progress steps: {e}")
+        traceback.print_exc()
         return jsonify({'message': 'Server error, please try again later.'}), 500
     finally:
         if connection:

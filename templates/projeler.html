@@ -4408,20 +4408,112 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
             });
         }
         async function updateProgressStatus(progressId, isChecked) {
-        const checkbox = document.querySelector(`#complete-${progressId}`);
-        try {
-            const response = await fetch(`/api/progress/${progressId}/complete`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            const result = await response.json();
+            const checkbox = document.querySelector(`#complete-${progressId}`);
+            const stepElement = checkbox.closest('.progress-detail-item');
+            const projectId = document.querySelector('.project-details')?.dataset.projectId;
             
-            if (!response.ok || !result.success) {
-                throw new Error(result.message || 'Bir hata oluştu');
+            if (!projectId) {
+                console.error('Project ID not found');
+                return;
             }
+            
+            try {
+                const response = await fetch(`/api/progress/${progressId}/complete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ is_completed: isChecked })
+                });
+
+                const result = await response.json();
+                
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || 'Bir hata oluştu');
+                }
+                
+                // Update the UI to reflect the new completion status
+                if (isChecked) {
+                    // If marking as completed
+                    stepElement.classList.add('completed-step');
+                    stepElement.setAttribute('data-completed', 'true');
+                    
+                    // Disable all form elements in this step
+                    const formElements = stepElement.querySelectorAll('input, select, textarea, button, .btn-edit, .btn-delete');
+                    formElements.forEach(element => {
+                        element.disabled = true;
+                        element.style.pointerEvents = 'none';
+                        element.style.opacity = '0.6';
+                    });
+                    
+                    // Disable any links
+                    const links = stepElement.querySelectorAll('a');
+                    links.forEach(link => {
+                        link.style.pointerEvents = 'none';
+                        link.style.opacity = '0.6';
+                        link.style.cursor = 'not-allowed';
+                        link.onclick = (e) => {
+                            e.preventDefault();
+                            return false;
+                        };
+                    });
+                    
+                    // Update the checkbox label
+                    const label = checkbox.nextElementSibling;
+                    if (label && label.classList.contains('form-check-label')) {
+                        label.textContent = 'Tamamlandı';
+                        label.style.color = '#4caf50';
+                        label.style.fontWeight = 'bold';
+                    }
+                    
+                    // Add a visual indicator
+                    const completedBadge = document.createElement('span');
+                    completedBadge.className = 'badge bg-success ms-2';
+                    completedBadge.textContent = 'Tamamlandı';
+                    const titleElement = stepElement.querySelector('.progress-detail-title');
+                    if (titleElement && !titleElement.querySelector('.badge')) {
+                        titleElement.appendChild(completedBadge);
+                    }
+                    
+                    showToast('Başarılı', 'İş adımı tamamlandı olarak işaretlendi', 'success');
+                } else {
+                    // If unmarking as completed
+                    stepElement.classList.remove('completed-step');
+                    stepElement.removeAttribute('data-completed');
+                    
+                    // Re-enable all form elements in this step
+                    const formElements = stepElement.querySelectorAll('input, select, textarea, button, .btn-edit, .btn-delete');
+                    formElements.forEach(element => {
+                        element.disabled = false;
+                        element.style.pointerEvents = '';
+                        element.style.opacity = '';
+                    });
+                    
+                    // Re-enable any links
+                    const links = stepElement.querySelectorAll('a');
+                    links.forEach(link => {
+                        link.style.pointerEvents = '';
+                        link.style.opacity = '';
+                        link.style.cursor = '';
+                        link.onclick = null;
+                    });
+                    
+                    // Update the checkbox label
+                    const label = checkbox.nextElementSibling;
+                    if (label && label.classList.contains('form-check-label')) {
+                        label.textContent = 'Tamamlandı olarak işaretle';
+                        label.style.color = '';
+                        label.style.fontWeight = '';
+                    }
+                    
+                    // Remove the visual indicator
+                    const badge = stepElement.querySelector('.progress-detail-title .badge');
+                    if (badge) {
+                        badge.remove();
+                    }
+                    
+                    showToast('Başarılı', 'İş adımı tamamlanmadı olarak işaretlendi', 'success');
+                }
 
             showToast('Başarılı', 'İşlem başarıyla tamamlandı', 'success');
             
