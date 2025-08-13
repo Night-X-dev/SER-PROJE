@@ -808,6 +808,71 @@
         border-top: 1px solid var(--border-color);
         padding-top: 20px;
       }
+
+      .header-select-wrapper {
+        margin-bottom: 15px;
+        width: 100%;
+      }
+
+      .select-container {
+        position: relative;
+        width: 100%;
+      }
+
+      .select-arrow {
+        position: absolute;
+        top: 50%;
+        right: 15px;
+        transform: translateY(-50%);
+        pointer-events: none;
+        color: #6c757d;
+        transition: transform 0.2s ease;
+      }
+
+      .header-dropdown {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background-color: #fff;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        padding: 10px 40px 10px 15px;
+        font-size: 14px;
+        color: #495057;
+        width: 100%;
+        height: 42px;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        background-image: none;
+      }
+
+      .header-dropdown:focus {
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        outline: none;
+      }
+
+      .header-dropdown:hover {
+        border-color: #adb5bd;
+      }
+
+      .header-dropdown option {
+        padding: 10px;
+        background: #fff;
+      }
+
+      .header-dropdown:focus + .select-arrow {
+        transform: translateY(-50%) rotate(180deg);
+      }
+
+      .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #495057;
+        font-size: 13px;
+      }
+
       .progress-detail-item {
         background-color: var(--input-bg);
         border-radius: 8px;
@@ -3174,12 +3239,17 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 if (isEditable) {
                     // We'll fetch the headers when the edit form is opened
                     titleContent = `
-                        <div class="input-group" style="margin-bottom: 10px;">
-                            <label for="step-${step.progress_id}-header">Başlık</label>
-                            <select id="step-${step.progress_id}-header" class="form-select" required>
-                                <option value="">Başlık seçiniz...</option>
-                                <!-- Headers will be loaded dynamically -->
-                            </select>
+                        <div class="header-select-wrapper">
+                            <label for="step-${step.progress_id}-header" class="form-label">Başlık</label>
+                            <div class="select-container">
+                                <select id="step-${step.progress_id}-header" class="form-select header-dropdown" required>
+                                    <option value="">Başlık seçiniz...</option>
+                                    <!-- Headers will be loaded dynamically -->
+                                </select>
+                                <div class="select-arrow">
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                            </div>
                         </div>
                         <input type="hidden" id="step-${step.progress_id}-name" value="${step.step_name || step.title || ''}">
                     `;
