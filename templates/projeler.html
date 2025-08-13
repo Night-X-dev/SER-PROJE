@@ -3169,9 +3169,23 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 stepElement.className = "progress-detail-item";
                 stepElement.dataset.stepIndex = index;
 
-                const titleContent = isEditable ?
-                    `<input type="text" id="step-${step.progress_id}-name" class="progress-step-name-input" value="${step.step_name || step.title || ''}" placeholder="Adım Adı" required>` :
-                    `<span class="progress-detail-title">${step.step_name || step.title || ''}</span>`;
+                // For edit mode, we'll show a dropdown for header selection instead of a text input
+                let titleContent;
+                if (isEditable) {
+                    // We'll fetch the headers when the edit form is opened
+                    titleContent = `
+                        <div class="input-group" style="margin-bottom: 10px;">
+                            <label for="step-${step.progress_id}-header">Başlık</label>
+                            <select id="step-${step.progress_id}-header" class="form-select" required>
+                                <option value="">Başlık seçiniz...</option>
+                                <!-- Headers will be loaded dynamically -->
+                            </select>
+                        </div>
+                        <input type="hidden" id="step-${step.progress_id}-name" value="${step.step_name || step.title || ''}">
+                    `;
+                } else {
+                    titleContent = `<span class="progress-detail-title">${step.step_name || step.title || ''}</span>`;
+                }
 
                 const startDateContent = isEditable ?
                     `<label for="step-${step.progress_id}-start">Başlangıç:</label><input type="date" id="step-${step.progress_id}-start" class="progress-datepicker" value="${formatDateForInput(step.start_date || '')}" required>` :
@@ -3289,17 +3303,63 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
             });
 
             if (isEditable) {
+                // Load headers for each edit form
+                document.querySelectorAll('.progress-detail-item').forEach(async (stepElement, index) => {
+                    const progressId = stepElement.querySelector('button.save-progress-btn')?.dataset.id;
+                    if (!progressId) return;
+                    
+                    const headerSelect = document.getElementById(`step-${progressId}-header`);
+                    if (!headerSelect) return;
+                    
+                    try {
+                        const res = await fetch(`${API_BASE_URL}/api/work-progress-headers/active`);
+                        if (!res.ok) throw new Error("Başlıklar alınamadı");
+                        const headersList = await res.json();
+                        
+                        // Clear existing options except the first one
+                        headerSelect.innerHTML = '<option value="">Başlık seçiniz...</option>';
+                        
+                        // Add headers to the dropdown
+                        headersList.forEach(header => {
+                            const option = document.createElement('option');
+                            option.value = header.id;
+                            option.textContent = header.title;
+                            headerSelect.appendChild(option);
+                        });
+                        
+                        // Select the current header if it exists
+                        const currentStep = steps.find(s => s.progress_id == progressId);
+                        if (currentStep?.header_id) {
+                            headerSelect.value = currentStep.header_id;
+                        } else if (currentStep?.step_name) {
+                            // Try to find a matching header by name if no header_id is set
+                            const matchingHeader = headersList.find(h => 
+                                h.title === currentStep.step_name
+                            );
+                            if (matchingHeader) {
+                                headerSelect.value = matchingHeader.id;
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Başlık listesi yüklenemedi:", err);
+                    }
+                });
+                
                 document.querySelectorAll('.save-progress-btn').forEach(button => {
                     button.addEventListener('click', async (e) => {
                         const progressId = e.currentTarget.dataset.id;
                         const projId = e.currentTarget.dataset.projectId;
-                        const stepName = document.getElementById(`step-${progressId}-name`).value;
+                        const headerSelect = document.getElementById(`step-${progressId}-header`);
+                        const selectedHeaderId = headerSelect.value;
+                        const selectedHeaderText = headerSelect.options[headerSelect.selectedIndex].text;
+                        const stepName = selectedHeaderText;
                         const startDate = document.getElementById(`step-${progressId}-start`).value;
                         const endDate = document.getElementById(`step-${progressId}-end`).value;
                         const description = document.getElementById(`step-${progressId}-desc`).value;
 
                         await editProgressStep(progressId, projId, {
                             step_name: stepName,
+                            header_id: selectedHeaderId,
                             start_date: startDate,
                             end_date: endDate,
                             description: description,
