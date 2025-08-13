@@ -117,21 +117,245 @@ def notify_completed_step(db_cursor, step, admin_emails):
         return False
 
     subject = f"Proje Adımı Tamamlandı: {project_name} - {step_title}"
+    formatted_date = step['end_date'].strftime('%d %B %Y')
     body = f"""
-    <html>
-        <body>
-            <p>Merhaba,</p>
-            <p>Aşağıdaki proje adımı başarıyla tamamlanmıştır:</p>
-            <ul>
-                <li><strong>Proje Adı:</strong> {project_name}</li>
-                <li><strong>İş Adımı:</strong> {step_title}</li>
-                <li><strong>Bitiş Tarihi:</strong> {step['end_date'].strftime('%Y-%m-%d')}</li>
-            </ul>
-            <p>Bilginize sunarız.</p>
-            <p>Teşekkürler.</p>
-        </body>
-    </html>
-    """
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proje Adımı Tamamlandı | SER Elektrik</title>
+    <style>
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            color: #333333;
+            line-height: 1.6;
+        }}
+        
+        .container {{
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }}
+        
+        .header {{
+            background: linear-gradient(135deg, #005c9d, #0980d3);
+            padding: 30px 20px;
+            text-align: center;
+            color: white;
+        }}
+        
+        .logo {{
+            margin-bottom: 15px;
+            text-align: center;
+        }}
+        
+        .logo img {{
+            height: 60px;
+            max-width: 100%;
+        }}
+        
+        .header h1 {{
+            margin: 10px 0 5px;
+            font-size: 28px;
+            font-weight: 600;
+        }}
+        
+        .header p {{
+            margin: 0;
+            opacity: 0.9;
+            font-size: 18px;
+        }}
+        
+        .content {{
+            padding: 40px 30px;
+        }}
+        
+        .title {{
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 25px;
+            text-align: center;
+            color: #005c9d;
+            margin-top: 0;
+        }}
+        
+        .message {{
+            margin-bottom: 30px;
+            font-size: 16px;
+            color: #5e6870;
+            text-align: center;
+        }}
+        
+        .project-card {{
+            background: linear-gradient(135deg, #f0f4f8, #e1e5e9);
+            border-radius: 12px;
+            padding: 30px;
+            margin: 30px 0;
+            box-shadow: 0 4px 15px rgba(0, 92, 157, 0.08);
+            border-left: 4px solid #0980d3;
+        }}
+        
+        .detail-item {{
+            display: flex;
+            margin-bottom: 18px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid rgba(0, 92, 157, 0.1);
+        }}
+        
+        .detail-item:last-child {{
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }}
+        
+        .detail-label {{
+            font-weight: 600;
+            color: #005c9d;
+            width: 140px;
+            flex-shrink: 0;
+        }}
+        
+        .detail-value {{
+            color: #333333;
+            font-weight: 500;
+        }}
+        
+        .status-badge {{
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 16px;
+            margin-top: 15px;
+            text-align: center;
+            width: 100%;
+            box-sizing: border-box;
+        }}
+        
+        .signature {{
+            margin-top: 30px;
+            text-align: center;
+            font-style: italic;
+            color: #5e6870;
+        }}
+        
+        .footer {{
+            background-color: #f0f4f8;
+            padding: 25px 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #97a1aa;
+        }}
+        
+        .footer-links {{
+            margin-bottom: 15px;
+        }}
+        
+        .footer-links a {{
+            color: #0980d3;
+            text-decoration: none;
+            margin: 0 10px;
+            transition: all 0.3s;
+        }}
+        
+        .footer-links a:hover {{
+            color: #005c9d;
+            text-decoration: underline;
+        }}
+        
+        .contact {{
+            margin-top: 15px;
+            font-size: 13px;
+        }}
+        
+        @media (max-width: 600px) {{
+            .detail-item {{
+                flex-direction: column;
+            }}
+            
+            .detail-label {{
+                width: 100%;
+                margin-bottom: 5px;
+            }}
+            
+            .content {{
+                padding: 30px 20px;
+            }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <img src="https://serotomasyon.tr/static/serlogobeyaz.png" alt="SER Elektrik Otomasyon">
+            </div>
+            <h1>Proje Adımı Tamamlandı</h1>
+            <p>Başarıyla tamamlanan proje aşaması hakkında bilgilendirme</p>
+        </div>
+        
+        <div class="content">
+            <h2 class="title">Proje Adımı Başarıyla Tamamlandı</h2>
+            
+            <p class="message">
+                Merhaba,<br>
+                Aşağıda belirtilen proje adımı başarıyla tamamlanmıştır. Detaylar aşağıda yer almaktadır.
+            </p>
+            
+            <div class="project-card">
+                <div class="detail-item">
+                    <div class="detail-label">Proje Adı:</div>
+                    <div class="detail-value">{project_name}</div>
+                </div>
+                
+                <div class="detail-item">
+                    <div class="detail-label">İş Adımı:</div>
+                    <div class="detail-value">{step_title}</div>
+                </div>
+                
+                <div class="detail-item">
+                    <div class="detail-label">Bitiş Tarihi:</div>
+                    <div class="detail-value">{formatted_date}</div>
+                </div>
+                
+                <div class="status-badge">
+                    ✔ BAŞARIYLA TAMAMLANDI
+                </div>
+            </div>
+            
+            <p class="signature">
+                Bilgilerinize sunarız.<br>
+                Teşekkür ederiz.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <div class="footer-links">
+                <a href="https://www.serelektrik.com">Web Sitemiz</a>
+                <a href="https://www.serelektrik.com/projeler">Projelerimiz</a>
+                <a href="https://www.serelektrik.com/iletisim">İletişim</a>
+            </div>
+            
+            <div>© 2025 SER Elektrik Otomasyon. Tüm hakları saklıdır.</div>
+            
+            <div class="contact">
+                <div>Adres: Ser Plaza, Yeşilce, Dalgıç Sk. No:9, 34418 Kağıthane/İstanbul</div>
+                <div>Telefon: (0212) 324 64 14 | E-posta: info@serelektrik.com</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+"""
     
     return send_email(subject, body, recipients)
 
