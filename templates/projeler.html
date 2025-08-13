@@ -4500,7 +4500,8 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
                 return;
             }
             
-            const projectId = foundProjectId; // Artık güvenle atayabiliriz
+            // foundProjectId'yi doğrudan kullanıyoruz
+            const projectIdToUse = foundProjectId; 
             
             try {
                 const response = await fetch(`/api/progress/${progressId}/complete`, {
@@ -4511,7 +4512,7 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
                     },
                     body: JSON.stringify({ 
                         is_completed: isChecked,
-                        project_id: projectId
+                        project_id: projectIdToUse
                     })
                 });
 
@@ -4611,7 +4612,7 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
                 
                 // Proje detaylarını güncelle
                 if (projectId) {
-                    updateProjectDatesFromSteps(projectId);
+                    updateProjectDatesFromSteps(projectIdToUse);
                 }
 
             showToast('Başarılı', 'İşlem başarıyla tamamlandı', 'success');
