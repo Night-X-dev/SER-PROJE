@@ -1997,8 +1997,8 @@
                     
                     // Tüm rolleri yükle ve modalı aç
                     try {
-                        // Tüm rolleri getir
-                        const response = await fetch('/api/yetkitable?all=true');
+                        // Tüm rolleri getir (Admin hariç)
+                        const response = await fetch('/api/yetkitable');
                         if (response.ok) {
                             const roles = await response.json();
                             const roleSelect = document.getElementById('editRole');
@@ -2006,17 +2006,15 @@
                             
                             console.log('Tüm roller:', roles); // Debug için
                             
-                            // Rolleri dropdown'a ekle (Admin hariç)
+                            // Rolleri dropdown'a ekle
                             roles.forEach(r => {
-                                if (r.role_name && r.role_name.toLowerCase() !== 'admin') {
-                                    const option = document.createElement('option');
-                                    option.value = r.role_name;
-                                    option.textContent = r.role_name;
-                                    if (r.role_name === role) {
-                                        option.selected = true;
-                                    }
-                                    roleSelect.appendChild(option);
+                                const option = document.createElement('option');
+                                option.value = r.role_name;
+                                option.textContent = r.role_name;
+                                if (r.role_name === role) {
+                                    option.selected = true;
                                 }
+                                roleSelect.appendChild(option);
                             });
                             
                             // Modalı göster
