@@ -117,7 +117,17 @@ def notify_completed_step(db_cursor, step, admin_emails):
         return False
 
     subject = f"Proje Adımı Tamamlandı: {project_name} - {step_title}"
-    formatted_date = step['end_date'].strftime('%d %B %Y')
+    
+    # Turkish month names
+    turkish_months = {
+        1: 'Ocak', 2: 'Şubat', 3: 'Mart', 4: 'Nisan', 5: 'Mayıs', 6: 'Haziran',
+        7: 'Temmuz', 8: 'Ağustos', 9: 'Eylül', 10: 'Ekim', 11: 'Kasım', 12: 'Aralık'
+    }
+    
+    day = step['end_date'].day
+    month = turkish_months[step['end_date'].month]
+    year = step['end_date'].year
+    formatted_date = f"{day} {month} {year}"
     body = f"""
 <!DOCTYPE html>
 <html lang="tr">
@@ -341,8 +351,6 @@ def notify_completed_step(db_cursor, step, admin_emails):
         <div class="footer">
             <div class="footer-links">
                 <a href="https://www.serelektrik.com">Web Sitemiz</a>
-                <a href="https://www.serelektrik.com/projeler">Projelerimiz</a>
-                <a href="https://www.serelektrik.com/iletisim">İletişim</a>
             </div>
             
             <div>© 2025 SER Elektrik Otomasyon. Tüm hakları saklıdır.</div>
