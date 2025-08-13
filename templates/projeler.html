@@ -3275,7 +3275,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
         } else {
             steps.forEach((step, index) => {
                 console.log(`İş adımı ${index} (ID: ${step.progress_id || step.id || 'bilinmiyor'}):`, step);
-                // Check if step is completed
+                // Check if step is completed - check both is_completed and status fields
                 const isCompleted = step.is_completed === true || step.is_completed === 1 || step.status === 'tamamlandi';
                 const disabledAttr = isCompleted ? 'disabled' : '';
                 const readonlyClass = isCompleted ? 'readonly-field' : '';
@@ -3283,6 +3283,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 const stepElement = document.createElement("div");
                 stepElement.className = `progress-detail-item ${isCompleted ? 'completed-step' : ''}`;
                 stepElement.dataset.stepIndex = index;
+                stepElement.dataset.progressId = step.progress_id || step.id || '';
                 
                 // For edit mode, we'll show a dropdown for header selection instead of a text input
                 
@@ -3435,6 +3436,16 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     ${actionsContent}
                 `;
                 progressStepsContainer.appendChild(stepElement);
+                
+                // If step is completed, disable all form fields
+                if (isCompleted && isEditable) {
+                    const formElements = stepElement.querySelectorAll('input, select, textarea, button');
+                    formElements.forEach(element => {
+                        if (element.type !== 'checkbox' || element.id === `complete-${step.progress_id}`) {
+                            element.disabled = true;
+                        }
+                    });
+                }
             });
 
             if (isEditable) {
