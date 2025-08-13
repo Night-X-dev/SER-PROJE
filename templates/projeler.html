@@ -1889,21 +1889,43 @@
 
 
     // Genel Toast bildirim fonksiyonu
-    function showToast(message, isError = false) {
+    function showToast(title, message, type = 'success') {
         const toast = document.getElementById('toast');
+        const toastTitle = document.getElementById('toastTitle');
         const toastMessage = document.getElementById('toastMessage');
 
-        if (!toast || !toastMessage) {
+        if (!toast || !toastTitle || !toastMessage) {
             console.error("Toast elementleri bulunamadı!");
             return;
         }
 
-        toastMessage.textContent = message;
-        toast.classList.remove('success', 'error');
-        toast.classList.add(isError ? 'error' : 'success');
+        // Eğer sadece bir parametre verilmişse, bunu mesaj olarak kabul et
+        if (arguments.length === 1) {
+            message = title;
+            title = type === 'error' ? 'Hata' : 'Başarılı';
+        } else if (arguments.length === 2 && typeof message === 'boolean') {
+            // Eski kullanım için geriye dönük uyumluluk
+            type = message ? 'error' : 'success';
+            message = title;
+            title = type === 'error' ? 'Hata' : 'Başarılı';
+        }
 
+        toastTitle.textContent = title || (type === 'error' ? 'Hata' : 'Başarılı');
+        toastMessage.textContent = message;
+        
+        // Mevcut tüm durum sınıflarını kaldır
+        toast.classList.remove('success', 'error', 'info', 'warning');
+        
+        // Yeni durum sınıfını ekle
+        const typeClass = type === 'error' ? 'error' : 
+                         type === 'info' ? 'info' :
+                         type === 'warning' ? 'warning' : 'success';
+        toast.classList.add(typeClass);
+
+        // Göster
         toast.classList.add('show');
 
+        // 3 saniye sonra gizle
         setTimeout(() => {
             toast.classList.remove('show');
         }, 3000);
@@ -4570,7 +4592,7 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
                         }
                     }
                     
-                    showToast('Başarılı', 'İş adımı tamamlandı olarak işaretlendi', 'success');
+                    // showToast kaldırıldı - zaten aşağıda tek bir başarı mesajı gösterilecek
                 } else {
                     // Tamamlanmadı olarak işaretlendi
                     stepElement.classList.remove('completed-step');
@@ -4607,15 +4629,15 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
                         badge.remove();
                     }
                     
-                    showToast('Başarılı', 'İş adımı tamamlanmadı olarak işaretlendi', 'success');
+                    // showToast kaldırıldı - zaten aşağıda tek bir başarı mesajı gösterilecek
                 }
                 
                 // Proje detaylarını güncelle
                 if (projectIdToUse) {
                     updateProjectDatesFromSteps(projectIdToUse);
                 }
-
-            showToast('Başarılı', 'İşlem başarıyla tamamlandı', 'success');
+                
+                // Tek bir başarı mesajı göster
             
             if (isChecked) {
                 const stepElement = document.querySelector(`.progress-step[data-progress-id="${progressId}"]`);
