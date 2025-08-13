@@ -2083,6 +2083,51 @@
             }
         }
         
+        // Kullanıcı düzenleme kaydetme işlemi
+        document.getElementById('saveEditUserBtn').addEventListener('click', async function() {
+            const userId = document.getElementById('editUserId').value;
+            const fullName = document.getElementById('editFullName').value;
+            const email = document.getElementById('editEmail').value;
+            const role = document.getElementById('editRole').value;
+            
+            if (!fullName || !email || !role) {
+                showToast('Lütfen tüm alanları doldurunuz.', true);
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/users/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        full_name: fullName,
+                        email: email,
+                        role: role
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showToast('Kullanıcı başarıyla güncellendi');
+                    // Modalı kapat
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+                    modal.hide();
+                    // Kullanıcı listesini yenile
+                    loadUsersTable();
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Kullanıcı güncellenirken bir hata oluştu');
+                }
+            } catch (error) {
+                console.error('Hata:', error);
+                showToast(error.message || 'Kullanıcı güncellenirken bir hata oluştu', true);
+            }
+        });
+        
         // Sayfalandırma butonları olay dinleyicileri
         document.getElementById('prevPage').addEventListener('click', () => {
             if (currentPage > 1) {
