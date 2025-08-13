@@ -151,10 +151,12 @@ def main():
             # `is_complete` değeri 1 olan ve daha önce bildirim gönderilmemiş adımları bul.
             # `completion_notified` koşulu, aynı adım için tekrar tekrar e-posta gönderilmesini engeller.
             sql = """
-                SELECT pp.progress_id, pp.end_date, pp.project_id, pp.title, p.project_name
+                 SELECT pp.progress_id, pp.end_date, pp.project_id, pp.title, p.project_name
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
-                WHERE pp.is_completed = 1
+                WHERE pp.end_date <= CURDATE()
+                AND pp.is_completed = 1
+                AND pp.completion_notified = 0
             """
             cursor.execute(sql)
             steps_to_notify = cursor.fetchall()
