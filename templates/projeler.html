@@ -895,6 +895,29 @@
         color: var(--text-muted);
       }
 
+      /* Readonly field styling */
+      .readonly-field {
+        background-color: var(--input-disabled-bg) !important;
+        cursor: not-allowed;
+        opacity: 0.8;
+      }
+
+      /* Completed step styling */
+      .progress-detail-item.completed-step {
+        opacity: 0.9;
+        background-color: rgba(40, 167, 69, 0.05);
+        border-left: 3px solid #28a745;
+      }
+
+      .progress-detail-item.completed-step .progress-detail-title {
+        color: #28a745;
+        font-weight: 600;
+      }
+
+      .progress-detail-item.completed-step .progress-dates {
+        color: #6c757d;
+      }
+
       .progress-detail-item {
         background-color: var(--input-bg);
         border-radius: 8px;
@@ -3253,10 +3276,14 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
             steps.forEach((step, index) => {
                 console.log(`İş adımı ${index} (ID: ${step.progress_id || step.id || 'bilinmiyor'}):`, step);
                 const stepElement = document.createElement("div");
-                stepElement.className = "progress-detail-item";
+                stepElement.className = `progress-detail-item ${isCompleted ? 'completed-step' : ''}`;
                 stepElement.dataset.stepIndex = index;
 
                 // For edit mode, we'll show a dropdown for header selection instead of a text input
+                const isCompleted = step.is_completed === true || step.is_completed === 1 || step.status === 'tamamlandi';
+                const disabledAttr = isCompleted ? 'disabled' : '';
+                const readonlyClass = isCompleted ? 'readonly-field' : '';
+                
                 let titleContent;
                 if (isEditable) {
                     // We'll fetch the headers when the edit form is opened
@@ -3264,13 +3291,14 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                         <div class="header-select-wrapper">
                             <label for="step-${step.progress_id}-header" class="form-label">Başlık</label>
                             <div class="select-container">
-                                <select id="step-${step.progress_id}-header" class="header-dropdown" required>
+                                <select id="step-${step.progress_id}-header" class="header-dropdown ${readonlyClass}" ${disabledAttr} required>
                                     <option value="">Başlık seçiniz...</option>
                                     <!-- Headers will be loaded dynamically -->
                                 </select>
+                                ${isCompleted ? '' : `
                                 <div class="select-arrow">
                                     <i class="fas fa-chevron-down"></i>
-                                </div>
+                                </div>`}
                             </div>
                         </div>
                         <input type="hidden" id="step-${step.progress_id}-name" value="${step.step_name || step.title || ''}">
@@ -3280,11 +3308,21 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 }
 
                 const startDateContent = isEditable ?
-                    `<label for="step-${step.progress_id}-start">Başlangıç:</label><input type="date" id="step-${step.progress_id}-start" class="progress-datepicker" value="${formatDateForInput(step.start_date || '')}" required>` :
+                    `<label for="step-${step.progress_id}-start">Başlangıç:</label>
+                    <input type="date" id="step-${step.progress_id}-start" 
+                           class="progress-datepicker ${readonlyClass}" 
+                           value="${formatDateForInput(step.start_date || '')}" 
+                           ${disabledAttr} 
+                           required>` :
                     `Başlangıç: ${formatDateForDisplay(step.start_date || '-')}`;
 
                 const endDateContent = isEditable ?
-                    `<label for="step-${step.progress_id}-end">Bitiş:</label><input type="date" id="step-${step.progress_id}-end" class="progress-datepicker" value="${formatDateForInput(step.end_date || '')}" required>` :
+                    `<label for="step-${step.progress_id}-end">Bitiş:</label>
+                    <input type="date" id="step-${step.progress_id}-end" 
+                           class="progress-datepicker ${readonlyClass}" 
+                           value="${formatDateForInput(step.end_date || '')}" 
+                           ${disabledAttr} 
+                           required>` :
                     `Bitiş: ${formatDateForDisplay(step.end_date || '-')}`;
 
                 // Gerçek Bitiş Tarihi değeri, hem görüntülenecek hem de inputun değeri olacak
@@ -3329,7 +3367,10 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 }
 
                 const descriptionContent = isEditable ?
-                    `<textarea id="step-${step.progress_id}-desc" class="progress-description-textarea" placeholder="Açıklama">${step.description || ''}</textarea>` :
+                    `<textarea id="step-${step.progress_id}-desc" 
+                              class="progress-description-textarea ${readonlyClass}" 
+                              placeholder="Açıklama" 
+                              ${disabledAttr}>${step.description || ''}</textarea>` :
                     `<div class="progress-detail-description">Açıklama: ${step.description || 'Yok'}</div>`;
 
                     const actionsContent = isEditable ?
@@ -3338,18 +3379,18 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
     <div class="checkbox-wrapper-46 me-3">
         <input type="checkbox" 
                id="complete-${step.progress_id}" 
-        class="inp-cbx complete-step-checkbox"
-        ${step.is_completed ? 'checked' : ''}
-        onchange="updateProgressStatus(${step.progress_id}, this.checked)"
-        data-id="${step.progress_id}" />
+               class="inp-cbx complete-step-checkbox"
+               ${isCompleted ? 'checked disabled' : ''}
+               onchange="updateProgressStatus(${step.progress_id}, this.checked)"
+               data-id="${step.progress_id}" />
                
-        <label for="complete-${step.progress_id}" class="cbx">
+        <label for="complete-${step.progress_id}" class="cbx" style="${isCompleted ? 'opacity: 1;' : ''}">
             <span>
                 <svg viewBox="0 0 12 10" height="10px" width="12px">
                     <polyline points="1.5 6 4.5 9 10.5 1"></polyline>
                 </svg>
             </span>
-            <span>Tamamlandı</span>
+            <span>${isCompleted ? 'Tamamlandı' : 'Tamamlandı'}</span>
         </label>
     </div>
     <div>
