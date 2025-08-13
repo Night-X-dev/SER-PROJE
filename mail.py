@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Bu betik, Cron job ile belirli aralıklarla çalışacak şekilde tasarlanmıştır.
-# Bitiş tarihi geçmiş veya bugünün tarihi olan iş adımlarını bulur ve mail gönderir.
+# Tamamlanmış iş adımlarını bulur ve mail gönderir.
 
 import os
 import sys
@@ -31,14 +31,6 @@ EMAIL_SENDER_ADDRESS = os.getenv("EMAIL_SENDER")
 EMAIL_SENDER_PASSWORD = os.getenv("EMAIL_PASSWORD", "").replace(" ", "")
 EMAIL_SMTP_SERVER = os.getenv("SMTP_SERVER")
 EMAIL_SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
-
-# ADMIN_EMAIL_LIST_JSON artık kullanılmıyor, çünkü admin e-postaları veritabanından çekilecek.
-# Bu satırlar daha önce vardı, dinamik olması için kaldırıldı.
-# try:
-#     ADMIN_EMAIL_LIST = json.loads(ADMIN_EMAIL_LIST_JSON)
-# except (json.JSONDecodeError, TypeError):
-#     ADMIN_EMAIL_LIST = []
-#     print("Uyarı: ADMIN_EMAIL_LIST_JSON .env dosyasında bulunamadı veya hatalı formatta.", file=sys.stderr, flush=True)
 
 def get_db_connection():
     """Veritabanı bağlantısı kurar ve döndürür."""
@@ -99,8 +91,8 @@ def send_email(subject, body, recipient_emails):
         traceback.print_exc(file=sys.stderr)
         return False
 
-def notify_overdue_step(db_cursor, step, admin_emails):
-    """Süresi geçmiş bir iş adımı için e-posta bildirimi gönderir."""
+def notify_completed_step(db_cursor, step, admin_emails):
+    """Tamamlanmış bir iş adımı için e-posta bildirimi gönderir."""
     progress_id = step['progress_id']
     project_id = step['project_id']
     project_name = step['project_name']
@@ -124,18 +116,18 @@ def notify_overdue_step(db_cursor, step, admin_emails):
         print(f"Uyarı: progress_id {progress_id} için e-posta alıcısı bulunamadı.", file=sys.stderr, flush=True)
         return False
 
-    subject = f"ACİL: Proje Adımı Süresi Doldu: {project_name} - {step_title}"
+    subject = f"Proje Adımı Tamamlandı: {project_name} - {step_title}"
     body = f"""
     <html>
         <body>
             <p>Merhaba,</p>
-            <p>Aşağıdaki proje adımı için bitiş tarihi dolmuştur ve henüz tamamlanmamıştır:</p>
+            <p>Aşağıdaki proje adımı başarıyla tamamlanmıştır:</p>
             <ul>
                 <li><strong>Proje Adı:</strong> {project_name}</li>
                 <li><strong>İş Adımı:</strong> {step_title}</li>
                 <li><strong>Bitiş Tarihi:</strong> {step['end_date'].strftime('%Y-%m-%d')}</li>
             </ul>
-            <p>Lütfen ilgili adımı en kısa sürede kontrol ediniz.</p>
+            <p>Bilginize sunarız.</p>
             <p>Teşekkürler.</p>
         </body>
     </html>
@@ -144,7 +136,7 @@ def notify_overdue_step(db_cursor, step, admin_emails):
     return send_email(subject, body, recipients)
 
 def main():
-    """Ana fonksiyon - bitiş tarihi geçmiş veya bugünün tarihi olan adımları kontrol eder ve bildirim gönderir."""
+    """Ana fonksiyon - tamamlanmış adımları kontrol eder ve bildirim gönderir."""
     print(f"[{datetime.datetime.now()}] Zamanlanmış görev başlatıldı...")
         
     connection = get_db_connection()
@@ -156,27 +148,26 @@ def main():
             # Admin e-postalarını veritabanından çek
             admin_emails = get_admin_emails(cursor)
 
-            # Bugünden önce veya bugünün tarihi olan ve henüz bildirim gönderilmemiş adımları bul.
+            # `is_complete` değeri 1 olan ve daha önce bildirim gönderilmemiş adımları bul.
             # `completion_notified` koşulu, aynı adım için tekrar tekrar e-posta gönderilmesini engeller.
             sql = """
                 SELECT pp.progress_id, pp.end_date, pp.project_id, pp.title, p.project_name
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
-                WHERE pp.end_date <= CURDATE()
-                AND pp.completion_notified = 0
+                WHERE pp.is_complete = 1
             """
             cursor.execute(sql)
             steps_to_notify = cursor.fetchall()
             
             notified_count = 0
             for step in steps_to_notify:
-                if notify_overdue_step(cursor, step, admin_emails):
+                if notify_completed_step(cursor, step, admin_emails):
                     notified_count += 1
                     # Bildirim gönderildikten sonra `completion_notified` flag'ini güncelle
                     cursor.execute("UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s", (step['progress_id'],))
             
             connection.commit()
-            print(f"[{datetime.datetime.now()}] Görev tamamlandı. {notified_count} adet tamamlanmamış iş adımı için bildirim gönderildi.")
+            print(f"[{datetime.datetime.now()}] Görev tamamlandı. {notified_count} adet tamamlanmış iş adımı için bildirim gönderildi.")
 
     except Exception as e:
         print(f"Zamanlanmış görevde bir hata oluştu: {e}", file=sys.stderr, flush=True)
