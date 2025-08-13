@@ -3275,14 +3275,16 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
         } else {
             steps.forEach((step, index) => {
                 console.log(`İş adımı ${index} (ID: ${step.progress_id || step.id || 'bilinmiyor'}):`, step);
-                const stepElement = document.createElement("div");
-                stepElement.className = `progress-detail-item ${isCompleted ? 'completed-step' : ''}`;
-                stepElement.dataset.stepIndex = index;
-
-                // For edit mode, we'll show a dropdown for header selection instead of a text input
+                // Check if step is completed
                 const isCompleted = step.is_completed === true || step.is_completed === 1 || step.status === 'tamamlandi';
                 const disabledAttr = isCompleted ? 'disabled' : '';
                 const readonlyClass = isCompleted ? 'readonly-field' : '';
+                
+                const stepElement = document.createElement("div");
+                stepElement.className = `progress-detail-item ${isCompleted ? 'completed-step' : ''}`;
+                stepElement.dataset.stepIndex = index;
+                
+                // For edit mode, we'll show a dropdown for header selection instead of a text input
                 
                 let titleContent;
                 if (isEditable) {
