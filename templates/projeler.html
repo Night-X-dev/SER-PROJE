@@ -2983,7 +2983,7 @@ function attachProjectTableEventListeners() {
         const description = document.getElementById("editDescription").value;
 
         if (!projectName || !customerId || !projectManagerId || !startDate || !endDate) {
-            showToast("Lütfen tüm zorunlu alanları doldurun: Proje Adı, Müşteri, Proje Yöneticisi, Başlangıç Tarihi, Bitiş Tarihi.", true);
+            showToast("Uyarı", "Lütfen tüm zorunlu alanları doldurun: Proje Adı, Müşteri, Proje Yöneticisi, Başlangıç Tarihi, Bitiş Tarihi.");
             return;
         }
 
@@ -3020,7 +3020,7 @@ function attachProjectTableEventListeners() {
             const data = await response.json();
 
             if (response.ok) {
-                showToast(data.message || "Proje başarıyla güncellendi!");
+                showToast("Başarılı", data.message || "Proje başarıyla güncellendi!");
                 closeProjectModal();
                 fetchProjects(); // Proje listesini yenile
                 addActivity(
@@ -3661,13 +3661,13 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
   const progressStepsContainer = document.getElementById("progressStepsContainer");
   if (!progressStepsContainer) {
     console.error("progressStepsContainer elementi bulunamadı!");
-    showToast("İş adımı eklenemiyor: Form container bulunamadı", true);
+    showToast("Hata", "İş adımı eklenemiyor: Form container bulunamadı");
     return;
   }
 
   if (document.getElementById('newProgressForm')) {
     console.log("Zaten açık bir ekleme formu var, yeni form açılmayacak.");
-    showToast("Zaten açık bir ekleme formu var.", false);
+    showToast("Uyarı", "Zaten açık bir ekleme formu var.");
     return;
   }
 
@@ -3679,7 +3679,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
     headersList = await res.json();
   } catch (err) {
     console.error("Başlık listesi alınamadı:", err);
-    showToast("Başlıklar alınırken hata oluştu", true);
+    showToast("Hata", "Başlıklar alınırken hata oluştu");
     return;
   }
 
@@ -3734,7 +3734,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
 
     if (!headerId || !startDate || !endDate) {
-      showToast("Lütfen tüm zorunlu alanları doldurun.", true);
+      showToast("Uyarı", "Lütfen tüm zorunlu alanları doldurun.");
       return;
     }
 
@@ -3754,7 +3754,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
       const data = await response.json();
       if (response.ok) {
-        showToast("İş adımı başarıyla eklendi.");
+        showToast("Başarılı", "İş adımı başarıyla eklendi.");
         formElement.remove();
         await updateProjectDatesFromSteps(projectId);
         fetchProgressSteps(projectId, true);
@@ -3765,13 +3765,13 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
       }
     } catch (error) {
       console.error("Yeni iş adımı ekleme hatası:", error);
-      showToast("İş adımı eklenirken bir sorun oluştu: " + error.message, true);
+      showToast("Hata", "İş adımı eklenirken bir sorun oluştu: " + error.message);
     }
   });
 
   document.getElementById('cancelAddProgressBtn').addEventListener('click', () => {
     formElement.remove();
-    showToast("İş adımı ekleme iptal edildi.", false);
+    showToast("Bilgi", "İş adımı ekleme iptal edildi.");
   });
 }
 
@@ -3815,7 +3815,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             }
         } catch (error) {
             console.error("İş adımı güncelleme hatası:", error);
-            showToast("İş adımı güncellenirken bir sorun oluştu.", true);
+            showToast("Hata", "İş adımı güncellenirken bir sorun oluştu.");
         }
     }
 
@@ -3827,7 +3827,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             });
             const data = await response.json();
             if (response.ok) {
-                showToast("İş adımı başarıyla silindi!");
+                showToast("Başarılı", "İş adımı başarıyla silindi!");
                 fetchProjects(); // Projeler listesini de yenile (durum güncellenmiş olabilir)
                 fetchProgressSteps(projectId, true); // Adımları yenile (düzenleme modunda kal)
                 addActivity(
@@ -3842,7 +3842,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             }
         } catch (error) {
             console.error("İş adımı silme hatası:", error);
-            showToast("İş adımı silinirken bir sorun oluştu.", true);
+            showToast("Hata", "İş adımı silinirken bir sorun oluştu.");
         }
     }
 
