@@ -3043,14 +3043,14 @@ def delete_role(role_id):
             connection.close()
 @app.route('/api/roles', methods=['GET'])
 def get_distinct_roles():
-    """Retrieves distinct roles from the users table (excluding 'Admin')."""
+    """Retrieves all roles from the yetki table."""
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            sql = "SELECT DISTINCT role FROM users WHERE role != 'Admin'"
+            sql = "SELECT DISTINCT role_name FROM yetki ORDER BY role_name"
             cursor.execute(sql)
-            roles = [row['role'] for row in cursor.fetchall()]
+            roles = [row['role_name'] for row in cursor.fetchall()]
 
         return jsonify(roles), 200
     except pymysql.Error as e:
