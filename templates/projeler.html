@@ -3285,6 +3285,11 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 stepElement.dataset.stepIndex = index;
                 stepElement.dataset.progressId = step.progress_id || step.id || '';
                 
+                // Add data attribute to easily check if step is completed
+                if (isCompleted) {
+                    stepElement.setAttribute('data-completed', 'true');
+                }
+                
                 // For edit mode, we'll show a dropdown for header selection instead of a text input
                 
                 let titleContent;
@@ -3439,12 +3444,33 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 
                 // If step is completed, disable all form fields
                 if (isCompleted && isEditable) {
-                    const formElements = stepElement.querySelectorAll('input, select, textarea, button');
+                    const formElements = stepElement.querySelectorAll('input, select, textarea, button, .btn-edit, .btn-delete');
                     formElements.forEach(element => {
-                        if (element.type !== 'checkbox' || element.id === `complete-${step.progress_id}`) {
-                            element.disabled = true;
-                        }
+                        element.disabled = true;
+                        element.style.pointerEvents = 'none';
+                        element.style.opacity = '0.6';
                     });
+                    
+                    // Also disable any links that might be used for editing
+                    const editLinks = stepElement.querySelectorAll('a[href*="edit"], .edit-link');
+                    editLinks.forEach(link => {
+                        link.style.pointerEvents = 'none';
+                        link.style.opacity = '0.6';
+                        link.style.cursor = 'not-allowed';
+                        link.onclick = (e) => {
+                            e.preventDefault();
+                            return false;
+                        };
+                    });
+                    
+                    // Add a visual indicator that the step is completed and cannot be edited
+                    const completedBadge = document.createElement('span');
+                    completedBadge.className = 'badge bg-success ms-2';
+                    completedBadge.textContent = 'Tamamlandı';
+                    const titleElement = stepElement.querySelector('.progress-detail-title');
+                    if (titleElement) {
+                        titleElement.appendChild(completedBadge);
+                    }
                 }
             });
 
