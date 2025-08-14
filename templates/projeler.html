@@ -3892,9 +3892,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         }
     }
 
-    // PDF Oluşturma Fonksiyonları (progress_id kullanıldı)
- // Bu fonksiyon, yeni düzeni ve istenen bilgileri içeren bir PDF raporu oluşturur.
-// Bu fonksiyon, yeni düzeni ve istenen bilgileri içeren bir PDF raporu oluşturur.
+   // Bu fonksiyon, yeni düzeni ve istenen bilgileri içeren bir PDF raporu oluşturur.
 async function generateProjectPdf(project) {
     let progressSteps = [];
     try {
@@ -3934,7 +3932,8 @@ async function generateProjectPdf(project) {
             const startDate = new Date(step.start_date);
             const endDate = new Date(step.end_date);
             if (today >= startDate && today <= endDate) {
-                return step.title;
+                // Return step.title, but provide a fallback if it's undefined
+                return step.title || 'Aşama Adı Yok';
             }
         }
         return 'Belirlenemedi';
@@ -4012,7 +4011,8 @@ async function generateProjectPdf(project) {
     // PDF report HTML content with the new structure
     pdfContent.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 20px;">
-            <img src="serlogo.png" alt="Ser Logo" style="height: 50px;">
+            <!-- DİKKAT: "serlogo.png" adresini geçerli bir logo görselinin URL'siyle değiştirmelisiniz. -->
+            <div style="width: 150px; height: 50px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: 10px;">LOGO (serlogo.png)</div>
             <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
             <div style="font-size: 14px; color: #555; text-align: right;">
                 ${formatDateForDisplay(new Date())}
@@ -4158,8 +4158,6 @@ async function generateProjectPdf(project) {
         );
     };
 }
-
-
 
     // Tüm projeleri PDF olarak dışa aktar
      async function exportAllProjectsToPdf() {
