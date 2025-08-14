@@ -3895,6 +3895,130 @@ def get_active_work_progress_headers():
         print(f"Error fetching active work progress headers: {str(e)}")
         return jsonify({"error": "Başlıklar getirilirken bir hata oluştu"}), 500
 
+# app.py dosyasına eklenmesi gereken kod bloğu
+
+@app.route('/api/revision-requests', methods=['POST'])
+def handle_revision_request():
+    """
+    Handles revision requests from the frontend and saves them to the database.
+    """
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Authentication required. Please log in.'}), 401
+
+    data = request.get_json()
+    project_id = data.get('project_id')
+    progress_id = data.get('progress_id')
+    title = data.get('title')
+    message = data.get('message')
+    requester_user_id = session.get('user_id')
+    
+    # Check for required fields
+    if not all([project_id, progress_id, title, message, requester_user_id]):
+        return jsonify({'success': False, 'message': 'Missing required fields.'}), 400
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Check if the progress step is valid and belongs to the project
+            # NOTE: We've changed the column name from `id` to `progress_id`
+            # to match your table's schema. This was likely the cause of the database error.
+            cursor.execute(
+                "SELECT progress_id FROM project_progress WHERE progress_id = %s AND project_id = %s",
+                (progress_id, project_id)
+            )
+            if not cursor.fetchone():
+                return jsonify({'success': False, 'message': 'Geçersiz proje veya ilerleme adımı ID.'}), 404
+                
+            # Check if there is an open revision request for the same progress step
+            cursor.execute(
+                "SELECT id FROM revision_requests WHERE progress_id = %s AND status = 'pending'",
+                (progress_id)
+            )
+            if cursor.fetchone():
+                return jsonify({'success': False, 'message': 'Bu adım için açık bir revizyon talebi zaten mevcut.'}), 409
+
+            # Insert the new revision request into the database
+            cursor.execute(
+                """
+                INSERT INTO revision_requests (project_id, progress_id, requested_by, title, message)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (project_id, progress_id, requester_user_id, title, message)
+            )
+            connection.commit()
+            
+            return jsonify({'success': True, 'message': 'Revizyon talebi başarıyla gönderildi.'}), 201
+
+    except pymysql.Error as e:
+        print(f"Database error during revision request: {e}")
+        if connection:
+            connection.rollback()
+        return jsonify({'success': False, 'message': 'A database error occurred.'}), 500
+    except Exception as e:
+        print(f"General error during revision request: {e}")
+        if connection:
+            connection.rollback()
+        return jsonify({'success': False, 'message': 'An internal server error occurred.'}), 500
+    finally:
+        if connection:
+            connection.close()
+@app.route('/api/revision-requests', methods=['GET'])
+def get_revision_requests():
+    """
+    Fetches revision requests with project and requester names from the database
+    by joining the `revision_requests`, `projects`, and `users` tables.
+    """
+    # Check if the user is authenticated.
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'}), 401
+
+    connection = None
+    try:
+        # Establish a database connection.
+        connection = get_db_connection()
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            # The corrected query joins 'revision_requests' with 'projects' and 'users'
+            # using the foreign keys you provided.
+            cursor.execute("""
+                SELECT
+                    rr.id,
+                    rr.project_id,
+                    rr.progress_id,
+                    rr.title,
+                    rr.message,
+                    rr.status,
+                    rr.created_at,
+                    p.project_name AS project_name,        -- Use p.project_name from projects table
+                    u.fullname AS requester_name           -- Use u.fullname from users table
+                FROM revision_requests rr
+                LEFT JOIN projects p ON rr.project_id = p.project_id
+                LEFT JOIN users u ON rr.requested_by = u.id  
+                ORDER BY rr.created_at DESC
+                LIMIT 10
+            """)
+            revisions = cursor.fetchall()
+            print("Revisions found:", revisions)  # Debug output
+            
+            return jsonify({
+                'success': True,
+                'revisions': revisions
+            })
+            
+    except Exception as e:
+        # Log and handle any errors during database operations.
+        print("Error in get_revision_requests:", str(e))
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False, 
+            'message': 'Bir hata oluştu',
+            'error': str(e)
+        }), 500
+    finally:
+        # Always close the database connection in the finally block.
+        if connection:
+            connection.close()
 @app.route('/api/revision-requests/<int:request_id>/approve', methods=['POST'])
 def approve_revision_request(request_id):
     """Handles approving a revision request."""
@@ -4010,7 +4134,6 @@ def update_revision_status(request_id, new_status, success_message, error_messag
         if connection:
             connection.close()
             app.logger.info("Veritabanı bağlantısı kapatıldı")
-
 
 @app.route('/api/progress/<int:progress_id>/complete', methods=['POST'])
 def complete_progress_step(progress_id):
