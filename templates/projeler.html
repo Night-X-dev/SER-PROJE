@@ -4158,7 +4158,7 @@ async function generateProjectPdf(project) {
                 /* Sayfa boyutu ve kenar boşlukları */
                 @page { 
                     size: A4; 
-                    margin: 20mm;
+                    margin: 0; /* Sayfa kenar boşluklarını sıfırla */
                 }
 
                 body { 
@@ -4170,11 +4170,13 @@ async function generateProjectPdf(project) {
                 
                 .pdf-container {
                     width: 210mm;
-                    margin: 20px auto;
+                    margin: 0 auto;
                     background: #fff;
                     box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                    padding: 20mm;
+                    min-height: 297mm; /* A4 sayfa yüksekliği */
                     box-sizing: border-box;
+                    padding-top: 60px; /* Sabit başlık için boşluk */
+                    padding-bottom: 60px; /* Sabit altbilgi için boşluk */
                 }
                 
                 .screen-header, .screen-footer {
@@ -4201,19 +4203,18 @@ async function generateProjectPdf(project) {
 
                 .main-content {
                     box-sizing: border-box;
+                    padding: 0 20mm; /* İçerik için kenar boşlukları */
                 }
                 
                 @media print {
                     body { 
                         background-color: #fff; 
-                        /* Fixed header ve footer ile içerik çakışmaması için boşluk bırakılır */
-                        padding-top: 60px; /* Başlık yüksekliğinden biraz fazla */
-                        padding-bottom: 60px; /* Altbilgi yüksekliğinden biraz fazla */
                     }
                     .pdf-container { 
                         margin: 0; 
                         box-shadow: none; 
-                        padding: 0; 
+                        padding: 0; /* Yazdırma için container padding'ini kaldır */
+                        min-height: 100%;
                     }
                     .print-button-container { 
                         display: none; 
@@ -4262,6 +4263,13 @@ async function generateProjectPdf(project) {
                         align-items: center;
                     }
 
+                    /* İçerik, başlık ve altbilgi ile çakışmayacak şekilde akacak */
+                    .main-content {
+                        padding-top: 50px; /* Başlık kadar boşluk */
+                        padding-bottom: 50px; /* Altbilgi kadar boşluk */
+                    }
+                    
+                    /* Her sayfanın sonunda içerik bölünürken, içerik parçasının tamamı bir sonraki sayfaya geçer. */
                     .progress-step-item {
                         page-break-inside: avoid;
                     }
