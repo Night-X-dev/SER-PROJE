@@ -3525,9 +3525,10 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 `;
                 progressStepsContainer.appendChild(stepElement);
                 
-                // If step is completed, disable all form fields
+                // If step is completed, disable all form fields except the revision request button
                 if (isCompleted && isEditable) {
-                    const formElements = stepElement.querySelectorAll('input, select, textarea, button, .btn-edit, .btn-delete');
+                    // Select all form elements except the revision request button
+                    const formElements = stepElement.querySelectorAll('input:not(.request-revision-btn), select, textarea, button:not(.request-revision-btn), .btn-edit, .btn-delete');
                     formElements.forEach(element => {
                         element.disabled = true;
                         element.style.pointerEvents = 'none';
@@ -3546,6 +3547,15 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                         };
                     });
                     
+                    // Make sure the revision request button is clickable
+                    const revBtns = stepElement.querySelectorAll('.request-revision-btn');
+                    revBtns.forEach(btn => {
+                        btn.disabled = false;
+                        btn.style.pointerEvents = 'auto';
+                        btn.style.opacity = '1';
+                        btn.style.cursor = 'pointer';
+                    });
+                    
                     // Add a visual indicator that the step is completed and cannot be edited
                     const completedBadge = document.createElement('span');
                     completedBadge.className = 'badge bg-success ms-2';
@@ -3553,6 +3563,13 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     const titleElement = stepElement.querySelector('.progress-detail-title');
                     if (titleElement) {
                         titleElement.appendChild(completedBadge);
+                    }
+                    
+                    // Ensure the revision request button is visible and clickable
+                    const revBtn = stepElement.querySelector('.request-revision-btn');
+                    if (revBtn) {
+                        revBtn.style.display = 'inline-block';
+                        revBtn.style.visibility = 'visible';
                     }
                 }
             });
