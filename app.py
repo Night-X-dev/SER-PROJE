@@ -3966,7 +3966,7 @@ def handle_revision_request():
 
 # Bu kod, `revision_requests` tablosu oluşturulduktan sonra kullanılmalıdır.
 # `projeler.html` dosyasından gelen `title` ve `message` alanlarını doğru şekilde işler.
-
+@app.route('/api/progress/<int:progress_id>/complete', methods=['POST'])
 def complete_progress_step(progress_id):
     data = request.get_json()
     is_completed = data.get('is_completed', False)
