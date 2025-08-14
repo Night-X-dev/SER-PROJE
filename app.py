@@ -3963,7 +3963,43 @@ def handle_revision_request():
     finally:
         if connection:
             connection.close()
+@app.route('/api/revision-requests', methods=['GET'])
+def get_revision_requests():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'}), 401
 
+    try:
+        connection = get_db_connection()
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            # Revizyon isteklerini proje ve kullanıcı bilgileriyle birlikte çek
+            cursor.execute("""
+                SELECT 
+                    rr.*,
+                    p.name as project_name,
+                    u.fullname as requester_name
+                FROM revision_requests rr
+                LEFT JOIN projects p ON rr.project_id = p.id
+                LEFT JOIN users u ON rr.requested_by = u.id
+                ORDER BY rr.created_at DESC
+            """)
+            revisions = cursor.fetchall()
+            
+            # Tarih formatını düzenle
+            for rev in revisions:
+                if 'created_at' in rev and rev['created_at']:
+                    rev['created_at'] = rev['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+            
+            return jsonify({
+                'success': True,
+                'revisions': revisions
+            })
+            
+    except Exception as e:
+        app.logger.error(f"Revizyon istekleri getirilirken hata: {str(e)}")
+        return jsonify({'success': False, 'message': 'Bir hata oluştu'}), 500
+    finally:
+        if connection:
+            connection.close()
 # Bu kod, `revision_requests` tablosu oluşturulduktan sonra kullanılmalıdır.
 # `projeler.html` dosyasından gelen `title` ve `message` alanlarını doğru şekilde işler.
 @app.route('/api/progress/<int:progress_id>/complete', methods=['POST'])

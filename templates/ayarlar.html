@@ -1568,7 +1568,37 @@
                 </div>
             </div>
         </div>
-        
+        <!-- Revizyon İstekleri Bölümü -->
+<div class="settings-card" id="revisionRequestsCard">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i class="fas fa-clipboard-check"></i>
+            Revizyon İstekleri
+        </h2>
+        <button type="button" class="btn btn-sm btn-primary" id="refreshRevisionsBtn">
+            <i class="fas fa-sync-alt"></i> Yenile
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="revisionRequestsTable">
+                <thead>
+                    <tr>
+                        <th>Proje</th>
+                        <th>Başlık</th>
+                        <th>İsteyen</th>
+                        <th>Tarih</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody id="revisionRequestsBody">
+                    <!-- Revizyon istekleri buraya yüklenecek -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
         <!-- Hesap Ayarları -->
         <div class="settings-card" id="accountSettingsCard">
             <div class="card-header">
@@ -1754,7 +1784,97 @@
 
         let confirmCallback = null; // Callback function to execute on confirmation
         let confirmationBootstrapModal; // Bootstrap modal instance
+        async function loadRevisionRequests() {
+    try {
+        const response = await fetch('/api/revision-requests');
+        if (!response.ok) {
+            throw new Error('İstekler yüklenirken bir hata oluştu');
+        }
+        const data = await response.json();
+        renderRevisionRequests(data.revisions);
+    } catch (error) {
+        console.error('Hata:', error);
+        showToast('Hata', 'Revizyon istekleri yüklenirken bir hata oluştu', 'error');
+    }
+}
 
+// Revizyon isteklerini tabloda göster
+function renderRevisionRequests(revisions) {
+    const tbody = document.getElementById('revisionRequestsBody');
+    tbody.innerHTML = '';
+
+    if (!revisions || revisions.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center">Bekleyen revizyon isteği bulunmamaktadır.</td>
+            </tr>
+        `;
+        return;
+    }
+
+    revisions.forEach(rev => {
+        const date = new Date(rev.created_at).toLocaleString('tr-TR');
+        const statusBadge = getStatusBadge(rev.status);
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${rev.project_name || 'Bilinmeyen Proje'}</td>
+            <td>${escapeHtml(rev.title)}</td>
+            <td>${rev.requester_name || 'Bilinmeyen Kullanıcı'}</td>
+            <td>${date}</td>
+            <td>${statusBadge}</td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-success btn-approve" data-id="${rev.id}">
+                        <i class="fas fa-check"></i> Kabul Et
+                    </button>
+                    <button class="btn btn-danger btn-reject" data-id="${rev.id}">
+                        <i class="fas fa-times"></i> Reddet
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Durum etiketi oluştur
+function getStatusBadge(status) {
+    const statuses = {
+        'pending': 'Bekliyor',
+        'approved': 'Onaylandı',
+        'rejected': 'Reddedildi'
+    };
+    
+    const classes = {
+        'pending': 'bg-warning',
+        'approved': 'bg-success',
+        'rejected': 'bg-danger'
+    };
+    
+    return `<span class="badge ${classes[status] || 'bg-secondary'}">${statuses[status] || status}</span>`;
+}
+
+// Sayfa yüklendiğinde çalıştır
+document.addEventListener('DOMContentLoaded', function() {
+    // Diğer kodlar...
+    loadRevisionRequests();
+    
+    // Yenile butonu
+    document.getElementById('refreshRevisionsBtn')?.addEventListener('click', loadRevisionRequests);
+    
+    // Kabul ve red butonları için event delegation
+    document.getElementById('revisionRequestsTable')?.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-approve, .btn-reject');
+        if (!btn) return;
+        
+        const revisionId = btn.dataset.id;
+        const action = btn.classList.contains('btn-approve') ? 'approve' : 'reject';
+        
+        console.log(`${action} clicked for revision ${revisionId}`);
+        // Burada onaylama/reddetme işlemleri yapılacak
+    });
+});
         // Confirmation Modal'ı gösterme fonksiyonu
         function showConfirmModal(title, message, onConfirm) { // Fonksiyon adı showConfirmModal olarak değiştirildi
             document.getElementById('confirmationModalLabel').textContent = title; // Başlığı ayarla
