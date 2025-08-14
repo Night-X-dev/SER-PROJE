@@ -4773,11 +4773,127 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
     }
 </script>
     <!-- Revizyon İsteği Modal -->
+    <style>
+        /* Custom Modal Styling */
+        #revisionRequestModal .modal-content {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+        }
+        
+        #revisionRequestModal .modal-header {
+            background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+            color: white;
+            padding: 1.2rem 1.5rem;
+            border-bottom: none;
+        }
+        
+        #revisionRequestModal .modal-title {
+            font-weight: 600;
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        #revisionRequestModal .btn-close {
+            filter: invert(1);
+            opacity: 0.8;
+            transition: all 0.2s ease;
+        }
+        
+        #revisionRequestModal .btn-close:hover {
+            opacity: 1;
+            transform: rotate(90deg);
+        }
+        
+        #revisionRequestModal .modal-body {
+            padding: 1.5rem;
+        }
+        
+        #revisionRequestModal .form-label {
+            font-weight: 500;
+            color: #495057;
+            margin-bottom: 0.5rem;
+        }
+        
+        #revisionRequestModal .form-control {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 0.65rem 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        #revisionRequestModal .form-control:focus {
+            border-color: #4361ee;
+            box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.15);
+        }
+        
+        #revisionRequestModal textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        #revisionRequestModal .modal-footer {
+            border-top: 1px solid #f0f0f0;
+            padding: 1.25rem 1.5rem;
+            background-color: #f9f9f9;
+        }
+        
+        #revisionRequestModal .btn {
+            padding: 0.5rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        #revisionRequestModal .btn-primary {
+            background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+            border: none;
+        }
+        
+        #revisionRequestModal .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+        }
+        
+        #revisionRequestModal .btn-secondary {
+            background-color: #f0f0f0;
+            color: #495057;
+            border: 1px solid #dee2e6;
+        }
+        
+        #revisionRequestModal .btn-secondary:hover {
+            background-color: #e2e6ea;
+            border-color: #dae0e5;
+        }
+        
+        /* Animation */
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        #revisionRequestModal .modal-dialog {
+            animation: modalFadeIn 0.3s ease-out;
+        }
+    </style>
+    
     <div class="modal fade" id="revisionRequestModal" tabindex="-1" aria-labelledby="revisionRequestModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="revisionRequestModalLabel">Revizyon İsteği Gönder</h5>
+                    <h5 class="modal-title" id="revisionRequestModalLabel">
+                        <i class="fas fa-edit me-2"></i>
+                        Revizyon İsteği Gönder
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
                 </div>
                 <form id="revisionRequestForm">
@@ -4785,18 +4901,37 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
                         <input type="hidden" id="revisionProgressId" name="progress_id">
                         <input type="hidden" id="revisionProjectId" name="project_id">
                         
-                        <div class="mb-3">
-                            <label for="revisionTitle" class="form-label">Başlık</label>
-                            <input type="text" class="form-control" id="revisionTitle" name="title" required>
+                        <div class="mb-4">
+                            <label for="revisionTitle" class="form-label">
+                                <i class="fas fa-heading me-2"></i>Başlık
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-pen"></i></span>
+                                <input type="text" class="form-control" id="revisionTitle" name="title" 
+                                       placeholder="Revizyon başlığını giriniz" required>
+                            </div>
                         </div>
+                        
                         <div class="mb-3">
-                            <label for="revisionMessage" class="form-label">Açıklama</label>
-                            <textarea class="form-control" id="revisionMessage" name="message" rows="4" required></textarea>
+                            <label for="revisionMessage" class="form-label">
+                                <i class="fas fa-align-left me-2"></i>Açıklama
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text align-items-start pt-2">
+                                    <i class="fas fa-comment-dots"></i>
+                                </span>
+                                <textarea class="form-control" id="revisionMessage" name="message" 
+                                          rows="4" placeholder="Revizyon detaylarını açıklayınız..." required></textarea>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-                        <button type="submit" class="btn btn-primary">Gönder</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i> İptal
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-1"></i> Gönder
+                        </button>
                     </div>
                 </form>
             </div>
