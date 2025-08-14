@@ -1727,11 +1727,11 @@ def update_project(project_id):
         return jsonify({'message': 'User ID is required.'}), 400
 
     # Tüm olası sütunlar
-   possible_columns = [
-    'project_name', 'reference_no', 'description', 'customer_id',
-    'project_location', 'status', 'project_manager_id', 'contract_date',
-    'meeting_date', 'start_date', 'end_date'
-]
+    possible_columns = [
+        'project_name', 'reference_no', 'description', 'customer_id',
+        'project_location', 'status', 'project_manager_id', 'contract_date',
+        'meeting_date', 'start_date', 'end_date'
+    ]
 
     # Hangi sütunların güncellendiğini takip et
     updates = []
