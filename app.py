@@ -3896,82 +3896,73 @@ def get_active_work_progress_headers():
         return jsonify({"error": "Başlıklar getirilirken bir hata oluştu"}), 500
 
 
-# app.py dosyasına eklenmesi gereken yeni kod bloğu
-
 @app.route('/api/revision-requests', methods=['POST'])
-def update_user_revision_stats():
+def handle_revision_request():
     """
-    Handles a revision request by updating the user's revision statistics.
-    NOTE: This endpoint does NOT save the full details of the revision request
-    as the 'revision_requests' table does not exist in the user's database schema.
+    Handles revision requests from the frontend and saves them to the database.
     """
     if 'user_id' not in session:
-        return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'}), 401
+        return jsonify({'success': False, 'message': 'Authentication required. Please log in.'}), 401
 
     data = request.get_json()
-    # Check for required fields from the frontend, even if they aren't stored
-    required_fields = ['progress_id', 'project_id', 'title', 'message']
-    if not all(field in data for field in required_fields):
-        return jsonify({
-            'success': False, 
-            'message': 'Eksik bilgi',
-            'missing_fields': [f for f in required_fields if f not in data]
-        }), 400
-
+    project_id = data.get('project_id')
+    progress_id = data.get('progress_id')
+    title = data.get('title')
+    message = data.get('message')
     requester_user_id = session.get('user_id')
-    current_month_year = datetime.datetime.now().strftime('%Y-%m')
+    
+    # Check for required fields
+    if not all([project_id, progress_id, title, message, requester_user_id]):
+        return jsonify({'success': False, 'message': 'Missing required fields.'}), 400
 
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
             # Check if the progress step is valid and belongs to the project
-            # This is a good practice to ensure data integrity
             cursor.execute(
                 "SELECT id FROM project_progress WHERE id = %s AND project_id = %s",
-                (data['progress_id'], data['project_id'])
+                (progress_id, project_id)
             )
             if not cursor.fetchone():
-                return jsonify({'success': False, 'message': 'Geçersiz ilerleme adımı veya proje'}), 400
+                return jsonify({'success': False, 'message': 'Invalid project or progress step ID.'}), 404
+                
+            # Check if there is an open revision request for the same progress step
+            cursor.execute(
+                "SELECT id FROM revision_requests WHERE progress_id = %s AND status = 'pending'",
+                (progress_id)
+            )
+            if cursor.fetchone():
+                return jsonify({'success': False, 'message': 'An open revision request for this step already exists.'}), 409
 
-            # Update the user_revision_stats table
+            # Insert the new revision request into the database
             cursor.execute(
                 """
-                INSERT INTO user_revision_stats (user_id, revision_count, month_year, created_at, updated_at)
-                VALUES (%s, 1, %s, NOW(), NOW())
-                ON DUPLICATE KEY UPDATE 
-                    revision_count = revision_count + 1, 
-                    updated_at = NOW()
+                INSERT INTO revision_requests (project_id, progress_id, requested_by, title, message)
+                VALUES (%s, %s, %s, %s, %s)
                 """,
-                (requester_user_id, current_month_year)
+                (project_id, progress_id, requester_user_id, title, message)
             )
-            
             connection.commit()
             
-            return jsonify({
-                'success': True,
-                'message': 'Revizyon isteği istatistikleri başarıyla güncellendi'
-            }), 201
+            return jsonify({'success': True, 'message': 'Revision request successfully sent.'}), 201
 
     except pymysql.Error as e:
-        print(f"Database error: {e}")
+        print(f"Database error during revision request: {e}")
         if connection:
             connection.rollback()
-        return jsonify({'success': False, 'message': 'Veritabanı hatası oluştu.'}), 500
+        return jsonify({'success': False, 'message': 'A database error occurred.'}), 500
     except Exception as e:
-        print(f"General error: {e}")
+        print(f"General error during revision request: {e}")
         if connection:
             connection.rollback()
-        return jsonify({'success': False, 'message': 'Bir iç sunucu hatası oluştu.'}), 500
+        return jsonify({'success': False, 'message': 'An internal server error occurred.'}), 500
     finally:
         if connection:
             connection.close()
 
-# Bu kod, `user_revision_stats` tablonuzun PRIMARY KEY'inin veya UNIQUE KEY'inin
-# `user_id` ve `month_year` sütunlarını içerdiğini varsayar.
-# Şayet böyle bir anahtar yoksa, ON DUPLICATE KEY UPDATE işlemi başarısız olur
-# ve her istekte yeni bir satır eklenir.
-# Bu durum veritabanı şemanıza bağlıdır.
+# Bu kod, `revision_requests` tablosu oluşturulduktan sonra kullanılmalıdır.
+# `projeler.html` dosyasından gelen `title` ve `message` alanlarını doğru şekilde işler.
 
 
 def complete_progress_step(progress_id):
