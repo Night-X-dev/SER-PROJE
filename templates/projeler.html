@@ -3961,7 +3961,6 @@ async function generateProjectPdf(project) {
     const getStepStatusHtml = (step) => {
         const today = new Date();
         const startDate = new Date(step.start_date);
-        const revisionCount = revisionCounts[step.id] || 0;
         
         let statusText = '';
         if (step.is_completed) {
@@ -3972,7 +3971,7 @@ async function generateProjectPdf(project) {
             statusText = `Devam Ediyor <i class="fas fa-spinner fa-spin" style="color: orange;"></i>`;
         }
 
-        return `${statusText} ${revisionCount > 0 ? `(${revisionCount} Revize)` : ''}`;
+        return statusText;
     };
 
     // Helper function to calculate planned duration in days
@@ -4061,7 +4060,6 @@ async function generateProjectPdf(project) {
     const projectPhase = getProjectPhaseText(project.display_status);
 
     // PDF report HTML content with the new structure.
-    // The main content no longer includes the header and footer, as they will be handled by the `@page` CSS.
     const mainContentHtml = `
         <!-- Part 1: Project Basic Info -->
         <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
@@ -4130,6 +4128,7 @@ async function generateProjectPdf(project) {
                                 <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(step.start_date || '-')}</p>
                                 <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(step.end_date || '-')}</p>
                                 <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(step.real_end_date || '-')}</p>
+                                <p><strong>Revize Sayısı:</strong> ${revisionCounts[step.id] || 0}</p>
                             </div>
                             <div style="width:50%; text-align:right;">
                                 <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.end_date)} gün</p>
@@ -4234,8 +4233,28 @@ async function generateProjectPdf(project) {
                     }
                     
                     /* Yazdırma sırasında başlık ve altbilgiyi göster */
-                    #pdf-header-content-to-print, #pdf-footer-content-to-print {
+                    #pdf-header-content-to-print {
                       display: block;
+                      position: fixed;
+                      top: 0;
+                      left: 0;
+                      right: 0;
+                      height: 50px; /* Başlığın yüksekliği */
+                      padding-left: 20mm;
+                      padding-right: 20mm;
+                      box-sizing: border-box;
+                    }
+                    
+                    #pdf-footer-content-to-print {
+                      display: block;
+                      position: fixed;
+                      bottom: 0;
+                      left: 0;
+                      right: 0;
+                      height: 50px; /* Altbilginin yüksekliği */
+                      padding-left: 20mm;
+                      padding-right: 20mm;
+                      box-sizing: border-box;
                     }
                     
                     /* Başlık ve altbilgi içeriğinin sayfa kenar boşluklarına uygun hizalanması */
