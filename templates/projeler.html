@@ -3892,7 +3892,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         }
     }
 
-   // Bu fonksiyon, yeni düzeni ve istenen bilgileri içeren bir PDF raporu oluşturur.
 // Bu fonksiyon, yeni düzeni ve istenen bilgileri içeren bir PDF raporu oluşturur.
 async function generateProjectPdf(project) {
     let progressSteps = [];
@@ -3944,7 +3943,8 @@ async function generateProjectPdf(project) {
     const getProjectStatusHtml = (statusText) => {
         const isDelayed = statusText && statusText.includes('Gecikmeli');
         const color = isDelayed ? 'red' : '#4CAF50';
-        return `<span style="color: ${color}; font-weight: bold; margin: 0;">${statusText || '-'}</span>`;
+        const text = isDelayed ? 'Gecikmeli devam ediyor' : 'Gecikmesiz devam ediyor';
+        return `<span style="color: ${color}; font-weight: bold; margin: 0;">${text}</span>`;
     };
 
     // Calculate progress bar data.
@@ -4019,8 +4019,8 @@ async function generateProjectPdf(project) {
     // PDF report HTML content with the new structure
     pdfContent.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 20px;">
-            <!-- DİKKAT: "serlogo.png" adresini geçerli bir logo görselinin URL'siyle değiştirmelisiniz. -->
-            <img src="https://placehold.co/150x50/cccccc/333333?text=LOGO" alt="Logo" style="height: 50px;">
+            <!-- DİKKAT: Logonuzun URL'sini buraya ekleyin -->
+            <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
             <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
             <div style="font-size: 14px; color: #555; text-align: right;">
                 ${formatDateForDisplay(new Date())}
@@ -4062,7 +4062,7 @@ async function generateProjectPdf(project) {
             </div>
             
             <h4 style="text-align: center; font-size: 16px; margin-top: 20px; color: #005c9d;">
-                Proje ${project.display_status || 'Aşama bilgisi bulunamadı'} aşamasında
+                Proje ${projectPhase} aşamasında
             </h4>
             
             <div style="height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px;">
