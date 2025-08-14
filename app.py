@@ -3973,31 +3973,26 @@ def get_revision_requests():
         connection = get_db_connection()
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
             # First, try a simple query to check connection
-            cursor.execute("SELECT 1 as test")
-            test = cursor.fetchone()
-            print("Test query result:", test)  # Check if basic query works
             
             # Then try the actual query
-            cursor.execute("""
-                SELECT 
-                    rr.id,
-                    rr.project_id,
-                    rr.progress_id,
-                    rr.title,
-                    rr.message,
-                    rr.status,
-                    rr.created_at
-                FROM revision_requests rr
-                ORDER BY rr.created_at DESC
-                LIMIT 10  # Limit results for testing
-            """)
-            revisions = cursor.fetchall()
-            print("Revisions found:", revisions)  # Debug output
-            
-            return jsonify({
-                'success': True,
-                'revisions': revisions
-            })
+           cursor.execute("""
+    SELECT 
+        rr.id,
+        rr.project_id,
+        rr.progress_id,
+        rr.requested_by,  # Bu satırı ekledik
+        rr.title,
+        rr.message,
+        rr.status,
+        rr.created_at,
+        p.name as project_name,  # Proje adı için
+        u.fullname as requester_name  # İsteyen kullanıcının adı için
+    FROM revision_requests rr
+    LEFT JOIN projects p ON rr.project_id = p.id  # Proje adı için JOIN
+    LEFT JOIN users u ON rr.requested_by = u.id  # Kullanıcı adı için JOIN
+    ORDER BY rr.created_at DESC
+    LIMIT 10
+""")
             
     except Exception as e:
         print("Error in get_revision_requests:", str(e))  # Print to console
