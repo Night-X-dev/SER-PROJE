@@ -3975,24 +3975,26 @@ def get_revision_requests():
             # First, try a simple query to check connection
             
             # Then try the actual query
-           cursor.execute("""
-    SELECT 
-        rr.id,
-        rr.project_id,
-        rr.progress_id,
-        rr.requested_by,  
-        rr.title,
-        rr.message,
-        rr.status,
-        rr.created_at,
-        p.name as project_name, 
-        u.fullname as requester_name 
-    FROM revision_requests rr
-    LEFT JOIN projects p ON rr.project_id = p.id 
-    LEFT JOIN users u ON rr.requested_by = u.id 
-    ORDER BY rr.created_at DESC
-    LIMIT 10
-""")
+            cursor.execute("""
+                SELECT 
+                    rr.id,
+                    rr.project_id,
+                    rr.progress_id,
+                    rr.title,
+                    rr.message,
+                    rr.status,
+                    rr.created_at
+                FROM revision_requests rr
+                ORDER BY rr.created_at DESC
+                LIMIT 10  # Limit results for testing
+            """)
+            revisions = cursor.fetchall()
+            print("Revisions found:", revisions)  # Debug output
+            
+            return jsonify({
+                'success': True,
+                'revisions': revisions
+            })
             
     except Exception as e:
         print("Error in get_revision_requests:", str(e))  # Print to console
