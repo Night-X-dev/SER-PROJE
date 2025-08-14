@@ -4021,17 +4021,25 @@ def get_revision_requests():
             connection.close()
 @app.route('/api/revision-requests/<int:request_id>/approve', methods=['POST'])
 def approve_revision_request(request_id):
-    return update_revision_status(request_id, 'approved',
-                                'Revizyon isteği onaylandı',
-                                'Revizyon isteği onaylanırken bir hata oluştu')
+    return update_revision_status(
+        request_id, 
+        'approved',
+        'Revizyon isteği onaylandı',
+        'Revizyon isteği onaylanırken bir hata oluştu',
+        update_progress=True
+    )
 
 @app.route('/api/revision-requests/<int:request_id>/reject', methods=['POST'])
 def reject_revision_request(request_id):
-    return update_revision_status(request_id, 'rejected',
-                                'Revizyon isteği reddedildi',
-                                'Revizyon isteği reddedilirken bir hata oluştu')
+    return update_revision_status(
+        request_id, 
+        'rejected',
+        'Revizyon isteği reddedildi',
+        'Revizyon isteği reddedilirken bir hata oluştu',
+        update_progress=False
+    )
 
-def update_revision_status(request_id, new_status, success_message, error_message):
+def update_revision_status(request_id, new_status, success_message, error_message, update_progress=False):
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'}), 401
 
@@ -4039,44 +4047,47 @@ def update_revision_status(request_id, new_status, success_message, error_messag
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Debug için log ekleyelim
-            app.logger.info(f"Revizyon durumu güncelleniyor - ID: {request_id}, Yeni Durum: {new_status}")
+            # İşlemi transaction içinde yapalım
+            cursor.execute("START TRANSACTION")
             
-            # Önce revizyon isteğini bul
-            cursor.execute("""
-                SELECT * FROM revision_requests 
-                WHERE id = %s AND status = 'pending'
-                FOR UPDATE
-            """, (request_id,))
-            revision = cursor.fetchone()
-            
-            if not revision:
-                app.logger.warning(f"Bekleyen revizyon isteği bulunamadı - ID: {request_id}")
-                return jsonify({
-                    'success': False,
-                    'message': 'Bekleyen revizyon isteği bulunamadı veya zaten işlenmiş'
-                }), 404
-
-            # Revizyon durumunu güncelle
+            # 1. Revizyon isteğini güncelle
             cursor.execute("""
                 UPDATE revision_requests 
                 SET status = %s, 
                     resolved_at = NOW(),
                     resolved_by = %s
-                WHERE id = %s
+                WHERE id = %s AND status = 'pending'
             """, (new_status, session['user_id'], request_id))
 
-            # Eğer onaylandıysa, ilgili progress'i güncelle
-            if new_status == 'approved':
-                app.logger.info(f"Progress güncelleniyor - Progress ID: {revision['progress_id']}")
-                cursor.execute("""
-                    UPDATE project_progress
-                    SET status = 'revision_required'
-                    WHERE id = %s
-                """, (revision['progress_id'],))
+            if cursor.rowcount == 0:
+                connection.rollback()
+                return jsonify({
+                    'success': False,
+                    'message': 'Bekleyen revizyon isteği bulunamadı veya zaten işlenmiş'
+                }), 404
 
+            # 2. Eğer onaylandıysa ve progress güncellenecekse
+            if update_progress:
+                # İlk olarak ilgili progress_id'yi alalım
+                cursor.execute("""
+                    SELECT progress_id 
+                    FROM revision_requests 
+                    WHERE id = %s
+                """, (request_id,))
+                result = cursor.fetchone()
+                
+                if result:
+                    progress_id = result['progress_id']
+                    # Progress'i güncelle: is_completed = 0 yapıyoruz
+                    cursor.execute("""
+                        UPDATE project_progress
+                        SET is_completed = 0,
+                            completion_notified = 0
+                        WHERE progress_id = %s
+                    """, (progress_id,))
+
+            # Tüm işlemler başarılı, commit et
             connection.commit()
-            app.logger.info(f"Revizyon başarıyla güncellendi - ID: {request_id}, Yeni Durum: {new_status}")
             return jsonify({
                 'success': True,
                 'message': success_message
