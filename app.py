@@ -3980,16 +3980,16 @@ def get_revision_requests():
         rr.id,
         rr.project_id,
         rr.progress_id,
-        rr.requested_by,  # Bu satırı ekledik
+        rr.requested_by,  
         rr.title,
         rr.message,
         rr.status,
         rr.created_at,
-        p.name as project_name,  # Proje adı için
-        u.fullname as requester_name  # İsteyen kullanıcının adı için
+        p.name as project_name, 
+        u.fullname as requester_name 
     FROM revision_requests rr
-    LEFT JOIN projects p ON rr.project_id = p.id  # Proje adı için JOIN
-    LEFT JOIN users u ON rr.requested_by = u.id  # Kullanıcı adı için JOIN
+    LEFT JOIN projects p ON rr.project_id = p.id 
+    LEFT JOIN users u ON rr.requested_by = u.id 
     ORDER BY rr.created_at DESC
     LIMIT 10
 """)
