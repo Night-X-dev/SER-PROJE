@@ -3903,15 +3903,17 @@ async function generateProjectPdf(project) {
             progressSteps = await response.json();
         }
 
-        // Revizyon sayılarını API'den çek ve projeye göre filtrele.
+        // Revizyon sayılarını API'den çek ve ilgili projeye göre filtrele.
         // Backend'de `/api/projects/{id}/revisions` endpoint'i olmadığı için,
-        // genel revizyon isteklerini çekip client tarafında filtreleniyor.
+        // genel revizyon istekleri çekilip client tarafında filtreleniyor.
         const revisionResponse = await fetch(`${API_BASE_URL}/api/revision-requests`);
         if (revisionResponse.ok) {
             const revisionsData = await revisionResponse.json();
             const revisions = revisionsData.revisions || [];
             
+            // Projeye ve ilerleme adımına göre revizyonları say
             revisions.forEach(rev => {
+                // Sadece mevcut projenin ve ilgili ilerleme adımının revizyonlarını say
                 if (rev.project_id === project.project_id && rev.progress_id) {
                     revisionCounts[rev.progress_id] = (revisionCounts[rev.progress_id] || 0) + 1;
                 }
@@ -4115,9 +4117,9 @@ async function generateProjectPdf(project) {
             <div>
                 ${progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => `
                     <div class="progress-step-item" style="margin-bottom:12px;">
-                        <h5 style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
-                            ${step.title || ''} <span style="font-weight: normal;"> - ${getStepStatusHtml(step)}</span>
-                        </h5>
+                        <div style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
+                            ${step.title || ''} <span style="font-weight: normal; float: right;">${getStepStatusHtml(step)}</span>
+                        </div>
                         <div style="display:flex; justify-content:space-between; font-size:13px; color:#555;">
                             <div style="width:50%;">
                                 <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(step.start_date || '-')}</p>
@@ -4153,6 +4155,7 @@ async function generateProjectPdf(project) {
             <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
+                /* Sayfa boyutu ve kenar boşlukları */
                 @page { 
                     size: A4; 
                     margin: 20mm;
@@ -4203,9 +4206,9 @@ async function generateProjectPdf(project) {
                 @media print {
                     body { 
                         background-color: #fff; 
-                        /* Fixed header ve footer ile içerik çakışmaması için padding ekle */
-                        padding-top: 70px;
-                        padding-bottom: 70px;
+                        /* Fixed header ve footer ile içerik çakışmaması için boşluk bırakılır */
+                        padding-top: 60px; /* Başlık yüksekliğinden biraz fazla */
+                        padding-bottom: 60px; /* Altbilgi yüksekliğinden biraz fazla */
                     }
                     .pdf-container { 
                         margin: 0; 
@@ -4227,10 +4230,10 @@ async function generateProjectPdf(project) {
                         top: 0;
                         left: 0;
                         right: 0;
-                        height: 60px;
-                        padding: 10px 20mm;
+                        height: 50px;
+                        padding: 5px 20mm;
                         box-sizing: border-box;
-                        background-color: #fff; /* Başlık alanının arka planını beyaz yap */
+                        background-color: #fff;
                         border-bottom: 1px solid #eee;
                     }
 
@@ -4241,22 +4244,24 @@ async function generateProjectPdf(project) {
                         left: 0;
                         right: 0;
                         height: 50px;
-                        padding: 10px 20mm;
+                        padding: 5px 20mm;
                         box-sizing: border-box;
-                        background-color: #fff; /* Altbilgi alanının arka planını beyaz yap */
+                        background-color: #fff;
                         border-top: 1px solid #eee;
                         font-size: 12px;
                         color: #6c757d;
                         text-align: center;
                     }
                     
-                    /* Başlık ve altbilgi içeriğinin sayfa kenar boşluklarına uygun hizalanması */
                     .print-header > div, .print-footer > div {
                         width: 170mm;
                         margin: 0 auto;
+                        height: 100%;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
                     }
 
-                    /* Her sayfanın sonunda içerik bölünürken, içerik parçasının tamamı bir sonraki sayfaya geçer. */
                     .progress-step-item {
                         page-break-inside: avoid;
                     }
@@ -4272,10 +4277,10 @@ async function generateProjectPdf(project) {
         <body>
             <!-- Yazdırma sırasında her sayfada tekrar edecek olan başlık içeriği -->
             <div class="print-header">
-                <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-                    <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
-                    <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
-                    <div style="font-size: 14px; color: #555; text-align: right;">
+                <div>
+                    <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 40px;">
+                    <h1 style="font-size: 20px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
+                    <div style="font-size: 12px; color: #555; text-align: right;">
                         ${formatDateForDisplay(new Date())}
                     </div>
                 </div>
@@ -4283,7 +4288,7 @@ async function generateProjectPdf(project) {
 
             <!-- Yazdırma sırasında her sayfada tekrar edecek olan altbilgi içeriği -->
             <div class="print-footer">
-                <div style='width:100%; font-size:12px; color:#6c757d; border-top:1px solid #eee; padding-top:5px; text-align: center;'>
+                <div>
                     <div style="font-weight: bold; margin-bottom: 5px;">Ser Elektrik Otomasyon Ticaret ve Sanayi Anonim Şirketi</div>
                     <div>www.serelektrik.com.tr | info@serelektrik.com.tr</div>
                 </div>
