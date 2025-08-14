@@ -3925,20 +3925,6 @@ async function generateProjectPdf(project) {
         return Math.floor(diffTime / (1000 * 60 * 60 * 24));
     };
 
-    // Helper function to get the current project phase.
-    const getProjectPhase = (steps) => {
-        const today = new Date();
-        for (const step of steps) {
-            const startDate = new Date(step.start_date);
-            const endDate = new Date(step.end_date);
-            if (today >= startDate && today <= endDate) {
-                // Return step.title, but provide a fallback if it's undefined
-                return step.title || 'Aşama bilgisi bulunamadı';
-            }
-        }
-        return 'Aşama bilgisi bulunamadı';
-    };
-
     // Helper function to get project status text with color.
     const getProjectStatusHtml = (statusText) => {
         const isDelayed = statusText && statusText.includes('Gecikmeli');
@@ -3956,6 +3942,39 @@ async function generateProjectPdf(project) {
         const phaseName = statusText.split('(')[0].trim();
         return `${phaseName} Aşamasında`;
     };
+
+    // Helper function to get step status and icon
+    const getStepStatusHtml = (step) => {
+        const today = new Date();
+        const startDate = new Date(step.start_date);
+        
+        if (step.is_completed) {
+            return `Tamamlandı <i class="fas fa-check-circle" style="color: green;"></i>`;
+        } else if (today < startDate) {
+            return `Bekliyor <i class="fas fa-hourglass-start" style="color: grey;"></i>`;
+        } else {
+            return `Devam Ediyor <i class="fas fa-spinner fa-spin" style="color: orange;"></i>`;
+        }
+    };
+
+    // Helper function to calculate planned duration in days
+    const calculatePlannedDuration = (startDateStr, endDateStr) => {
+        if (!startDateStr || !endDateStr) return '-';
+        const startDate = new Date(startDateStr);
+        const endDate = new Date(endDateStr);
+        const diffTime = endDate.getTime() - startDate.getTime();
+        return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    };
+
+    // Helper function to calculate actual duration in days
+    const calculateActualDuration = (startDateStr, realEndDateStr) => {
+        if (!startDateStr) return '-';
+        const startDate = new Date(startDateStr);
+        const endDate = realEndDateStr ? new Date(realEndDateStr) : new Date();
+        const diffTime = endDate.getTime() - startDate.getTime();
+        return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    };
+
 
     // Calculate progress bar data.
     const calculateProgressBarData = (progressSteps) => {
@@ -4021,7 +4040,7 @@ async function generateProjectPdf(project) {
     };
 
     const progressBarData = calculateProgressBarData(progressSteps);
-    const projectPhase = getProjectPhase(progressSteps);
+    const projectPhase = getProjectPhaseText(project.display_status);
 
     const pdfContent = document.createElement('div');
     pdfContent.className = 'pdf-report-content';
@@ -4029,7 +4048,6 @@ async function generateProjectPdf(project) {
     // PDF report HTML content with the new structure
     pdfContent.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 20px;">
-            <!-- DİKKAT: Logonuzun URL'sini buraya ekleyin -->
             <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
             <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
             <div style="font-size: 14px; color: #555; text-align: right;">
@@ -4095,15 +4113,22 @@ async function generateProjectPdf(project) {
             <div>
                 ${progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => `
                     <div style="margin-bottom:12px;">
-                        <div style="font-weight:bold;font-size:15px;">${step.title || ''}</div>
-                        <div style="font-size:13px; color:#555;">
-                            Başlangıç: ${formatDateForDisplay(step.start_date || '-')} - 
-                            Bitiş: ${formatDateForDisplay(step.end_date || '-')}
-                            ${(step.real_end_date && step.end_date !== step.real_end_date) ? ` (Gerçek Bitiş: ${formatDateForDisplay(step.real_end_date)})` : ''}
-                            ${(step.delay_days > 0) ? `<span class='pdf-delay-text'>(${step.delay_days} gün gecikmeli)</span>` : ''}
-                            ${(step.custom_delay_days > 0) ? `<span class='pdf-delay-text'> (${step.custom_delay_days} gün ertelendi)</span>` : ''}
+                        <div style="font-weight:bold;font-size:15px; display:flex; justify-content:space-between;">
+                            <span>${step.title || ''} - ${getStepStatusHtml(step)}</span>
                         </div>
-                        <div style="font-size:13px;">${step.description || ''}</div>
+                        <div style="display:flex; justify-content:space-between; font-size:13px; color:#555;">
+                            <div style="width:50%;">
+                                <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(step.start_date || '-')}</p>
+                                <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(step.end_date || '-')}</p>
+                                <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(step.real_end_date || '-')}</p>
+                            </div>
+                            <div style="width:50%; text-align:right;">
+                                <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.end_date)} gün</p>
+                                <p><strong>Gecikme Toplam Süre:</strong> ${(step.delay_days || 0) + (step.custom_delay_days || 0)} gün</p>
+                                <p><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.real_end_date)} gün</p>
+                            </div>
+                        </div>
+                        ${step.description ? `<div style="font-size:13px; margin-top: 5px;">Açıklama: ${step.description}</div>` : ''}
                     </div>
                 `).join('')}
             </div>
