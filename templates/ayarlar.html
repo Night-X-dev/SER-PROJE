@@ -1788,13 +1788,14 @@
     try {
         const response = await fetch('/api/revision-requests');
         if (!response.ok) {
-            throw new Error('İstekler yüklenirken bir hata oluştu');
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
         renderRevisionRequests(data.revisions);
     } catch (error) {
-        console.error('Hata:', error);
-        showToast('Hata', 'Revizyon istekleri yüklenirken bir hata oluştu', 'error');
+        console.error('Hata Detayı:', error);
+        showToast('Hata', `Revizyon istekleri yüklenirken bir hata oluştu: ${error.message}`, 'error');
     }
 }
 

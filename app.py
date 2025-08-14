@@ -3972,7 +3972,12 @@ def get_revision_requests():
     try:
         connection = get_db_connection()
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            # Daha basit ve güvenli bir sorgu ile başlayalım
+            # First, try a simple query to check connection
+            cursor.execute("SELECT 1 as test")
+            test = cursor.fetchone()
+            print("Test query result:", test)  # Check if basic query works
+            
+            # Then try the actual query
             cursor.execute("""
                 SELECT 
                     rr.id,
@@ -3981,23 +3986,13 @@ def get_revision_requests():
                     rr.title,
                     rr.message,
                     rr.status,
-                    rr.created_at,
-                    p.name as project_name,
-                    u.fullname as requester_name
+                    rr.created_at
                 FROM revision_requests rr
-                LEFT JOIN projects p ON rr.project_id = p.id
-                LEFT JOIN users u ON rr.requested_by = u.id
                 ORDER BY rr.created_at DESC
+                LIMIT 10  # Limit results for testing
             """)
-            
             revisions = cursor.fetchall()
-            app.logger.info(f"Bulunan revizyon istekleri: {revisions}")  # Log ekleyelim
-            
-            # Tarih formatını düzenle
-            for rev in revisions:
-                if 'created_at' in rev and rev['created_at']:
-                    if isinstance(rev['created_at'], (datetime.date, datetime.datetime)):
-                        rev['created_at'] = rev['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+            print("Revisions found:", revisions)  # Debug output
             
             return jsonify({
                 'success': True,
@@ -4005,7 +4000,9 @@ def get_revision_requests():
             })
             
     except Exception as e:
-        app.logger.error(f"Revizyon istekleri getirilirken hata: {str(e)}", exc_info=True)
+        print("Error in get_revision_requests:", str(e))  # Print to console
+        import traceback
+        traceback.print_exc()  # Print full traceback
         return jsonify({
             'success': False, 
             'message': 'Bir hata oluştu',
