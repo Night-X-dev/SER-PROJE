@@ -3991,7 +3991,7 @@ def get_revision_requests():
                     u.name AS requester_name      -- Add requester_name from the users table
                 FROM revision_requests rr
                 LEFT JOIN projects p ON rr.project_id = p.id
-                LEFT JOIN users u ON rr.requester_by = u.id  
+                LEFT JOIN users u ON rr.requested_by = u.id  
                 ORDER BY rr.created_at DESC
                 LIMIT 10
             """)
