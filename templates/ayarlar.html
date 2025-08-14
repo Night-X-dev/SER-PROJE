@@ -1785,24 +1785,41 @@
         let confirmCallback = null; // Callback function to execute on confirmation
         let confirmationBootstrapModal; // Bootstrap modal instance
         async function loadRevisionRequests() {
+    const tbody = document.getElementById('revisionRequestsBody');
+    if (!tbody) return;
+    
     try {
         const response = await fetch('/api/revision-requests');
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        if (data.success && data.revisions) {
+        if (data.success && Array.isArray(data.revisions)) {
             renderRevisionRequests(data.revisions);
         } else {
-            throw new Error(data.message || 'Geçersiz yanıt formatı');
+            throw new Error('Geçersiz yanıt formatı');
         }
     } catch (error) {
-        console.error('Hata Detayı:', error);
-        showToast('Hata', `Revizyon istekleri yüklenirken bir hata oluştu: ${error.message}`, 'error');
+        console.error('Error loading revision requests:', error);
+        showToast('Hata', 'Revizyon istekleri yüklenirken bir hata oluştu', 'error');
     }
 }
-// Helper function to escape HTML
+// Durum etiketi oluştur
+function getStatusBadge(status) {
+    const statuses = {
+        'pending': 'Bekliyor',
+        'approved': 'Onaylandı',
+        'rejected': 'Reddedildi'
+    };
+    
+    const classes = {
+        'pending': 'bg-warning',
+        'approved': 'bg-success',
+        'rejected': 'bg-danger'
+    };
+    
+    return `<span class="badge ${classes[status] || 'bg-secondary'}">${statuses[status] || status}</span>`;
+}
 function escapeHtml(unsafe) {
     if (!unsafe) return '';
     return unsafe
@@ -1862,22 +1879,7 @@ function renderRevisionRequests(revisions) {
     });
 }
 
-// Durum etiketi oluştur
-function getStatusBadge(status) {
-    const statuses = {
-        'pending': 'Bekliyor',
-        'approved': 'Onaylandı',
-        'rejected': 'Reddedildi'
-    };
-    
-    const classes = {
-        'pending': 'bg-warning',
-        'approved': 'bg-success',
-        'rejected': 'bg-danger'
-    };
-    
-    return `<span class="badge ${classes[status] || 'bg-secondary'}">${statuses[status] || status}</span>`;
-}
+
 
 // Sayfa yüklendiğinde çalıştır
 document.addEventListener('DOMContentLoaded', function() {
