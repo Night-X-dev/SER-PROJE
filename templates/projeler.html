@@ -4060,19 +4060,9 @@ async function generateProjectPdf(project) {
     const progressBarData = calculateProgressBarData(progressSteps);
     const projectPhase = getProjectPhaseText(project.display_status);
 
-    const pdfContent = document.createElement('div');
-    pdfContent.className = 'pdf-report-content';
-
-    // PDF report HTML content with the new structure
-    pdfContent.innerHTML = `
-        <div class="pdf-header" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 20px;">
-            <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
-            <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
-            <div style="font-size: 14px; color: #555; text-align: right;">
-                ${formatDateForDisplay(new Date())}
-            </div>
-        </div>
-        
+    // PDF report HTML content with the new structure.
+    // The main content no longer includes the header and footer, as they will be handled by the `@page` CSS.
+    const mainContentHtml = `
         <!-- Part 1: Project Basic Info -->
         <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
             <div style="display: flex; justify-content: space-between; font-size: 14px;">
@@ -4152,12 +4142,6 @@ async function generateProjectPdf(project) {
                 `).join('')}
             </div>
         </div>
-
-        <!-- Footer -->
-        <div class="pdf-footer" style='margin-top:40px; font-size:12px; color:#6c757d; border-top:1px solid #eee; padding-top:15px; text-align: center;'>
-            <div style="font-weight: bold; margin-bottom: 5px;">Ser Elektrik Otomasyon Ticaret ve Sanayi Anonim Şirketi</div>
-            <div>www.serelektrik.com.tr | info@serelektrik.com.tr</div>
-        </div>
     `;
 
     const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
@@ -4175,128 +4159,79 @@ async function generateProjectPdf(project) {
             <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
+                /* Page setup for A4 size and margins */
                 @page { size: A4; margin: 20mm; }
-                body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; position: relative; }
+
+                /* Running elements for header and footer on print */
+                @page {
+                    @top-center { content: element(header); }
+                    @bottom-center { content: element(footer); }
+                }
+
+                #pdf-header-content-to-print { position: running(header); }
+                #pdf-footer-content-to-print { position: running(footer); }
+                
+                body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; }
+                
+                /* Main container for the report */
                 .pdf-container {
-                    width: 100%;
-                    min-height: 297mm;
-                    margin: auto;
+                    width: 210mm;
+                    margin: 20px auto;
                     background: #fff;
                     box-shadow: 0 0 10px rgba(0,0,0,0.1);
                     padding: 20mm;
                     box-sizing: border-box;
                 }
-                .pdf-report-content {
-                    font-family: "Segoe UI", Arial, sans-serif;
-                    color: #333;
+                
+                /* Main content wrapper to prevent overlap with running header/footer */
+                .main-content {
+                    padding-top: 30mm;
+                    padding-bottom: 20mm;
                     box-sizing: border-box;
-                    position: relative;
-                    min-height: 297mm;
                 }
-                .pdf-header, .pdf-footer {
-                    position: fixed;
-                    left: 20mm;
-                    right: 20mm;
-                    background: white;
-                }
-                .pdf-header {
-                    top: 20mm;
-                    z-index: 1000;
-                }
-                .pdf-footer {
-                    bottom: 20mm;
-                    z-index: 1000;
-                    text-align: center;
-                }
-                @media screen {
-                    .pdf-header, .pdf-footer {
-                        position: relative;
-                        top: auto;
-                        bottom: auto;
-                    }
-                    .pdf-container {
-                        width: 210mm;
-                        min-height: 297mm;
-                        margin: 20px auto;
-                        padding: 20mm;
-                    }
-                }
-                .pdf-delay-text { color: red; font-weight: bold; }
+
+                /* Print-specific styles */
                 @media print {
-                    .print-button-container { display: none; }
                     body { background-color: #fff; }
                     .pdf-container { margin: 0; box-shadow: none; padding: 0; }
-                    .pdf-report-content {
-                        min-height: auto;
-                        padding-top: 20mm;
-                        padding-bottom: 20mm;
-                    }
-                    .pdf-header, .pdf-footer {
-                        position: running(header);
-                    }
-                    .pdf-header-placeholder, .pdf-footer-placeholder { display: block; height: 30mm; }
-                    .pdf-header-content { display: none; }
-                }
-
-                @page {
-                    @top-center {
-                        content: element(header);
-                    }
-                    @bottom-center {
-                        content: element(footer);
-                    }
-                }
-
-                #pdf-header-content-to-print {
-                  display: none;
-                }
-                #pdf-footer-content-to-print {
-                  display: none;
-                }
-                @media print {
-                    #pdf-header-content-to-print {
+                    .print-button-container { display: none; }
+                    
+                    /* Display running elements for print */
+                    #pdf-header-content-to-print, #pdf-footer-content-to-print {
                       display: block;
-                      position: running(header);
-                    }
-                    #pdf-footer-content-to-print {
-                      display: block;
-                      position: running(footer);
                     }
                 }
                 
-                .main-content {
-                    padding-top: 30mm; /* Header yüksekliği kadar boşluk */
-                    padding-bottom: 20mm; /* Footer yüksekliği kadar boşluk */
+                /* Screen-specific styles to hide running elements */
+                @media screen {
+                    #pdf-header-content-to-print, #pdf-footer-content-to-print {
+                      display: none;
+                    }
                 }
-                
             </style>
         </head>
         <body>
             <!-- This will be a running element for the header -->
-            <div id="pdf-header-content-to-print">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 20px;">
-                    <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
-                    <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
-                    <div style="font-size: 14px; color: #555; text-align: right;">
-                        ${formatDateForDisplay(new Date())}
-                    </div>
+            <div id="pdf-header-content-to-print" style="width:100%; display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 20px;">
+                <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
+                <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
+                <div style="font-size: 14px; color: #555; text-align: right;">
+                    ${formatDateForDisplay(new Date())}
                 </div>
             </div>
 
             <!-- This will be a running element for the footer -->
-            <div id="pdf-footer-content-to-print" style='font-size:12px; color:#6c757d; border-top:1px solid #eee; padding-top:15px; text-align: center;'>
+            <div id="pdf-footer-content-to-print" style='width:100%; font-size:12px; color:#6c757d; border-top:1px solid #eee; padding-top:15px; text-align: center;'>
                 <div style="font-weight: bold; margin-bottom: 5px;">Ser Elektrik Otomasyon Ticaret ve Sanayi Anonim Şirketi</div>
                 <div>www.serelektrik.com.tr | info@serelektrik.com.tr</div>
             </div>
 
             <div class="pdf-container">
-                <div class="pdf-report-content">
-                    <!-- Main content, excluding the fixed header and footer -->
-                    <div class="main-content">
-                        ${pdfContent.innerHTML}
-                    </div>
+                <div class="main-content">
+                    ${mainContentHtml}
                 </div>
             </div>
+            
             <div class="print-button-container" style="text-align: center; margin-top: 20px; padding-bottom: 20px;">
                 <button class="print-button" onclick="window.print()" style="background-color: #005c9d; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background-color 0.3s ease;">
                     <i class="fas fa-print"></i> PDF Kaydet / Yazdır
@@ -4318,7 +4253,6 @@ async function generateProjectPdf(project) {
         );
     };
 }
-
 
     // Tüm projeleri PDF olarak dışa aktar
      async function exportAllProjectsToPdf() {
