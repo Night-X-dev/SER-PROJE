@@ -2018,6 +2018,19 @@
     // loadUserInfo fonksiyonunu hemen çağırıyoruz ki currentUser değişkeni set edilsin
     loadUserInfo();
 
+    // Revizyon isteği butonları için event delegation
+    document.addEventListener('click', function(e) {
+        const revBtn = e.target.closest('.request-revision-btn');
+        if (revBtn) {
+            e.preventDefault();
+            const progressId = revBtn.dataset.progressId;
+            const projectId = revBtn.dataset.projectId;
+            if (progressId && projectId) {
+                showRevisionRequestModal(progressId, projectId);
+            }
+        }
+    });
+
     // --- DOM Yüklendiğinde Çalışacak Kod ---
     document.addEventListener("DOMContentLoaded", function () {
       async function fetchWorkProgressHeaders() {
