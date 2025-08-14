@@ -3895,6 +3895,7 @@ def get_active_work_progress_headers():
         print(f"Error fetching active work progress headers: {str(e)}")
         return jsonify({"error": "Başlıklar getirilirken bir hata oluştu"}), 500
 
+# app.py dosyasına eklenmesi gereken kod bloğu
 
 @app.route('/api/revision-requests', methods=['POST'])
 def handle_revision_request():
@@ -3920,8 +3921,10 @@ def handle_revision_request():
         connection = get_db_connection()
         with connection.cursor() as cursor:
             # Check if the progress step is valid and belongs to the project
+            # NOTE: We've changed the column name from `id` to `progress_id`
+            # to match your table's schema. This was likely the cause of the database error.
             cursor.execute(
-                "SELECT id FROM project_progress WHERE id = %s AND project_id = %s",
+                "SELECT progress_id FROM project_progress WHERE progress_id = %s AND project_id = %s",
                 (progress_id, project_id)
             )
             if not cursor.fetchone():
@@ -3963,7 +3966,6 @@ def handle_revision_request():
 
 # Bu kod, `revision_requests` tablosu oluşturulduktan sonra kullanılmalıdır.
 # `projeler.html` dosyasından gelen `title` ve `message` alanlarını doğru şekilde işler.
-
 
 def complete_progress_step(progress_id):
     data = request.get_json()
