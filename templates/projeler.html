@@ -4159,23 +4159,29 @@ async function generateProjectPdf(project) {
             <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* Page setup for A4 size and margins */
-                @page { size: A4; margin: 20mm; }
-
-                /* Running elements for header and footer on print */
-                @page {
+                /* Sayfa ayarları: A4 boyutu ve kenar boşlukları */
+                @page { 
+                    size: A4; 
+                    margin: 20mm; 
+                    /* Sayfaların üst ve alt kenarlarına başlık ve altbilgi elementlerini yerleştiriyoruz. */
                     @top-center { content: element(header); }
                     @bottom-center { content: element(footer); }
                 }
 
+                /* Başlık ve altbilgiyi yazdırma sırasında tekrar etmesi için 'running' element olarak belirliyoruz. */
                 #pdf-header-content-to-print { position: running(header); }
                 #pdf-footer-content-to-print { position: running(footer); }
                 
-                body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; }
+                body { 
+                    font-family: 'Segoe UI', Arial, sans-serif; 
+                    margin: 0; 
+                    padding: 0; 
+                    background-color: #f0f2f5;
+                }
                 
-                /* Main container for the report */
+                /* Raporun ana konteyneri */
                 .pdf-container {
-                    width: 210mm;
+                    width: 210mm; /* A4 genişliği */
                     margin: 20px auto;
                     background: #fff;
                     box-shadow: 0 0 10px rgba(0,0,0,0.1);
@@ -4183,27 +4189,40 @@ async function generateProjectPdf(project) {
                     box-sizing: border-box;
                 }
                 
-                /* Main content wrapper to prevent overlap with running header/footer */
+                /* Ana içerik, başlık ve altbilgi ile çakışmaması için boşluk bırakılır. */
                 .main-content {
+                    /* Header ve footer yüksekliğine uygun boşluk */
                     padding-top: 30mm;
                     padding-bottom: 20mm;
                     box-sizing: border-box;
                 }
-
-                /* Print-specific styles */
+                
+                /* Yazdırma medyası için özel stil ayarları */
                 @media print {
                     body { background-color: #fff; }
                     .pdf-container { margin: 0; box-shadow: none; padding: 0; }
                     .print-button-container { display: none; }
                     
-                    /* Display running elements for print */
+                    /* Yazdırma sırasında başlık ve altbilgiyi göster */
                     #pdf-header-content-to-print, #pdf-footer-content-to-print {
                       display: block;
                     }
+                    
+                    /* Başlık ve altbilgi içeriğinin sayfa kenar boşluklarına uygun hizalanması */
+                    #pdf-header-content-to-print > div, #pdf-footer-content-to-print > div {
+                        width: 170mm; /* A4 genişliği (210mm) - 2 * margin (20mm) = 170mm */
+                        margin: 0 auto;
+                    }
+
+                    /* Her sayfanın sonunda içerik bölünürken, içerik parçasının tamamı bir sonraki sayfaya geçer. */
+                    .progress-step-item {
+                        page-break-inside: avoid;
+                    }
                 }
                 
-                /* Screen-specific styles to hide running elements */
+                /* Ekran önizlemesi için özel stil ayarları */
                 @media screen {
+                    /* Ekran önizlemesinde yazdırma için tanımlanan başlık ve altbilgi elementlerini gizle */
                     #pdf-header-content-to-print, #pdf-footer-content-to-print {
                       display: none;
                     }
@@ -4211,19 +4230,23 @@ async function generateProjectPdf(project) {
             </style>
         </head>
         <body>
-            <!-- This will be a running element for the header -->
-            <div id="pdf-header-content-to-print" style="width:100%; display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 20px;">
-                <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
-                <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
-                <div style="font-size: 14px; color: #555; text-align: right;">
-                    ${formatDateForDisplay(new Date())}
+            <!-- Yazdırma sırasında her sayfada tekrar edecek olan başlık içeriği -->
+            <div id="pdf-header-content-to-print">
+                <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                    <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
+                    <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
+                    <div style="font-size: 14px; color: #555; text-align: right;">
+                        ${formatDateForDisplay(new Date())}
+                    </div>
                 </div>
             </div>
 
-            <!-- This will be a running element for the footer -->
-            <div id="pdf-footer-content-to-print" style='width:100%; font-size:12px; color:#6c757d; border-top:1px solid #eee; padding-top:15px; text-align: center;'>
-                <div style="font-weight: bold; margin-bottom: 5px;">Ser Elektrik Otomasyon Ticaret ve Sanayi Anonim Şirketi</div>
-                <div>www.serelektrik.com.tr | info@serelektrik.com.tr</div>
+            <!-- Yazdırma sırasında her sayfada tekrar edecek olan altbilgi içeriği -->
+            <div id="pdf-footer-content-to-print">
+                <div style='width:100%; font-size:12px; color:#6c757d; border-top:1px solid #eee; padding-top:15px; text-align: center;'>
+                    <div style="font-weight: bold; margin-bottom: 5px;">Ser Elektrik Otomasyon Ticaret ve Sanayi Anonim Şirketi</div>
+                    <div>www.serelektrik.com.tr | info@serelektrik.com.tr</div>
+                </div>
             </div>
 
             <div class="pdf-container">
