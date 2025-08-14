@@ -1802,7 +1802,17 @@
         showToast('Hata', `Revizyon istekleri yüklenirken bir hata oluştu: ${error.message}`, 'error');
     }
 }
-
+// Helper function to escape HTML
+function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 // Revizyon isteklerini tabloda göster
 function renderRevisionRequests(revisions) {
     const tbody = document.getElementById('revisionRequestsBody');
@@ -3413,17 +3423,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 }
 
-    // Helper function to escape HTML
-    function escapeHtml(unsafe) {
-    if (!unsafe) return '';
-    return unsafe
-        .toString()
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
+    
 });
     </script>
 </body>
