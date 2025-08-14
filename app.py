@@ -3965,6 +3965,9 @@ def handle_revision_request():
             connection.close()
 @app.route('/api/revision-requests', methods=['GET'])
 def get_revision_requests():
+    """
+    Fetches revision requests with project and requester names from the database.
+    """
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'}), 401
 
@@ -3972,21 +3975,25 @@ def get_revision_requests():
     try:
         connection = get_db_connection()
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            # First, try a simple query to check connection
-            
-            # Then try the actual query
+            # The corrected query now uses LEFT JOIN to retrieve project and user names.
+            # We assume a 'projects' table with 'id' and 'name', and a 'users' table with 'id' and 'name'.
+            # We also assume 'revision_requests' has a 'requester_id' column.
             cursor.execute("""
-                SELECT 
+                SELECT
                     rr.id,
                     rr.project_id,
                     rr.progress_id,
                     rr.title,
                     rr.message,
                     rr.status,
-                    rr.created_at
+                    rr.created_at,
+                    p.name AS project_name,        -- Add project_name from the projects table
+                    u.name AS requester_name      -- Add requester_name from the users table
                 FROM revision_requests rr
+                LEFT JOIN projects p ON rr.project_id = p.id
+                LEFT JOIN users u ON rr.requester_id = u.id  
                 ORDER BY rr.created_at DESC
-                LIMIT 10  # Limit results for testing
+                LIMIT 10
             """)
             revisions = cursor.fetchall()
             print("Revisions found:", revisions)  # Debug output
@@ -3997,9 +4004,9 @@ def get_revision_requests():
             })
             
     except Exception as e:
-        print("Error in get_revision_requests:", str(e))  # Print to console
+        print("Error in get_revision_requests:", str(e))
         import traceback
-        traceback.print_exc()  # Print full traceback
+        traceback.print_exc()
         return jsonify({
             'success': False, 
             'message': 'Bir hata oluştu',
@@ -4008,8 +4015,6 @@ def get_revision_requests():
     finally:
         if connection:
             connection.close()
-# Bu kod, `revision_requests` tablosu oluşturulduktan sonra kullanılmalıdır.
-# `projeler.html` dosyasından gelen `title` ve `message` alanlarını doğru şekilde işler.
 @app.route('/api/progress/<int:progress_id>/complete', methods=['POST'])
 def complete_progress_step(progress_id):
     data = request.get_json()
