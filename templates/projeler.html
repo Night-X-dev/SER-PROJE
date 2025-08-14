@@ -4775,6 +4775,13 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
     <!-- Revizyon İsteği Modal -->
     <style>
         /* Custom Modal Styling */
+        #revisionRequestModal .modal-dialog {
+            display: flex;
+            align-items: center;
+            min-height: calc(100% - 1rem);
+            margin: 0.5rem auto;
+        }
+        
         #revisionRequestModal .modal-content {
             border: none;
             border-radius: 12px;
@@ -4783,6 +4790,9 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
             background-color: var(--card-bg);
             color: var(--text-color);
             border: 1px solid var(--border-color);
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
         }
         
         #revisionRequestModal .modal-header {
@@ -4790,26 +4800,49 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
             color: var(--white);
             padding: 1.2rem 1.5rem;
             border-bottom: 1px solid var(--border-color);
+            position: relative;
         }
         
         #revisionRequestModal .modal-title {
             font-weight: 600;
             font-size: 1.25rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
             color: var(--white);
+            width: 100%;
+            padding-right: 2rem;
         }
         
         #revisionRequestModal .btn-close {
-            filter: invert(1);
+            position: absolute;
+            right: 1.5rem;
+            top: 50%;
+            transform: translateY(-50%);
             opacity: 0.8;
             transition: all 0.2s ease;
+            background: none;
+            color: var(--white);
+            font-size: 1.5rem;
+            line-height: 1;
+            padding: 0.5rem;
+            margin: 0;
+            border: none;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         #revisionRequestModal .btn-close:hover {
             opacity: 1;
-            transform: rotate(90deg);
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        #revisionRequestModal .btn-close::before {
+            content: '×';
+            font-size: 2rem;
+            line-height: 1;
+            margin-top: -4px;
         }
         
         #revisionRequestModal .modal-body {
@@ -4821,18 +4854,16 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
             font-weight: 500;
             color: var(--text-color);
             margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
         }
         
         #revisionRequestModal .form-control {
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 0.65rem 1rem;
+            padding: 0.75rem 1rem;
             transition: all 0.3s ease;
             background-color: var(--input-bg);
             color: var(--text-color);
+            width: 100%;
         }
         
         #revisionRequestModal .form-control:focus {
@@ -4845,32 +4876,31 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
             resize: vertical;
         }
         
-        #revisionRequestModal .input-group-text {
-            background-color: var(--input-bg);
-            border: 1px solid var(--border-color);
-            color: var(--light-gray);
-        }
-        
         #revisionRequestModal .modal-footer {
             border-top: 1px solid var(--border-color);
             padding: 1.25rem 1.5rem;
             background-color: var(--card-bg);
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
         }
         
         #revisionRequestModal .btn {
-            padding: 0.5rem 1.5rem;
+            padding: 0.6rem 1.75rem;
             border-radius: 8px;
             font-weight: 500;
             transition: all 0.2s ease;
+            min-width: 100px;
+            text-align: center;
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
+            justify-content: center;
         }
         
         #revisionRequestModal .btn-primary {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
             border: none;
-            color: var(--white);
+            color: white;
         }
         
         #revisionRequestModal .btn-primary:hover {
@@ -4880,12 +4910,23 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
         }
         
         #revisionRequestModal .btn-secondary {
+            background-color: white;
+            color: #333;
+            border: 1px solid #dee2e6;
+        }
+        
+        [data-theme="dark"] #revisionRequestModal .btn-secondary {
             background-color: var(--input-bg);
             color: var(--text-color);
-            border: 1px solid var(--border-color);
+            border-color: var(--border-color);
         }
         
         #revisionRequestModal .btn-secondary:hover {
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        
+        [data-theme="dark"] #revisionRequestModal .btn-secondary:hover {
             background-color: var(--border-color);
             color: var(--text-color);
         }
@@ -4917,6 +4958,11 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
             animation: modalFadeIn 0.3s ease-out;
         }
         
+        /* Form group styling */
+        #revisionRequestModal .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
         /* Responsive adjustments */
         @media (max-width: 576px) {
             #revisionRequestModal .modal-dialog {
@@ -4925,15 +4971,18 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
             #revisionRequestModal .modal-content {
                 border-radius: 8px;
             }
+            #revisionRequestModal .btn {
+                padding: 0.5rem 1.25rem;
+                min-width: 80px;
+            }
         }
     </style>
     
-    <div class="modal fade" id="revisionRequestModal" tabindex="-1" aria-labelledby="revisionRequestModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+    <div class="modal fade" id="revisionRequestModal" tabindex="-1" aria-labelledby="revisionRequestModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="revisionRequestModalLabel">
-                        <i class="fas fa-edit me-2"></i>
                         Revizyon İsteği Gönder
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
@@ -4943,36 +4992,28 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
                         <input type="hidden" id="revisionProgressId" name="progress_id">
                         <input type="hidden" id="revisionProjectId" name="project_id">
                         
-                        <div class="mb-4">
+                        <div class="form-group">
                             <label for="revisionTitle" class="form-label">
-                                <i class="fas fa-heading me-2"></i>Başlık
+                                Başlık
                             </label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-pen"></i></span>
-                                <input type="text" class="form-control" id="revisionTitle" name="title" 
-                                       placeholder="Revizyon başlığını giriniz" required>
-                            </div>
+                            <input type="text" class="form-control" id="revisionTitle" name="title" 
+                                   placeholder="Revizyon başlığını giriniz" required>
                         </div>
                         
-                        <div class="mb-3">
+                        <div class="form-group">
                             <label for="revisionMessage" class="form-label">
-                                <i class="fas fa-align-left me-2"></i>Açıklama
+                                Açıklama
                             </label>
-                            <div class="input-group">
-                                <span class="input-group-text align-items-start pt-2">
-                                    <i class="fas fa-comment-dots"></i>
-                                </span>
-                                <textarea class="form-control" id="revisionMessage" name="message" 
-                                          rows="4" placeholder="Revizyon detaylarını açıklayınız..." required></textarea>
-                            </div>
+                            <textarea class="form-control" id="revisionMessage" name="message" 
+                                      rows="5" placeholder="Revizyon detaylarını açıklayınız..." required></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <i class="fas fa-times me-1"></i> İptal
+                            İptal
                         </button>
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-paper-plane me-1"></i> Gönder
+                            Gönder
                         </button>
                     </div>
                 </form>
