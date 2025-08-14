@@ -3928,7 +3928,7 @@ def handle_revision_request():
                 (progress_id, project_id)
             )
             if not cursor.fetchone():
-                return jsonify({'success': False, 'message': 'Invalid project or progress step ID.'}), 404
+                return jsonify({'success': False, 'message': 'Geçersiz proje veya ilerleme adımı ID.'}), 404
                 
             # Check if there is an open revision request for the same progress step
             cursor.execute(
@@ -3936,7 +3936,7 @@ def handle_revision_request():
                 (progress_id)
             )
             if cursor.fetchone():
-                return jsonify({'success': False, 'message': 'An open revision request for this step already exists.'}), 409
+                return jsonify({'success': False, 'message': 'Bu adım için açık bir revizyon talebi zaten mevcut.'}), 409
 
             # Insert the new revision request into the database
             cursor.execute(
@@ -3948,7 +3948,7 @@ def handle_revision_request():
             )
             connection.commit()
             
-            return jsonify({'success': True, 'message': 'Revision request successfully sent.'}), 201
+            return jsonify({'success': True, 'message': 'Revizyon talebi başarıyla gönderildi.'}), 201
 
     except pymysql.Error as e:
         print(f"Database error during revision request: {e}")
