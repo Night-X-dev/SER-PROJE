@@ -3892,7 +3892,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         }
     }
 
-   // Bu fonksiyon, yeni düzeni ve istenen bilgileri içeren bir PDF raporu oluşturur.
+// Bu fonksiyon, yeni düzeni ve istenen bilgileri içeren bir PDF raporu oluşturur.
 async function generateProjectPdf(project) {
     let progressSteps = [];
     try {
@@ -3933,10 +3933,17 @@ async function generateProjectPdf(project) {
             const endDate = new Date(step.end_date);
             if (today >= startDate && today <= endDate) {
                 // Return step.title, but provide a fallback if it's undefined
-                return step.title || 'Aşama Adı Yok';
+                return step.title || 'Aşama bilgisi bulunamadı';
             }
         }
-        return 'Belirlenemedi';
+        return 'Aşama bilgisi bulunamadı';
+    };
+
+    // Helper function to get project status text with color.
+    const getProjectStatusHtml = (statusText) => {
+        const isDelayed = statusText && statusText.includes('Gecikmeli');
+        const color = isDelayed ? 'red' : '#4CAF50';
+        return `<span style="color: ${color}; font-weight: bold;">${statusText || '-'}</span>`;
     };
 
     // Calculate progress bar data.
@@ -4012,7 +4019,7 @@ async function generateProjectPdf(project) {
     pdfContent.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 20px;">
             <!-- DİKKAT: "serlogo.png" adresini geçerli bir logo görselinin URL'siyle değiştirmelisiniz. -->
-            <div style="width: 150px; height: 50px; border: 0px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: 10px;"><img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Logo" style="height: 50px;"></div>
+            <img src="https://placehold.co/150x50/cccccc/333333?text=LOGO" alt="Logo" style="height: 50px;">
             <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
             <div style="font-size: 14px; color: #555; text-align: right;">
                 ${formatDateForDisplay(new Date())}
@@ -4021,7 +4028,9 @@ async function generateProjectPdf(project) {
         
         <!-- Part 1: Project Basic Info -->
         <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
-            <h3 style="margin: 0 0 10px 0; color: #005c9d;">Proje Referans Numarası: ${project.reference_no || '-'}</h3>
+            <h3 style="margin: 0 0 10px 0; color: #005c9d; font-size: 16px;">
+                ${project.reference_no || '-'}
+            </h3>
             <div style="display: flex; justify-content: space-between; font-size: 14px;">
                 <div style="width: 50%;">
                     <p><strong>Proje Yöneticisi:</strong> ${project.project_manager_name || '-'}</p>
@@ -4029,7 +4038,7 @@ async function generateProjectPdf(project) {
                     <p><strong>Müşteri Adı:</strong> ${project.customer_name || '-'}</p>
                 </div>
                 <div style="width: 50%; text-align: right;">
-                    <p><strong>Proje Durumu:</strong> ${project.display_status || '-'}</p>
+                    <p><strong>${getProjectStatusHtml(project.display_status)}</strong></p>
                     <p><strong>Sözleşme imzalanalı:</strong> ${calculateDaysSinceContract(project.contract_date)} gün oldu</p>
                 </div>
             </div>
