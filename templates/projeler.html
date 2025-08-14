@@ -5056,29 +5056,50 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
                     const formData = new FormData(revisionForm);
                     const progressId = formData.get('progress_id');
                     const projectId = formData.get('project_id');
+                    const title = formData.get('title').trim();
+                    const message = formData.get('message').trim();
+                    
+                    // Form doğrulama
+                    if (!title || !message) {
+                        showToast('Uyarı', 'Lütfen tüm alanları doldurunuz', 'warning');
+                        return;
+                    }
+                    
+                    // Butonu devre dışı bırak ve yükleniyor durumuna getir
+                    const submitBtn = revisionForm.querySelector('button[type="submit"]');
+                    const originalBtnText = submitBtn.innerHTML;
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Gönderiliyor...';
                     
                     try {
                         const response = await fetch('/api/revision-requests', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'X-CSRFToken': document.querySelector('[name=csrf_token]')?.value || ''
+                                'X-CSRFToken': document.querySelector('[name=csrf_token]')?.value || '',
+                                'X-Requested-With': 'XMLHttpRequest'
                             },
                             body: JSON.stringify({
                                 progress_id: progressId,
                                 project_id: projectId,
-                                title: formData.get('title'),
-                                message: formData.get('message')
+                                title: title,
+                                message: message,
+                                status: 'pending', // Varsayılan durum
+                                created_by: currentUser?.id || null // Mevcut kullanıcı ID'si
                             })
                         });
                         
+                        const responseData = await response.json();
+                        
                         if (!response.ok) {
-                            const errorData = await response.json();
-                            throw new Error(errorData.message || 'Revizyon isteği gönderilirken bir hata oluştu');
+                            throw new Error(responseData.message || 'Revizyon isteği gönderilirken bir hata oluştu');
                         }
                         
                         // Başarılı yanıt
-                        const result = await response.json();
+                        showToast('Başarılı', 'Revizyon isteğiniz başarıyla gönderildi', 'success');
+                        
+                        // Formu temizle
+                        revisionForm.reset();
                         
                         // Modalı kapat
                         const modal = bootstrap.Modal.getInstance(document.getElementById('revisionRequestModal'));
@@ -5086,15 +5107,23 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
                             modal.hide();
                         }
                         
-                        // Başarı mesajı göster
-                        showToast('Başarılı', 'Revizyon isteği başarıyla gönderildi', 'success');
-                        
-                        // Sayfayı yenile (isteğe bağlı)
-                        // window.location.reload();
+                        // İlgili projenin detay sayfasındaysak, ilerleme adımlarını yenile
+                        if (window.location.pathname.includes('proje-detay')) {
+                            const projectId = new URLSearchParams(window.location.search).get('id');
+                            if (projectId) {
+                                fetchProgressSteps(projectId, true);
+                            }
+                        }
                         
                     } catch (error) {
                         console.error('Revizyon isteği gönderilirken hata oluştu:', error);
                         showToast('Hata', error.message || 'Revizyon isteği gönderilirken bir hata oluştu', 'error');
+                    } finally {
+                        // Butonu tekrar aktif et
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = originalBtnText;
+                        }
                     }
                 });
             }

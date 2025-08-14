@@ -3896,7 +3896,205 @@ def get_active_work_progress_headers():
         return jsonify({"error": "Başlıklar getirilirken bir hata oluştu"}), 500
 
 
-@app.route('/api/progress/<int:progress_id>/complete', methods=['POST'])
+@app.route('/api/revision-requests', methods=['POST'])
+def create_revision_request():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'}), 401
+    
+    data = request.get_json()
+    required_fields = ['progress_id', 'project_id', 'title', 'message']
+    
+    if not all(field in data for field in required_fields):
+        return jsonify({'success': False, 'message': 'Eksik bilgi'}), 400
+    
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Check if the progress step exists and belongs to the project
+            cursor.execute(
+                "SELECT id, title FROM project_progress WHERE id = %s AND project_id = %s",
+                (data['progress_id'], data['project_id'])
+            )
+            progress = cursor.fetchone()
+            if not progress:
+                return jsonify({'success': False, 'message': 'Geçersiz ilerleme adımı veya proje'}), 400
+            
+            # Insert the revision request
+            cursor.execute(
+                """
+                INSERT INTO revision_requests 
+                (project_id, progress_id, requested_by, title, message, status)
+                VALUES (%s, %s, %s, %s, %s, 'pending')
+                """,
+                (
+                    data['project_id'],
+                    data['progress_id'],
+                    session['user_id'],
+                    data['title'],
+                    data['message']
+                )
+            )
+            
+            # Update user's revision stats
+            cursor.execute(
+                """
+                INSERT INTO user_revision_stats (user_id, revision_count, created_at, updated_at)
+                VALUES (%s, 1, NOW(), NOW())
+                ON DUPLICATE KEY UPDATE 
+                    revision_count = revision_count + 1,
+                    updated_at = NOW()
+                """,
+                (session['user_id'],)
+            )
+            
+            # Get the inserted revision request
+            revision_id = cursor.lastrowid
+            cursor.execute(
+                """
+                SELECT r.*, u.fullname as requester_name, p.title as progress_title
+                FROM revision_requests r
+                JOIN users u ON r.requested_by = u.id
+                JOIN project_progress p ON r.progress_id = p.id
+                WHERE r.id = %s
+                """,
+                (revision_id,)
+            )
+            revision = cursor.fetchone()
+            
+            # Log activity
+            log_activity(
+                session['user_id'],
+                'Yeni Revizyon İsteği',
+                f"{progress['title']} adımı için yeni revizyon isteği oluşturuldu",
+                'fas fa-redo'
+            )
+            
+            connection.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Revizyon isteği başarıyla oluşturuldu',
+                'revision': dict(revision) if revision else None
+            })
+            
+    except Exception as e:
+        if connection:
+            connection.rollback()
+        app.logger.error(f"Revizyon isteği oluşturulurken hata: {str(e)}")
+        return jsonify({'success': False, 'message': 'Bir hata oluştu'}), 500
+    
+    finally:
+        if connection:
+            connection.close()
+# API to get revision requests for a project
+@app.route('/api/projects/<int:project_id>/revision-requests', methods=['GET'])
+def get_project_revision_requests(project_id):
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'}), 401
+    
+    try:
+        connection = get_db_connection()
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute(
+                """
+                SELECT r.*, u.fullname as requester_name, p.title as progress_title
+                FROM revision_requests r
+                JOIN users u ON r.requested_by = u.id
+                JOIN project_progress p ON r.progress_id = p.id
+                WHERE r.project_id = %s
+                ORDER BY r.created_at DESC
+                """,
+                (project_id,)
+            )
+            revisions = cursor.fetchall()
+            
+            return jsonify({
+                'success': True,
+                'revisions': revisions
+            })
+            
+    except Exception as e:
+        app.logger.error(f"Revizyon istekleri alınırken hata: {str(e)}")
+        return jsonify({'success': False, 'message': 'Bir hata oluştu'}), 500
+    
+    finally:
+        if connection:
+            connection.close()
+
+# API to update revision request status
+@app.route('/api/revision-requests/<int:revision_id>', methods=['PUT'])
+def update_revision_request(revision_id):
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'}), 401
+    
+    data = request.get_json()
+    if 'status' not in data or data['status'] not in ['pending', 'approved', 'rejected']:
+        return jsonify({'success': False, 'message': 'Geçersiz durum'}), 400
+    
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Check if revision exists and get current status
+            cursor.execute(
+                "SELECT * FROM revision_requests WHERE id = %s",
+                (revision_id,)
+            )
+            revision = cursor.fetchone()
+            
+            if not revision:
+                return jsonify({'success': False, 'message': 'Revizyon isteği bulunamadı'}), 404
+                
+            # Update the revision status
+            cursor.execute(
+                """
+                UPDATE revision_requests 
+                SET status = %s, 
+                    resolved_at = CASE WHEN %s != 'pending' THEN NOW() ELSE NULL END,
+                    resolved_by = CASE WHEN %s != 'pending' THEN %s ELSE NULL END
+                WHERE id = %s
+                """,
+                (
+                    data['status'],
+                    data['status'],
+                    data['status'],
+                    session['user_id'] if data['status'] != 'pending' else None,
+                    revision_id
+                )
+            )
+            
+            # If approved, update the progress step status to 'revision_required'
+            if data['status'] == 'approved':
+                cursor.execute(
+                    "UPDATE project_progress SET status = 'revision_required' WHERE id = %s",
+                    (revision['progress_id'],)
+                )
+            
+            # Log activity
+            status_text = 'onaylandı' if data['status'] == 'approved' else 'reddedildi'
+            log_activity(
+                session['user_id'],
+                'Revizyon İsteği Güncellendi',
+                f"{revision['title']} başlıklı revizyon isteği {status_text}",
+                'fas fa-check-circle' if data['status'] == 'approved' else 'fas fa-times-circle'
+            )
+            
+            connection.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': f'Revizyon isteği başarıyla {status_text}'
+            })
+            
+    except Exception as e:
+        connection.rollback()
+        app.logger.error(f"Revizyon isteği güncellenirken hata: {str(e)}")
+        return jsonify({'success': False, 'message': 'Bir hata oluştu'}), 500
+    
+    finally:
+        if connection:
+            connection.close()
+
 def complete_progress_step(progress_id):
     data = request.get_json()
     is_completed = data.get('is_completed', False)
