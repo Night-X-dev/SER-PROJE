@@ -4019,7 +4019,75 @@ def get_revision_requests():
         # Always close the database connection in the finally block.
         if connection:
             connection.close()
+@app.route('/api/revision-requests/<int:request_id>/approve', methods=['POST'])
+def approve_revision_request(request_id):
+    return update_revision_status(request_id, 'approved',
+                                'Revizyon isteği onaylandı',
+                                'Revizyon isteği onaylanırken bir hata oluştu')
 
+@app.route('/api/revision-requests/<int:request_id>/reject', methods=['POST'])
+def reject_revision_request(request_id):
+    return update_revision_status(request_id, 'rejected',
+                                'Revizyon isteği reddedildi',
+                                'Revizyon isteği reddedilirken bir hata oluştu')
+
+def update_revision_status(request_id, new_status, success_message, error_message):
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'}), 401
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Önce revizyon isteğini bul
+            cursor.execute("""
+                SELECT * FROM revision_requests 
+                WHERE id = %s AND status = 'pending'
+                FOR UPDATE
+            """, (request_id,))
+            revision = cursor.fetchone()
+            
+            if not revision:
+                return jsonify({
+                    'success': False,
+                    'message': 'Bekleyen revizyon isteği bulunamadı veya zaten işlenmiş'
+                }), 404
+
+            # Revizyon durumunu güncelle
+            cursor.execute("""
+                UPDATE revision_requests 
+                SET status = %s, 
+                    resolved_at = NOW(),
+                    resolved_by = %s
+                WHERE id = %s
+            """, (new_status, session['user_id'], request_id))
+
+            # Eğer onaylandıysa, ilgili progress'i güncelle
+            if new_status == 'approved':
+                cursor.execute("""
+                    UPDATE project_progress
+                    SET status = 'revision_required'
+                    WHERE id = %s
+                """, (revision['progress_id'],))
+
+            connection.commit()
+            return jsonify({
+                'success': True,
+                'message': success_message
+            })
+
+    except Exception as e:
+        if connection:
+            connection.rollback()
+        app.logger.error(f"Revizyon durumu güncellenirken hata: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': error_message,
+            'error': str(e)
+        }), 500
+    finally:
+        if connection:
+            connection.close()
 @app.route('/api/progress/<int:progress_id>/complete', methods=['POST'])
 def complete_progress_step(progress_id):
     data = request.get_json()

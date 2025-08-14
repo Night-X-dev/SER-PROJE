@@ -1833,10 +1833,7 @@ function escapeHtml(unsafe) {
 // Revizyon isteklerini tabloda göster
 function renderRevisionRequests(revisions) {
     const tbody = document.getElementById('revisionRequestsBody');
-    if (!tbody) {
-        console.error('revisionRequestsBody elementi bulunamadı');
-        return;
-    }
+    if (!tbody) return;
     
     tbody.innerHTML = '';
 
@@ -1852,7 +1849,7 @@ function renderRevisionRequests(revisions) {
     revisions.forEach(rev => {
         try {
             const date = rev.created_at ? new Date(rev.created_at).toLocaleString('tr-TR') : 'Bilinmiyor';
-            const statusBadge = getStatusBadge(rev.status || 'pending');
+            const statusBadge = getStatusBadge(rev.status);
             
             const row = document.createElement('tr');
             row.innerHTML = `
@@ -1863,10 +1860,14 @@ function renderRevisionRequests(revisions) {
                 <td>${statusBadge}</td>
                 <td>
                     <div class="btn-group btn-group-sm">
-                        <button class="btn btn-success btn-approve" data-id="${escapeHtml(rev.id)}">
+                        <button class="btn btn-success btn-approve" 
+                                data-id="${escapeHtml(rev.id)}"
+                                ${rev.status !== 'pending' ? 'disabled' : ''}>
                             <i class="fas fa-check"></i> Kabul Et
                         </button>
-                        <button class="btn btn-danger btn-reject" data-id="${escapeHtml(rev.id)}">
+                        <button class="btn btn-danger btn-reject" 
+                                data-id="${escapeHtml(rev.id)}"
+                                ${rev.status !== 'pending' ? 'disabled' : ''}>
                             <i class="fas fa-times"></i> Reddet
                         </button>
                     </div>
@@ -1879,8 +1880,6 @@ function renderRevisionRequests(revisions) {
     });
 }
 
-
-
 // Sayfa yüklendiğinde çalıştır
 document.addEventListener('DOMContentLoaded', function() {
     // Diğer kodlar...
@@ -1890,32 +1889,100 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('refreshRevisionsBtn')?.addEventListener('click', loadRevisionRequests);
     
     // Kabul ve red butonları için event delegation
-    document.getElementById('revisionRequestsTable')?.addEventListener('click', function(e) {
+    document.getElementById('revisionRequestsTable')?.addEventListener('click', async function(e) {
         const btn = e.target.closest('.btn-approve, .btn-reject');
-        if (!btn) return;
+        if (!btn || btn.disabled) return;
         
-        const revisionId = btn.dataset.id;
-        const action = btn.classList.contains('btn-approve') ? 'approve' : 'reject';
+        const requestId = btn.dataset.id;
+        const isApprove = btn.classList.contains('btn-approve');
+        const action = isApprove ? 'approve' : 'reject';
+        const actionText = isApprove ? 'onaylamak' : 'reddetmek';
         
-        console.log(`${action} clicked for revision ${revisionId}`);
-        // Burada onaylama/reddetme işlemleri yapılacak
+        try {
+            const confirmed = await showConfirmModal(
+                'Onay',
+                `Bu revizyon isteğini ${actionText} istediğinize emin misiniz?`,
+                'Evet, Onayla',
+                'Vazgeç'
+            );
+            
+            if (!confirmed) return;
+            
+            const response = await fetch(`/api/revision-requests/${requestId}/${action}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast('Başarılı', result.message, 'success');
+                loadRevisionRequests(); // Listeyi yenile
+            } else {
+                throw new Error(result.message || 'İşlem başarısız oldu');
+            }
+        } catch (error) {
+            console.error('İşlem sırasında hata:', error);
+            showToast('Hata', error.message || 'İşlem sırasında bir hata oluştu', 'error');
+        }
     });
 });
         // Confirmation Modal'ı gösterme fonksiyonu
-        function showConfirmModal(title, message, onConfirm) { // Fonksiyon adı showConfirmModal olarak değiştirildi
-            document.getElementById('confirmationModalLabel').textContent = title; // Başlığı ayarla
-            document.getElementById('confirmationMessage').textContent = message;
-            confirmCallback = onConfirm; // Callback'i sakla
-            if (confirmationBootstrapModal) {
-                // Modal'ı göstermeden önce gizle ve küçük bir gecikme ekle
-                confirmationBootstrapModal.hide(); 
-                setTimeout(() => {
-                    confirmationBootstrapModal.show();
-                }, 50); // 50ms gecikme
-            } else {
-                console.error("Confirmation modal is not initialized. Cannot show.");
-            }
+        function showConfirmModal(title, message, confirmText = 'Evet', cancelText = 'İptal') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirmationModal');
+        if (!modal) {
+            console.error('Onay modalı bulunamadı');
+            resolve(false);
+            return;
         }
+
+        const modalTitle = modal.querySelector('.modal-title');
+        const modalBody = modal.querySelector('.modal-body');
+        const confirmBtn = modal.querySelector('.btn-confirm');
+        const cancelBtn = modal.querySelector('.btn-cancel');
+
+        modalTitle.textContent = title;
+        modalBody.textContent = message;
+        confirmBtn.textContent = confirmText;
+        cancelBtn.textContent = cancelText;
+
+        // Mevcut event listener'ları temizle
+        const cleanUp = () => {
+            confirmBtn.removeEventListener('click', onConfirm);
+            cancelBtn.removeEventListener('click', onCancel);
+            modal.removeEventListener('hidden.bs.modal', onHidden);
+        };
+
+        const onConfirm = () => {
+            cleanUp();
+            bootstrap.Modal.getInstance(modal).hide();
+            resolve(true);
+        };
+
+        const onCancel = () => {
+            cleanUp();
+            bootstrap.Modal.getInstance(modal).hide();
+            resolve(false);
+        };
+
+        const onHidden = () => {
+            cleanUp();
+            resolve(false);
+        };
+
+        confirmBtn.addEventListener('click', onConfirm);
+        cancelBtn.addEventListener('click', onCancel);
+        modal.addEventListener('hidden.bs.modal', onHidden);
+
+        // Modalı göster
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+    });
+}
 
         // Kullanıcı bilgilerini localStorage'dan yükleyen fonksiyon
         function loadUserInfo() {
