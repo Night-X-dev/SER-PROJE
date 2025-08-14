@@ -1940,11 +1940,19 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        const modalTitle = modal.querySelector('.modal-title');
-        const modalBody = modal.querySelector('.modal-body');
-        const confirmBtn = modal.querySelector('.btn-confirm');
-        const cancelBtn = modal.querySelector('.btn-cancel');
+        // Elementleri mevcut yapıya göre güncelle
+        const modalTitle = modal.querySelector('#confirmationModalLabel');
+        const modalBody = modal.querySelector('#confirmationMessage');
+        const confirmBtn = modal.querySelector('#confirmActionBtn');
+        const cancelBtn = modal.querySelector('.btn-secondary[data-bs-dismiss="modal"]');
 
+        if (!modalTitle || !modalBody || !confirmBtn || !cancelBtn) {
+            console.error('Modal elementleri bulunamadı', {modalTitle, modalBody, confirmBtn, cancelBtn});
+            resolve(false);
+            return;
+        }
+
+        // Element değerlerini güncelle
         modalTitle.textContent = title;
         modalBody.textContent = message;
         confirmBtn.textContent = confirmText;
@@ -1959,13 +1967,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const onConfirm = () => {
             cleanUp();
-            bootstrap.Modal.getInstance(modal).hide();
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) {
+                bsModal.hide();
+            }
             resolve(true);
         };
 
         const onCancel = () => {
             cleanUp();
-            bootstrap.Modal.getInstance(modal).hide();
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) {
+                bsModal.hide();
+            }
             resolve(false);
         };
 
@@ -1974,6 +1988,7 @@ document.addEventListener('DOMContentLoaded', function() {
             resolve(false);
         };
 
+        // Yeni event listener'ları ekle
         confirmBtn.addEventListener('click', onConfirm);
         cancelBtn.addEventListener('click', onCancel);
         modal.addEventListener('hidden.bs.modal', onHidden);
