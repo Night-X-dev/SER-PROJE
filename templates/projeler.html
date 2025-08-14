@@ -3892,6 +3892,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         }
     }
 
+   // Bu fonksiyon, yeni düzeni ve istenen bilgileri içeren bir PDF raporu oluşturur.
 // Bu fonksiyon, yeni düzeni ve istenen bilgileri içeren bir PDF raporu oluşturur.
 async function generateProjectPdf(project) {
     let progressSteps = [];
@@ -3943,7 +3944,7 @@ async function generateProjectPdf(project) {
     const getProjectStatusHtml = (statusText) => {
         const isDelayed = statusText && statusText.includes('Gecikmeli');
         const color = isDelayed ? 'red' : '#4CAF50';
-        return `<span style="color: ${color}; font-weight: bold;">${statusText || '-'}</span>`;
+        return `<span style="color: ${color}; font-weight: bold; margin: 0;">${statusText || '-'}</span>`;
     };
 
     // Calculate progress bar data.
@@ -4028,18 +4029,18 @@ async function generateProjectPdf(project) {
         
         <!-- Part 1: Project Basic Info -->
         <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
-            <h3 style="margin: 0 0 10px 0; color: #005c9d; font-size: 16px;">
-                ${project.reference_no || '-'}
-            </h3>
             <div style="display: flex; justify-content: space-between; font-size: 14px;">
                 <div style="width: 50%;">
+                    <h3 style="margin: 0 0 10px 0; color: #005c9d; font-size: 16px;">
+                        ${project.reference_no || '-'}
+                    </h3>
                     <p><strong>Proje Yöneticisi:</strong> ${project.project_manager_name || '-'}</p>
                     <p><strong>İşin Adı:</strong> ${project.project_name ? project.project_name.normalize('NFC') : '-'}</p>
                     <p><strong>Müşteri Adı:</strong> ${project.customer_name || '-'}</p>
                 </div>
                 <div style="width: 50%; text-align: right;">
-                    <p><strong>${getProjectStatusHtml(project.display_status)}</strong></p>
-                    <p><strong>Sözleşme imzalanalı:</strong> ${calculateDaysSinceContract(project.contract_date)} gün oldu</p>
+                    <p style="margin: 0; font-weight: bold;">${getProjectStatusHtml(project.display_status)}</p>
+                    <p style="margin-top: 10px;"><strong>Sözleşme imzalanalı:</strong> ${calculateDaysSinceContract(project.contract_date)} gün oldu</p>
                 </div>
             </div>
         </div>
@@ -4061,7 +4062,7 @@ async function generateProjectPdf(project) {
             </div>
             
             <h4 style="text-align: center; font-size: 16px; margin-top: 20px; color: #005c9d;">
-                Proje ${projectPhase} aşamasında
+                Proje ${project.display_status || 'Aşama bilgisi bulunamadı'} aşamasında
             </h4>
             
             <div style="height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px;">
@@ -4071,10 +4072,10 @@ async function generateProjectPdf(project) {
                     <div style="background-color: #ccc; width: ${progressBarData.remainingPercentage}%;"></div>
                 </div>
             </div>
-            <div style="font-size: 12px; margin-top: 5px; text-align: center;">
-                <span style="color: #4CAF50;">■</span> Tamamlanan Süre: ${progressBarData.totalRealDays} gün
-                <span style="color: #f44336;">■</span> Gecikme Süresi: ${progressBarData.totalDelayedDays} gün
-                <span style="color: #ccc;">■</span> Kalan Süre: ${progressBarData.totalPlannedDays - progressBarData.totalRealDays} gün
+            <div style="font-size: 12px; margin-top: 5px; display: flex; justify-content: space-between;">
+                <div style="text-align: left;"><span style="color: #4CAF50;">■</span> Tamamlanan Süre: ${progressBarData.totalRealDays} gün</div>
+                <div style="text-align: center;"><span style="color: #f44336;">■</span> Gecikme Süresi: ${progressBarData.totalDelayedDays} gün</div>
+                <div style="text-align: right;"><span style="color: #ccc;">■</span> Kalan Süre: ${progressBarData.totalPlannedDays - progressBarData.totalRealDays} gün</div>
             </div>
         </div>
         
@@ -4167,6 +4168,7 @@ async function generateProjectPdf(project) {
         );
     };
 }
+
 
     // Tüm projeleri PDF olarak dışa aktar
      async function exportAllProjectsToPdf() {
