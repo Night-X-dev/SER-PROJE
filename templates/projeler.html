@@ -3893,40 +3893,192 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
     }
 
     // PDF Oluşturma Fonksiyonları (progress_id kullanıldı)
-    async function generateProjectPdf(project) {
-        let progressSteps = [];
+ // Bu fonksiyon, yeni düzeni ve istenen bilgileri içeren bir PDF raporu oluşturur.
+async function generateProjectPdf(project) {
+    let progressSteps = [];
+    try {
+        // Fetch project progress steps from the API.
+        const response = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
+        if (response.ok) {
+            progressSteps = await response.json();
+        }
+    } catch (e) {
+        console.error("Proje ilerleme adımları çekilirken hata oluştu:", e);
+    }
+
+    // Helper function to format dates for display.
+    const formatDateForDisplay = (dateStr) => {
+        if (!dateStr || dateStr === '-') return '-';
         try {
-            const response = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
-            if (response.ok) {
-                progressSteps = await response.json();
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('tr-TR');
+        } catch {
+            return '-';
+        }
+    };
+
+    // Helper function to calculate the number of days since the contract date.
+    const calculateDaysSinceContract = (contractDateStr) => {
+        if (!contractDateStr) return 0;
+        const contractDate = new Date(contractDateStr);
+        const today = new Date();
+        const diffTime = today.getTime() - contractDate.getTime();
+        return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    };
+
+    // Helper function to get the current project phase.
+    const getProjectPhase = (steps) => {
+        const today = new Date();
+        for (const step of steps) {
+            const startDate = new Date(step.start_date);
+            const endDate = new Date(step.end_date);
+            if (today >= startDate && today <= endDate) {
+                return step.title; // Using 'title' as per your original code logic
             }
-        } catch (e) {
-            // Progress adımları olmadan da PDF oluşturulabilir
+        }
+        return 'Belirlenemedi';
+    };
+
+    // Helper function to get project status text.
+    const getProjectStatusText = (status) => {
+        // Assume 'delayed' status is calculated on the server side or project object.
+        if (status === 'delayed') {
+            return 'Gecikmeli Devam Ediyor';
+        }
+        switch (status) {
+            case 'in_progress':
+                return 'Gecikmesiz Devam Ediyor';
+            case 'completed':
+                return 'Tamamlandı';
+            case 'on_hold':
+                return 'Beklemede';
+            default:
+                return 'Bilinmiyor';
+        }
+    };
+
+    // Calculate progress bar data.
+    const calculateProgressBarData = (progressSteps) => {
+        let totalPlannedDays = 0;
+        let totalPassedDays = 0;
+        let totalDelayedDays = 0;
+        let totalRealDays = 0;
+
+        const today = new Date();
+
+        progressSteps.forEach(step => {
+            const startDate = new Date(step.start_date);
+            const endDate = new Date(step.end_date);
+            const realEndDate = step.real_end_date ? new Date(step.real_end_date) : null;
+            
+            const plannedDays = (endDate - startDate) / (1000 * 60 * 60 * 24) + 1;
+            totalPlannedDays += plannedDays;
+
+            if (step.is_completed) {
+                 const stepRealDays = (realEndDate - startDate) / (1000 * 60 * 60 * 24) + 1;
+                 totalRealDays += stepRealDays;
+                 if (realEndDate > endDate) {
+                     totalDelayedDays += (realEndDate - endDate) / (1000 * 60 * 60 * 24);
+                 }
+            } else if (today >= startDate) {
+                const stepPassedDays = (today - startDate) / (1000 * 60 * 60 * 24) + 1;
+                totalPassedDays += stepPassedDays;
+            }
+        });
+        
+        let completedPercentage = (totalRealDays / totalPlannedDays) * 100;
+        let delayPercentage = (totalDelayedDays / totalPlannedDays) * 100;
+        let remainingPercentage = 100 - completedPercentage - delayPercentage;
+
+        // Round percentages
+        completedPercentage = Math.round(Math.max(0, completedPercentage));
+        delayPercentage = Math.round(Math.max(0, delayPercentage));
+        remainingPercentage = Math.round(Math.max(0, remainingPercentage));
+        
+        // Ensure total is 100%
+        const totalPercentage = completedPercentage + delayPercentage + remainingPercentage;
+        if (totalPercentage !== 100) {
+            remainingPercentage += 100 - totalPercentage;
         }
 
-        const pdfContent = document.createElement('div');
-        pdfContent.className = 'pdf-report-content';
-        pdfContent.innerHTML = `
-            <div class="pdf-header">
-                <h1 style='font-size:28px;color:#005c9d;margin-bottom:5px;'>Ser Elektrik Otomasyon</h1>
-                <h2 style='font-size:22px;color:#0980d3;margin-bottom:15px;'>Proje Detaylı Raporu</h2>
+        return {
+            totalPlannedDays: Math.ceil(totalPlannedDays),
+            totalDelayedDays: Math.ceil(totalDelayedDays),
+            totalRealDays: Math.ceil(totalRealDays),
+            completedPercentage,
+            delayPercentage,
+            remainingPercentage
+        };
+    };
+
+    const progressBarData = calculateProgressBarData(progressSteps);
+    const projectPhase = getProjectPhase(progressSteps);
+
+    const pdfContent = document.createElement('div');
+    pdfContent.className = 'pdf-report-content';
+
+    // PDF report HTML content with the new structure
+    pdfContent.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 20px;">
+            <img src="serlogo.png" alt="Ser Logo" style="height: 50px;">
+            <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
+            <div style="font-size: 14px; color: #555; text-align: right;">
+                ${formatDateForDisplay(new Date())}
             </div>
-            <table class="pdf-info-table" style="width:100%;margin-bottom:20px;font-size:15px;">
-                <tr><th>Proje Adı</th><td>${project.project_name ? project.project_name.normalize('NFC') : "-"}</td></tr>
-                <tr><th>Referans No</th><td>${project.reference_no || '-'}</td></tr>
-                <tr><th>Müşteri</th><td>${project.customer_name || '-'}</td></tr>
-                <tr><th>Konum</th><td>${project.project_location || '-'}</td></tr>
-                <tr><th>Durum</th><td>${project.display_status || '-'}</td></tr>
-                <tr><th>Başlangıç Tarihi</th><td>${formatDateForDisplay(project.start_date || '-')}</td></tr>
-                <tr><th>Bitiş Tarihi</th><td>${formatDateForDisplay(project.end_date || '-')}</td></tr>
-                <tr><th>Yönetici</th><td>${project.project_manager_name || '-'}</td></tr>
-                <tr><th>Açıklama</th><td>${project.description || '-'}</td></tr>
-            </table>
+        </div>
+        
+        <!-- Part 1: Project Basic Info -->
+        <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
+            <h3 style="margin: 0 0 10px 0; color: #005c9d;">Proje Referans Numarası: ${project.reference_no || '-'}</h3>
+            <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                <div style="width: 50%;">
+                    <p><strong>Proje Yöneticisi:</strong> ${project.project_manager_name || '-'}</p>
+                    <p><strong>İşin Adı:</strong> ${project.project_name ? project.project_name.normalize('NFC') : '-'}</p>
+                    <p><strong>Müşteri Adı:</strong> ${project.customer_name || '-'}</p>
+                </div>
+                <div style="width: 50%; text-align: right;">
+                    <p><strong>Proje Durumu:</strong> ${getProjectStatusText(project.status) || '-'}</p>
+                    <p><strong>Sözleşme imzalanalı:</strong> ${calculateDaysSinceContract(project.contract_date)} gün oldu</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Part 2: Project Time & Progress -->
+        <div style="border-top: 1px solid #ccc; margin-top: 20px; padding-top: 20px;">
+            <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                <div style="width: 50%;">
+                    <p><strong>Sözleşme Tarihi:</strong> ${formatDateForDisplay(project.contract_date || '-')}</p>
+                    <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(project.start_date || '-')}</p>
+                    <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(project.end_date || '-')}</p>
+                    <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(project.real_end_date || '-')}</p>
+                </div>
+                <div style="width: 50%; text-align: right;">
+                    <p><strong>Planlanan Toplam Süre:</strong> ${progressBarData.totalPlannedDays || '-'} gün</p>
+                    <p><strong>Gecikme Toplam Süre:</strong> ${progressBarData.totalDelayedDays || '-'} gün</p>
+                    <p><strong>Gerçek Toplam Süre:</strong> ${progressBarData.totalRealDays || '-'} gün</p>
+                </div>
+            </div>
+            
+            <h4 style="text-align: center; font-size: 16px; margin-top: 20px; color: #005c9d;">
+                Proje ${projectPhase} aşamasında
+            </h4>
+            
+            <div style="height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px;">
+                <div style="height: 100%; display: flex;">
+                    <div style="background-color: #4CAF50; width: ${progressBarData.completedPercentage}%;"></div>
+                    <div style="background-color: #f44336; width: ${progressBarData.delayPercentage}%;"></div>
+                    <div style="background-color: #ccc; width: ${progressBarData.remainingPercentage}%;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Project Progress Steps -->
+        <div style="border-top: 1px solid #ccc; margin-top: 20px; padding-top: 20px;">
             <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
             <div>
                 ${progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => `
                     <div style="margin-bottom:12px;">
-                        <div style="font-weight:bold;font-size:15px;">${step.step_name || ''}</div>
+                        <div style="font-weight:bold;font-size:15px;">${step.title || ''}</div>
                         <div style="font-size:13px; color:#555;">
                             Başlangıç: ${formatDateForDisplay(step.start_date || '-')} - 
                             Bitiş: ${formatDateForDisplay(step.end_date || '-')}
@@ -3938,97 +4090,78 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     </div>
                 `).join('')}
             </div>
-            <div class="pdf-footer" style='margin-top:40px; font-size:12px; color:#6c757d; border-top:1px solid #eee; padding-top:15px;'>
-                © 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır.
-            </div>
-        `;
+        </div>
 
-        const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
-        if (!newWindow) {
-            showToast("PDF önizlemesi için yeni pencere açılamadı. Tarayıcınızın pop-up engelleyicisini kontrol edin.", true);
-            return;
-        }
+        <!-- Footer -->
+        <div class="pdf-footer" style='margin-top:40px; font-size:12px; color:#6c757d; border-top:1px solid #eee; padding-top:15px; text-align: center;'>
+            © 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır.
+        </div>
+    `;
 
-        newWindow.document.write(`
-            <!DOCTYPE html>
-            <html lang="tr">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
-                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-                <style>
-                    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; }
-                    .pdf-container {
-                        width: 210mm;
-                        min-height: 297mm;
-                        margin: 20px auto;
-                        background: #fff;
-                        box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                        padding: 20mm;
-                        box-sizing: border-box;
-                    }
-                    .pdf-report-content {
-                        font-family: "Segoe UI", Arial, sans-serif;
-                        color: #333;
-                        box-sizing: border-box;
-                    }
-                    .pdf-header h1 { color: #005c9d; font-size: 28px; margin-bottom: 5px; }
-                    .pdf-header h2 { color: #0980d3; font-size: 22px; margin-bottom: 15px; }
-                    .pdf-info-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 15px; }
-                    .pdf-info-table th, .pdf-info-table td { padding: 8px; border: 1px solid #e1e5e9; text-align: left; }
-                    .pdf-info-table th { background-color: #f0f4f8; color: #5e6870; width: 30%; }
-                    .pdf-section-title { color: #005c9d; border-bottom: 1px solid #e1e5e9; padding-bottom: 5px; margin-bottom: 15px; font-size: 18px; }
-                    .pdf-delay-text { color: red; font-weight: bold; }
-                    .pdf-footer { text-align: center; font-size: 12px; color: #6c757d; margin-top: 40px; border-top: 1px solid #eee; padding-top: 15px; }
-                    .print-button-container {
-                        text-align: center;
-                        margin-top: 20px;
-                        padding-bottom: 20px;
-                    }
-                    .print-button {
-                        background-color: #005c9d;
-                        color: white;
-                        padding: 10px 20px;
-                        border: none;
-                        border-radius: 8px;
-                        font-size: 16px;
-                        cursor: pointer;
-                        transition: background-color 0.3s ease;
-                    }
-                    .print-button:hover {
-                        background-color: #0980d3;
-                    }
-                    @media print {
-                        .print-button-container { display: none; }
-                        body { background-color: #fff; }
-                        .pdf-container { margin: 0; box-shadow: none; padding: 0; }
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="pdf-container">
-                    ${pdfContent.innerHTML}
-                </div>
-                <div class="print-button-container">
-                    <button class="print-button" onclick="window.print()"><i class="fas fa-print"></i> PDF Kaydet / Yazdır</button>
-                </div>
-            </body>
-            </html>
-        `);
-        newWindow.document.close();
-
-        newWindow.onload = () => {
-            showToast(`${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi hazır.`);
-            addActivity(
-                "PDF Raporu Önizlendi",
-                `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi açıldı.`,
-                project.project_id,
-                "fas fa-file-pdf",
-                "pdf_preview"
-            );
-        };
+    const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
+    if (!newWindow) {
+        showToast("PDF önizlemesi için yeni pencere açılamadı. Tarayıcınızın pop-up engelleyicisini kontrol edin.", true);
+        return;
     }
+
+    newWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="tr">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <style>
+                body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; }
+                .pdf-container {
+                    width: 210mm;
+                    min-height: 297mm;
+                    margin: 20px auto;
+                    background: #fff;
+                    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                    padding: 20mm;
+                    box-sizing: border-box;
+                }
+                .pdf-report-content {
+                    font-family: "Segoe UI", Arial, sans-serif;
+                    color: #333;
+                    box-sizing: border-box;
+                }
+                .pdf-delay-text { color: red; font-weight: bold; }
+                @media print {
+                    .print-button-container { display: none; }
+                    body { background-color: #fff; }
+                    .pdf-container { margin: 0; box-shadow: none; padding: 0; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="pdf-container">
+                ${pdfContent.innerHTML}
+            </div>
+            <div class="print-button-container" style="text-align: center; margin-top: 20px; padding-bottom: 20px;">
+                <button class="print-button" onclick="window.print()" style="background-color: #005c9d; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background-color 0.3s ease;">
+                    <i class="fas fa-print"></i> PDF Kaydet / Yazdır
+                </button>
+            </div>
+        </body>
+        </html>
+    `);
+    newWindow.document.close();
+
+    newWindow.onload = () => {
+        showToast(`${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi hazır.`);
+        addActivity(
+            "PDF Raporu Önizlendi",
+            `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi açıldı.`,
+            project.project_id,
+            "fas fa-file-pdf",
+            "pdf_preview"
+        );
+    };
+}
+
 
     // Tüm projeleri PDF olarak dışa aktar
      async function exportAllProjectsToPdf() {
