@@ -3966,18 +3966,20 @@ def handle_revision_request():
 @app.route('/api/revision-requests', methods=['GET'])
 def get_revision_requests():
     """
-    Fetches revision requests with project and requester names from the database.
+    Fetches revision requests with project and requester names from the database
+    by joining the `revision_requests`, `projects`, and `users` tables.
     """
+    # Check if the user is authenticated.
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'}), 401
 
     connection = None
     try:
+        # Establish a database connection.
         connection = get_db_connection()
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            # The corrected query now uses LEFT JOIN to retrieve project and user names.
-            # We assume a 'projects' table with 'id' and 'name', and a 'users' table with 'id' and 'name'.
-            # We also assume 'revision_requests' has a 'requester_id' column.
+            # The corrected query joins 'revision_requests' with 'projects' and 'users'
+            # using the foreign keys you provided.
             cursor.execute("""
                 SELECT
                     rr.id,
@@ -3987,10 +3989,10 @@ def get_revision_requests():
                     rr.message,
                     rr.status,
                     rr.created_at,
-                    p.name AS project_name,        -- Add project_name from the projects table
-                    u.name AS requester_name      -- Add requester_name from the users table
+                    p.project_name AS project_name,        -- Use p.project_name from projects table
+                    u.fullname AS requester_name           -- Use u.fullname from users table
                 FROM revision_requests rr
-                LEFT JOIN projects p ON rr.project_id = p.id
+                LEFT JOIN projects p ON rr.project_id = p.project_id
                 LEFT JOIN users u ON rr.requested_by = u.id  
                 ORDER BY rr.created_at DESC
                 LIMIT 10
@@ -4004,6 +4006,7 @@ def get_revision_requests():
             })
             
     except Exception as e:
+        # Log and handle any errors during database operations.
         print("Error in get_revision_requests:", str(e))
         import traceback
         traceback.print_exc()
@@ -4013,8 +4016,10 @@ def get_revision_requests():
             'error': str(e)
         }), 500
     finally:
+        # Always close the database connection in the finally block.
         if connection:
             connection.close()
+
 @app.route('/api/progress/<int:progress_id>/complete', methods=['POST'])
 def complete_progress_step(progress_id):
     data = request.get_json()
