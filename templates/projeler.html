@@ -3894,6 +3894,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
     // PDF Oluşturma Fonksiyonları (progress_id kullanıldı)
  // Bu fonksiyon, yeni düzeni ve istenen bilgileri içeren bir PDF raporu oluşturur.
+// Bu fonksiyon, yeni düzeni ve istenen bilgileri içeren bir PDF raporu oluşturur.
 async function generateProjectPdf(project) {
     let progressSteps = [];
     try {
@@ -3933,69 +3934,60 @@ async function generateProjectPdf(project) {
             const startDate = new Date(step.start_date);
             const endDate = new Date(step.end_date);
             if (today >= startDate && today <= endDate) {
-                return step.title; // Using 'title' as per your original code logic
+                return step.title;
             }
         }
         return 'Belirlenemedi';
     };
 
-    // Helper function to get project status text.
-    const getProjectStatusText = (status) => {
-        // Assume 'delayed' status is calculated on the server side or project object.
-        if (status === 'delayed') {
-            return 'Gecikmeli Devam Ediyor';
-        }
-        switch (status) {
-            case 'in_progress':
-                return 'Gecikmesiz Devam Ediyor';
-            case 'completed':
-                return 'Tamamlandı';
-            case 'on_hold':
-                return 'Beklemede';
-            default:
-                return 'Bilinmiyor';
-        }
-    };
-
     // Calculate progress bar data.
     const calculateProgressBarData = (progressSteps) => {
         let totalPlannedDays = 0;
-        let totalPassedDays = 0;
+        let totalCompletedDays = 0;
         let totalDelayedDays = 0;
-        let totalRealDays = 0;
 
         const today = new Date();
 
         progressSteps.forEach(step => {
             const startDate = new Date(step.start_date);
             const endDate = new Date(step.end_date);
-            const realEndDate = step.real_end_date ? new Date(step.real_end_date) : null;
             
-            const plannedDays = (endDate - startDate) / (1000 * 60 * 60 * 24) + 1;
+            // Calculate planned duration for the step
+            const plannedDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
             totalPlannedDays += plannedDays;
 
+            // Calculate completed and delayed days
             if (step.is_completed) {
-                 const stepRealDays = (realEndDate - startDate) / (1000 * 60 * 60 * 24) + 1;
-                 totalRealDays += stepRealDays;
-                 if (realEndDate > endDate) {
-                     totalDelayedDays += (realEndDate - endDate) / (1000 * 60 * 60 * 24);
-                 }
-            } else if (today >= startDate) {
-                const stepPassedDays = (today - startDate) / (1000 * 60 * 60 * 24) + 1;
-                totalPassedDays += stepPassedDays;
-            }
-        });
-        
-        let completedPercentage = (totalRealDays / totalPlannedDays) * 100;
-        let delayPercentage = (totalDelayedDays / totalPlannedDays) * 100;
-        let remainingPercentage = 100 - completedPercentage - delayPercentage;
+                const realEndDate = new Date(step.real_end_date);
+                const stepCompletedDays = (realEndDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
+                totalCompletedDays += stepCompletedDays;
 
-        // Round percentages
+                if (realEndDate > endDate) {
+                    totalDelayedDays += (realEndDate.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24);
+                }
+            } else {
+                // If not completed, count passed days as completed days
+                if (today >= startDate) {
+                    const stepPassedDays = (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
+                    totalCompletedDays += stepPassedDays;
+                }
+            }
+
+            // Add custom delay days to total delay
+            totalDelayedDays += (step.delay_days || 0) + (step.custom_delay_days || 0);
+        });
+
+        // Calculate percentages
+        const totalDuration = totalPlannedDays + totalDelayedDays;
+        let completedPercentage = (totalCompletedDays / totalDuration) * 100;
+        let delayPercentage = (totalDelayedDays / totalDuration) * 100;
+        let remainingPercentage = 100 - completedPercentage - delayPercentage;
+        
+        // Ensure percentages are within a valid range
         completedPercentage = Math.round(Math.max(0, completedPercentage));
         delayPercentage = Math.round(Math.max(0, delayPercentage));
         remainingPercentage = Math.round(Math.max(0, remainingPercentage));
         
-        // Ensure total is 100%
         const totalPercentage = completedPercentage + delayPercentage + remainingPercentage;
         if (totalPercentage !== 100) {
             remainingPercentage += 100 - totalPercentage;
@@ -4004,7 +3996,7 @@ async function generateProjectPdf(project) {
         return {
             totalPlannedDays: Math.ceil(totalPlannedDays),
             totalDelayedDays: Math.ceil(totalDelayedDays),
-            totalRealDays: Math.ceil(totalRealDays),
+            totalRealDays: Math.ceil(totalCompletedDays + totalDelayedDays), // This seems more accurate
             completedPercentage,
             delayPercentage,
             remainingPercentage
@@ -4037,7 +4029,7 @@ async function generateProjectPdf(project) {
                     <p><strong>Müşteri Adı:</strong> ${project.customer_name || '-'}</p>
                 </div>
                 <div style="width: 50%; text-align: right;">
-                    <p><strong>Proje Durumu:</strong> ${getProjectStatusText(project.status) || '-'}</p>
+                    <p><strong>Proje Durumu:</strong> ${project.display_status || '-'}</p>
                     <p><strong>Sözleşme imzalanalı:</strong> ${calculateDaysSinceContract(project.contract_date)} gün oldu</p>
                 </div>
             </div>
@@ -4069,6 +4061,11 @@ async function generateProjectPdf(project) {
                     <div style="background-color: #f44336; width: ${progressBarData.delayPercentage}%;"></div>
                     <div style="background-color: #ccc; width: ${progressBarData.remainingPercentage}%;"></div>
                 </div>
+            </div>
+            <div style="font-size: 12px; margin-top: 5px; text-align: center;">
+                <span style="color: #4CAF50;">■</span> Tamamlanan Süre: ${progressBarData.totalRealDays} gün
+                <span style="color: #f44336;">■</span> Gecikme Süresi: ${progressBarData.totalDelayedDays} gün
+                <span style="color: #ccc;">■</span> Kalan Süre: ${progressBarData.totalPlannedDays - progressBarData.totalRealDays} gün
             </div>
         </div>
         
@@ -4161,6 +4158,7 @@ async function generateProjectPdf(project) {
         );
     };
 }
+
 
 
     // Tüm projeleri PDF olarak dışa aktar
