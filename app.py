@@ -3896,124 +3896,83 @@ def get_active_work_progress_headers():
         return jsonify({"error": "Başlıklar getirilirken bir hata oluştu"}), 500
 
 
+# app.py dosyasına eklenmesi gereken yeni kod bloğu
+
 @app.route('/api/revision-requests', methods=['POST'])
-def create_revision_request():
+def update_user_revision_stats():
+    """
+    Handles a revision request by updating the user's revision statistics.
+    NOTE: This endpoint does NOT save the full details of the revision request
+    as the 'revision_requests' table does not exist in the user's database schema.
+    """
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'}), 401
-    
+
     data = request.get_json()
-    app.logger.info(f"Gelen veri: {data}")  # Gelen veriyi logla
+    # Check for required fields from the frontend, even if they aren't stored
     required_fields = ['progress_id', 'project_id', 'title', 'message']
-    
     if not all(field in data for field in required_fields):
         return jsonify({
             'success': False, 
             'message': 'Eksik bilgi',
             'missing_fields': [f for f in required_fields if f not in data]
         }), 400
-    
+
+    requester_user_id = session.get('user_id')
+    current_month_year = datetime.datetime.now().strftime('%Y-%m')
+
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            app.logger.info("Veritabanı bağlantısı başarılı")
-            
-            # İlerleme adımını kontrol et
+            # Check if the progress step is valid and belongs to the project
+            # This is a good practice to ensure data integrity
             cursor.execute(
-                "SELECT id, title FROM project_progress WHERE id = %s AND project_id = %s",
+                "SELECT id FROM project_progress WHERE id = %s AND project_id = %s",
                 (data['progress_id'], data['project_id'])
             )
-            progress = cursor.fetchone()
-            app.logger.info(f"İlerleme adımı sorgusu sonucu: {progress}")
-            
-            if not progress:
-                return jsonify({
-                    'success': False, 
-                    'message': 'Geçersiz ilerleme adımı veya proje',
-                    'progress_id': data['progress_id'],
-                    'project_id': data['project_id']
-                }), 400
-            
-            # Revizyon isteğini ekle
+            if not cursor.fetchone():
+                return jsonify({'success': False, 'message': 'Geçersiz ilerleme adımı veya proje'}), 400
+
+            # Update the user_revision_stats table
             cursor.execute(
                 """
-                INSERT INTO revision_requests 
-                (project_id, progress_id, requested_by, title, message, status)
-                VALUES (%s, %s, %s, %s, %s, 'pending')
+                INSERT INTO user_revision_stats (user_id, revision_count, month_year, created_at, updated_at)
+                VALUES (%s, 1, %s, NOW(), NOW())
+                ON DUPLICATE KEY UPDATE 
+                    revision_count = revision_count + 1, 
+                    updated_at = NOW()
                 """,
-                (
-                    data['project_id'],
-                    data['progress_id'],
-                    session['user_id'],
-                    data['title'],
-                    data['message']
-                )
-            )
-            app.logger.info("Revizyon isteği eklendi")
-            
-            # Kullanıcı istatistiklerini güncelle
-            try:
-                cursor.execute(
-                    """
-                    INSERT INTO user_revision_stats (user_id, revision_count, created_at, updated_at)
-                    VALUES (%s, 1, NOW(), NOW())
-                    ON DUPLICATE KEY UPDATE 
-                        revision_count = revision_count + 1,
-                        updated_at = NOW()
-                    """,
-                    (session['user_id'],)
-                )
-                app.logger.info("Kullanıcı istatistikleri güncellendi")
-            except Exception as stats_error:
-                app.logger.error(f"İstatistik güncelleme hatası: {str(stats_error)}")
-                # İstatistik güncelleme hatası işlemi devam ettir
-                pass
-            
-            # Eklenen revizyon isteğini al
-            revision_id = cursor.lastrowid
-            cursor.execute(
-                """
-                SELECT r.*, u.fullname as requester_name, p.title as progress_title
-                FROM revision_requests r
-                JOIN users u ON r.requested_by = u.id
-                JOIN project_progress p ON r.progress_id = p.id
-                WHERE r.id = %s
-                """,
-                (revision_id,)
-            )
-            revision = cursor.fetchone()
-            app.logger.info(f"Eklenen revizyon: {revision}")
-            
-            # Aktiviteyi kaydet
-            log_activity(
-                session['user_id'],
-                'Yeni Revizyon İsteği',
-                f"{progress['title']} adımı için yeni revizyon isteği oluşturuldu",
-                'fas fa-redo'
+                (requester_user_id, current_month_year)
             )
             
             connection.commit()
-            app.logger.info("Değişiklikler kaydedildi")
             
             return jsonify({
                 'success': True,
-                'message': 'Revizyon isteği başarıyla oluşturuldu',
-                'revision': dict(revision) if revision else None
-            })
-            
-    except Exception as e:
+                'message': 'Revizyon isteği istatistikleri başarıyla güncellendi'
+            }), 201
+
+    except pymysql.Error as e:
+        print(f"Database error: {e}")
         if connection:
             connection.rollback()
-        app.logger.error(f"Revizyon isteği oluşturulurken hata: {str(e)}", exc_info=True)
-        return jsonify({
-            'success': False, 
-            'message': 'Bir hata oluştu',
-            'error': str(e)
-        }), 500
-    
+        return jsonify({'success': False, 'message': 'Veritabanı hatası oluştu.'}), 500
+    except Exception as e:
+        print(f"General error: {e}")
+        if connection:
+            connection.rollback()
+        return jsonify({'success': False, 'message': 'Bir iç sunucu hatası oluştu.'}), 500
     finally:
         if connection:
             connection.close()
+
+# Bu kod, `user_revision_stats` tablonuzun PRIMARY KEY'inin veya UNIQUE KEY'inin
+# `user_id` ve `month_year` sütunlarını içerdiğini varsayar.
+# Şayet böyle bir anahtar yoksa, ON DUPLICATE KEY UPDATE işlemi başarısız olur
+# ve her istekte yeni bir satır eklenir.
+# Bu durum veritabanı şemanıza bağlıdır.
+
 
 def complete_progress_step(progress_id):
     data = request.get_json()
