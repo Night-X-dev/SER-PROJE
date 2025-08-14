@@ -3947,6 +3947,16 @@ async function generateProjectPdf(project) {
         return `<span style="color: ${color}; font-weight: bold; margin: 0;">${text}</span>`;
     };
 
+    // Helper function to get the project phase text from the display status.
+    const getProjectPhaseText = (statusText) => {
+        if (!statusText) {
+            return 'Aşama bilgisi bulunamadı';
+        }
+        // Remove the part in parentheses if it exists and add "Aşamasında"
+        const phaseName = statusText.split('(')[0].trim();
+        return `${phaseName} Aşamasında`;
+    };
+
     // Calculate progress bar data.
     const calculateProgressBarData = (progressSteps) => {
         let totalPlannedDays = 0;
@@ -4062,7 +4072,7 @@ async function generateProjectPdf(project) {
             </div>
             
             <h4 style="text-align: center; font-size: 16px; margin-top: 20px; color: #005c9d;">
-                Proje ${projectPhase} aşamasında
+                ${getProjectPhaseText(project.display_status)}
             </h4>
             
             <div style="height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px;">
