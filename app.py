@@ -4039,6 +4039,9 @@ def update_revision_status(request_id, new_status, success_message, error_messag
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # Debug için log ekleyelim
+            app.logger.info(f"Revizyon durumu güncelleniyor - ID: {request_id}, Yeni Durum: {new_status}")
+            
             # Önce revizyon isteğini bul
             cursor.execute("""
                 SELECT * FROM revision_requests 
@@ -4048,6 +4051,7 @@ def update_revision_status(request_id, new_status, success_message, error_messag
             revision = cursor.fetchone()
             
             if not revision:
+                app.logger.warning(f"Bekleyen revizyon isteği bulunamadı - ID: {request_id}")
                 return jsonify({
                     'success': False,
                     'message': 'Bekleyen revizyon isteği bulunamadı veya zaten işlenmiş'
@@ -4064,6 +4068,7 @@ def update_revision_status(request_id, new_status, success_message, error_messag
 
             # Eğer onaylandıysa, ilgili progress'i güncelle
             if new_status == 'approved':
+                app.logger.info(f"Progress güncelleniyor - Progress ID: {revision['progress_id']}")
                 cursor.execute("""
                     UPDATE project_progress
                     SET status = 'revision_required'
@@ -4071,6 +4076,7 @@ def update_revision_status(request_id, new_status, success_message, error_messag
                 """, (revision['progress_id'],))
 
             connection.commit()
+            app.logger.info(f"Revizyon başarıyla güncellendi - ID: {request_id}, Yeni Durum: {new_status}")
             return jsonify({
                 'success': True,
                 'message': success_message
@@ -4079,7 +4085,7 @@ def update_revision_status(request_id, new_status, success_message, error_messag
     except Exception as e:
         if connection:
             connection.rollback()
-        app.logger.error(f"Revizyon durumu güncellenirken hata: {str(e)}")
+        app.logger.error(f"Revizyon durumu güncellenirken hata: {str(e)}", exc_info=True)
         return jsonify({
             'success': False,
             'message': error_message,
