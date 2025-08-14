@@ -3897,29 +3897,31 @@ async function generateProjectPdf(project) {
     let progressSteps = [];
     let revisionCounts = {};
     try {
-        // Fetch project progress steps from the API.
+        // API'den proje ilerleme adımlarını çek.
         const response = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
         if (response.ok) {
             progressSteps = await response.json();
         }
 
-        // Fetch revision counts for each step.
-        const revisionResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/revisions`);
+        // Revizyon sayılarını API'den çek ve projeye göre filtrele.
+        // Backend'de `/api/projects/{id}/revisions` endpoint'i olmadığı için,
+        // genel revizyon isteklerini çekip client tarafında filtreleniyor.
+        const revisionResponse = await fetch(`${API_BASE_URL}/api/revision-requests`);
         if (revisionResponse.ok) {
-            const revisions = await revisionResponse.json();
+            const revisionsData = await revisionResponse.json();
+            const revisions = revisionsData.revisions || [];
+            
             revisions.forEach(rev => {
-                const progressId = rev.progress_id;
-                if (progressId) {
-                    revisionCounts[progressId] = (revisionCounts[progressId] || 0) + 1;
+                if (rev.project_id === project.project_id && rev.progress_id) {
+                    revisionCounts[rev.progress_id] = (revisionCounts[rev.progress_id] || 0) + 1;
                 }
             });
         }
-
     } catch (e) {
         console.error("Proje ilerleme adımları veya revizyonlar çekilirken hata oluştu:", e);
     }
 
-    // Helper function to format dates for display.
+    // Tarihleri görüntülemek için yardımcı fonksiyon.
     const formatDateForDisplay = (dateStr) => {
         if (!dateStr || dateStr === '-') return '-';
         try {
@@ -3930,7 +3932,7 @@ async function generateProjectPdf(project) {
         }
     };
 
-    // Helper function to calculate the number of days since the contract date.
+    // Sözleşme tarihinden bu yana geçen gün sayısını hesaplayan yardımcı fonksiyon.
     const calculateDaysSinceContract = (contractDateStr) => {
         if (!contractDateStr) return 0;
         const contractDate = new Date(contractDateStr);
@@ -3939,7 +3941,7 @@ async function generateProjectPdf(project) {
         return Math.floor(diffTime / (1000 * 60 * 60 * 24));
     };
 
-    // Helper function to get project status text with color.
+    // Proje durumunu renkle birlikte HTML olarak döndüren yardımcı fonksiyon.
     const getProjectStatusHtml = (statusText) => {
         const isDelayed = statusText && statusText.includes('Gecikmeli');
         const color = isDelayed ? 'red' : '#4CAF50';
@@ -3947,17 +3949,17 @@ async function generateProjectPdf(project) {
         return `<span style="color: ${color}; font-weight: bold; margin: 0;">${text}</span>`;
     };
 
-    // Helper function to get the project phase text from the display status.
+    // Proje aşama metnini döndüren yardımcı fonksiyon.
     const getProjectPhaseText = (statusText) => {
         if (!statusText) {
             return 'Aşama bilgisi bulunamadı';
         }
-        // Remove the part in parentheses if it exists and add "Aşamasında"
+        // Parantez içindeki kısmı silip "Aşamasında" ekler.
         const phaseName = statusText.split('(')[0].trim();
         return `${phaseName} Aşamasında`;
     };
 
-    // Helper function to get step status and icon
+    // Adım durumunu ve simgesini döndüren yardımcı fonksiyon.
     const getStepStatusHtml = (step) => {
         const today = new Date();
         const startDate = new Date(step.start_date);
@@ -3974,7 +3976,7 @@ async function generateProjectPdf(project) {
         return statusText;
     };
 
-    // Helper function to calculate planned duration in days
+    // Planlanan süreyi gün olarak hesaplayan yardımcı fonksiyon.
     const calculatePlannedDuration = (startDateStr, endDateStr) => {
         if (!startDateStr || !endDateStr) return '-';
         const startDate = new Date(startDateStr);
@@ -3983,7 +3985,7 @@ async function generateProjectPdf(project) {
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
 
-    // Helper function to calculate actual duration in days
+    // Gerçekleşen süreyi gün olarak hesaplayan yardımcı fonksiyon.
     const calculateActualDuration = (startDateStr, realEndDateStr) => {
         if (!startDateStr) return '-';
         const startDate = new Date(startDateStr);
@@ -3993,7 +3995,7 @@ async function generateProjectPdf(project) {
     };
 
 
-    // Calculate progress bar data.
+    // İlerleme çubuğu verilerini hesaplayan yardımcı fonksiyon.
     const calculateProgressBarData = (progressSteps) => {
         let totalPlannedDays = 0;
         let totalCompletedDays = 0;
@@ -4005,11 +4007,9 @@ async function generateProjectPdf(project) {
             const startDate = new Date(step.start_date);
             const endDate = new Date(step.end_date);
             
-            // Calculate planned duration for the step
             const plannedDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
             totalPlannedDays += plannedDays;
 
-            // Calculate completed and delayed days
             if (step.is_completed) {
                 const realEndDate = new Date(step.real_end_date);
                 const stepCompletedDays = (realEndDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
@@ -4019,24 +4019,20 @@ async function generateProjectPdf(project) {
                     totalDelayedDays += (realEndDate.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24);
                 }
             } else {
-                // If not completed, count passed days as completed days
                 if (today >= startDate) {
                     const stepPassedDays = (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
                     totalCompletedDays += stepPassedDays;
                 }
             }
 
-            // Add custom delay days to total delay
             totalDelayedDays += (step.delay_days || 0) + (step.custom_delay_days || 0);
         });
 
-        // Calculate percentages
         const totalDuration = totalPlannedDays + totalDelayedDays;
         let completedPercentage = (totalCompletedDays / totalDuration) * 100;
         let delayPercentage = (totalDelayedDays / totalDuration) * 100;
         let remainingPercentage = 100 - completedPercentage - delayPercentage;
         
-        // Ensure percentages are within a valid range
         completedPercentage = Math.round(Math.max(0, completedPercentage));
         delayPercentage = Math.round(Math.max(0, delayPercentage));
         remainingPercentage = Math.round(Math.max(0, remainingPercentage));
@@ -4049,7 +4045,7 @@ async function generateProjectPdf(project) {
         return {
             totalPlannedDays: Math.ceil(totalPlannedDays),
             totalDelayedDays: Math.ceil(totalDelayedDays),
-            totalRealDays: Math.ceil(totalCompletedDays + totalDelayedDays), // This seems more accurate
+            totalRealDays: Math.ceil(totalCompletedDays + totalDelayedDays),
             completedPercentage,
             delayPercentage,
             remainingPercentage
@@ -4059,7 +4055,7 @@ async function generateProjectPdf(project) {
     const progressBarData = calculateProgressBarData(progressSteps);
     const projectPhase = getProjectPhaseText(project.display_status);
 
-    // PDF report HTML content with the new structure.
+    // Yeni yapıya sahip PDF raporunun HTML içeriği.
     const mainContentHtml = `
         <!-- Part 1: Project Basic Info -->
         <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
@@ -4119,10 +4115,9 @@ async function generateProjectPdf(project) {
             <div>
                 ${progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => `
                     <div class="progress-step-item" style="margin-bottom:12px;">
-                        <div style="font-weight:bold;font-size:15px; display:flex; justify-content:space-between;">
-                            <span>${step.title || ''}</span>
-                            <span>${getStepStatusHtml(step)}</span>
-                        </div>
+                        <h5 style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
+                            ${step.title || ''} <span style="font-weight: normal;"> - ${getStepStatusHtml(step)}</span>
+                        </h5>
                         <div style="display:flex; justify-content:space-between; font-size:13px; color:#555;">
                             <div style="width:50%;">
                                 <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(step.start_date || '-')}</p>
@@ -4158,25 +4153,11 @@ async function generateProjectPdf(project) {
             <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* Sayfa ayarları: A4 boyutu ve kenar boşlukları */
                 @page { 
                     size: A4; 
-                    margin: 20mm; 
-                    /* Sayfaların üst ve alt kenarlarına başlık ve altbilgi elementlerini yerleştiriyoruz. */
-                    @top-center { content: element(header); }
-                    @bottom-center { content: element(footer); }
+                    margin: 20mm;
                 }
 
-                /* Başlık ve altbilgiyi yazdırma sırasında tekrar etmesi için 'running' element olarak belirliyoruz. */
-                #pdf-header-content-to-print { 
-                    position: running(header);
-                    display: none;
-                }
-                #pdf-footer-content-to-print { 
-                    position: running(footer); 
-                    display: none;
-                }
-                
                 body { 
                     font-family: 'Segoe UI', Arial, sans-serif; 
                     margin: 0; 
@@ -4184,9 +4165,8 @@ async function generateProjectPdf(project) {
                     background-color: #f0f2f5;
                 }
                 
-                /* Raporun ana konteyneri */
                 .pdf-container {
-                    width: 210mm; /* A4 genişliği */
+                    width: 210mm;
                     margin: 20px auto;
                     background: #fff;
                     box-shadow: 0 0 10px rgba(0,0,0,0.1);
@@ -4194,7 +4174,6 @@ async function generateProjectPdf(project) {
                     box-sizing: border-box;
                 }
                 
-                /* Önizleme ekranı için başlık ve altbilgi */
                 .screen-header, .screen-footer {
                     width: 170mm;
                     margin: 0 auto;
@@ -4217,49 +4196,63 @@ async function generateProjectPdf(project) {
                     font-size: 12px;
                 }
 
-                /* Ana içerik, başlık ve altbilgi ile çakışmaması için boşluk bırakılır. */
                 .main-content {
                     box-sizing: border-box;
                 }
                 
-                /* Yazdırma medyası için özel stil ayarları */
                 @media print {
-                    body { background-color: #fff; }
-                    .pdf-container { margin: 0; box-shadow: none; padding: 0; }
-                    .print-button-container { display: none; }
+                    body { 
+                        background-color: #fff; 
+                        /* Fixed header ve footer ile içerik çakışmaması için padding ekle */
+                        padding-top: 70px;
+                        padding-bottom: 70px;
+                    }
+                    .pdf-container { 
+                        margin: 0; 
+                        box-shadow: none; 
+                        padding: 0; 
+                    }
+                    .print-button-container { 
+                        display: none; 
+                    }
 
                     .screen-header, .screen-footer {
                         display: none;
                     }
                     
-                    /* Yazdırma sırasında başlık ve altbilgiyi göster */
-                    #pdf-header-content-to-print {
-                      display: block;
-                      position: fixed;
-                      top: 0;
-                      left: 0;
-                      right: 0;
-                      height: 50px; /* Başlığın yüksekliği */
-                      padding-left: 20mm;
-                      padding-right: 20mm;
-                      box-sizing: border-box;
+                    /* Yazdırma sırasında her sayfada tekrar edecek olan başlık ve altbilgi */
+                    .print-header {
+                        display: block;
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        height: 60px;
+                        padding: 10px 20mm;
+                        box-sizing: border-box;
+                        background-color: #fff; /* Başlık alanının arka planını beyaz yap */
+                        border-bottom: 1px solid #eee;
                     }
-                    
-                    #pdf-footer-content-to-print {
-                      display: block;
-                      position: fixed;
-                      bottom: 0;
-                      left: 0;
-                      right: 0;
-                      height: 50px; /* Altbilginin yüksekliği */
-                      padding-left: 20mm;
-                      padding-right: 20mm;
-                      box-sizing: border-box;
+
+                    .print-footer {
+                        display: block;
+                        position: fixed;
+                        bottom: 0;
+                        left: 0;
+                        right: 0;
+                        height: 50px;
+                        padding: 10px 20mm;
+                        box-sizing: border-box;
+                        background-color: #fff; /* Altbilgi alanının arka planını beyaz yap */
+                        border-top: 1px solid #eee;
+                        font-size: 12px;
+                        color: #6c757d;
+                        text-align: center;
                     }
                     
                     /* Başlık ve altbilgi içeriğinin sayfa kenar boşluklarına uygun hizalanması */
-                    #pdf-header-content-to-print > div, #pdf-footer-content-to-print > div {
-                        width: 170mm; /* A4 genişliği (210mm) - 2 * margin (20mm) = 170mm */
+                    .print-header > div, .print-footer > div {
+                        width: 170mm;
                         margin: 0 auto;
                     }
 
@@ -4269,18 +4262,16 @@ async function generateProjectPdf(project) {
                     }
                 }
                 
-                /* Ekran önizlemesi için özel stil ayarları */
                 @media screen {
-                    /* Ekran önizlemesinde yazdırma için tanımlanan başlık ve altbilgi elementlerini gizle */
-                    #pdf-header-content-to-print, #pdf-footer-content-to-print {
-                      display: none;
+                    .print-header, .print-footer {
+                        display: none;
                     }
                 }
             </style>
         </head>
         <body>
             <!-- Yazdırma sırasında her sayfada tekrar edecek olan başlık içeriği -->
-            <div id="pdf-header-content-to-print">
+            <div class="print-header">
                 <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                     <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
                     <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
@@ -4291,8 +4282,8 @@ async function generateProjectPdf(project) {
             </div>
 
             <!-- Yazdırma sırasında her sayfada tekrar edecek olan altbilgi içeriği -->
-            <div id="pdf-footer-content-to-print">
-                <div style='width:100%; font-size:12px; color:#6c757d; border-top:1px solid #eee; padding-top:15px; text-align: center;'>
+            <div class="print-footer">
+                <div style='width:100%; font-size:12px; color:#6c757d; border-top:1px solid #eee; padding-top:5px; text-align: center;'>
                     <div style="font-weight: bold; margin-bottom: 5px;">Ser Elektrik Otomasyon Ticaret ve Sanayi Anonim Şirketi</div>
                     <div>www.serelektrik.com.tr | info@serelektrik.com.tr</div>
                 </div>
