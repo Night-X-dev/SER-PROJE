@@ -1792,7 +1792,11 @@
             throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        renderRevisionRequests(data.revisions);
+        if (data.success && data.revisions) {
+            renderRevisionRequests(data.revisions);
+        } else {
+            throw new Error(data.message || 'Geçersiz yanıt formatı');
+        }
     } catch (error) {
         console.error('Hata Detayı:', error);
         showToast('Hata', `Revizyon istekleri yüklenirken bir hata oluştu: ${error.message}`, 'error');
@@ -1802,6 +1806,11 @@
 // Revizyon isteklerini tabloda göster
 function renderRevisionRequests(revisions) {
     const tbody = document.getElementById('revisionRequestsBody');
+    if (!tbody) {
+        console.error('revisionRequestsBody elementi bulunamadı');
+        return;
+    }
+    
     tbody.innerHTML = '';
 
     if (!revisions || revisions.length === 0) {
@@ -1814,28 +1823,32 @@ function renderRevisionRequests(revisions) {
     }
 
     revisions.forEach(rev => {
-        const date = new Date(rev.created_at).toLocaleString('tr-TR');
-        const statusBadge = getStatusBadge(rev.status);
-        
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${rev.project_name || 'Bilinmeyen Proje'}</td>
-            <td>${escapeHtml(rev.title)}</td>
-            <td>${rev.requester_name || 'Bilinmeyen Kullanıcı'}</td>
-            <td>${date}</td>
-            <td>${statusBadge}</td>
-            <td>
-                <div class="btn-group btn-group-sm">
-                    <button class="btn btn-success btn-approve" data-id="${rev.id}">
-                        <i class="fas fa-check"></i> Kabul Et
-                    </button>
-                    <button class="btn btn-danger btn-reject" data-id="${rev.id}">
-                        <i class="fas fa-times"></i> Reddet
-                    </button>
-                </div>
-            </td>
-        `;
-        tbody.appendChild(row);
+        try {
+            const date = rev.created_at ? new Date(rev.created_at).toLocaleString('tr-TR') : 'Bilinmiyor';
+            const statusBadge = getStatusBadge(rev.status || 'pending');
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${escapeHtml(rev.project_name || 'Bilinmeyen Proje')}</td>
+                <td>${escapeHtml(rev.title || '')}</td>
+                <td>${escapeHtml(rev.requester_name || 'Bilinmeyen Kullanıcı')}</td>
+                <td>${date}</td>
+                <td>${statusBadge}</td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-success btn-approve" data-id="${escapeHtml(rev.id)}">
+                            <i class="fas fa-check"></i> Kabul Et
+                        </button>
+                        <button class="btn btn-danger btn-reject" data-id="${escapeHtml(rev.id)}">
+                            <i class="fas fa-times"></i> Reddet
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        } catch (e) {
+            console.error('Satır oluşturulurken hata:', e, rev);
+        }
     });
 }
 
@@ -3402,14 +3415,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Helper function to escape HTML
     function escapeHtml(unsafe) {
-        return unsafe
-            .toString()
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
+    if (!unsafe) return '';
+    return unsafe
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 });
     </script>
 </body>
