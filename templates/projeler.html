@@ -4742,7 +4742,113 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
         bsToast.show();
     }
 </script>
+    <!-- Revizyon İsteği Modal -->
+    <div class="modal fade" id="revisionRequestModal" tabindex="-1" aria-labelledby="revisionRequestModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="revisionRequestModalLabel">Revizyon İsteği Gönder</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                </div>
+                <form id="revisionRequestForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="revisionProgressId" name="progress_id">
+                        <input type="hidden" id="revisionProjectId" name="project_id">
+                        
+                        <div class="mb-3">
+                            <label for="revisionTitle" class="form-label">Başlık</label>
+                            <input type="text" class="form-control" id="revisionTitle" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="revisionMessage" class="form-label">Açıklama</label>
+                            <textarea class="form-control" id="revisionMessage" name="message" rows="4" required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                        <button type="submit" class="btn btn-primary">Gönder</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="static/bildirim.js"></script>
     <script src="static/user-avatar.js"></script>
+    
+    <script>
+        // Revizyon isteği modalını göster
+        function showRevisionRequestModal(progressId, projectId) {
+            const modalElement = document.getElementById('revisionRequestModal');
+            if (!modalElement) {
+                console.error('Revizyon isteği modalı bulunamadı');
+                return;
+            }
+            
+            // Form alanlarını sıfırla
+            document.getElementById('revisionProgressId').value = progressId;
+            document.getElementById('revisionProjectId').value = projectId;
+            document.getElementById('revisionTitle').value = '';
+            document.getElementById('revisionMessage').value = '';
+            
+            // Modalı göster
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        }
+        
+        // Revizyon isteği formu gönderimi
+        document.addEventListener('DOMContentLoaded', function() {
+            const revisionForm = document.getElementById('revisionRequestForm');
+            if (revisionForm) {
+                revisionForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const formData = new FormData(revisionForm);
+                    const progressId = formData.get('progress_id');
+                    const projectId = formData.get('project_id');
+                    
+                    try {
+                        const response = await fetch('/api/revision-requests', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': document.querySelector('[name=csrf_token]')?.value || ''
+                            },
+                            body: JSON.stringify({
+                                progress_id: progressId,
+                                project_id: projectId,
+                                title: formData.get('title'),
+                                message: formData.get('message')
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.message || 'Revizyon isteği gönderilirken bir hata oluştu');
+                        }
+                        
+                        // Başarılı yanıt
+                        const result = await response.json();
+                        
+                        // Modalı kapat
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('revisionRequestModal'));
+                        if (modal) {
+                            modal.hide();
+                        }
+                        
+                        // Başarı mesajı göster
+                        showToast('Başarılı', 'Revizyon isteği başarıyla gönderildi', 'success');
+                        
+                        // Sayfayı yenile (isteğe bağlı)
+                        // window.location.reload();
+                        
+                    } catch (error) {
+                        console.error('Revizyon isteği gönderilirken hata oluştu:', error);
+                        showToast('Hata', error.message || 'Revizyon isteği gönderilirken bir hata oluştu', 'error');
+                    }
+                });
+            }
+        });
+    </script>
   </body>
 </html>
