@@ -4021,6 +4021,7 @@ def get_revision_requests():
             connection.close()
 @app.route('/api/revision-requests/<int:request_id>/approve', methods=['POST'])
 def approve_revision_request(request_id):
+    app.logger.info(f"Approve request received for revision_id: {request_id}")
     return update_revision_status(
         request_id, 
         'approved',
@@ -4031,6 +4032,7 @@ def approve_revision_request(request_id):
 
 @app.route('/api/revision-requests/<int:request_id>/reject', methods=['POST'])
 def reject_revision_request(request_id):
+    app.logger.info(f"Reject request received for revision_id: {request_id}")
     return update_revision_status(
         request_id, 
         'rejected',
@@ -4040,17 +4042,23 @@ def reject_revision_request(request_id):
     )
 
 def update_revision_status(request_id, new_status, success_message, error_message, update_progress=False):
+    app.logger.info(f"Updating revision status - ID: {request_id}, New Status: {new_status}, Update Progress: {update_progress}")
+    
     if 'user_id' not in session:
+        app.logger.warning("Kullanıcı oturumu bulunamadı")
         return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'}), 401
 
     connection = None
     try:
         connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # İşlemi transaction içinde yapalım
-            cursor.execute("START TRANSACTION")
-            
+        cursor = connection.cursor(pymysql.cursors.DictCursor)
+        
+        app.logger.info("Transaction başlatılıyor...")
+        connection.begin()
+        
+        try:
             # 1. Revizyon isteğini güncelle
+            app.logger.info(f"Revizyon isteği güncelleniyor - ID: {request_id}, Yeni Durum: {new_status}")
             cursor.execute("""
                 UPDATE revision_requests 
                 SET status = %s, 
@@ -4060,6 +4068,7 @@ def update_revision_status(request_id, new_status, success_message, error_messag
             """, (new_status, session['user_id'], request_id))
 
             if cursor.rowcount == 0:
+                app.logger.warning("Bekleyen revizyon isteği bulunamadı veya zaten işlenmiş")
                 connection.rollback()
                 return jsonify({
                     'success': False,
@@ -4068,34 +4077,44 @@ def update_revision_status(request_id, new_status, success_message, error_messag
 
             # 2. Eğer onaylandıysa ve progress güncellenecekse
             if update_progress:
-                # İlk olarak ilgili progress_id'yi alalım
+                app.logger.info("Progress güncellemesi yapılacak")
+                # İlgili progress_id'yi al
                 cursor.execute("""
                     SELECT progress_id 
                     FROM revision_requests 
                     WHERE id = %s
                 """, (request_id,))
-                result = cursor.fetchone()
                 
-                if result:
+                result = cursor.fetchone()
+                app.logger.info(f"Progress sorgu sonucu: {result}")
+                
+                if result and 'progress_id' in result:
                     progress_id = result['progress_id']
-                    # Progress'i güncelle: is_completed = 0 yapıyoruz
+                    app.logger.info(f"Progress güncelleniyor - Progress ID: {progress_id}")
+                    
+                    # Progress'i güncelle
                     cursor.execute("""
                         UPDATE project_progress
                         SET is_completed = 0,
                             completion_notified = 0
                         WHERE progress_id = %s
                     """, (progress_id,))
+                    app.logger.info(f"Progress güncellendi - Etkilenen satır sayısı: {cursor.rowcount}")
 
             # Tüm işlemler başarılı, commit et
             connection.commit()
+            app.logger.info("İşlem başarıyla tamamlandı")
             return jsonify({
                 'success': True,
                 'message': success_message
             })
 
-    except Exception as e:
-        if connection:
+        except Exception as inner_e:
             connection.rollback()
+            app.logger.error(f"İç işlem hatası: {str(inner_e)}", exc_info=True)
+            raise
+
+    except Exception as e:
         app.logger.error(f"Revizyon durumu güncellenirken hata: {str(e)}", exc_info=True)
         return jsonify({
             'success': False,
@@ -4105,6 +4124,8 @@ def update_revision_status(request_id, new_status, success_message, error_messag
     finally:
         if connection:
             connection.close()
+            app.logger.info("Veritabanı bağlantısı kapatıldı")
+            
 @app.route('/api/progress/<int:progress_id>/complete', methods=['POST'])
 def complete_progress_step(progress_id):
     data = request.get_json()
