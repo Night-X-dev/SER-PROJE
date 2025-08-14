@@ -1760,27 +1760,33 @@
     });
         let currentUser = null; // Kullanıcı bilgisi burada veya başka bir global script'te ayarlanmalı
         // Genel Toast bildirim fonksiyonu (Sadece bir kez tanımlanacak)
-        function showToast(message, isError = false) {
-            const toast = document.getElementById('toast');
-            const toastMessage = document.getElementById('toastMessage');
+        function showToast(title, message, type = 'success') {
+    const toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) return;
 
-            if (!toast || !toastMessage) {
-                console.error("Toast elementleri bulunamadı!");
-                return;
-            }
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0 show`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
 
-            toastMessage.textContent = message;
-            toast.className = "toast show"; // 'show' sınıfı CSS ile toast'ı görünür yapar
-            if (isError) {
-                toast.classList.add("error");
-            } else {
-                toast.classList.remove("error"); // Başarılı ise 'error' sınıfını kaldır
-            }
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <strong>${title}</strong><br>
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Kapat"></button>
+        </div>
+    `;
 
-            setTimeout(() => {
-                toast.className = "toast"; // 'show' sınıfını kaldırarak toast'ı gizle
-            }, 3000); // 3 saniye sonra kaybolur
-        }
+    toastContainer.appendChild(toast);
+
+    // 5 saniye sonra toast'ı kaldır
+    setTimeout(() => {
+        toast.remove();
+    }, 5000);
+}
 
         let confirmCallback = null; // Callback function to execute on confirmation
         let confirmationBootstrapModal; // Bootstrap modal instance
@@ -1919,7 +1925,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const result = await response.json();
             
             if (result.success) {
-                showToast('Başarılı', result.message, 'success');
+               showToast('Başarılı', 'Revizyon isteği kabul edildi', 'success');
                 loadRevisionRequests(); // Listeyi yenile
             } else {
                 throw new Error(result.message || 'İşlem başarısız oldu');
