@@ -3902,25 +3902,39 @@ def create_revision_request():
         return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'}), 401
     
     data = request.get_json()
+    app.logger.info(f"Gelen veri: {data}")  # Gelen veriyi logla
     required_fields = ['progress_id', 'project_id', 'title', 'message']
     
     if not all(field in data for field in required_fields):
-        return jsonify({'success': False, 'message': 'Eksik bilgi'}), 400
+        return jsonify({
+            'success': False, 
+            'message': 'Eksik bilgi',
+            'missing_fields': [f for f in required_fields if f not in data]
+        }), 400
     
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Check if the progress step exists and belongs to the project
+            app.logger.info("Veritabanı bağlantısı başarılı")
+            
+            # İlerleme adımını kontrol et
             cursor.execute(
                 "SELECT id, title FROM project_progress WHERE id = %s AND project_id = %s",
                 (data['progress_id'], data['project_id'])
             )
             progress = cursor.fetchone()
-            if not progress:
-                return jsonify({'success': False, 'message': 'Geçersiz ilerleme adımı veya proje'}), 400
+            app.logger.info(f"İlerleme adımı sorgusu sonucu: {progress}")
             
-            # Insert the revision request
+            if not progress:
+                return jsonify({
+                    'success': False, 
+                    'message': 'Geçersiz ilerleme adımı veya proje',
+                    'progress_id': data['progress_id'],
+                    'project_id': data['project_id']
+                }), 400
+            
+            # Revizyon isteğini ekle
             cursor.execute(
                 """
                 INSERT INTO revision_requests 
@@ -3935,20 +3949,27 @@ def create_revision_request():
                     data['message']
                 )
             )
+            app.logger.info("Revizyon isteği eklendi")
             
-            # Update user's revision stats
-            cursor.execute(
-                """
-                INSERT INTO user_revision_stats (user_id, revision_count, created_at, updated_at)
-                VALUES (%s, 1, NOW(), NOW())
-                ON DUPLICATE KEY UPDATE 
-                    revision_count = revision_count + 1,
-                    updated_at = NOW()
-                """,
-                (session['user_id'],)
-            )
+            # Kullanıcı istatistiklerini güncelle
+            try:
+                cursor.execute(
+                    """
+                    INSERT INTO user_revision_stats (user_id, revision_count, created_at, updated_at)
+                    VALUES (%s, 1, NOW(), NOW())
+                    ON DUPLICATE KEY UPDATE 
+                        revision_count = revision_count + 1,
+                        updated_at = NOW()
+                    """,
+                    (session['user_id'],)
+                )
+                app.logger.info("Kullanıcı istatistikleri güncellendi")
+            except Exception as stats_error:
+                app.logger.error(f"İstatistik güncelleme hatası: {str(stats_error)}")
+                # İstatistik güncelleme hatası işlemi devam ettir
+                pass
             
-            # Get the inserted revision request
+            # Eklenen revizyon isteğini al
             revision_id = cursor.lastrowid
             cursor.execute(
                 """
@@ -3961,8 +3982,9 @@ def create_revision_request():
                 (revision_id,)
             )
             revision = cursor.fetchone()
+            app.logger.info(f"Eklenen revizyon: {revision}")
             
-            # Log activity
+            # Aktiviteyi kaydet
             log_activity(
                 session['user_id'],
                 'Yeni Revizyon İsteği',
@@ -3971,6 +3993,7 @@ def create_revision_request():
             )
             
             connection.commit()
+            app.logger.info("Değişiklikler kaydedildi")
             
             return jsonify({
                 'success': True,
@@ -3981,8 +4004,12 @@ def create_revision_request():
     except Exception as e:
         if connection:
             connection.rollback()
-        app.logger.error(f"Revizyon isteği oluşturulurken hata: {str(e)}")
-        return jsonify({'success': False, 'message': 'Bir hata oluştu'}), 500
+        app.logger.error(f"Revizyon isteği oluşturulurken hata: {str(e)}", exc_info=True)
+        return jsonify({
+            'success': False, 
+            'message': 'Bir hata oluştu',
+            'error': str(e)
+        }), 500
     
     finally:
         if connection:
