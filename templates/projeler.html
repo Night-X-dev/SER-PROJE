@@ -4088,9 +4088,43 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
                 @page { 
+                    /* İkinci sayfa ve sonrasının üst ve alt kenar boşlukları */
                     size: A4; 
-                    margin: 0; 
+                    margin-top: 70px;
+                    margin-bottom: 60px;
+                    margin-left: 20mm;
+                    margin-right: 20mm;
+
+                    /* Başlık içeriğini tanımlar */
+                    @top-center {
+                        content: '${project.project_name ? project.project_name.normalize('NFC').replace(/'/g, "\\'") : "Proje"} Raporu';
+                        font-family: 'Segoe UI', Arial, sans-serif;
+                        font-size: 14px;
+                        color: #005c9d;
+                    }
+                    /* Altbilgi içeriğini tanımlar */
+                    @bottom-center {
+                        content: 'Sayfa ' counter(page);
+                        font-family: 'Segoe UI', Arial, sans-serif;
+                        font-size: 12px;
+                        color: #6c757d;
+                    }
                 }
+                
+                @page :first {
+                    /* İlk sayfanın kenar boşluklarını sıfırlar */
+                    margin-top: 0;
+                    margin-bottom: 0;
+                    
+                    /* İlk sayfa için başlık ve altbilgiyi gizler */
+                    @top-center {
+                        content: '';
+                    }
+                    @bottom-center {
+                        content: '';
+                    }
+                }
+
                 body { 
                     font-family: 'Segoe UI', Arial, sans-serif; 
                     margin: 0; 
@@ -4107,151 +4141,42 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     padding-top: 60px;
                     padding-bottom: 60px;
                 }
-                .screen-header, .screen-footer {
-                    width: 170mm;
-                    margin: 0 auto;
-                    padding: 15px 0;
-                }
-                .screen-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    border-bottom: 1px solid #eee;
-                    margin-bottom: 15px;
-                }
-                .screen-footer {
-                    border-top: 1px solid #eee;
-                    margin-top: 15px;
-                    text-align: center;
-                    color: #6c757d;
-                    font-size: 12px;
-                }
                 .main-content {
                     box-sizing: border-box;
                     padding: 0 20mm;
                 }
 
-                /* PRINT STYLES */
-                @media print {
-                    body { 
-                        background-color: #fff; 
-                        -webkit-print-color-adjust: exact;
-                        margin-top: 70px; /* Sabit başlık için boşluk bırakır */
-                        margin-bottom: 60px; /* Sabit altbilgi için boşluk bırakır */
-                    }
-                    .pdf-container { 
-                        margin: 0; 
-                        box-shadow: none; 
-                        padding: 0; 
-                        min-height: 100%;
-                    }
-                    .print-button-container { 
-                        display: none; 
-                    }
-                    .screen-header, .screen-footer {
-                        display: none;
-                    }
-                    
-                    /* Ortak yazdırma başlığı ve altbilgisi */
-                    .print-header {
-                        display: block;
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        right: 0;
-                        height: 40px;
-                        padding: 10px 20mm 5px 20mm;
-                        background-color: #fff;
-                        border-bottom: 1px solid #eee;
-                        -webkit-print-color-adjust: exact;
-                        z-index: 1000;
-                    }
-                    .print-footer {
-                        display: block;
-                        position: fixed;
-                        bottom: 0;
-                        left: 0;
-                        right: 0;
-                        height: 50px;
-                        padding: 5px 20mm;
-                        box-sizing: border-box;
-                        background-color: #fff;
-                        border-top: 1px solid #eee;
-                        font-size: 12px;
-                        color: #6c757d;
+                /* Yalnızca ekran görünümü için başlık ve altbilgi */
+                @media screen {
+                    .print-button-container {
                         text-align: center;
-                        -webkit-print-color-adjust: exact;
-                        z-index: 1000;
-                    }
-                    .print-header > div, .print-footer > div {
-                        width: 170mm;
-                        margin: 0 auto;
-                        height: 100%;
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                    }
-                    .print-header img {
-                        height: 35px;
-                    }
-                    
-                    /* main-content'ten padding'i kaldırıyoruz, çünkü boşluğu body'ye taşıdık */
-                    .main-content {
-                        padding-top: 0 !important; 
-                        padding-bottom: 0 !important;
-                    }
-
-                    .pdf-section-title {
-                        page-break-before: auto;
-                    }
-
-                    .progress-step-item {
-                        page-break-inside: avoid;
-                        margin-top: 0;
-                    }
-
-                    /* Sayfa numaralandırma */
-                    body {
-                        counter-reset: page-number;
-                    }
-                    .print-footer::after {
-                        counter-increment: page-number;
-                        content: "Sayfa " counter(page-number);
-                        display: block;
-                        text-align: center;
+                        margin-top: 20px;
+                        padding-bottom: 20px;
                     }
                 }
-                @media screen {
-                    .print-header, .print-footer {
+                
+                /* Yalnızca yazdırma için stiller */
+                @media print {
+                    body {
+                        background-color: #fff;
+                        -webkit-print-color-adjust: exact;
+                        margin: 0; 
+                    }
+                    .pdf-container {
+                        margin: 0;
+                        box-shadow: none;
+                        padding: 0;
+                        min-height: 100%;
+                    }
+                    .print-button-container {
                         display: none;
                     }
                 }
             </style>
         </head>
         <body>
-            <!-- Static header and footer for print -->
-            <div class="print-header">
-                <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-                    <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px; margin-right: 15px;">
-                    <h1 style="font-size: 20px; color: #005c9d; margin: 0; text-align: center; flex-grow: 1;">Proje Takip Formu</h1>
-                    <div style="font-size: 12px; color: #6c757d; text-align: right; margin-left: 15px;">
-                        ${formatDateForDisplay(new Date())}
-                    </div>
-                </div>
-            </div>
-            <div class="print-footer">
-                <!-- Sayfa numarası burada otomatik olarak eklenecek -->
-            </div>
-
             <div class="pdf-container">
-                <!-- Header and footer for screen view -->
-                <div class="screen-header">
-                    <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
-                    <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
-                    <div style="font-size: 14px; color: #555; text-align: right;">
-                        ${formatDateForDisplay(new Date())}
-                    </div>
-                </div>
+                <!-- Main content for both screen and print -->
                 <div class="main-content">
                     <!-- Section 1: Project Basic Information -->
                     <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
@@ -4317,7 +4242,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                 </div>
             </div>
             
-            <div class="print-button-container" style="text-align: center; margin-top: 20px; padding-bottom: 20px;">
+            <div class="print-button-container">
                 <button class="print-button" onclick="window.print()" style="background-color: #005c9d; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background-color 0.3s ease;">
                     <i class="fas fa-print"></i> PDF Kaydet / Yazdır
                 </button>
