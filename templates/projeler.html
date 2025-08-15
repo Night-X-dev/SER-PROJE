@@ -4094,7 +4094,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     margin-bottom: 60px;
                     margin-left: 20mm;
                     margin-right: 20mm;
-
+                    
                     /* Başlık içeriğini tanımlar */
                     @top-center {
                         content: '${project.project_name ? project.project_name.normalize('NFC').replace(/'/g, "\\'") : "Proje"} Raporu';
@@ -4128,22 +4128,8 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                 body { 
                     font-family: 'Segoe UI', Arial, sans-serif; 
                     margin: 0; 
-                    padding: 0; 
+                    padding: 0 20mm; /* İçerik için kenar boşlukları doğrudan body'de tanımlandı */
                     background-color: #f0f2f5;
-                }
-                .pdf-container {
-                    width: 210mm;
-                    margin: 0 auto;
-                    background: #fff;
-                    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                    min-height: 297mm;
-                    box-sizing: border-box;
-                    padding-top: 60px;
-                    padding-bottom: 60px;
-                }
-                .main-content {
-                    box-sizing: border-box;
-                    padding: 0 20mm;
                 }
 
                 /* Yalnızca ekran görünümü için başlık ve altbilgi */
@@ -4161,12 +4147,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         background-color: #fff;
                         -webkit-print-color-adjust: exact;
                         margin: 0; 
-                    }
-                    .pdf-container {
-                        margin: 0;
-                        box-shadow: none;
-                        padding: 0;
-                        min-height: 100%;
+                        padding: 0; /* Yazdırma görünümünde padding'i sıfırlıyoruz */
                     }
                     .print-button-container {
                         display: none;
@@ -4175,71 +4156,80 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             </style>
         </head>
         <body>
-            <div class="pdf-container">
-                <!-- Main content for both screen and print -->
-                <div class="main-content">
-                    <!-- Section 1: Project Basic Information -->
-                    <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
-                        <div style="display: flex; justify-content: space-between; font-size: 14px;">
-                            <div style="width: 50%;">
-                                <h3 style="margin: 0 0 10px 0; color: #005c9d; font-size: 16px;">
-                                    ${project.reference_no || '-'}
-                                </h3>
-                                <p><strong>Proje Yöneticisi:</strong> ${project.project_manager_name || '-'}</p>
-                                <p><strong>İşin Adı:</strong> ${project.project_name ? project.project_name.normalize('NFC') : '-'}</p>
-                                <p><strong>Müşteri Adı:</strong> ${project.customer_name || '-'}</p>
-                            </div>
-                            <div style="width: 50%; text-align: right;">
-                                <p style="margin: 0; font-weight: bold;">${getProjectStatusHtml(project.display_status)}</p>
-                                <p style="margin-top: 10px;"><strong>Sözleşme imzalanalı:</strong> ${calculateDaysSinceContract(project.contract_date)} gün oldu</p>
-                            </div>
+            <!-- Main content for both screen and print -->
+            <div>
+                <!-- Section 1: Project Basic Information -->
+                <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                        <div style="width: 50%;">
+                            <h3 style="margin: 0 0 10px 0; color: #005c9d; font-size: 16px;">
+                                ${project.reference_no || '-'}
+                            </h3>
+                            <p><strong>Proje Yöneticisi:</strong> ${project.project_manager_name || '-'}</p>
+                            <p><strong>İşin Adı:</strong> ${project.project_name ? project.project_name.normalize('NFC') : '-'}</p>
+                            <p><strong>Müşteri Adı:</strong> ${project.customer_name || '-'}</p>
+                        </div>
+                        <div style="width: 50%; text-align: right;">
+                            <p style="margin: 0; font-weight: bold;">${getProjectStatusHtml(project.display_status)}</p>
+                            <p style="margin-top: 10px;"><strong>Sözleşme imzalanalı:</strong> ${calculateDaysSinceContract(project.contract_date)} gün oldu</p>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Section 2: Project Duration and Progress -->
-                    <div style="border-top: 1px solid #ccc; margin-top: 20px; padding-top: 20px;">
-                        <div style="display: flex; justify-content: space-between; font-size: 14px;">
-                            <div style="width: 50%;">
-                                <p><strong>Sözleşme Tarihi:</strong> ${formatDateForDisplay(project.contract_date || '-')}</p>
-                                <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(project.start_date || '-')}</p>
-                                <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(project.end_date || '-')}</p>
-                                <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(project.real_end_date || '-')}</p>
-                            </div>
-                            <div style="width: 50%; text-align: right;">
-                                <p><strong>Planlanan Toplam Süre:</strong> ${progressBarData.totalPlannedDays || '-'} gün</p>
-                                <p><strong>Gecikme Toplam Süre:</strong> ${progressBarData.totalDelayedDays || '-'} gün</p>
-                                <p><strong>Gerçek Toplam Süre:</strong> ${progressBarData.totalRealDays || '-'} gün</p>
-                            </div>
+                <!-- Section 2: Project Duration and Progress -->
+                <div style="border-top: 1px solid #ccc; margin-top: 20px; padding-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                        <div style="width: 50%;">
+                            <p><strong>Sözleşme Tarihi:</strong> ${formatDateForDisplay(project.contract_date || '-')}</p>
+                            <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(project.start_date || '-')}</p>
+                            <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(project.end_date || '-')}</p>
+                            <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(project.real_end_date || '-')}</p>
                         </div>
-                        
-                        <h4 style="text-align: center; font-size: 16px; margin-top: 20px; color: #005c9d;">
-                            ${getProjectPhaseText(project.display_status)}
-                        </h4>
-                        
-                        <div style="height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px;">
-                            <div style="height: 100%; display: flex;">
-                                <div style="background-color: #4CAF50; width: ${progressBarData.completedPercentage}%;"></div>
-                                <div style="background-color: #f44336; width: ${progressBarData.delayPercentage}%;"></div>
-                                <div style="background-color: #ccc; width: ${progressBarData.remainingPercentage}%;"></div>
-                            </div>
-                        </div>
-                        <div style="font-size: 12px; margin-top: 5px; display: flex; justify-content: space-between;">
-                            <div style="text-align: left;"><span style="color: #4CAF50;">■</span> Tamamlanan Süre: ${progressBarData.totalRealDays} gün</div>
-                            <div style="text-align: center;"><span style="color: #f44336;">■</span> Gecikme Süresi: ${progressBarData.totalDelayedDays} gün</div>
-                            <div style="text-align: right;"><span style="color: #ccc;">■</span> Kalan Süre: ${progressBarData.totalPlannedDays - progressBarData.totalRealDays} gün</div>
+                        <div style="width: 50%; text-align: right;">
+                            <p><strong>Planlanan Toplam Süre:</strong> ${progressBarData.totalPlannedDays || '-'} gün</p>
+                            <p><strong>Gecikme Toplam Süre:</strong> ${progressBarData.totalDelayedDays || '-'} gün</p>
+                            <p><strong>Gerçek Toplam Süre:</strong> ${progressBarData.totalRealDays || '-'} gün</p>
                         </div>
                     </div>
                     
-                    <!-- Tüm Proje İlerleme Adımları -->
-                    ${allStepsHtml.length > 0 ? `
-                    <div style="margin-top: 20px; padding-top: 20px;">
-                        <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
-                        <div>
-                            ${allStepsHtml}
+                    <h4 style="text-align: center; font-size: 16px; margin-top: 20px; color: #005c9d;">
+                        ${getProjectPhaseText(project.display_status)}
+                    </h4>
+                    
+                    <div style="height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px;">
+                        <div style="height: 100%; display: flex;">
+                            <div style="background-color: #4CAF50; width: ${progressBarData.completedPercentage}%;"></div>
+                            <div style="background-color: #f44336; width: ${progressBarData.delayPercentage}%;"></div>
+                            <div style="background-color: #ccc; width: ${progressBarData.remainingPercentage}%;"></div>
                         </div>
                     </div>
-                    ` : ''}
+                    <div style="font-size: 12px; margin-top: 5px; display: flex; justify-content: space-between;">
+                        <div style="text-align: left;"><span style="color: #4CAF50;">■</span> Tamamlanan Süre: ${progressBarData.totalRealDays} gün</div>
+                        <div style="text-align: center;"><span style="color: #f44336;">■</span> Gecikme Süresi: ${progressBarData.totalDelayedDays} gün</div>
+                        <div style="text-align: right;"><span style="color: #ccc;">■</span> Kalan Süre: ${progressBarData.totalPlannedDays - progressBarData.totalRealDays} gün</div>
+                    </div>
                 </div>
+                
+                <!-- Tüm Proje İlerleme Adımları -->
+                ${allStepsHtml.length > 0 ? `
+                <div style="margin-top: 20px; padding-top: 20px;">
+                    <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
+                    <div>
+                        ${allStepsHtml}
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Sayfa geçişini test etmek için eklenen deneme metni -->
+                <p style="margin-top: 40px; text-align: justify; font-size: 14px; line-height: 1.6;">
+                    Yazdırma ayarlarının çok sayfalı bir çıktı oluşturabildiğini göstermek için bu örnek metin eklenmiştir. Bu metin, sayfanın sonuna ulaştığında yeni bir sayfaya geçiş yaparak, daha sonraki sayfalarda başlık ve altbilginin doğru şekilde göründüğünü kanıtlar. Bu metni kendi gerçek verinizle değiştirebilir veya projenizdeki mevcut verilerin birden fazla sayfa oluşturduğundan emin olduktan sonra tamamen kaldırabilirsiniz. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                </p>
             </div>
             
             <div class="print-button-container">
