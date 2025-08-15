@@ -4123,6 +4123,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                 @media print {
                     body { 
                         background-color: #fff; 
+                        -webkit-print-color-adjust: exact;
                     }
                     .pdf-container { 
                         margin: 0; 
@@ -4149,6 +4150,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         box-sizing: border-box;
                         background-color: #fff;
                         border-bottom: 1px solid #eee;
+                        -webkit-print-color-adjust: exact;
                     }
                     .print-footer {
                         display: block;
@@ -4164,6 +4166,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         font-size: 12px;
                         color: #6c757d;
                         text-align: center;
+                        -webkit-print-color-adjust: exact;
                     }
                     .print-header > div, .print-footer > div {
                         width: 170mm;
@@ -4182,6 +4185,17 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     .progress-step-item {
                         page-break-inside: avoid;
                     }
+
+                    /* Sayfa numaralandırması */
+                    body {
+                        counter-reset: page-number;
+                    }
+                    .print-footer::before {
+                        counter-increment: page-number;
+                        content: "Sayfa " counter(page-number);
+                        display: block;
+                        text-align: center;
+                    }
                 }
                 @media screen {
                     .print-header, .print-footer {
@@ -4191,7 +4205,22 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             </style>
         </head>
         <body>
+            <!-- Yazdırma için sabit başlık ve altbilgi -->
+            <div class="print-header">
+                <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                    <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px; margin-right: 15px;">
+                    <h1 style="font-size: 20px; color: #005c9d; margin: 0; text-align: center; flex-grow: 1;">Proje Takip Formu</h1>
+                    <div style="font-size: 12px; color: #6c757d; text-align: right; margin-left: 15px;">
+                        ${formatDateForDisplay(new Date())}
+                    </div>
+                </div>
+            </div>
+            <div class="print-footer">
+                <!-- Sayfa numarası burada otomatik olarak eklenecek -->
+            </div>
+
             <div class="pdf-container">
+                <!-- Ekranda görüntüleme için başlık ve altbilgi -->
                 <div class="screen-header">
                     <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
                     <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
