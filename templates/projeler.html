@@ -3895,13 +3895,12 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
     async function generateProjectPdf(project) {
     let progressSteps = [];
     let revisionCounts = {};
+    const stepsPerSubsequentPage = 5; // Sonraki sayfalarda gösterilecek adım sayısı. Bu değer ihtiyaca göre ayarlanabilir.
     
     try {
-        // API'den proje ilerleme adımlarını çek.
         const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
         if (progressResponse.ok) {
             progressSteps = await progressResponse.json();
-            console.log("Proje İlerleme Adımları Verisi:", progressSteps);
         } else {
             console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
         }   
@@ -3909,26 +3908,20 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         const revisionCountResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/revision-counts-by-step`);
         if (revisionCountResponse.ok) {
             revisionCounts = await revisionCountResponse.json();
-            console.log("Revizyon Sayıları API'den Gelen:", revisionCounts);
-            // DEBUG: Revizyon sayılarının anahtarlarını kontrol edelim.
-            console.log("Revizyon Sayıları Nesnesi Anahtarları:", Object.keys(revisionCounts));
         } else {
             console.error("Revizyon sayıları çekilirken hata oluştu. HTTP Status:", revisionCountResponse.status);
-            console.warn("Revizyon sayıları alınamadığından, varsayılan olarak 0 kullanılacak.");
         }
 
     } catch (e) {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
-    // Tarihleri görüntülemek için yardımcı fonksiyon.
+    // Yardımcı fonksiyonlar (değişmedi)
     const formatDateForDisplay = (dateStr) => {
         if (!dateStr || dateStr === '-') return '-';
         try {
             const date = new Date(dateStr);
-            if (isNaN(date.getTime())) {
-                throw new Error("Invalid date format");
-            }
+            if (isNaN(date.getTime())) throw new Error("Invalid date format");
             return date.toLocaleDateString('tr-TR');
         } catch (error) {
             console.error("Tarih formatı dönüştürülürken hata:", dateStr, error);
@@ -3936,7 +3929,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         }
     };
 
-    // Sözleşme tarihinden bu yana geçen gün sayısını hesaplayan yardımcı fonksiyon.
     const calculateDaysSinceContract = (contractDateStr) => {
         if (!contractDateStr) return 0;
         const contractDate = new Date(contractDateStr);
@@ -3945,7 +3937,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         return Math.floor(diffTime / (1000 * 60 * 60 * 24));
     };
 
-    // Proje durumunu renkle birlikte HTML olarak döndüren yardımcı fonksiyon.
     const getProjectStatusHtml = (statusText) => {
         const isDelayed = statusText && statusText.includes('Gecikmeli');
         const color = isDelayed ? 'red' : '#4CAF50';
@@ -3953,20 +3944,15 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         return `<span style="color: ${color}; font-weight: bold; margin: 0;">${text}</span>`;
     };
 
-    // Proje aşama metnini döndüren yardımcı fonksiyon.
     const getProjectPhaseText = (statusText) => {
-        if (!statusText) {
-            return 'Aşama bilgisi bulunamadı';
-        }
+        if (!statusText) return 'Aşama bilgisi bulunamadı';
         const phaseName = statusText.split('(')[0].trim();
         return `${phaseName} Aşamasında`;
     };
 
-    // Adım durumunu ve simgesini döndüren yardımcı fonksiyon.
     const getStepStatusHtml = (step) => {
         const today = new Date();
         const startDate = new Date(step.start_date);
-        
         let statusText = '';
         if (step.is_completed) {
             statusText = `Tamamlandı <i class="fas fa-check-circle" style="color: green;"></i>`;
@@ -3975,11 +3961,9 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         } else {
             statusText = `Devam Ediyor <i class="fas fa-spinner fa-spin" style="color: orange;"></i>`;
         }
-
         return statusText;
     };
 
-    // Planlanan süreyi gün olarak hesaplayan yardımcı fonksiyon.
     const calculatePlannedDuration = (startDateStr, endDateStr) => {
         if (!startDateStr || !endDateStr) return '-';
         const startDate = new Date(startDateStr);
@@ -3988,7 +3972,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
 
-    // Gerçekleşen süreyi gün olarak hesaplayan yardımcı fonksiyon.
     const calculateActualDuration = (startDateStr, realEndDateStr) => {
         if (!startDateStr) return '-';
         const startDate = new Date(startDateStr);
@@ -3997,26 +3980,21 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
 
-    // İlerleme çubuğu verilerini hesaplayan yardımcı fonksiyon.
     const calculateProgressBarData = (progressSteps) => {
         let totalPlannedDays = 0;
         let totalCompletedDays = 0;
         let totalDelayedDays = 0;
-
         const today = new Date();
 
         progressSteps.forEach(step => {
             const startDate = new Date(step.start_date);
             const endDate = new Date(step.end_date);
-            
             const plannedDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
             totalPlannedDays += plannedDays;
-
             if (step.is_completed) {
                 const realEndDate = new Date(step.real_end_date);
                 const stepCompletedDays = (realEndDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
                 totalCompletedDays += stepCompletedDays;
-
                 if (realEndDate > endDate) {
                     totalDelayedDays += (realEndDate.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24);
                 }
@@ -4026,7 +4004,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     totalCompletedDays += stepPassedDays;
                 }
             }
-
             totalDelayedDays += (step.delay_days || 0) + (step.custom_delay_days || 0);
         });
 
@@ -4057,9 +4034,13 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
     const progressBarData = calculateProgressBarData(progressSteps);
     const projectPhase = getProjectPhaseText(project.display_status);
 
-    // Yeni yapıya sahip PDF raporunun HTML içeriği.
-    const mainContentHtml = `
-        <!-- Part 1: Project Basic Info -->
+    const firstPageSteps = progressSteps.slice(0, 3);
+    const remainingSteps = progressSteps.slice(3);
+    const totalPages = 1 + Math.ceil(remainingSteps.length / stepsPerSubsequentPage);
+
+    // İlk sayfanın HTML içeriği (mevcut tasarım)
+    const firstPageContentHtml = `
+        <!-- Bölüm 1: Proje Temel Bilgileri -->
         <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
             <div style="display: flex; justify-content: space-between; font-size: 14px;">
                 <div style="width: 50%;">
@@ -4077,7 +4058,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             </div>
         </div>
 
-        <!-- Part 2: Project Time & Progress -->
+        <!-- Bölüm 2: Proje Süresi ve İlerleme -->
         <div style="border-top: 1px solid #ccc; margin-top: 20px; padding-top: 20px;">
             <div style="display: flex; justify-content: space-between; font-size: 14px;">
                 <div style="width: 50%;">
@@ -4111,23 +4092,13 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             </div>
         </div>
         
-        <!-- Project Progress Steps -->
+        <!-- Proje İş Adımları (İlk 3 tanesi) -->
         <div style="margin-top: 20px; padding-top: 20px;">
             <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
             <div>
-                ${progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => {
-                    // Adım ID'sinin varlığını kontrol et
-                    const stepId = step.progress_id; // Değişiklik burada yapıldı.
+                ${firstPageSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : firstPageSteps.map(step => {
+                    const stepId = step.progress_id;
                     const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
-                    
-                    console.log(`Adım ID'si: ${stepId}, Veri Tipi: ${typeof stepId}`);
-                    console.log(`Revizyon Sayısı için aranan anahtar: '${stepId}'`);
-                    console.log(`Bulunan revizyon sayısı: ${revisionCountForStep}`);
-                    
-                    if (!stepId) {
-                        console.warn(`Uyarı: Bu adımın ID'si eksik olduğu için revizyon sayısı eşleştirilemiyor.`);
-                    }
-
                     return `
                     <div class="progress-step-item" style="margin-bottom:12px;">
                         <div style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
@@ -4154,13 +4125,69 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         </div>
     `;
 
+    // Sonraki sayfalar için HTML içeriği (yeni tasarım)
+    let remainingPagesContentHtml = '';
+    let currentPage = 2; // Sayfa sayacı
+
+    for (let i = 0; i < remainingSteps.length; i += stepsPerSubsequentPage) {
+        const pageSteps = remainingSteps.slice(i, i + stepsPerSubsequentPage);
+        const pageNumber = currentPage++;
+
+        remainingPagesContentHtml += `
+            <div class="subsequent-page-content">
+                <!-- Yeni sayfa başlığı -->
+                <div class="print-header-subsequent">
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 170mm; margin: 0 auto; height: 100%;">
+                        <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 40px;">
+                        <h1 style="font-size: 20px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
+                        <div style="font-size: 12px; color: #555; text-align: right;">
+                            ${formatDateForDisplay(new Date())}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="main-content">
+                    <div class="pdf-section-title" style="font-size:16px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px; text-align:center;">
+                        <p style="margin: 0; font-size: 14px; font-weight: bold;">Referans Numarası: ${project.reference_no || '-'}</p>
+                        <i class="fas fa-tasks"></i> İş Gidişatı (devamı)
+                    </div>
+                    <div>
+                        ${pageSteps.map(step => {
+                            const stepId = step.progress_id;
+                            const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
+                            return `
+                            <div class="progress-step-item" style="margin-bottom:12px; border: 1px solid #eee; padding: 10px; border-radius: 8px;">
+                                <div style="font-weight:bold; font-size:14px; margin-bottom: 5px; margin-top: 0; display:flex; justify-content: space-between;">
+                                    ${step.title || 'Başlık bilgisi yok'} <span style="font-weight: normal; font-size: 12px;">${getStepStatusHtml(step)}</span>
+                                </div>
+                                <div style="font-size:12px; color:#555;">
+                                    <p style="margin: 0;"><strong>Planlanan Süre:</strong> ${calculatePlannedDuration(step.start_date, step.end_date)} gün</p>
+                                    <p style="margin: 0;"><strong>Revize Sayısı:</strong> ${revisionCountForStep}</p>
+                                </div>
+                            </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <!-- Yeni sayfa altbilgisi -->
+                <div class="print-footer-subsequent">
+                    <div style="text-align: right; width: 170mm; margin: 0 auto; padding-top: 5px; font-size: 12px; color: #6c757d;">
+                        ${pageNumber} / ${totalPages}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // HTML dosyasını yeni bir pencerede aç
     const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
     if (!newWindow) {
         showToast("PDF önizlemesi için yeni pencere açılamadı. Tarayıcınızın pop-up engelleyicisini kontrol edin.", true);
         return;
     }
 
-    newWindow.document.write(`
+    const fullHtmlContent = `
         <!DOCTYPE html>
         <html lang="tr">
         <head>
@@ -4169,36 +4196,31 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* Sayfa boyutu ve kenar boşlukları */
                 @page { 
                     size: A4; 
-                    margin: 0; /* Sayfa kenar boşluklarını sıfırla */
+                    margin: 0; 
                 }
-
                 body { 
                     font-family: 'Segoe UI', Arial, sans-serif; 
                     margin: 0; 
                     padding: 0; 
                     background-color: #f0f2f5;
                 }
-                
                 .pdf-container {
                     width: 210mm;
                     margin: 0 auto;
                     background: #fff;
                     box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                    min-height: 297mm; /* A4 sayfa yüksekliği */
+                    min-height: 297mm;
                     box-sizing: border-box;
-                    padding-top: 60px; /* Sabit başlık için boşluk */
-                    padding-bottom: 60px; /* Sabit altbilgi için boşluk */
+                    padding-top: 60px;
+                    padding-bottom: 60px;
                 }
-                
                 .screen-header, .screen-footer {
                     width: 170mm;
                     margin: 0 auto;
                     padding: 15px 0;
                 }
-
                 .screen-header {
                     display: flex;
                     justify-content: space-between;
@@ -4206,7 +4228,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     border-bottom: 1px solid #eee;
                     margin-bottom: 15px;
                 }
-
                 .screen-footer {
                     border-top: 1px solid #eee;
                     margin-top: 15px;
@@ -4214,12 +4235,10 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     color: #6c757d;
                     font-size: 12px;
                 }
-
                 .main-content {
                     box-sizing: border-box;
-                    padding: 0 20mm; /* İçerik için kenar boşlukları */
+                    padding: 0 20mm;
                 }
-                
                 @media print {
                     body { 
                         background-color: #fff; 
@@ -4227,18 +4246,15 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     .pdf-container { 
                         margin: 0; 
                         box-shadow: none; 
-                        padding: 0; /* Yazdırma için container padding'ini kaldır */
+                        padding: 0; 
                         min-height: 100%;
                     }
                     .print-button-container { 
                         display: none; 
                     }
-
                     .screen-header, .screen-footer {
                         display: none;
                     }
-                    
-                    /* Yazdırma sırasında her sayfada tekrar edecek olan başlık ve altbilgi */
                     .print-header {
                         display: block;
                         position: fixed;
@@ -4251,7 +4267,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         background-color: #fff;
                         border-bottom: 1px solid #eee;
                     }
-
                     .print-footer {
                         display: block;
                         position: fixed;
@@ -4267,7 +4282,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         color: #6c757d;
                         text-align: center;
                     }
-                    
                     .print-header > div, .print-footer > div {
                         width: 170mm;
                         margin: 0 auto;
@@ -4277,47 +4291,58 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         align-items: center;
                     }
 
-                    /* İçerik, başlık ve altbilgi ile çakışmayacak şekilde akacak */
                     .main-content {
-                        padding-top: 50px; /* Başlık kadar boşluk */
-                        padding-bottom: 50px; /* Altbilgi kadar boşluk */
+                        padding-top: 50px;
+                        padding-bottom: 50px;
+                    }
+
+                    .first-page {
+                        /* İlk sayfanın stilini koru */
                     }
                     
-                    /* Her sayfanın sonunda içerik bölünürken, içerik parçasının tamamı bir sonraki sayfaya geçer. */
+                    .subsequent-page-content {
+                        page-break-before: always;
+                    }
+                    
+                    .print-header-subsequent {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        height: 50px;
+                        padding: 5px 20mm;
+                        box-sizing: border-box;
+                        background-color: #fff;
+                        border-bottom: 1px solid #eee;
+                    }
+
+                    .print-footer-subsequent {
+                        position: fixed;
+                        bottom: 0;
+                        left: 0;
+                        right: 0;
+                        height: 50px;
+                        padding: 5px 20mm;
+                        box-sizing: border-box;
+                        background-color: #fff;
+                        border-top: 1px solid #eee;
+                        text-align: right;
+                    }
+
                     .progress-step-item {
                         page-break-inside: avoid;
                     }
                 }
-                
                 @media screen {
-                    .print-header, .print-footer {
+                    .print-header, .print-footer, .print-header-subsequent, .print-footer-subsequent {
                         display: none;
                     }
                 }
             </style>
         </head>
         <body>
-            <!-- Yazdırma sırasında her sayfada tekrar edecek olan başlık içeriği -->
-            <div class="print-header">
-                <div>
-                    <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 40px;">
-                    <h1 style="font-size: 20px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
-                    <div style="font-size: 12px; color: #555; text-align: right;">
-                        ${formatDateForDisplay(new Date())}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Yazdırma sırasında her sayfada tekrar edecek olan altbilgi içeriği -->
-            <div class="print-footer">
-                <div>
-                    <div style="font-weight: bold; margin-bottom: 5px;">Ser Elektrik Otomasyon Ticaret ve Sanayi Anonim Şirketi</div>
-                    <div>www.serelektrik.com.tr | info@serelektrik.com.tr</div>
-                </div>
-            </div>
-
-            <div class="pdf-container">
-                <!-- Ekran önizlemesi için başlık -->
+            <!-- İlk sayfa için ekran başlığı ve içeriği -->
+            <div class="pdf-container first-page">
                 <div class="screen-header">
                     <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
                     <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
@@ -4325,19 +4350,13 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         ${formatDateForDisplay(new Date())}
                     </div>
                 </div>
-
                 <div class="main-content">
-                    ${mainContentHtml}
-                </div>
-
-                <!-- Ekran önizlemesi için altbilgi -->
-                <div class="screen-footer">
-                    <div>
-                        <div style="font-weight: bold; margin-bottom: 5px;">Ser Elektrik Otomasyon Ticaret ve Sanayi Anonim Şirketi</div>
-                        <div>www.serelektrik.com.tr | info@serelektrik.com.tr</div>
-                    </div>
+                    ${firstPageContentHtml}
                 </div>
             </div>
+
+            <!-- Sonraki sayfalar için içerik -->
+            ${remainingPagesContentHtml}
             
             <div class="print-button-container" style="text-align: center; margin-top: 20px; padding-bottom: 20px;">
                 <button class="print-button" onclick="window.print()" style="background-color: #005c9d; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background-color 0.3s ease;">
@@ -4346,7 +4365,9 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             </div>
         </body>
         </html>
-    `);
+    `;
+
+    newWindow.document.write(fullHtmlContent);
     newWindow.document.close();
 
     newWindow.onload = () => {
