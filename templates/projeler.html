@@ -3892,35 +3892,52 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         }
     }
 
-// Bu fonksiyon, yeni düzeni ve istenen bilgileri içeren bir PDF raporu oluşturur.
+    // Bu fonksiyon, yeni düzeni ve istenen bilgileri içeren bir PDF raporu oluşturur.
+    // Bu fonksiyon, yeni düzeni ve istenen bilgileri içeren bir PDF raporu oluşturur.
 async function generateProjectPdf(project) {
     let progressSteps = [];
     let revisionCounts = {};
+    
+    // API'den gelen veriyi saklamak için değişkenler
+    let progressResponseData = null;
+    let revisionsResponseData = null;
+
     try {
         // API'den proje ilerleme adımlarını çek.
-        const response = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
-        if (response.ok) {
-            progressSteps = await response.json();
+        const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
+        if (progressResponse.ok) {
+            progressResponseData = await progressResponse.json();
+            progressSteps = progressResponseData;
+        } else {
+            console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
         }
 
-        // Revizyon sayılarını API'den çek ve ilgili projeye göre filtrele.
+        // Revizyon sayılarını API'den çek.
         // Backend'de `/api/projects/{id}/revisions` endpoint'i olmadığı için,
         // genel revizyon istekleri çekilip client tarafında filtreleniyor.
         const revisionResponse = await fetch(`${API_BASE_URL}/api/revision-requests`);
         if (revisionResponse.ok) {
-            const revisionsData = await revisionResponse.json();
-            const revisions = revisionsData.revisions || [];
-            
-            // Projeye ve ilerleme adımına göre revizyonları say
-            revisions.forEach(rev => {
-                // Sadece mevcut projenin ve ilgili ilerleme adımının revizyonlarını say
+            revisionsResponseData = await revisionResponse.json();
+        } else {
+            console.error("Revizyon istekleri çekilirken hata oluştu. HTTP Status:", revisionResponse.status);
+        }
+
+        // Revizyon verisi varsa, projeye ve ilerleme adımına göre revizyonları say.
+        if (revisionsResponseData && Array.isArray(revisionsResponseData.revisions)) {
+            // Sadece mevcut projenin revizyonlarını filtrele ve say.
+            revisionsResponseData.revisions.forEach(rev => {
                 if (rev.project_id === project.project_id && rev.progress_id) {
                     revisionCounts[rev.progress_id] = (revisionCounts[rev.progress_id] || 0) + 1;
                 }
             });
+        } else {
+            console.warn("Revizyon verisi bulunamadı veya beklenen formatta değil.");
+            // Debugging için ham veriyi log'layalım.
+            console.log("API'den gelen ham revizyon verisi:", revisionsResponseData);
         }
+
     } catch (e) {
-        console.error("Proje ilerleme adımları veya revizyonlar çekilirken hata oluştu:", e);
+        console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
     // Tarihleri görüntülemek için yardımcı fonksiyon.
@@ -3928,8 +3945,13 @@ async function generateProjectPdf(project) {
         if (!dateStr || dateStr === '-') return '-';
         try {
             const date = new Date(dateStr);
+            // Tarih geçersizse, hata fırlatır.
+            if (isNaN(date.getTime())) {
+                throw new Error("Invalid date format");
+            }
             return date.toLocaleDateString('tr-TR');
-        } catch {
+        } catch (error) {
+            console.error("Tarih formatı dönüştürülürken hata:", dateStr, error);
             return '-';
         }
     };
@@ -4118,7 +4140,7 @@ async function generateProjectPdf(project) {
                 ${progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => `
                     <div class="progress-step-item" style="margin-bottom:12px;">
                         <div style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
-                            ${step.title || ''} <span style="font-weight: normal; float: right;">${getStepStatusHtml(step)}</span>
+                            ${step.title || 'Başlık bilgisi yok'} <span style="font-weight: normal; float: right;">${getStepStatusHtml(step)}</span>
                         </div>
                         <div style="display:flex; justify-content:space-between; font-size:13px; color:#555;">
                             <div style="width:50%;">
@@ -4318,8 +4340,10 @@ async function generateProjectPdf(project) {
 
                 <!-- Ekran önizlemesi için altbilgi -->
                 <div class="screen-footer">
-                    <div style="font-weight: bold; margin-bottom: 5px;">Ser Elektrik Otomasyon Ticaret ve Sanayi Anonim Şirketi</div>
-                    <div>www.serelektrik.com.tr | info@serelektrik.com.tr</div>
+                    <div>
+                        <div style="font-weight: bold; margin-bottom: 5px;">Ser Elektrik Otomasyon Ticaret ve Sanayi Anonim Şirketi</div>
+                        <div>www.serelektrik.com.tr | info@serelektrik.com.tr</div>
+                    </div>
                 </div>
             </div>
             
@@ -4344,6 +4368,7 @@ async function generateProjectPdf(project) {
         );
     };
 }
+
 
     // Tüm projeleri PDF olarak dışa aktar
      async function exportAllProjectsToPdf() {
