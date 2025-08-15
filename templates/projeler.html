@@ -3915,7 +3915,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
-    // Yardımcı fonksiyonlar (değişmedi)
+    // Helper functions (no changes)
     const formatDateForDisplay = (dateStr) => {
         if (!dateStr || dateStr === '-') return '-';
         try {
@@ -4032,38 +4032,43 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
     const progressBarData = calculateProgressBarData(progressSteps);
 
-    const allStepsHtml = progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map((step, index) => {
-        const stepId = step.progress_id;
-        const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
-        let stepHtml = `
-        <div class="progress-step-item" style="margin-bottom:12px;">
-            <div style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
-                ${step.title || 'Başlık bilgisi yok'} <span style="font-weight: normal; float: right;">${getStepStatusHtml(step)}</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:13px; color:#555;">
-                <div style="width:50%;">
-                    <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(step.start_date || '-')}</p>
-                    <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(step.end_date || '-')}</p>
-                    <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(step.real_end_date || '-')}</p>
-                    <p><strong>Revize Sayısı:</strong> ${revisionCountForStep}</p>
-                </div>
-                <div style="width:50%; text-align:right;">
-                    <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.end_date)} gün</p>
-                    <p><strong>Gecikme Toplam Süre:</strong> ${(step.delay_days || 0) + (step.custom_delay_days || 0)} gün</p>
-                    <p><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.real_end_date)} gün</p>
-                </div>
-            </div>
-            ${step.description ? `<div style="font-size:13px; margin-top: 5px;">Açıklama: ${step.description}</div>` : ''}
-        </div>
-        `;
-        // Sadece ikinci iş adımından sonra sayfa sonu ekle
-        if (index === 1) {
-            stepHtml += `<div class="page-break-after"></div>`;
-        }
-        return stepHtml;
-    }).join('');
+    // Get the first two steps
+    const firstTwoSteps = progressSteps.slice(0, 2);
+    const remainingSteps = progressSteps.slice(2);
 
-    // HTML dosyasını yeni bir pencerede aç
+    const generateStepHtml = (steps) => {
+        if (steps.length === 0) return '';
+        return steps.map((step, index) => {
+            const stepId = step.progress_id;
+            const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
+            return `
+                <div class="progress-step-item" style="margin-bottom:12px;">
+                    <div style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
+                        ${step.title || 'Başlık bilgisi yok'} <span style="font-weight: normal; float: right;">${getStepStatusHtml(step)}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; color:#555;">
+                        <div style="width:50%;">
+                            <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(step.start_date || '-')}</p>
+                            <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(step.end_date || '-')}</p>
+                            <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(step.real_end_date || '-')}</p>
+                            <p><strong>Revize Sayısı:</strong> ${revisionCountForStep}</p>
+                        </div>
+                        <div style="width:50%; text-align:right;">
+                            <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.end_date)} gün</p>
+                            <p><strong>Gecikme Toplam Süre:</strong> ${(step.delay_days || 0) + (step.custom_delay_days || 0)} gün</p>
+                            <p><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.real_end_date)} gün</p>
+                        </div>
+                    </div>
+                    ${step.description ? `<div style="font-size:13px; margin-top: 5px;">Açıklama: ${step.description}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+    };
+
+    const firstPageStepsHtml = generateStepHtml(firstTwoSteps);
+    const remainingStepsHtml = generateStepHtml(remainingSteps);
+
+    // HTML file in a new window
     const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
     if (!newWindow) {
         showToast("PDF önizlemesi için yeni pencere açılamadı. Tarayıcınızın pop-up engelleyicisini kontrol edin.", true);
@@ -4123,12 +4128,12 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     padding: 0 20mm;
                 }
 
-                /* YAZDIRMA STİLLERİ */
+                /* PRINT STYLES */
                 @media print {
                     body { 
                         background-color: #fff; 
                         -webkit-print-color-adjust: exact;
-                        margin-top: 0; /* body'ye sabit marjin eklenmez, çünkü main-content'e özel padding ekledik */
+                        margin-top: 0;
                     }
                     .pdf-container { 
                         margin: 0; 
@@ -4143,7 +4148,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         display: none;
                     }
                     
-                    /* Ortak başlık ve altbilgi */
+                    /* Common header and footer for print */
                     .print-header {
                         display: block;
                         position: fixed;
@@ -4151,7 +4156,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         left: 0;
                         right: 0;
                         height: 50px;
-                        padding: 20px 20mm 5px 20mm; /* Üst boşluk artırıldı */
+                        padding: 30px 20mm 5px 20mm; /* Increased top padding */
                         box-sizing: border-box;
                         background-color: #fff;
                         border-bottom: 1px solid #eee;
@@ -4182,15 +4187,14 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         align-items: center;
                     }
                     .print-header img {
-                        height: 35px; /* Logo boyutu küçültüldü */
+                        height: 35px;
                     }
 
                     .main-content {
-                        padding-top: 70px; /* Başlık için yeterli boşluk bırakır */
+                        padding-top: 80px; /* Leave enough space for the header */
                         padding-bottom: 50px;
                     }
                     
-                    /* Bu yeni kural, içeriğin her yeni sayfada düzgün başlamasını sağlar */
                     .pdf-section-title {
                         page-break-before: always;
                     }
@@ -4202,8 +4206,8 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     .page-break-after {
                         page-break-after: always;
                     }
-
-                    /* Sayfa numaralandırması */
+                    
+                    /* Page numbering */
                     body {
                         counter-reset: page-number;
                     }
@@ -4222,7 +4226,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             </style>
         </head>
         <body>
-            <!-- Yazdırma için sabit başlık ve altbilgi -->
+            <!-- Static header and footer for print -->
             <div class="print-header">
                 <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                     <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px; margin-right: 15px;">
@@ -4233,11 +4237,11 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                 </div>
             </div>
             <div class="print-footer">
-                <!-- Sayfa numarası burada otomatik olarak eklenecek -->
+                <!-- Page number will be added here automatically -->
             </div>
 
             <div class="pdf-container">
-                <!-- Ekranda görüntüleme için başlık ve altbilgi -->
+                <!-- Header and footer for screen view -->
                 <div class="screen-header">
                     <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
                     <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
@@ -4246,7 +4250,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     </div>
                 </div>
                 <div class="main-content">
-                    <!-- Bölüm 1: Proje Temel Bilgileri -->
+                    <!-- Section 1: Project Basic Information -->
                     <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
                         <div style="display: flex; justify-content: space-between; font-size: 14px;">
                             <div style="width: 50%;">
@@ -4264,7 +4268,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         </div>
                     </div>
 
-                    <!-- Bölüm 2: Proje Süresi ve İlerleme -->
+                    <!-- Section 2: Project Duration and Progress -->
                     <div style="border-top: 1px solid #ccc; margin-top: 20px; padding-top: 20px;">
                         <div style="display: flex; justify-content: space-between; font-size: 14px;">
                             <div style="width: 50%;">
@@ -4298,13 +4302,26 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         </div>
                     </div>
                     
-                    <!-- Proje İş Adımları -->
+                    <!-- Project Progress Steps (First page) -->
+                    ${firstPageStepsHtml.length > 0 ? `
                     <div style="margin-top: 20px; padding-top: 20px;">
                         <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
                         <div>
-                            ${allStepsHtml}
+                            ${firstPageStepsHtml}
                         </div>
                     </div>
+                    ` : ''}
+
+                    <!-- Project Progress Steps (Remaining pages) -->
+                    ${remainingStepsHtml.length > 0 ? `
+                    <div class="page-break-after"></div>
+                    <div style="margin-top: 20px; padding-top: 20px;">
+                        <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
+                        <div>
+                            ${remainingStepsHtml}
+                        </div>
+                    </div>
+                    ` : ''}
                 </div>
             </div>
             
@@ -4331,7 +4348,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         );
     };
 }
-
 
 async function exportAllProjectsToPdf() {
         showToast("Tüm projeler PDF olarak hazırlanıyor...", false);
