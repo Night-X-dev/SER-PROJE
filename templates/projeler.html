@@ -3892,12 +3892,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         }
     }
 
-/**
- * Verilen proje nesnesi için bir PDF raporu önizlemesi oluşturur.
- * Proje verilerini API'den çeker ve bu verileri kullanarak yeni bir pencerede
- * yazdırılabilir bir HTML sayfası oluşturur.
- * @param {object} project - Raporu oluşturulacak proje nesnesi.
- */
+
  async function generateProjectPdf(project) {
     let progressSteps = [];
     let revisionCounts = {};
@@ -4089,7 +4084,9 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             <style>
                 @page { 
                     size: A4; 
-                    margin: 0; 
+                    /* Sayfanın üst ve alt kenar boşluklarını belirler */
+                    margin-top: 70px; 
+                    margin-bottom: 60px;
                 }
                 body { 
                     font-family: 'Segoe UI', Arial, sans-serif; 
@@ -4131,12 +4128,13 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     padding: 0 20mm;
                 }
 
-                /* PRINT STYLES */
+                /* YAZDIRMA STİLLERİ */
                 @media print {
                     body { 
                         background-color: #fff; 
                         -webkit-print-color-adjust: exact;
-                        margin-top: 0;
+                        /* BODY'nin kendi boşluklarını kaldırıyoruz */
+                        margin: 0; 
                     }
                     .pdf-container { 
                         margin: 0; 
@@ -4192,11 +4190,9 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         height: 35px;
                     }
                     
-                    /* BURADA DÜZELTME YAPILDI: Main içeriğin üst ve alt boşluğunu artırarak
-                       sabit başlık ve altbilginin altında kalmasını engelledik. */
+                    /* Burada düzeltme yapıldı: ana içerikten padding kaldırıldı */
                     .main-content {
-                        padding-top: 70px !important; 
-                        padding-bottom: 60px !important;
+                        padding: 0 20mm;
                     }
 
                     .pdf-section-title {
@@ -4325,7 +4321,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
     `;
 
     newWindow.document.write(fullHtmlContent);
-    newWindow.document.close();
+    newWindow.document.document.close();
 
     newWindow.onload = () => {
         // showToast ve addActivity fonksiyonlarının projenizin ana dosyasında tanımlı olduğunu varsayıyorum
