@@ -4032,11 +4032,10 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
     const progressBarData = calculateProgressBarData(progressSteps);
 
-    const allStepsHtml = progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => {
+    const allStepsHtml = progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map((step, index) => {
         const stepId = step.progress_id;
-        // Eğer step.title boşsa, "Başlık bilgisi yok" yazısını gösterir.
         const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
-        return `
+        let stepHtml = `
         <div class="progress-step-item" style="margin-bottom:12px;">
             <div style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
                 ${step.title || 'Başlık bilgisi yok'} <span style="font-weight: normal; float: right;">${getStepStatusHtml(step)}</span>
@@ -4057,6 +4056,11 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             ${step.description ? `<div style="font-size:13px; margin-top: 5px;">Açıklama: ${step.description}</div>` : ''}
         </div>
         `;
+        // Sadece ikinci iş adımından sonra sayfa sonu ekle
+        if (index === 1) {
+            stepHtml += `<div class="page-break-after"></div>`;
+        }
+        return stepHtml;
     }).join('');
 
     // HTML dosyasını yeni bir pencerede aç
@@ -4147,7 +4151,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         left: 0;
                         right: 0;
                         height: 50px;
-                        padding: 10px 20mm 5px 20mm;
+                        padding: 20px 20mm 5px 20mm; /* Üst boşluk artırıldı */
                         box-sizing: border-box;
                         background-color: #fff;
                         border-bottom: 1px solid #eee;
@@ -4193,6 +4197,10 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
                     .progress-step-item {
                         page-break-inside: avoid;
+                    }
+                    
+                    .page-break-after {
+                        page-break-after: always;
                     }
 
                     /* Sayfa numaralandırması */
@@ -4323,6 +4331,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         );
     };
 }
+
 
 async function exportAllProjectsToPdf() {
         showToast("Tüm projeler PDF olarak hazırlanıyor...", false);
