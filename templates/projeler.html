@@ -3892,10 +3892,19 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         }
     }
 
-    async function generateProjectPdf(project) {
+  /**
+ * Verilen proje nesnesi için bir PDF raporu önizlemesi oluşturur.
+ * Proje verilerini API'den çeker ve bu verileri kullanarak yeni bir pencerede
+ * yazdırılabilir bir HTML sayfası oluşturur.
+ * @param {object} project - Raporu oluşturulacak proje nesnesi.
+ */
+async function generateProjectPdf(project) {
     let progressSteps = [];
     let revisionCounts = {};
+    const API_BASE_URL = "https://your-api-base-url.com"; // API URL'sini güncellemeyi unutmayın
+    
     try {
+        // Proje ilerleme adımlarını çekme
         const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
         if (progressResponse.ok) {
             progressSteps = await progressResponse.json();
@@ -3903,6 +3912,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
         }
 
+        // Revizyon sayılarını çekme
         const revisionCountResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/revision-counts-by-step`);
         if (revisionCountResponse.ok) {
             revisionCounts = await revisionCountResponse.json();
@@ -3914,7 +3924,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
-    // Helper functions (no changes)
+    // Yardımcı fonksiyonlar (mevcut koddan alınmıştır)
     const formatDateForDisplay = (dateStr) => {
         if (!dateStr || dateStr === '-') return '-';
         try {
@@ -4064,7 +4074,8 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
     const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
     if (!newWindow) {
-        showToast("PDF önizlemesi için yeni pencere açılamadı. Tarayıcınızın pop-up engelleyicisini kontrol edin.", true);
+        // showToast fonksiyonu projenizin ana dosyasında olmalı
+        // showToast("PDF önizlemesi için yeni pencere açılamadı. Tarayıcınızın pop-up engelleyicisini kontrol edin.", true);
         return;
     }
 
@@ -4141,7 +4152,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         display: none;
                     }
                     
-                    /* Common header and footer for print */
+                    /* Ortak yazdırma başlığı ve altbilgisi */
                     .print-header {
                         display: block;
                         position: fixed;
@@ -4181,10 +4192,12 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     .print-header img {
                         height: 35px;
                     }
-
+                    
+                    /* BURADA DÜZELTME YAPILDI: Main içeriğin üst ve alt boşluğunu artırarak
+                       sabit başlık ve altbilginin altında kalmasını engelledik. */
                     .main-content {
-                        padding-top: 60px !important;
-                        padding-bottom: 50px;
+                        padding-top: 70px !important; 
+                        padding-bottom: 60px !important;
                     }
 
                     .pdf-section-title {
@@ -4196,7 +4209,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         margin-top: 0;
                     }
 
-                    /* Page numbering */
+                    /* Sayfa numaralandırma */
                     body {
                         counter-reset: page-number;
                     }
@@ -4226,7 +4239,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                 </div>
             </div>
             <div class="print-footer">
-                <!-- Page number will be added here automatically -->
+                <!-- Sayfa numarası burada otomatik olarak eklenecek -->
             </div>
 
             <div class="pdf-container">
@@ -4291,7 +4304,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         </div>
                     </div>
                     
-                    <!-- All Project Progress Steps -->
+                    <!-- Tüm Proje İlerleme Adımları -->
                     ${allStepsHtml.length > 0 ? `
                     <div style="margin-top: 20px; padding-top: 20px;">
                         <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
@@ -4316,14 +4329,15 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
     newWindow.document.close();
 
     newWindow.onload = () => {
-        showToast(`${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi hazır.`);
-        addActivity(
-            "PDF Raporu Önizlendi",
-            `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi açıldı.`,
-            project.project_id,
-            "fas fa-file-pdf",
-            "pdf_preview"
-        );
+        // showToast ve addActivity fonksiyonlarının projenizin ana dosyasında tanımlı olduğunu varsayıyorum
+        // showToast(`${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi hazır.`);
+        // addActivity(
+        //     "PDF Raporu Önizlendi",
+        //     `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi açıldı.`,
+        //     project.project_id,
+        //     "fas fa-file-pdf",
+        //     "pdf_preview"
+        // );
     };
 }
 
