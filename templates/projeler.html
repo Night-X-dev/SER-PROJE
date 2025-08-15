@@ -3897,25 +3897,18 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         let progressSteps = [];
         let revisionCounts = {};
         
-        // API'den gelen veriyi saklamak için değişkenler
-        let progressResponseData = null;
-        let revisionsResponseData = null;
-
         try {
             // API'den proje ilerleme adımlarını çek.
             const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
             if (progressResponse.ok) {
-                progressResponseData = await progressResponse.json();
-                progressSteps = progressResponseData;
+                progressSteps = await progressResponse.json();
+                console.log("Proje İlerleme Adımları Verisi (id kontrolü için):", progressSteps);
             } else {
                 console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
             }
             
-            // Yeni mantığa göre, her bir ilerleme adımı için revizyon sayısını getiren
-            // yeni API endpoint'ini çağırıyoruz.
             const revisionCountResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/revision-counts-by-step`);
             if (revisionCountResponse.ok) {
-                // Cevabı doğrudan revizyonCounts nesnesine atıyoruz.
                 revisionCounts = await revisionCountResponse.json();
                 console.log("Revizyon Sayıları API'den Gelen:", revisionCounts);
             } else {
@@ -3932,7 +3925,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             if (!dateStr || dateStr === '-') return '-';
             try {
                 const date = new Date(dateStr);
-                // Tarih geçersizse, hata fırlatır.
                 if (isNaN(date.getTime())) {
                     throw new Error("Invalid date format");
                 }
@@ -3965,7 +3957,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             if (!statusText) {
                 return 'Aşama bilgisi bulunamadı';
             }
-            // Parantez içindeki kısmı silip "Aşamasında" ekler.
             const phaseName = statusText.split('(')[0].trim();
             return `${phaseName} Aşamasında`;
         };
@@ -4004,7 +3995,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             const diffTime = endDate.getTime() - startDate.getTime();
             return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
         };
-
 
         // İlerleme çubuğu verilerini hesaplayan yardımcı fonksiyon.
         const calculateProgressBarData = (progressSteps) => {
@@ -4125,7 +4115,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                 <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
                 <div>
                     ${progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => {
-                        const revisionCountForStep = revisionCounts[String(step.id)] || 0;
+                        const revisionCountForStep = step.id ? (revisionCounts[String(step.id)] || 0) : 0;
                         console.log(`Adım ID'si: ${step.id}, Revizyon Sayısı: ${revisionCountForStep}`);
                         
                         return `
