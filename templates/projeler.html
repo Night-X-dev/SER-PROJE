@@ -3896,28 +3896,30 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 async function generateProjectPdf(project) {
     let progressSteps = [];
     let revisionCounts = {};
+    const API_BASE_URL = 'https://serotomasyon.tr/api'; // API URL'nizi buraya ekleyin.
+
     try {
         // API'den proje ilerleme adımlarını çek.
-        const response = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
+        const response = await fetch(`${API_BASE_URL}/projects/${project.project_id}/progress`);
         if (response.ok) {
             progressSteps = await response.json();
         }
 
         // Revizyon sayılarını API'den çek ve ilgili projeye göre filtrele.
-        // Backend'de `/api/projects/{id}/revisions` endpoint'i olmadığı için,
-        // genel revizyon istekleri çekilip client tarafında filtreleniyor.
         const revisionResponse = await fetch(`${API_BASE_URL}/api/revision-requests`);
         if (revisionResponse.ok) {
             const revisionsData = await revisionResponse.json();
             const revisions = revisionsData.revisions || [];
             
             // Projeye ve ilerleme adımına göre revizyonları say
-            revisions.forEach(rev => {
-                // Sadece mevcut projenin ve ilgili ilerleme adımının revizyonlarını say
-                if (rev.project_id === project.project_id && rev.progress_id) {
-                    revisionCounts[rev.progress_id] = (revisionCounts[rev.progress_id] || 0) + 1;
-                }
-            });
+            // rev.progress_id'nin geçerli bir değer olduğundan emin olmak için kontrol ekledik.
+            if (Array.isArray(revisions)) {
+                revisions.forEach(rev => {
+                    if (rev.project_id === project.project_id && rev.progress_id) {
+                        revisionCounts[rev.progress_id] = (revisionCounts[rev.progress_id] || 0) + 1;
+                    }
+                });
+            }
         }
     } catch (e) {
         console.error("Proje ilerleme adımları veya revizyonlar çekilirken hata oluştu:", e);
@@ -4265,8 +4267,8 @@ async function generateProjectPdf(project) {
 
                     /* İçerik, başlık ve altbilgi ile çakışmayacak şekilde akacak */
                     .main-content {
-                        padding-top: 50px; /* Başlık kadar boşluk */
-                        padding-bottom: 50px; /* Altbilgi kadar boşluk */
+                        padding-top: 60px; /* Başlık kadar boşluk */
+                        padding-bottom: 60px; /* Altbilgi kadar boşluk */
                     }
                     
                     /* Her sayfanın sonunda içerik bölünürken, içerik parçasının tamamı bir sonraki sayfaya geçer. */
@@ -4289,7 +4291,9 @@ async function generateProjectPdf(project) {
                     <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 40px;">
                     <h1 style="font-size: 20px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
                     <div style="font-size: 12px; color: #555; text-align: right;">
-                        ${formatDateForDisplay(new Date())}
+                        <p style="margin: 0;"><strong>Referans No:</strong> ${project.reference_no || '-'}</p>
+                        <p style="margin: 0;"><strong>Haysa No:</strong> ${project.haysa_no || '-'}</p>
+                        <p style="margin: 0;"><strong>Tarih:</strong> ${formatDateForDisplay(new Date())}</p>
                     </div>
                 </div>
             </div>
@@ -4335,13 +4339,18 @@ async function generateProjectPdf(project) {
 
     newWindow.onload = () => {
         showToast(`${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi hazır.`);
-        addActivity(
-            "PDF Raporu Önizlendi",
-            `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi açıldı.`,
-            project.project_id,
-            "fas fa-file-pdf",
-            "pdf_preview"
-        );
+        // addActivity fonksiyonunun var olduğu varsayımı
+        if (typeof addActivity === 'function') {
+            addActivity(
+                "PDF Raporu Önizlendi",
+                `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi açıldı.`,
+                project.project_id,
+                "fas fa-file-pdf",
+                "pdf_preview"
+            );
+        } else {
+            console.warn("addActivity fonksiyonu bulunamadı. Aktivite kaydı yapılamıyor.");
+        }
     };
 }
 
