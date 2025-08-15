@@ -3904,20 +3904,21 @@ async function generateProjectPdf(project) {
         }
 
         // Revizyon sayılarını API'den çek ve ilgili projeye göre filtrele.
-        // Backend'de `/api/projects/{id}/revisions` endpoint'i olmadığı için,
-        // genel revizyon istekleri çekilip client tarafında filtreleniyor.
-        const revisionResponse = await fetch(`${API_BASE_URL}/api/revision-requests`);
-        if (revisionResponse.ok) {
-            const revisionsData = await revisionResponse.json();
-            const revisions = revisionsData.revisions || [];
-            
-            // Projeye ve ilerleme adımına göre revizyonları say
-            revisions.forEach(rev => {
-                // Sadece mevcut projenin ve ilgili ilerleme adımının revizyonlarını say
-                if (rev.project_id === project.project_id && rev.progress_id) {
-                    revisionCounts[rev.progress_id] = (revisionCounts[rev.progress_id] || 0) + 1;
-                }
-            });
+        try {
+            const revisionResponse = await fetch(`${API_BASE_URL}/api/revision-requests?project_id=${project.project_id}`);
+            if (revisionResponse.ok) {
+                const revisionsData = await revisionResponse.json();
+                const revisions = revisionsData.revisions || [];
+                
+                // Projeye ve ilerleme adımına göre revizyonları say
+                revisions.forEach(rev => {
+                    if (rev.progress_id) {
+                        revisionCounts[rev.progress_id] = (revisionCounts[rev.progress_id] || 0) + 1;
+                    }
+                });
+            }
+        } catch (error) {
+            console.error("Revizyon bilgileri çekilirken hata:", error);
         }
     } catch (e) {
         console.error("Proje ilerleme adımları veya revizyonlar çekilirken hata oluştu:", e);
@@ -4207,14 +4208,22 @@ async function generateProjectPdf(project) {
                 }
                 
                 @media print {
-                    body { 
-                        background-color: #fff; 
+                    @page {
+                        margin: 20mm 15mm 20mm 15mm;
                     }
+                    
+                    body { 
+                        background-color: #fff;
+                        margin: 0;
+                        padding: 0;
+                    }
+                    
                     .pdf-container { 
-                        margin: 0; 
+                        margin: 0 auto; 
                         box-shadow: none; 
-                        padding: 0; /* Yazdırma için container padding'ini kaldır */
-                        min-height: 100%;
+                        padding: 0;
+                        width: 100%;
+                        max-width: 100%;
                     }
                     .print-button-container { 
                         display: none; 
@@ -4231,11 +4240,12 @@ async function generateProjectPdf(project) {
                         top: 0;
                         left: 0;
                         right: 0;
-                        height: 50px;
-                        padding: 5px 20mm;
+                        height: 40px;
+                        padding: 5px 0;
                         box-sizing: border-box;
                         background-color: #fff;
                         border-bottom: 1px solid #eee;
+                        z-index: 1000;
                     }
 
                     .print-footer {
@@ -4244,14 +4254,15 @@ async function generateProjectPdf(project) {
                         bottom: 0;
                         left: 0;
                         right: 0;
-                        height: 50px;
-                        padding: 5px 20mm;
+                        height: 30px;
+                        padding: 5px 0;
                         box-sizing: border-box;
                         background-color: #fff;
                         border-top: 1px solid #eee;
-                        font-size: 12px;
+                        font-size: 10px;
                         color: #6c757d;
                         text-align: center;
+                        z-index: 1000;
                     }
                     
                     .print-header > div, .print-footer > div {
@@ -4263,10 +4274,23 @@ async function generateProjectPdf(project) {
                         align-items: center;
                     }
 
-                    /* İçerik, başlık ve altbilgi ile çakışmayacak şekilde akacak */
+                    /* İçerik, başlık ve altbilgi ile çakışmayacak şekilde ayarla */
                     .main-content {
-                        padding-top: 50px; /* Başlık kadar boşluk */
-                        padding-bottom: 50px; /* Altbilgi kadar boşluk */
+                        padding-top: 45px; /* Başlık için boşluk */
+                        padding-bottom: 30px; /* Altbilgi için boşluk */
+                        margin: 0;
+                    }
+                    
+                    /* Sayfa sonlarında içerik bölünmesini önle */
+                    .progress-step-item {
+                        page-break-inside: avoid;
+                        break-inside: avoid;
+                    }
+                    
+                    /* Sayfa sonlarında başlıkları kaydır */
+                    h1, h2, h3, h4, .pdf-section-title {
+                        page-break-after: avoid;
+                        break-after: avoid;
                     }
                     
                     /* Her sayfanın sonunda içerik bölünürken, içerik parçasının tamamı bir sonraki sayfaya geçer. */
