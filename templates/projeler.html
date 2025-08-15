@@ -3917,6 +3917,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             if (revisionCountResponse.ok) {
                 // Cevabı doğrudan revizyonCounts nesnesine atıyoruz.
                 revisionCounts = await revisionCountResponse.json();
+                console.log("Revizyon Sayıları API'den Gelen:", revisionCounts);
             } else {
                 console.error("Revizyon sayıları çekilirken hata oluştu. HTTP Status:", revisionCountResponse.status);
                 console.warn("Revizyon sayıları alınamadığından, varsayılan olarak 0 kullanılacak.");
@@ -4123,7 +4124,11 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             <div style="margin-top: 20px; padding-top: 20px;">
                 <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
                 <div>
-                    ${progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => `
+                    ${progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => {
+                        const revisionCountForStep = revisionCounts[String(step.id)] || 0;
+                        console.log(`Adım ID'si: ${step.id}, Revizyon Sayısı: ${revisionCountForStep}`);
+                        
+                        return `
                         <div class="progress-step-item" style="margin-bottom:12px;">
                             <div style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
                                 ${step.title || 'Başlık bilgisi yok'} <span style="font-weight: normal; float: right;">${getStepStatusHtml(step)}</span>
@@ -4133,7 +4138,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                                     <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(step.start_date || '-')}</p>
                                     <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(step.end_date || '-')}</p>
                                     <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(step.real_end_date || '-')}</p>
-                                    <p><strong>Revize Sayısı:</strong> ${revisionCounts[step.id] || 0}</p>
+                                    <p><strong>Revize Sayısı:</strong> ${revisionCountForStep}</p>
                                 </div>
                                 <div style="width:50%; text-align:right;">
                                     <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.end_date)} gün</p>
@@ -4143,7 +4148,8 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                             </div>
                             ${step.description ? `<div style="font-size:13px; margin-top: 5px;">Açıklama: ${step.description}</div>` : ''}
                         </div>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </div>
             </div>
         `;
