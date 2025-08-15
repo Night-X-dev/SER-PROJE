@@ -4032,8 +4032,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
     };
 
     const progressBarData = calculateProgressBarData(progressSteps);
-    const projectPhase = getProjectPhaseText(project.display_status);
-
     const firstPageSteps = progressSteps.slice(0, 3);
     const remainingSteps = progressSteps.slice(3);
     const totalPages = 1 + Math.ceil(remainingSteps.length / stepsPerSubsequentPage);
@@ -4145,11 +4143,10 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         </div>
                     </div>
                 </div>
-
-                <div class="main-content">
+                <div class="main-content-subsequent">
+                    <p style="margin: 0; font-size: 14px; font-weight: bold; color: #005c9d;">Referans No: ${project.reference_no || '-'}</p>
                     <div class="pdf-section-title" style="font-size:16px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px; text-align:center;">
-                        <p style="margin: 0; font-size: 14px; font-weight: bold;">Referans Numarası: ${project.reference_no || '-'}</p>
-                        <i class="fas fa-tasks"></i> İş Gidişatı (devamı)
+                        İş Gidişatı (devamı)
                     </div>
                     <div>
                         ${pageSteps.map(step => {
@@ -4167,13 +4164,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                             </div>
                             `;
                         }).join('')}
-                    </div>
-                </div>
-
-                <!-- Yeni sayfa altbilgisi -->
-                <div class="print-footer-subsequent">
-                    <div style="text-align: right; width: 170mm; margin: 0 auto; padding-top: 5px; font-size: 12px; color: #6c757d;">
-                        ${pageNumber} / ${totalPages}
                     </div>
                 </div>
             </div>
@@ -4239,6 +4229,8 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     box-sizing: border-box;
                     padding: 0 20mm;
                 }
+
+                /* YAZDIRMA STİLLERİ */
                 @media print {
                     body { 
                         background-color: #fff; 
@@ -4255,6 +4247,8 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     .screen-header, .screen-footer {
                         display: none;
                     }
+                    
+                    /* İlk sayfa için başlık ve altbilgi */
                     .print-header {
                         display: block;
                         position: fixed;
@@ -4296,10 +4290,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         padding-bottom: 50px;
                     }
 
-                    .first-page {
-                        /* İlk sayfanın stilini koru */
-                    }
-                    
+                    /* Sonraki sayfalar için yeni stiller */
                     .subsequent-page-content {
                         page-break-before: always;
                     }
@@ -4314,6 +4305,11 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         box-sizing: border-box;
                         background-color: #fff;
                         border-bottom: 1px solid #eee;
+                    }
+
+                    .main-content-subsequent {
+                        box-sizing: border-box;
+                        padding: 70px 20mm 0 20mm; /* Başlıktan sonra boşluk bırak */
                     }
 
                     .print-footer-subsequent {
@@ -4341,7 +4337,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             </style>
         </head>
         <body>
-            <!-- İlk sayfa için ekran başlığı ve içeriği -->
+            <!-- İlk sayfa içeriği -->
             <div class="pdf-container first-page">
                 <div class="screen-header">
                     <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
@@ -4355,7 +4351,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                 </div>
             </div>
 
-            <!-- Sonraki sayfalar için içerik -->
+            <!-- Sonraki sayfa içeriği -->
             ${remainingPagesContentHtml}
             
             <div class="print-button-container" style="text-align: center; margin-top: 20px; padding-bottom: 20px;">
