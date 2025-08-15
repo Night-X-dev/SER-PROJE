@@ -3891,19 +3891,48 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             showToast("Hata", "İş adımı silinirken bir sorun oluştu.");
         }
     }
+/**
+ * @fileoverview This script generates an HTML-based preview of a project report,
+ * designed to be easily printed or saved as a PDF.
+ * It fetches project progress and revision data from an API and dynamically
+ * constructs a detailed, multi-page report.
+ */
 
-    async function generateProjectPdf(project) {
+/**
+ * Generates and displays an HTML-based PDF preview for a given project.
+ * The function fetches progress steps and revision counts, then dynamically
+ * creates an HTML document with project details, a progress bar, and a list of steps.
+ * It intelligently paginates the progress steps to ensure a balanced layout.
+ *
+ * @param {Object} project - The project object containing details like project_id, project_name, etc.
+ * @param {string} project.project_id - The unique ID of the project.
+ * @param {string} project.project_name - The name of the project.
+ * @param {string} project.reference_no - The project's reference number.
+ * @param {string} project.project_manager_name - The name of the project manager.
+ * @param {string} project.customer_name - The customer's name.
+ * @param {string} project.display_status - The current status text of the project.
+ * @param {string} project.contract_date - The contract signing date.
+ * @param {string} project.start_date - The planned start date.
+ * @param {string} project.end_date - The planned end date.
+ * @param {string} project.real_end_date - The actual end date.
+ * @param {Function} showToast - A utility function to display a toast notification.
+ * @param {Function} addActivity - A utility function to log a user activity.
+ */
+ async function generateProjectPdf(project) {
     let progressSteps = [];
     let revisionCounts = {};
-    
+    const API_BASE_URL = "https://your-api-base-url.com"; // Placeholder URL, replace with your actual API URL
+
     try {
+        // Fetch project progress steps from the API
         const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
         if (progressResponse.ok) {
             progressSteps = await progressResponse.json();
         } else {
             console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
-        }   
-        
+        }
+
+        // Fetch revision counts for each step from the API
         const revisionCountResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/revision-counts-by-step`);
         if (revisionCountResponse.ok) {
             revisionCounts = await revisionCountResponse.json();
@@ -3915,7 +3944,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
-    // Helper functions (no changes)
+    // Helper function to format a date string for display in Turkish locale
     const formatDateForDisplay = (dateStr) => {
         if (!dateStr || dateStr === '-') return '-';
         try {
@@ -3928,6 +3957,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         }
     };
 
+    // Helper function to calculate the number of days since the contract was signed
     const calculateDaysSinceContract = (contractDateStr) => {
         if (!contractDateStr) return 0;
         const contractDate = new Date(contractDateStr);
@@ -3936,6 +3966,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         return Math.floor(diffTime / (1000 * 60 * 60 * 24));
     };
 
+    // Helper function to generate an HTML string for project status with color coding
     const getProjectStatusHtml = (statusText) => {
         const isDelayed = statusText && statusText.includes('Gecikmeli');
         const color = isDelayed ? 'red' : '#4CAF50';
@@ -3943,12 +3974,14 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         return `<span style="color: ${color}; font-weight: bold; margin: 0;">${text}</span>`;
     };
 
+    // Helper function to extract and format the project phase from the status text
     const getProjectPhaseText = (statusText) => {
         if (!statusText) return 'Aşama bilgisi bulunamadı';
         const phaseName = statusText.split('(')[0].trim();
         return `${phaseName} Aşamasında`;
     };
 
+    // Helper function to generate an HTML string for a step's current status icon
     const getStepStatusHtml = (step) => {
         const today = new Date();
         const startDate = new Date(step.start_date);
@@ -3963,6 +3996,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         return statusText;
     };
 
+    // Helper function to calculate the planned duration of a step
     const calculatePlannedDuration = (startDateStr, endDateStr) => {
         if (!startDateStr || !endDateStr) return '-';
         const startDate = new Date(startDateStr);
@@ -3971,6 +4005,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
 
+    // Helper function to calculate the actual duration of a step
     const calculateActualDuration = (startDateStr, realEndDateStr) => {
         if (!startDateStr) return '-';
         const startDate = new Date(startDateStr);
@@ -3979,6 +4014,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
 
+    // Calculates data for the project progress bar
     const calculateProgressBarData = (progressSteps) => {
         let totalPlannedDays = 0;
         let totalCompletedDays = 0;
@@ -4010,11 +4046,11 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         let completedPercentage = (totalCompletedDays / totalDuration) * 100;
         let delayPercentage = (totalDelayedDays / totalDuration) * 100;
         let remainingPercentage = 100 - completedPercentage - delayPercentage;
-        
+
         completedPercentage = Math.round(Math.max(0, completedPercentage));
         delayPercentage = Math.round(Math.max(0, delayPercentage));
         remainingPercentage = Math.round(Math.max(0, remainingPercentage));
-        
+
         const totalPercentage = completedPercentage + delayPercentage + remainingPercentage;
         if (totalPercentage !== 100) {
             remainingPercentage += 100 - totalPercentage;
@@ -4032,10 +4068,13 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
     const progressBarData = calculateProgressBarData(progressSteps);
 
-    // Get the first two steps
-    const firstTwoSteps = progressSteps.slice(0, 2);
-    const remainingSteps = progressSteps.slice(2);
+    // --- LOGIC CHANGE: DYNAMICALLY SPLIT STEPS FOR PAGINATION ---
+    // Instead of a fixed number, we'll place the first 4 steps on the initial page
+    // to better utilize the space. The rest will go on subsequent pages.
+    const firstPageSteps = progressSteps.slice(0, 4);
+    const remainingSteps = progressSteps.slice(4);
 
+    // Helper function to generate HTML for a list of steps
     const generateStepHtml = (steps) => {
         if (steps.length === 0) return '';
         return steps.map((step, index) => {
@@ -4065,16 +4104,17 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         }).join('');
     };
 
-    const firstPageStepsHtml = generateStepHtml(firstTwoSteps);
+    const firstPageStepsHtml = generateStepHtml(firstPageSteps);
     const remainingStepsHtml = generateStepHtml(remainingSteps);
 
-    // HTML file in a new window
+    // Open a new window to display the PDF preview
     const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
     if (!newWindow) {
         showToast("PDF önizlemesi için yeni pencere açılamadı. Tarayıcınızın pop-up engelleyicisini kontrol edin.", true);
         return;
     }
 
+    // Main HTML content for the PDF preview
     const fullHtmlContent = `
         <!DOCTYPE html>
         <html lang="tr">
@@ -4084,14 +4124,14 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                @page { 
-                    size: A4; 
-                    margin: 0; 
+                @page {
+                    size: A4;
+                    margin: 0;
                 }
-                body { 
-                    font-family: 'Segoe UI', Arial, sans-serif; 
-                    margin: 0; 
-                    padding: 0; 
+                body {
+                    font-family: 'Segoe UI', Arial, sans-serif;
+                    margin: 0;
+                    padding: 0;
                     background-color: #f0f2f5;
                 }
                 .pdf-container {
@@ -4130,24 +4170,24 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
                 /* PRINT STYLES */
                 @media print {
-                    body { 
-                        background-color: #fff; 
+                    body {
+                        background-color: #fff;
                         -webkit-print-color-adjust: exact;
                         margin-top: 0;
                     }
-                    .pdf-container { 
-                        margin: 0; 
-                        box-shadow: none; 
-                        padding: 0; 
+                    .pdf-container {
+                        margin: 0;
+                        box-shadow: none;
+                        padding: 0;
                         min-height: 100%;
                     }
-                    .print-button-container { 
-                        display: none; 
+                    .print-button-container {
+                        display: none;
                     }
                     .screen-header, .screen-footer {
                         display: none;
                     }
-                    
+
                     /* Common header and footer for print */
                     .print-header {
                         display: block;
@@ -4194,7 +4234,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         padding-top: 80px; /* Leave enough space for the header */
                         padding-bottom: 50px;
                     }
-                    
+
                     .pdf-section-title {
                         page-break-before: always;
                     }
@@ -4202,11 +4242,11 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     .progress-step-item {
                         page-break-inside: avoid;
                     }
-                    
+
                     .page-break-after {
                         page-break-after: always;
                     }
-                    
+
                     /* Page numbering */
                     body {
                         counter-reset: page-number;
@@ -4283,11 +4323,11 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                                 <p><strong>Gerçek Toplam Süre:</strong> ${progressBarData.totalRealDays || '-'} gün</p>
                             </div>
                         </div>
-                        
+
                         <h4 style="text-align: center; font-size: 16px; margin-top: 20px; color: #005c9d;">
                             ${getProjectPhaseText(project.display_status)}
                         </h4>
-                        
+
                         <div style="height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px;">
                             <div style="height: 100%; display: flex;">
                                 <div style="background-color: #4CAF50; width: ${progressBarData.completedPercentage}%;"></div>
@@ -4301,7 +4341,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                             <div style="text-align: right;"><span style="color: #ccc;">■</span> Kalan Süre: ${progressBarData.totalPlannedDays - progressBarData.totalRealDays} gün</div>
                         </div>
                     </div>
-                    
+
                     <!-- Project Progress Steps (First page) -->
                     ${firstPageStepsHtml.length > 0 ? `
                     <div style="margin-top: 20px; padding-top: 20px;">
@@ -4324,7 +4364,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     ` : ''}
                 </div>
             </div>
-            
+
             <div class="print-button-container" style="text-align: center; margin-top: 20px; padding-bottom: 20px;">
                 <button class="print-button" onclick="window.print()" style="background-color: #005c9d; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background-color 0.3s ease;">
                     <i class="fas fa-print"></i> PDF Kaydet / Yazdır
