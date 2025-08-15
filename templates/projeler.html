@@ -3892,12 +3892,12 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         }
     }
 
-    // Bu fonksiyon, yeni düzeni ve istenen bilgileri içeren bir PDF raporu oluşturur.
-    // Bu fonksiyon, yeni düzeni ve istenen bilgileri içeren bir PDF raporu oluşturur.
+// Bu fonksiyonu, yukarıda belirtilen yeni Flask endpoint'ini kullanacak şekilde güncelledik.
+// İstemci tarafında filtreleme yapmak yerine, tüm revizyon sayılarını tek bir API çağrısıyla alıyoruz.
 async function generateProjectPdf(project) {
     let progressSteps = [];
     let revisionCounts = {};
-    
+
     // API'den gelen veriyi saklamak için değişkenler
     let progressResponseData = null;
     let revisionsResponseData = null;
@@ -3912,28 +3912,15 @@ async function generateProjectPdf(project) {
             console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
         }
 
-        // Revizyon sayılarını API'den çek.
-        // Backend'de `/api/projects/{id}/revisions` endpoint'i olmadığı için,
-        // genel revizyon istekleri çekilip client tarafında filtreleniyor.
-        const revisionResponse = await fetch(`${API_BASE_URL}/api/revision-requests`);
-        if (revisionResponse.ok) {
-            revisionsResponseData = await revisionResponse.json();
+        // Revizyon sayılarını adım bazlı yeni API endpoint'inden çek.
+        const revisionCountsResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/revision-counts-by-step`);
+        if (revisionCountsResponse.ok) {
+            // API'den gelen veriyi doğrudan revisionCounts nesnesine atıyoruz.
+            // Örnek: { "1": 5, "2": 3 }
+            revisionCounts = await revisionCountsResponse.json();
         } else {
-            console.error("Revizyon istekleri çekilirken hata oluştu. HTTP Status:", revisionResponse.status);
-        }
-
-        // Revizyon verisi varsa, projeye ve ilerleme adımına göre revizyonları say.
-        if (revisionsResponseData && Array.isArray(revisionsResponseData.revisions)) {
-            // Sadece mevcut projenin revizyonlarını filtrele ve say.
-            revisionsResponseData.revisions.forEach(rev => {
-                if (rev.project_id === project.project_id && rev.progress_id) {
-                    revisionCounts[rev.progress_id] = (revisionCounts[rev.progress_id] || 0) + 1;
-                }
-            });
-        } else {
-            console.warn("Revizyon verisi bulunamadı veya beklenen formatta değil.");
-            // Debugging için ham veriyi log'layalım.
-            console.log("API'den gelen ham revizyon verisi:", revisionsResponseData);
+            console.error("Revizyon sayıları çekilirken hata oluştu. HTTP Status:", revisionCountsResponse.status);
+            revisionCounts = {}; // Hata durumunda boş bir nesne ile devam et
         }
 
     } catch (e) {
@@ -3987,7 +3974,7 @@ async function generateProjectPdf(project) {
     const getStepStatusHtml = (step) => {
         const today = new Date();
         const startDate = new Date(step.start_date);
-        
+
         let statusText = '';
         if (step.is_completed) {
             statusText = `Tamamlandı <i class="fas fa-check-circle" style="color: green;"></i>`;
@@ -4030,7 +4017,7 @@ async function generateProjectPdf(project) {
         progressSteps.forEach(step => {
             const startDate = new Date(step.start_date);
             const endDate = new Date(step.end_date);
-            
+
             const plannedDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
             totalPlannedDays += plannedDays;
 
@@ -4056,11 +4043,11 @@ async function generateProjectPdf(project) {
         let completedPercentage = (totalCompletedDays / totalDuration) * 100;
         let delayPercentage = (totalDelayedDays / totalDuration) * 100;
         let remainingPercentage = 100 - completedPercentage - delayPercentage;
-        
+
         completedPercentage = Math.round(Math.max(0, completedPercentage));
         delayPercentage = Math.round(Math.max(0, delayPercentage));
         remainingPercentage = Math.round(Math.max(0, remainingPercentage));
-        
+
         const totalPercentage = completedPercentage + delayPercentage + remainingPercentage;
         if (totalPercentage !== 100) {
             remainingPercentage += 100 - totalPercentage;
@@ -4081,85 +4068,85 @@ async function generateProjectPdf(project) {
 
     // Yeni yapıya sahip PDF raporunun HTML içeriği.
     const mainContentHtml = `
-        <!-- Part 1: Project Basic Info -->
-        <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
-            <div style="display: flex; justify-content: space-between; font-size: 14px;">
-                <div style="width: 50%;">
-                    <h3 style="margin: 0 0 10px 0; color: #005c9d; font-size: 16px;">
-                        ${project.reference_no || '-'}
-                    </h3>
-                    <p><strong>Proje Yöneticisi:</strong> ${project.project_manager_name || '-'}</p>
-                    <p><strong>İşin Adı:</strong> ${project.project_name ? project.project_name.normalize('NFC') : '-'}</p>
-                    <p><strong>Müşteri Adı:</strong> ${project.customer_name || '-'}</p>
-                </div>
-                <div style="width: 50%; text-align: right;">
-                    <p style="margin: 0; font-weight: bold;">${getProjectStatusHtml(project.display_status)}</p>
-                    <p style="margin-top: 10px;"><strong>Sözleşme imzalanalı:</strong> ${calculateDaysSinceContract(project.contract_date)} gün oldu</p>
-                </div>
+    <!-- Part 1: Project Basic Info -->
+    <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
+        <div style="display: flex; justify-content: space-between; font-size: 14px;">
+            <div style="width: 50%;">
+                <h3 style="margin: 0 0 10px 0; color: #005c9d; font-size: 16px;">
+                    ${project.reference_no || '-'}
+                </h3>
+                <p><strong>Proje Yöneticisi:</strong> ${project.project_manager_name || '-'}</p>
+                <p><strong>İşin Adı:</strong> ${project.project_name ? project.project_name.normalize('NFC') : '-'}</p>
+                <p><strong>Müşteri Adı:</strong> ${project.customer_name || '-'}</p>
+            </div>
+            <div style="width: 50%; text-align: right;">
+                <p style="margin: 0; font-weight: bold;">${getProjectStatusHtml(project.display_status)}</p>
+                <p style="margin-top: 10px;"><strong>Sözleşme imzalanalı:</strong> ${calculateDaysSinceContract(project.contract_date)} gün oldu</p>
             </div>
         </div>
+    </div>
 
-        <!-- Part 2: Project Time & Progress -->
-        <div style="border-top: 1px solid #ccc; margin-top: 20px; padding-top: 20px;">
-            <div style="display: flex; justify-content: space-between; font-size: 14px;">
-                <div style="width: 50%;">
-                    <p><strong>Sözleşme Tarihi:</strong> ${formatDateForDisplay(project.contract_date || '-')}</p>
-                    <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(project.start_date || '-')}</p>
-                    <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(project.end_date || '-')}</p>
-                    <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(project.real_end_date || '-')}</p>
-                </div>
-                <div style="width: 50%; text-align: right;">
-                    <p><strong>Planlanan Toplam Süre:</strong> ${progressBarData.totalPlannedDays || '-'} gün</p>
-                    <p><strong>Gecikme Toplam Süre:</strong> ${progressBarData.totalDelayedDays || '-'} gün</p>
-                    <p><strong>Gerçek Toplam Süre:</strong> ${progressBarData.totalRealDays || '-'} gün</p>
-                </div>
+    <!-- Part 2: Project Time & Progress -->
+    <div style="border-top: 1px solid #ccc; margin-top: 20px; padding-top: 20px;">
+        <div style="display: flex; justify-content: space-between; font-size: 14px;">
+            <div style="width: 50%;">
+                <p><strong>Sözleşme Tarihi:</strong> ${formatDateForDisplay(project.contract_date || '-')}</p>
+                <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(project.start_date || '-')}</p>
+                <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(project.end_date || '-')}</p>
+                <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(project.real_end_date || '-')}</p>
             </div>
-            
-            <h4 style="text-align: center; font-size: 16px; margin-top: 20px; color: #005c9d;">
-                ${getProjectPhaseText(project.display_status)}
-            </h4>
-            
-            <div style="height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px;">
-                <div style="height: 100%; display: flex;">
-                    <div style="background-color: #4CAF50; width: ${progressBarData.completedPercentage}%;"></div>
-                    <div style="background-color: #f44336; width: ${progressBarData.delayPercentage}%;"></div>
-                    <div style="background-color: #ccc; width: ${progressBarData.remainingPercentage}%;"></div>
-                </div>
-            </div>
-            <div style="font-size: 12px; margin-top: 5px; display: flex; justify-content: space-between;">
-                <div style="text-align: left;"><span style="color: #4CAF50;">■</span> Tamamlanan Süre: ${progressBarData.totalRealDays} gün</div>
-                <div style="text-align: center;"><span style="color: #f44336;">■</span> Gecikme Süresi: ${progressBarData.totalDelayedDays} gün</div>
-                <div style="text-align: right;"><span style="color: #ccc;">■</span> Kalan Süre: ${progressBarData.totalPlannedDays - progressBarData.totalRealDays} gün</div>
+            <div style="width: 50%; text-align: right;">
+                <p><strong>Planlanan Toplam Süre:</strong> ${progressBarData.totalPlannedDays || '-'} gün</p>
+                <p><strong>Gecikme Toplam Süre:</strong> ${progressBarData.totalDelayedDays || '-'} gün</p>
+                <p><strong>Gerçek Toplam Süre:</strong> ${progressBarData.totalRealDays || '-'} gün</p>
             </div>
         </div>
         
-        <!-- Project Progress Steps -->
-        <div style="margin-top: 20px; padding-top: 20px;">
-            <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
-            <div>
-                ${progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => `
-                    <div class="progress-step-item" style="margin-bottom:12px;">
-                        <div style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
-                            ${step.title || 'Başlık bilgisi yok'} <span style="font-weight: normal; float: right;">${getStepStatusHtml(step)}</span>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; font-size:13px; color:#555;">
-                            <div style="width:50%;">
-                                <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(step.start_date || '-')}</p>
-                                <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(step.end_date || '-')}</p>
-                                <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(step.real_end_date || '-')}</p>
-                                <p><strong>Revize Sayısı:</strong> ${revisionCounts[step.id] || 0}</p>
-                            </div>
-                            <div style="width:50%; text-align:right;">
-                                <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.end_date)} gün</p>
-                                <p><strong>Gecikme Toplam Süre:</strong> ${(step.delay_days || 0) + (step.custom_delay_days || 0)} gün</p>
-                                <p><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.real_end_date)} gün</p>
-                            </div>
-                        </div>
-                        ${step.description ? `<div style="font-size:13px; margin-top: 5px;">Açıklama: ${step.description}</div>` : ''}
-                    </div>
-                `).join('')}
+        <h4 style="text-align: center; font-size: 16px; margin-top: 20px; color: #005c9d;">
+            ${getProjectPhaseText(project.display_status)}
+        </h4>
+        
+        <div style="height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px;">
+            <div style="height: 100%; display: flex;">
+                <div style="background-color: #4CAF50; width: ${progressBarData.completedPercentage}%;"></div>
+                <div style="background-color: #f44336; width: ${progressBarData.delayPercentage}%;"></div>
+                <div style="background-color: #ccc; width: ${progressBarData.remainingPercentage}%;"></div>
             </div>
         </div>
+        <div style="font-size: 12px; margin-top: 5px; display: flex; justify-content: space-between;">
+            <div style="text-align: left;"><span style="color: #4CAF50;">■</span> Tamamlanan Süre: ${progressBarData.totalRealDays} gün</div>
+            <div style="text-align: center;"><span style="color: #f44336;">■</span> Gecikme Süresi: ${progressBarData.totalDelayedDays} gün</div>
+            <div style="text-align: right;"><span style="color: #ccc;">■</span> Kalan Süre: ${progressBarData.totalPlannedDays - progressBarData.totalRealDays} gün</div>
+        </div>
+    </div>
+    
+    <!-- Project Progress Steps -->
+    <div style="margin-top: 20px; padding-top: 20px;">
+        <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
+        <div>
+            ${progressSteps.length === 0 ? '<p>İş adımı bulunamadı.</p>' : progressSteps.map(step => `
+                <div class="progress-step-item" style="margin-bottom:12px;">
+                    <div style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
+                        ${step.title || 'Başlık bilgisi yok'} <span style="font-weight: normal; float: right;">${getStepStatusHtml(step)}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; color:#555;">
+                        <div style="width:50%;">
+                            <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(step.start_date || '-')}</p>
+                            <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(step.end_date || '-')}</p>
+                            <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(step.real_end_date || '-')}</p>
+                            <p><strong>Revize Sayısı:</strong> ${revisionCounts[step.id] || 0}</p>
+                        </div>
+                        <div style="width:50%; text-align:right;">
+                            <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.end_date)} gün</p>
+                            <p><strong>Gecikme Toplam Süre:</strong> ${(step.delay_days || 0) + (step.custom_delay_days || 0)} gün</p>
+                            <p><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.real_end_date)} gün</p>
+                        </div>
+                    </div>
+                    ${step.description ? `<div style="font-size:13px; margin-top: 5px;">Açıklama: ${step.description}</div>` : ''}
+                </div>
+            `).join('')}
+        </div>
+    </div>
     `;
 
     const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');

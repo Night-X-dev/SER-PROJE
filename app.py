@@ -4184,3 +4184,32 @@ def complete_progress_step(progress_id):
     finally:
         if connection:
             connection.close()
+@app.route('/api/projects/<int:project_id>/revision-counts-by-step', methods=['GET'])
+def get_revision_counts_by_step(project_id):
+    """
+    Belirtilen proje için her bir ilerleme adımı bazında revizyon sayısını döndürür.
+    """
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            # SQL sorgusu ile projenin revizyonlarını progress_id'ye göre gruplayarak sayıyoruz.
+            sql = """
+                SELECT progress_id, COUNT(*) AS revision_count
+                FROM revision_requests 
+                WHERE project_id = %s
+                GROUP BY progress_id
+            """
+            cursor.execute(sql, (project_id,))
+            results = cursor.fetchall()
+
+            # Sonuçları progress_id'yi anahtar, sayıyı değer olarak içeren bir dictionary'e dönüştürüyoruz.
+            revision_counts = {str(row['progress_id']): row['revision_count'] for row in results}
+
+        return jsonify(revision_counts), 200
+    except Exception as e:
+        print(f"API hatası: Adım bazlı revizyon sayısı çekilemedi. Hata: {e}")
+        return jsonify({"error": "Revizyon sayıları alınırken bir hata oluştu."}), 500
+    finally:
+        if conn:
+            conn.close()
