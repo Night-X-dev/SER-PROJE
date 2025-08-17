@@ -3903,7 +3903,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
     let revisionCounts = {};
     
     try {
-        // Proje ilerleme adımlarını çekme
+        // Fetch project progress steps
         const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
         if (progressResponse.ok) {
             progressSteps = await progressResponse.json();
@@ -3917,7 +3917,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
         }
         
-        // Revizyon sayılarını çekme
+        // Fetch revision counts
         const revisionCountResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/revision-counts-by-step`);
         if (revisionCountResponse.ok) {
             revisionCounts = await revisionCountResponse.json();
@@ -3928,7 +3928,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
-    // Yardımcı fonksiyonlar (mevcut koddan alınmıştır)
+    // Helper functions (taken from existing code)
     const formatDateForDisplay = (dateStr) => {
         if (!dateStr || dateStr === '-') return '-';
         try {
@@ -4145,11 +4145,12 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
                 /* PRINT STYLES */
                 @media print {
+                    /* Header ve footer için uygun boşluk bırakır */
                     body { 
                         background-color: #fff; 
                         -webkit-print-color-adjust: exact;
-                        margin-top: 70px; /* Sabit başlık için boşluk bırakır */
-                        margin-bottom: 60px; /* Sabit altbilgi için boşluk bırakır */
+                        margin-top: 70px; /* Header yüksekliği */
+                        margin-bottom: 60px; /* Footer yüksekliği */
                     }
                     .pdf-container { 
                         margin: 0; 
@@ -4164,7 +4165,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         display: none;
                     }
                     
-                    /* Ortak yazdırma başlığı ve altbilgisi */
+                    /* Common print header and footer */
                     /* Header styling */
                     /* Fixed header that appears on each printed page */
                     .print-header {
@@ -4191,7 +4192,9 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     .pdf-container {
                         margin: 0;
                         padding: 0 20mm;
-                        padding-top: 70px; /* Space for header */
+                        /* Eskiden burada padding-top: 70px vardı.
+                           Header ve footer için body'ye margin verdiğimizden 
+                           bu padding'e artık gerek yok ve kaldırıldı. */
                     }
                     .print-footer {
                         display: block;
@@ -4229,7 +4232,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     }
                     
                     /* Page setup */
-                    /* Page setup */
                     @page {
                         margin: 0;
                         size: auto;
@@ -4246,6 +4248,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     }
 
                     .progress-step-item {
+                        /* Adımların sayfa sonlarında bölünmesini engeller */
                         page-break-inside: avoid;
                         break-inside: avoid;
                         margin: 0 0 25px 0;
@@ -4258,7 +4261,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         margin-top: 0;
                     }
 
-                    /* Sayfa numaralandırma */
+                    /* Page numbering */
                     body {
                         counter-reset: page-number;
                     }
@@ -4353,7 +4356,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         </div>
                     </div>
                     
-                    <!-- Tüm Proje İlerleme Adımları -->
+                    <!-- All Project Progress Steps -->
                     ${allStepsHtml.length > 0 ? `
                     <div style="margin-top: 20px; padding-top: 20px;">
                         <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
@@ -4378,7 +4381,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
     newWindow.document.close();
 
     newWindow.onload = () => {
-        // showToast ve addActivity fonksiyonlarının projenizin ana dosyasında tanımlı olduğunu varsayıyorum
+        // showToast and addActivity functions are assumed to be defined in your main file
         // showToast(`${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi hazır.`);
         // addActivity(
         //     "PDF Raporu Önizlendi",
