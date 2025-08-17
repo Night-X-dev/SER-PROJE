@@ -4165,28 +4165,33 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     }
                     
                     /* Ortak yazdırma başlığı ve altbilgisi */
+                    /* Header styling */
                     .print-header {
-                        display: block;
                         position: fixed;
                         top: 0;
                         left: 0;
                         right: 0;
-                        height: 40px;
-                        padding: 10px 20mm 5px 20mm;
+                        height: 50px;
                         background-color: #fff;
+                        padding: 10px 20mm;
+                        box-sizing: border-box;
                         border-bottom: 1px solid #eee;
                         -webkit-print-color-adjust: exact;
                         z-index: 1000;
-                        /* Ensure header stays at the top of each printed page */
-                        position: running(header);
                     }
                     
-                    /* Add margin to the top of each page to prevent content overlap */
-                    @page {
-                        margin-top: 60px;
-                        @top-center {
-                            content: element(header);
-                        }
+                    /* Body and content setup */
+                    body {
+                        margin: 0;
+                        padding: 0;
+                    }
+                    
+                    /* Main container */
+                    .pdf-container {
+                        margin: 0;
+                        padding: 0 20mm;
+                        padding-top: 60px; /* Space for header */
+                        position: relative;
                     }
                     .print-footer {
                         display: block;
@@ -4217,21 +4222,22 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         height: 35px;
                     }
                     
-                    /* Add margin to main content on all pages except the first */
+                    /* Reset margins and padding for the main content */
                     .main-content {
-                        padding-top: 0 !important;
-                        padding-bottom: 0 !important;
-                        margin-top: 60px; /* Space for header on first page */
+                        padding: 0 !important;
+                        margin: 0 !important;
                     }
                     
-                    /* Add more space on subsequent pages */
-                    @page :not(:first) {
-                        margin-top: 80px; /* Extra space for header on subsequent pages */
+                    /* Page setup */
+                    @page {
+                        margin: 0;
+                        size: auto;
                     }
                     
-                    /* Ensure content doesn't start too close to the header */
-                    .progress-step-item:first-child {
-                        margin-top: 20px;
+                    /* Ensure content starts below header */
+                    .main-content {
+                        margin: 0;
+                        padding: 0;
                     }
 
                     .pdf-section-title {
@@ -4241,13 +4247,14 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     .progress-step-item {
                         page-break-inside: avoid;
                         break-inside: avoid;
-                        margin-top: 15px;
-                        padding-top: 10px;
+                        margin: 0 0 20px 0;
+                        padding: 10px 0;
+                        border-top: 1px solid #f0f0f0;
                     }
                     
-                    /* Add extra space before the first item on a new page */
-                    .progress-step-item:first-of-type {
-                        margin-top: 20px;
+                    /* Ensure first item starts right after header */
+                    .progress-step-item:first-child {
+                        margin-top: 0;
                     }
 
                     /* Sayfa numaralandırma */
