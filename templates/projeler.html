@@ -4140,16 +4140,22 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                 }
                 .main-content {
                     box-sizing: border-box;
-                    padding: 0 20mm;
+                    padding: 20px 20mm 40px 20mm;
                 }
 
                 /* PRINT STYLES */
                 @media print {
+                    @page {
+                        size: A4;
+                        margin: 0;
+                        padding-top: 70px; /* Space for header */
+                    }
+                    
                     body { 
                         background-color: #fff; 
                         -webkit-print-color-adjust: exact;
-                        margin-top: 70px; /* Sabit başlık için boşluk bırakır */
-                        margin-bottom: 60px; /* Sabit altbilgi için boşluk bırakır */
+                        margin: 0;
+                        padding: 0;
                     }
                     .pdf-container { 
                         margin: 0; 
@@ -4175,10 +4181,14 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         height: 50px;
                         background-color: #fff;
                         padding: 10px 20mm;
-                        box-sizing: border-box;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
                         border-bottom: 1px solid #eee;
                         -webkit-print-color-adjust: exact;
                         z-index: 1000;
+                        /* Ensure header is printed on each page */
+                        position: running(header);
                     }
                     
                     /* Reset body and page margins */
@@ -4207,6 +4217,12 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         margin: 0 !important;
                     }
                     
+                    /* Ensure content doesn't go under header */
+                    .progress-step-item:first-child {
+                        margin-top: 0;
+                        padding-top: 10px;
+                    }
+                    
                     /* Page setup */
                     /* Page setup */
                     @page {
@@ -4217,7 +4233,13 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     /* Main content area */
                     .main-content {
                         margin: 0;
-                        padding: 10px 0;
+                        padding: 20px 20mm 40px 20mm;
+                        margin-top: 0;
+                    }
+                    
+                    /* Ensure content doesn't go under header */
+                    .progress-step-item:first-child {
+                        margin-top: 20px;
                     }
 
                     .pdf-section-title {
