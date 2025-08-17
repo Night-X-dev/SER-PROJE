@@ -3903,21 +3903,10 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
     let revisionCounts = {};
     
     try {
-        // Proje ilerleme adımlarını çekme (başlıklarla birlikte)
-        const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress?include_headers=true`);
+        // Proje ilerleme adımlarını çekme
+        const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
         if (progressResponse.ok) {
-            const responseData = await progressResponse.json();
-            // API'den gelen yanıt bir dizi ise doğrudan ata, değilse responseData.steps veya responseData kullan
-            progressSteps = Array.isArray(responseData) ? responseData : (responseData.steps || responseData);
-            
-            // Eğer adımlarda header yoksa, başlıkları manuel olarak ekle
-            if (progressSteps.length > 0 && !progressSteps[0].header) {
-                progressSteps = progressSteps.map(step => ({
-                    ...step,
-                    // Eğer step'in kendi başlık bilgisi yoksa, bir önceki adımdan devam et veya 'Genel İşler' olarak ayarla
-                    header: step.section_name || step.category || 'Genel İşler'
-                }));
-            }
+            progressSteps = await progressResponse.json();
         } else {
             console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
         }
@@ -4053,53 +4042,31 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
     const generateStepHtml = (steps) => {
         if (steps.length === 0) return '';
-        
-        let currentHeader = '';
-        let html = '';
-        
-        steps.forEach((step) => {
-            // If this step has a different header than the current one, add a header
-            if (step.header && step.header !== currentHeader) {
-                currentHeader = step.header;
-                html += `
-                    <div style="page-break-after: avoid; page-break-inside: avoid; margin: 20px 0 10px 0;">
-                        <h3 style="color: #005c9d; border-bottom: 1px solid #e1e5e9; 
-                                padding-bottom: 5px; margin: 0 0 10px 0;">
-                            ${currentHeader || 'Genel İşler'}
-                        </h3>
-                    </div>`;
-            }
-            
+        return steps.map((step) => {
             const stepId = step.progress_id;
             const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
-            
-            html += `
-                <div class="progress-step-item" style="margin-bottom: 20px; border-left: 3px solid #005c9d; 
-                            padding-left: 12px; page-break-inside: avoid;">
-                    <div style="font-weight:bold; font-size:15px; margin-bottom: 8px; margin-top: 0;">
-                        ${step.title || 'Başlık bilgisi yok'} 
-                        <span style="font-weight: normal; float: right;">${getStepStatusHtml(step)}</span>
+            return `
+                <div class="progress-step-item" style="margin-bottom:12px;">
+                    <div style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
+                        ${step.title || 'Başlık bilgisi yok'} <span style="font-weight: normal; float: right;">${getStepStatusHtml(step)}</span>
                     </div>
                     <div style="display:flex; justify-content:space-between; font-size:13px; color:#555;">
                         <div style="width:50%;">
-                            <p style="margin: 4px 0;"><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(step.start_date || '-')}</p>
-                            <p style="margin: 4px 0;"><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(step.end_date || '-')}</p>
-                            <p style="margin: 4px 0;"><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(step.real_end_date || '-')}</p>
-                            <p style="margin: 4px 0;"><strong>Revize Sayısı:</strong> ${revisionCountForStep}</p>
+                            <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(step.start_date || '-')}</p>
+                            <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(step.end_date || '-')}</p>
+                            <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(step.real_end_date || '-')}</p>
+                            <p><strong>Revize Sayısı:</strong> ${revisionCountForStep}</p>
                         </div>
                         <div style="width:50%; text-align:right;">
-                            <p style="margin: 4px 0;"><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.end_date)} gün</p>
-                            <p style="margin: 4px 0;"><strong>Gecikme Toplam Süre:</strong> ${(step.delay_days || 0) + (step.custom_delay_days || 0)} gün</p>
-                            <p style="margin: 4px 0;"><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.real_end_date)} gün</p>
+                            <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.end_date)} gün</p>
+                            <p><strong>Gecikme Toplam Süre:</strong> ${(step.delay_days || 0) + (step.custom_delay_days || 0)} gün</p>
+                            <p><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.real_end_date)} gün</p>
                         </div>
                     </div>
-                    ${step.description ? `<div style="font-size:13px; margin-top: 8px; padding: 5px; background-color: #f8f9fa; border-radius: 4px;">
-                        <strong>Açıklama:</strong> ${step.description}
-                    </div>` : ''}
-                </div>`;
-        });
-        
-        return html;
+                    ${step.description ? `<div style="font-size:13px; margin-top: 5px;">Açıklama: ${step.description}</div>` : ''}
+                </div>
+            `;
+        }).join('');
     };
 
     const allStepsHtml = generateStepHtml(progressSteps);
@@ -4240,15 +4207,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
                     .progress-step-item {
                         page-break-inside: avoid;
-                        break-inside: avoid;
                         margin-top: 0;
-                    }
-                    .progress-step-item h3 {
-                        page-break-after: avoid;
-                        break-after: avoid;
-                    }
-                    .progress-step-item:first-child {
-                        page-break-before: auto;
                     }
 
                     /* Sayfa numaralandırma */
