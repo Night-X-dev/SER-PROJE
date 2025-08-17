@@ -4140,22 +4140,16 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                 }
                 .main-content {
                     box-sizing: border-box;
-                    padding: 20px 20mm 40px 20mm;
+                    padding: 0 20mm;
                 }
 
                 /* PRINT STYLES */
                 @media print {
-                    @page {
-                        size: A4;
-                        margin: 0;
-                        padding-top: 70px; /* Space for header */
-                    }
-                    
                     body { 
                         background-color: #fff; 
                         -webkit-print-color-adjust: exact;
-                        margin: 0;
-                        padding: 0;
+                        margin-top: 70px; /* Sabit başlık için boşluk bırakır */
+                        margin-bottom: 60px; /* Sabit altbilgi için boşluk bırakır */
                     }
                     .pdf-container { 
                         margin: 0; 
@@ -4172,7 +4166,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     
                     /* Ortak yazdırma başlığı ve altbilgisi */
                     /* Header styling */
-                    /* Print header - appears on each printed page */
+                    /* Fixed header that appears on each printed page */
                     .print-header {
                         position: fixed;
                         top: 0;
@@ -4181,14 +4175,10 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         height: 50px;
                         background-color: #fff;
                         padding: 10px 20mm;
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
+                        box-sizing: border-box;
                         border-bottom: 1px solid #eee;
                         -webkit-print-color-adjust: exact;
                         z-index: 1000;
-                        /* Ensure header is printed on each page */
-                        position: running(header);
                     }
                     
                     /* Reset body and page margins */
@@ -4197,7 +4187,28 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         padding: 0;
                     }
                     
-                    /* Main container */
+                    /* Main container with space for fixed header */
+                    .pdf-container {
+                        margin: 0;
+                        padding: 0 20mm;
+                        padding-top: 70px; /* Space for header */
+                    }
+                    .print-footer {
+                        display: block;
+                        position: fixed;
+                        bottom: 0;
+                        left: 0;
+                        right: 0;
+                        height: 50px;
+                        padding: 5px 20mm;
+                        box-sizing: border-box;
+                        background-color: #fff;
+                        border-top: 1px solid #eee;
+                        font-size: 12px;
+                        color: #6c757d;
+                        text-align: center;
+                        -webkit-print-color-adjust: exact;
+                        z-index: 1000;
                     }
                     .print-header > div, .print-footer > div {
                         width: 170mm;
@@ -4217,12 +4228,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         margin: 0 !important;
                     }
                     
-                    /* Ensure content doesn't go under header */
-                    .progress-step-item:first-child {
-                        margin-top: 0;
-                        padding-top: 10px;
-                    }
-                    
                     /* Page setup */
                     /* Page setup */
                     @page {
@@ -4233,13 +4238,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     /* Main content area */
                     .main-content {
                         margin: 0;
-                        padding: 20px 20mm 40px 20mm;
-                        margin-top: 0;
-                    }
-                    
-                    /* Ensure content doesn't go under header */
-                    .progress-step-item:first-child {
-                        margin-top: 20px;
+                        padding: 10px 0;
                     }
 
                     .pdf-section-title {
@@ -4252,11 +4251,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         margin: 0 0 25px 0;
                         padding: 15px 0 0 0;
                         border-top: 1px solid #f0f0f0;
-                    }
-                    
-                    /* Ensure first item has proper spacing */
-                    .progress-step-item:first-child {
-                        padding-top: 20px;
                     }
                     
                     /* Ensure first item starts right after header */
