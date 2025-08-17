@@ -4090,19 +4090,24 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         return;
     }
 
-    const fullHtmlContent = `
-        <!DOCTYPE html>
-        <html lang="tr">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-            <style>
-                @page { 
-                    size: A4; 
-                    margin: 0; 
+    const pdfContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>${project.project_name} - Proje Detayı</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <style>
+            @page { 
+                size: A4; 
+                margin: 20mm 15mm 15mm 15mm;
+                @top-center {
+                    content: element(header);
                 }
+                @bottom-center {
+                    content: element(footer);
+                }
+            }    
                 body { 
                     font-family: 'Segoe UI', Arial, sans-serif; 
                     margin: 0; 
@@ -4116,198 +4121,168 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     box-shadow: 0 0 10px rgba(0,0,0,0.1);
                     min-height: 297mm;
                     box-sizing: border-box;
-                    padding-top: 60px;
-                    padding-bottom: 60px;
-                }
-                .screen-header, .screen-footer {
-                    width: 170mm;
-                    margin: 0 auto;
-                    padding: 15px 0;
-                }
-                .screen-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
+                    .print-header {
+                    position: running(header);
+                    width: 100%;
+                    height: 50px;
+                    background-color: #fff;
+                    padding: 10px 0;
+                    box-sizing: border-box;
                     border-bottom: 1px solid #eee;
-                    margin-bottom: 15px;
-                }
-                .screen-footer {
+                    -webkit-print-color-adjust: exact;
+                    page-break-after: avoid;
+                }.screen-footer {
                     border-top: 1px solid #eee;
                     margin-top: 15px;
                     text-align: center;
                     color: #6c757d;
                     font-size: 12px;
-                }
-                .main-content {
-                    box-sizing: border-box;
-                    padding: 0 20mm;
-                }
-
-                /* PRINT STYLES */
-                @media print {
-                    body { 
-                        background-color: #fff; 
-                        -webkit-print-color-adjust: exact;
-                        margin-top: 70px; /* Sabit başlık için boşluk bırakır */
-                        margin-bottom: 60px; /* Sabit altbilgi için boşluk bırakır */
+    {{ ... }}
                     }
+                    @bottom-center {
+                        content: element(footer, first);
+                    }
+                }
+                /* PRINT STYLES */
+            @page :first {
+                @top-center {
+                    content: element(header, first);
+                }
+                @bottom-center {
+                    content: element(footer, first);
+                }
+            }
+            
+            @media print {
+                body { 
+                    background-color: #fff; 
+                    -webkit-print-color-adjust: exact;
+                    margin: 0;
+                    padding: 0;
+                }    
                     .pdf-container { 
                         margin: 0; 
                         box-shadow: none; 
                         padding: 0; 
                         min-height: 100%;
-                    }
-                    .print-button-container { 
-                        display: none; 
-                    }
-                    .screen-header, .screen-footer {
-                        display: none;
-                    }
-                    
-                    /* Ortak yazdırma başlığı ve altbilgisi */
-                    /* Header styling */
-                    /* Fixed header that appears on each printed page */
-                    .print-header {
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        right: 0;
-                        height: 50px;
-                        background-color: #fff;
-                        padding: 10px 20mm;
-                        box-sizing: border-box;
-                        border-bottom: 1px solid #eee;
-                        -webkit-print-color-adjust: exact;
-                        z-index: 1000;
-                    }
-                    
-                    /* Reset body and page margins */
-                    body {
-                        margin: 0;
-                        padding: 0;
-                    }
-                    
-                    /* Main container with space for fixed header */
-                    .pdf-container {
-                        margin: 0;
-                        padding: 0 20mm;
-                        padding-top: 70px; /* Space for header */
-                    }
-                    .print-footer {
-                        display: block;
-                        position: fixed;
-                        bottom: 0;
-                        left: 0;
-                        right: 0;
-                        height: 50px;
-                        padding: 5px 20mm;
-                        box-sizing: border-box;
-                        background-color: #fff;
-                        border-top: 1px solid #eee;
-                        font-size: 12px;
-                        color: #6c757d;
-                        text-align: center;
-                        -webkit-print-color-adjust: exact;
-                        z-index: 1000;
-                    }
+    {{ ... }}
+                    margin: 0;
+                    padding: 0 20mm;
+                    padding-top: 70px; /* Space for header */
+                }
+                .print-footer {
+                position: running(footer);
+                width: 100%;
+                height: 40px;
+                padding: 5px 0;
+                box-sizing: border-box;
+                background-color: #fff;
+                border-top: 1px solid #eee;
+                font-size: 12px;
+                color: #6c757d;
+                text-align: center;
+                -webkit-print-color-adjust: exact;
+                page-break-before: avoid;
+            }
+            
+            .page-number:after {
+                content: counter(page);
+            }
+            
+            .page-count:after {
+                content: counter(pages);
+            }    
                     .print-header > div, .print-footer > div {
                         width: 170mm;
                         margin: 0 auto;
                         height: 100%;
                         display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                    }
-                    .print-header img {
-                        height: 35px;
-                    }
-                    
-                    /* Reset margins and padding for the main content */
-                    .main-content {
-                        padding: 0 !important;
-                        margin: 0 !important;
-                    }
-                    
-                    /* Page setup */
-                    /* Page setup */
-                    @page {
+    {{ ... }}
                         margin: 0;
                         size: auto;
                     }
                     
                     /* Main content area */
-                    .main-content {
-                        margin: 0;
-                        padding: 10px 0;
+                .main-content {
+                    margin: 0;
+                    padding: 20px 0;
+                    position: relative;
+                    z-index: 1;
+                }
+                
+                /* Page break handling */
+                .page-break {
+                    page-break-after: always;
+                    break-after: page;
+                }
+                
+                .no-break {
+                    page-break-inside: avoid;
+                    break-inside: avoid;
+                }        position: relative;
+                        z-index: 1;
                     }
-
+                    
+                    /* Page break handling */
+                    .page-break {
+    {{ ... }}
                     .pdf-section-title {
                         page-break-before: auto;
                     }
 
                     .progress-step-item {
-                        page-break-inside: avoid;
-                        break-inside: avoid;
-                        margin: 0 0 25px 0;
-                        padding: 15px 0 0 0;
-                        border-top: 1px solid #f0f0f0;
-                    }
+                    page-break-inside: avoid;
+                    break-inside: avoid;
+                    margin: 0 0 25px 0;
+                    padding: 15px 0 0 0;
+                    border-top: 1px solid #f0f0f0;
+                }
+                
+                /* Ensure content doesn't break in the middle of important elements */
+                .progress-step-item, 
+                .project-info-section,
+                .progress-section {
+                    page-break-inside: avoid;
+                    break-inside: avoid;
+                }    
                     
                     /* Ensure first item starts right after header */
                     .progress-step-item:first-child {
                         margin-top: 0;
                     }
+    {{ ... }}
+                    <span>Sayfa <span class="page-number"></span> / <span class="page-count"></span></span>
+                    <span>${project.project_manager_name || '-'}</span>
+                </div>
+            </div>
 
-                    /* Sayfa numaralandırma */
-                    body {
-                        counter-reset: page-number;
-                    }
-                    .print-footer::after {
-                        counter-increment: page-number;
-                        content: "Sayfa " counter(page-number);
-                        display: block;
-                        text-align: center;
-                    }
-                }
-                @media screen {
-                    .print-header, .print-footer {
-                        display: none;
-                    }
-                }
-            </style>
-        </head>
-        <body>
-            <!-- Static header and footer for print -->
             <div class="print-header">
-                <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-                    <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px; margin-right: 15px;">
-                    <h1 style="font-size: 20px; color: #005c9d; margin: 0; text-align: center; flex-grow: 1;">Proje Takip Formu</h1>
-                    <div style="font-size: 12px; color: #6c757d; text-align: right; margin-left: 15px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; max-width: 100%; margin: 0 auto; padding: 0 10mm;">
+                    <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 40px; margin-right: 15px;">
+                    <div style="text-align: center; flex-grow: 1;">
+                        <h1 style="font-size: 18px; color: #005c9d; margin: 0 0 2px 0;">Proje Takip Formu</h1>
+                        <div style="font-size: 12px; color: #6c757d;">
+                            ${project.reference_no || '-'} • ${project.project_name ? project.project_name.normalize('NFC').substring(0, 30) + (project.project_name.length > 30 ? '...' : '') : '-'}
+                        </div>
+                    </div>
+                    <div style="font-size: 12px; color: #6c757d; text-align: right; margin-left: 15px; white-space: nowrap;">
                         ${formatDateForDisplay(new Date())}
                     </div>
                 </div>
             </div>
             <div class="print-footer">
-                <!-- Sayfa numarası burada otomatik olarak eklenecek -->
-            </div>
-
-            <div class="pdf-container">
-                <!-- Header and footer for screen view -->
-                <div class="screen-header">
-                    <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
-                    <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
-                    <div style="font-size: 14px; color: #555; text-align: right;">
-                        ${formatDateForDisplay(new Date())}
-                    </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; max-width: 100%; margin: 0 auto; padding: 0 10mm;">
+                    <span>${project.customer_name || '-'}</span>
+                    <span>Sayfa <span class="page-number"></span> / <span class="page-count"></span></span>
+                    <span>${project.project_manager_name || '-'}</span>
                 </div>
-                <div class="main-content">
-                    <!-- Section 1: Project Basic Information -->
-                    <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
+            </div>        <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
                         <div style="display: flex; justify-content: space-between; font-size: 14px;">
                             <div style="width: 50%;">
                                 <h3 style="margin: 0 0 10px 0; color: #005c9d; font-size: 16px;">
                                     ${project.reference_no || '-'}
                                 </h3>
+    {{ ... }}
                                 <p><strong>Proje Yöneticisi:</strong> ${project.project_manager_name || '-'}</p>
                                 <p><strong>İşin Adı:</strong> ${project.project_name ? project.project_name.normalize('NFC') : '-'}</p>
                                 <p><strong>Müşteri Adı:</strong> ${project.customer_name || '-'}</p>
