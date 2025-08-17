@@ -3910,7 +3910,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         } else {
             console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
         }
-
+        
         // Revizyon sayılarını çekme
         const revisionCountResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/revision-counts-by-step`);
         if (revisionCountResponse.ok) {
@@ -3918,7 +3918,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         } else {
             console.error("Revizyon sayıları çekilirken hata oluştu. HTTP Status:", revisionCountResponse.status);
         }
-
     } catch (e) {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
@@ -4043,6 +4042,9 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
     const generateStepHtml = (steps) => {
         if (steps.length === 0) return '';
         return steps.map((step) => {
+            if (!step.title) {
+                console.warn(`Uyarı: Proje ID ${project.project_id} içindeki başlığı olmayan bir iş adımı tespit edildi. Adım verisi:`, step);
+            }
             const stepId = step.progress_id;
             const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
             return `
