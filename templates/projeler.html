@@ -4177,6 +4177,16 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         border-bottom: 1px solid #eee;
                         -webkit-print-color-adjust: exact;
                         z-index: 1000;
+                        /* Ensure header stays at the top of each printed page */
+                        position: running(header);
+                    }
+                    
+                    /* Add margin to the top of each page to prevent content overlap */
+                    @page {
+                        margin-top: 60px;
+                        @top-center {
+                            content: element(header);
+                        }
                     }
                     .print-footer {
                         display: block;
@@ -4207,10 +4217,21 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         height: 35px;
                     }
                     
-                    /* main-content'ten padding'i kaldırıyoruz, çünkü boşluğu body'ye taşıdık */
+                    /* Add margin to main content on all pages except the first */
                     .main-content {
-                        padding-top: 0 !important; 
+                        padding-top: 0 !important;
                         padding-bottom: 0 !important;
+                        margin-top: 60px; /* Space for header on first page */
+                    }
+                    
+                    /* Add more space on subsequent pages */
+                    @page :not(:first) {
+                        margin-top: 80px; /* Extra space for header on subsequent pages */
+                    }
+                    
+                    /* Ensure content doesn't start too close to the header */
+                    .progress-step-item:first-child {
+                        margin-top: 20px;
                     }
 
                     .pdf-section-title {
@@ -4219,7 +4240,14 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
                     .progress-step-item {
                         page-break-inside: avoid;
-                        margin-top: 0;
+                        break-inside: avoid;
+                        margin-top: 15px;
+                        padding-top: 10px;
+                    }
+                    
+                    /* Add extra space before the first item on a new page */
+                    .progress-step-item:first-of-type {
+                        margin-top: 20px;
                     }
 
                     /* Sayfa numaralandırma */
