@@ -3928,7 +3928,7 @@ async function generateProjectPdf(project) {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
-    // Yardımcı fonksiyonlar (mevcut koddan alınmıştır)
+    // Yardımcı fonksiyonlar
     const formatDateForDisplay = (dateStr) => {
         if (!dateStr || dateStr === '-') return '-';
         try {
@@ -4048,13 +4048,7 @@ async function generateProjectPdf(project) {
     const generateStepHtml = (steps) => {
         if (steps.length === 0) return '';
         return steps.map((step) => {
-            // Try different possible field names for the title
             const stepTitle = step.title || step.name || step.step_name || step.progress_title || 'Başlık bilgisi yok';
-            
-            if (!step.title) {
-                console.warn(`Uyarı: Proje ID ${project.project_id} için başlık alanı bulunamadı. Kullanılan alanlar:`, Object.keys(step));
-            }
-            
             const stepId = step.progress_id || step.id;
             const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
             return `
@@ -4081,12 +4075,11 @@ async function generateProjectPdf(project) {
         }).join('');
     };
 
-    const allStepsHtml = generateStepHtml(progressSteps);
+    const firstStepsHtml = progressSteps.length > 0 ? generateStepHtml(progressSteps.slice(0, 2)) : '';
+    const remainingStepsHtml = progressSteps.length > 2 ? generateStepHtml(progressSteps.slice(2)) : '';
 
     const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
     if (!newWindow) {
-        // showToast fonksiyonu projenizin ana dosyasında olmalı
-        // showToast("PDF önizlemesi için yeni pencere açılamadı. Tarayıcınızın pop-up engelleyicisini kontrol edin.", true);
         return;
     }
 
@@ -4102,16 +4095,9 @@ async function generateProjectPdf(project) {
                 @page {
                     size: A4;
                     margin: 1.5cm 1cm 2cm 1cm;
-                    
-                    @top-center {
-                        content: element(printHeader);
-                    }
-                    
-                    @bottom-center {
-                        content: element(printFooter);
-                    }
+                    @top-center { content: element(printHeader); }
+                    @bottom-center { content: element(printFooter); }
                 }
-                
                 body {
                     font-family: 'Segoe UI', Arial, sans-serif;
                     margin: 0;
@@ -4119,7 +4105,6 @@ async function generateProjectPdf(project) {
                     background-color: #f0f2f5;
                     counter-reset: page-number;
                 }
-                
                 #printHeader {
                     position: running(printHeader);
                     width: 100%;
@@ -4127,7 +4112,6 @@ async function generateProjectPdf(project) {
                     padding-bottom: 10px;
                     border-bottom: 1px solid #ddd;
                 }
-                
                 #printFooter {
                     position: running(printFooter);
                     width: 100%;
@@ -4137,12 +4121,10 @@ async function generateProjectPdf(project) {
                     font-size: 10px;
                     color: #666;
                 }
-                
                 #printFooter::after {
                     counter-increment: page-number;
                     content: "Sayfa " counter(page-number);
                 }
-                
                 .pdf-container {
                     width: 210mm;
                     margin: 0 auto;
@@ -4152,13 +4134,11 @@ async function generateProjectPdf(project) {
                     box-sizing: border-box;
                     padding: 20px 25px;
                 }
-                
                 .screen-header, .screen-footer {
                     width: 100%;
                     margin: 0 auto;
                     padding: 15px 0;
                 }
-                
                 .screen-header {
                     display: flex;
                     justify-content: space-between;
@@ -4166,7 +4146,6 @@ async function generateProjectPdf(project) {
                     border-bottom: 1px solid #eee;
                     margin-bottom: 15px;
                 }
-                
                 .screen-footer {
                     border-top: 1px solid #eee;
                     margin-top: 15px;
@@ -4174,11 +4153,9 @@ async function generateProjectPdf(project) {
                     color: #6c757d;
                     font-size: 12px;
                 }
-                
                 .main-content {
                     box-sizing: border-box;
                 }
-
                 /* PRINT STYLES */
                 @media print {
                     body {
@@ -4186,70 +4163,55 @@ async function generateProjectPdf(project) {
                         -webkit-print-color-adjust: exact;
                         color-adjust: exact;
                     }
-                    
                     .pdf-container {
                         margin: 0;
                         box-shadow: none;
                         padding: 0;
                         width: auto;
                     }
-                    
                     .print-button-container,
                     .screen-header,
                     .screen-footer {
                         display: none;
                     }
-                    
                     #printHeader,
                     #printFooter {
                         display: block;
                     }
-                    
-                    /* Sayfa sonu kontrolü */
-                    .page-break {
-                        page-break-after: always;
-                    }
-                    
                     .avoid-break {
                         page-break-inside: avoid;
                     }
-                    
+                    .page-break-before {
+                        page-break-before: always;
+                    }
                     .progress-step-item {
                         margin-bottom: 15px;
                         padding-top: 10px;
                         border-top: 1px solid #f0f0f0;
+                        break-inside: avoid;
                     }
-                    
                     .progress-step-item:first-child {
                         border-top: none;
                         padding-top: 0;
                     }
                 }
-                
                 @media screen {
                     #printHeader,
                     #printFooter {
                         display: none;
                     }
-                    
                     .print-button-container {
                         text-align: center;
                         margin-top: 20px;
                         padding-bottom: 20px;
                     }
                 }
-                
-                /* Ortak stiller */
-                .progress-step-item {
-                    margin-bottom: 15px;
-                    padding-top: 10px;
-                    border-top: 1px solid #f0f0f0;
-                    break-inside: avoid;
-                }
-                
-                .progress-step-item:first-child {
-                    border-top: none;
-                    padding-top: 0;
+                .pdf-section-title {
+                    font-size:18px; 
+                    color:#005c9d; 
+                    border-bottom:1px solid #e1e5e9; 
+                    padding-bottom:5px; 
+                    margin-bottom:15px;
                 }
             </style>
         </head>
@@ -4333,12 +4295,22 @@ async function generateProjectPdf(project) {
                         </div>
                     </div>
                     
-                    <!-- Tüm Proje İlerleme Adımları -->
-                    ${allStepsHtml.length > 0 ? `
+                    <!-- İlk 2 Proje İlerleme Adımı -->
+                    ${firstStepsHtml.length > 0 ? `
                     <div style="margin-top: 30px; padding-top: 20px;" class="avoid-break">
-                        <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
+                        <div class="pdf-section-title"><i class="fas fa-tasks"></i> İş Gidişatı</div>
                         <div>
-                            ${allStepsHtml}
+                            ${firstStepsHtml}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <!-- Kalan Proje İlerleme Adımları (Yeni Sayfada Başlar) -->
+                    ${remainingStepsHtml.length > 0 ? `
+                    <div style="margin-top: 30px; padding-top: 20px;" class="avoid-break page-break-before">
+                        <div class="pdf-section-title"><i class="fas fa-tasks"></i> İş Gidişatı (Devamı)</div>
+                        <div>
+                            ${remainingStepsHtml}
                         </div>
                     </div>
                     ` : ''}
