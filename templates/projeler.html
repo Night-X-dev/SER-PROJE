@@ -4166,6 +4166,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     
                     /* Ortak yazdırma başlığı ve altbilgisi */
                     /* Header styling */
+                    /* Print header - appears on each printed page */
                     .print-header {
                         position: fixed;
                         top: 0;
@@ -4180,7 +4181,12 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         z-index: 1000;
                     }
                     
-                    /* Body and content setup */
+                    /* Add top margin to the first element after header */
+                    .pdf-container > *:first-child {
+                        margin-top: 60px !important;
+                    }
+                    
+                    /* Reset body and page margins */
                     body {
                         margin: 0;
                         padding: 0;
@@ -4190,8 +4196,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     .pdf-container {
                         margin: 0;
                         padding: 0 20mm;
-                        padding-top: 60px; /* Space for header */
-                        position: relative;
+                        padding-top: 0;
                     }
                     .print-footer {
                         display: block;
@@ -4229,15 +4234,16 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     }
                     
                     /* Page setup */
+                    /* Page setup */
                     @page {
                         margin: 0;
                         size: auto;
                     }
                     
-                    /* Ensure content starts below header */
+                    /* Main content area */
                     .main-content {
                         margin: 0;
-                        padding: 0;
+                        padding: 10px 0;
                     }
 
                     .pdf-section-title {
@@ -4247,9 +4253,14 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     .progress-step-item {
                         page-break-inside: avoid;
                         break-inside: avoid;
-                        margin: 0 0 20px 0;
-                        padding: 10px 0;
+                        margin: 0 0 25px 0;
+                        padding: 15px 0 0 0;
                         border-top: 1px solid #f0f0f0;
+                    }
+                    
+                    /* Ensure first item has proper spacing */
+                    .progress-step-item:first-child {
+                        padding-top: 20px;
                     }
                     
                     /* Ensure first item starts right after header */
