@@ -3928,7 +3928,7 @@ async function generateProjectPdf(project) {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
-    // Yardımcı fonksiyonlar
+    // Yardımcı fonksiyonlar (mevcut koddan alınmıştır)
     const formatDateForDisplay = (dateStr) => {
         if (!dateStr || dateStr === '-') return '-';
         try {
@@ -4048,7 +4048,13 @@ async function generateProjectPdf(project) {
     const generateStepHtml = (steps) => {
         if (steps.length === 0) return '';
         return steps.map((step) => {
+            // Try different possible field names for the title
             const stepTitle = step.title || step.name || step.step_name || step.progress_title || 'Başlık bilgisi yok';
+            
+            if (!step.title) {
+                console.warn(`Uyarı: Proje ID ${project.project_id} için başlık alanı bulunamadı. Kullanılan alanlar:`, Object.keys(step));
+            }
+            
             const stepId = step.progress_id || step.id;
             const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
             return `
@@ -4075,11 +4081,12 @@ async function generateProjectPdf(project) {
         }).join('');
     };
 
-    const firstStepsHtml = progressSteps.length > 0 ? generateStepHtml(progressSteps.slice(0, 2)) : '';
-    const remainingStepsHtml = progressSteps.length > 2 ? generateStepHtml(progressSteps.slice(2)) : '';
+    const allStepsHtml = generateStepHtml(progressSteps);
 
     const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
     if (!newWindow) {
+        // showToast fonksiyonu projenizin ana dosyasında olmalı
+        // showToast("PDF önizlemesi için yeni pencere açılamadı. Tarayıcınızın pop-up engelleyicisini kontrol edin.", true);
         return;
     }
 
@@ -4092,38 +4099,15 @@ async function generateProjectPdf(project) {
             <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                @page {
-                    size: A4;
-                    margin: 1.5cm 1cm 2cm 1cm;
-                    @top-center { content: element(printHeader); }
-                    @bottom-center { content: element(printFooter); }
+                @page { 
+                    size: A4; 
+                    margin: 0; 
                 }
-                body {
-                    font-family: 'Segoe UI', Arial, sans-serif;
-                    margin: 0;
-                    padding: 0;
+                body { 
+                    font-family: 'Segoe UI', Arial, sans-serif; 
+                    margin: 0; 
+                    padding: 0; 
                     background-color: #f0f2f5;
-                    counter-reset: page-number;
-                }
-                #printHeader {
-                    position: running(printHeader);
-                    width: 100%;
-                    text-align: center;
-                    padding-bottom: 10px;
-                    border-bottom: 1px solid #ddd;
-                }
-                #printFooter {
-                    position: running(printFooter);
-                    width: 100%;
-                    text-align: center;
-                    padding-top: 10px;
-                    border-top: 1px solid #ddd;
-                    font-size: 10px;
-                    color: #666;
-                }
-                #printFooter::after {
-                    counter-increment: page-number;
-                    content: "Sayfa " counter(page-number);
                 }
                 .pdf-container {
                     width: 210mm;
@@ -4132,10 +4116,11 @@ async function generateProjectPdf(project) {
                     box-shadow: 0 0 10px rgba(0,0,0,0.1);
                     min-height: 297mm;
                     box-sizing: border-box;
-                    padding: 20px 25px;
+                    padding-top: 60px;
+                    padding-bottom: 60px;
                 }
                 .screen-header, .screen-footer {
-                    width: 100%;
+                    width: 170mm;
                     margin: 0 auto;
                     padding: 15px 0;
                 }
@@ -4155,85 +4140,165 @@ async function generateProjectPdf(project) {
                 }
                 .main-content {
                     box-sizing: border-box;
+                    padding: 0 20mm;
                 }
+
                 /* PRINT STYLES */
                 @media print {
-                    body {
+                    body { 
+                        background-color: #fff; 
+                        -webkit-print-color-adjust: exact;
+                        color-adjust: exact;
+                        margin: 0;
+                        padding: 0;
+                    }
+                    
+                    /* Page setup - kritik: margin-top header için yer açar */
+                    @page {
+                        margin-top: 80px; /* Header için yer */
+                        margin-bottom: 60px; /* Footer için yer */
+                        margin-left: 20mm;
+                        margin-right: 20mm;
+                        size: A4;
+                    }
+                    
+                    .pdf-container { 
+                        margin: 0; 
+                        box-shadow: none; 
+                        padding: 0; 
+                        min-height: 100%;
+                        width: 100%;
+                    }
+                    
+                    .print-button-container { 
+                        display: none; 
+                    }
+                    
+                    .screen-header, .screen-footer {
+                        display: none;
+                    }
+                    
+                    /* Header - tüm sayfalarda görünecek */
+                    .print-header {
+                        position: fixed;
+                        top: -80px; /* @page margin-top ile eşleşmeli */
+                        left: 0;
+                        right: 0;
+                        height: 60px;
                         background-color: #fff;
+                        padding: 10px 20mm;
+                        box-sizing: border-box;
+                        border-bottom: 2px solid #005c9d;
+                        z-index: 1000;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
                         -webkit-print-color-adjust: exact;
                         color-adjust: exact;
                     }
-                    .pdf-container {
+                    
+                    .print-header img {
+                        height: 40px;
+                    }
+                    
+                    .print-header h1 {
+                        font-size: 18px;
+                        color: #005c9d;
                         margin: 0;
-                        box-shadow: none;
+                        text-align: center;
+                        flex-grow: 1;
+                    }
+                    
+                    .print-header .date {
+                        font-size: 12px;
+                        color: #6c757d;
+                        text-align: right;
+                    }
+                    
+                    /* Footer - tüm sayfalarda görünecek */
+                    .print-footer {
+                        position: fixed;
+                        bottom: -60px; /* @page margin-bottom ile eşleşmeli */
+                        left: 0;
+                        right: 0;
+                        height: 40px;
+                        background-color: #fff;
+                        border-top: 1px solid #ccc;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 12px;
+                        color: #6c757d;
+                        z-index: 1000;
+                        -webkit-print-color-adjust: exact;
+                        color-adjust: exact;
+                    }
+                    
+                    /* Ana içerik alanı */
+                    .main-content {
                         padding: 0;
-                        width: auto;
+                        margin: 0;
                     }
-                    .print-button-container,
-                    .screen-header,
-                    .screen-footer {
-                        display: none;
+                    
+                    /* İlk içerik elementi için üst boşluk */
+                    .main-content > div:first-child {
+                        margin-top: 20px;
                     }
-                    #printHeader,
-                    #printFooter {
-                        display: block;
-                    }
-                    .avoid-break {
-                        page-break-inside: avoid;
-                    }
-                    .page-break-before {
-                        page-break-before: always;
-                    }
+                    
+                    /* İş gidişatı bölümü için sayfa kırılması kontrolü */
                     .progress-step-item {
-                        margin-bottom: 15px;
-                        padding-top: 10px;
-                        border-top: 1px solid #f0f0f0;
+                        page-break-inside: avoid;
                         break-inside: avoid;
+                        margin-bottom: 25px;
+                        padding: 15px 0;
+                        border-top: 1px solid #f0f0f0;
                     }
+                    
                     .progress-step-item:first-child {
                         border-top: none;
                         padding-top: 0;
                     }
+                    
+                    /* Bölüm başlıkları */
+                    .pdf-section-title {
+                        page-break-after: avoid;
+                        margin-top: 30px;
+                        margin-bottom: 20px;
+                    }
+                    
+                    /* Sayfa numaralandırma */
+                    .print-footer::after {
+                        content: "Sayfa " counter(page);
+                    }
+                    
+                    /* Progress bar için print uyumluluğu */
+                    .progress-bar {
+                        -webkit-print-color-adjust: exact;
+                        color-adjust: exact;
+                    }
                 }
+                
                 @media screen {
-                    #printHeader,
-                    #printFooter {
+                    .print-header, .print-footer {
                         display: none;
                     }
-                    .print-button-container {
-                        text-align: center;
-                        margin-top: 20px;
-                        padding-bottom: 20px;
-                    }
-                }
-                .pdf-section-title {
-                    font-size:18px; 
-                    color:#005c9d; 
-                    border-bottom:1px solid #e1e5e9; 
-                    padding-bottom:5px; 
-                    margin-bottom:15px;
                 }
             </style>
         </head>
         <body>
-            <!-- Yazdırma için header -->
-            <div id="printHeader">
-                <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-                    <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 30px; margin-right: 15px;">
-                    <h1 style="font-size: 18px; color: #005c9d; margin: 0; text-align: center; flex-grow: 1;">Proje Takip Formu</h1>
-                    <div style="font-size: 10px; color: #6c757d; text-align: right; margin-left: 15px;">
-                        ${formatDateForDisplay(new Date())}
-                    </div>
-                </div>
+            <!-- Print için sabit header ve footer -->
+            <div class="print-header">
+                <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo">
+                <h1>Proje Takip Formu</h1>
+                <div class="date">${formatDateForDisplay(new Date())}</div>
             </div>
             
-            <!-- Yazdırma için footer -->
-            <div id="printFooter">
-                <div>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu | ${project.reference_no || '-'} | ${formatDateForDisplay(new Date())}</div>
+            <div class="print-footer">
+                <!-- Sayfa numarası otomatik eklenir -->
             </div>
 
             <div class="pdf-container">
-                <!-- Header and footer for screen view -->
+                <!-- Screen görünümü için header -->
                 <div class="screen-header">
                     <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
                     <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
@@ -4281,7 +4346,7 @@ async function generateProjectPdf(project) {
                             ${getProjectPhaseText(project.display_status)}
                         </h4>
                         
-                        <div style="height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px;">
+                        <div class="progress-bar" style="height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px;">
                             <div style="height: 100%; display: flex;">
                                 <div style="background-color: #4CAF50; width: ${progressBarData.completedPercentage}%;"></div>
                                 <div style="background-color: #f44336; width: ${progressBarData.delayPercentage}%;"></div>
@@ -4289,39 +4354,26 @@ async function generateProjectPdf(project) {
                             </div>
                         </div>
                         <div style="font-size: 12px; margin-top: 5px; display: flex; justify-content: space-between;">
-                            <div style="text-align: left;"><span style="color: #4CAF50;">■</span> Tamamlanan Süre: ${progressBarData.totalRealDays} gün</div>
-                            <div style="text-align: center;"><span style="color: #f44336;">■</span> Gecikme Süresi: ${progressBarData.totalDelayedDays} gün</div>
-                            <div style="text-align: right;"><span style="color: #ccc;">■</span> Kalan Süre: ${progressBarData.totalPlannedDays - progressBarData.totalRealDays} gün</div>
+                            <div style="text-align: left;"><span style="color: #4CAF50;">■ </span> Tamamlanan Süre: ${progressBarData.totalRealDays} gün</div>
+                            <div style="text-align: center;"><span style="color: #f44336;">■ </span> Gecikme Süresi: ${progressBarData.totalDelayedDays} gün</div>
+                            <div style="text-align: right;"><span style="color: #ccc;">■ </span> Kalan Süre: ${progressBarData.totalPlannedDays - progressBarData.totalRealDays} gün</div>
                         </div>
                     </div>
                     
-                    <!-- İlk 2 Proje İlerleme Adımı -->
-                    ${firstStepsHtml.length > 0 ? `
-                    <div style="margin-top: 30px; padding-top: 20px;" class="avoid-break">
-                        <div class="pdf-section-title"><i class="fas fa-tasks"></i> İş Gidişatı</div>
+                    <!-- Tüm Proje İlerleme Adımları -->
+                    ${allStepsHtml.length > 0 ? `
+                    <div style="margin-top: 20px; padding-top: 20px;">
+                        <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:2px solid #005c9d; padding-bottom:8px; margin-bottom:20px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
                         <div>
-                            ${firstStepsHtml}
+                            ${allStepsHtml}
                         </div>
                     </div>
                     ` : ''}
-
-                    <!-- Kalan Proje İlerleme Adımları (Yeni Sayfada Başlar) -->
-                    ${remainingStepsHtml.length > 0 ? `
-                    <div style="margin-top: 30px; padding-top: 20px;" class="avoid-break page-break-before">
-                        <div class="pdf-section-title"><i class="fas fa-tasks"></i> İş Gidişatı (Devamı)</div>
-                        <div>
-                            ${remainingStepsHtml}
-                        </div>
-                    </div>
-                    ` : ''}
-                </div>
-                
-                <div class="screen-footer">
-                    ${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu | ${project.reference_no || '-'} | ${formatDateForDisplay(new Date())}
                 </div>
             </div>
             
-            <div class="print-button-container">
+            <!-- Screen görünümü için yazdır butonu -->
+            <div class="print-button-container" style="text-align: center; margin-top: 20px; padding-bottom: 20px;">
                 <button class="print-button" onclick="window.print()" style="background-color: #005c9d; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background-color 0.3s ease;">
                     <i class="fas fa-print"></i> PDF Kaydet / Yazdır
                 </button>
@@ -4338,11 +4390,13 @@ async function generateProjectPdf(project) {
         // showToast(`${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi hazır.`);
         // addActivity(
         //     "PDF Raporu Önizlendi",
-        //     `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi oluşturuldu.`
+        //     `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi açıldı.`,
+        //     project.project_id,
+        //     "fas fa-file-pdf",
+        //     "pdf_preview"
         // );
     };
 }
-
 async function exportAllProjectsToPdf() {
         showToast("Tüm projeler PDF olarak hazırlanıyor...", false);
 
