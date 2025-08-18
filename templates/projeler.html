@@ -4083,8 +4083,18 @@ async function generateProjectPdf(project) {
                 /* YAZDIRMA VE EKRAN GÖRÜNÜMÜ İÇİN GÜNCELLENMİŞ CSS */
                 @page {
                     size: A4;
-                    margin: 1.5cm 1cm; /* Üst ve alt boşluklar body padding ile yönetilecek */
+                    /* Header ve footer için sayfa kenar boşluklarını ayarla */
+                    margin: 2.5cm 1cm;
                 }
+
+                /* Bu sahte elemanlar, @page içinde header ve footer'ı tanımlamak için kullanılır */
+                @top-center {
+                    content: element(printHeader);
+                }
+                @bottom-center {
+                    content: element(printFooter);
+                }
+
                 body {
                     font-family: 'Segoe UI', Arial, sans-serif;
                     margin: 0;
@@ -4136,9 +4146,6 @@ async function generateProjectPdf(project) {
                         background-color: #fff;
                         -webkit-print-color-adjust: exact;
                         color-adjust: exact;
-                        /* Sabit header ve footer için boşluk oluştur */
-                        padding-top: 60px;
-                        padding-bottom: 50px;
                     }
                     .pdf-container {
                         margin: 0;
@@ -4154,28 +4161,11 @@ async function generateProjectPdf(project) {
                     }
                     #printHeader {
                         display: block;
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        right: 0;
-                        background-color: white;
-                        padding: 0 1cm;
-                        box-sizing: border-box;
-                        z-index: 1000;
+                        position: running(printHeader); /* Akıştan çıkar ve @page için kullanılabilir yap */
                     }
                     #printFooter {
                         display: block;
-                        position: fixed;
-                        bottom: 0;
-                        left: 0;
-                        right: 0;
-                        background-color: white;
-                        padding: 10px 1cm;
-                        box-sizing: border-box;
-                        z-index: 1000;
-                        font-size: 10px;
-                        color: #666;
-                        border-top: 1px solid #ddd;
+                        position: running(printFooter); /* Akıştan çıkar ve @page için kullanılabilir yap */
                     }
                     .avoid-break {
                         page-break-inside: avoid;
@@ -4212,7 +4202,7 @@ async function generateProjectPdf(project) {
         <body>
             <!-- Yazdırma için header (Tüm sayfalarda tekrar edecek) -->
             <div id="printHeader">
-                <div style="display:flex; justify-content:space-between; align-items:center; width:100%; padding: 10px 0; border-bottom: 1px solid #ddd;">
+                <div style="display:flex; justify-content:space-between; align-items:center; width:100%; padding-bottom: 10px; border-bottom: 1px solid #ddd;">
                     <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 30px; margin-right: 15px;">
                     <h1 style="font-size: 18px; color: #005c9d; margin: 0; text-align: center; flex-grow: 1;">Proje Takip Formu</h1>
                     <div style="font-size: 10px; color: #6c757d; text-align: right; margin-left: 15px;">
@@ -4223,7 +4213,10 @@ async function generateProjectPdf(project) {
             
             <!-- Yazdırma için footer (Tüm sayfalarda tekrar edecek) -->
             <div id="printFooter">
-                <div>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu | ${project.reference_no || '-'} | ${formatDateForDisplay(new Date())}</div>
+                <div class="footer-content" style="text-align: center; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; color: #666;">
+                    <span>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu | ${project.reference_no || '-'} | ${formatDateForDisplay(new Date())}</span>
+                    <span class="page-number"></span>
+                </div>
             </div>
 
             <div class="pdf-container">
