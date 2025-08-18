@@ -4139,22 +4139,18 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
                 /* PRINT STYLES */
                 @media print {
-                    /* Base page settings */
                     @page {
                         size: A4;
                         margin: 0;
                     }
                     
-                    /* First page - no top margin */
+                    /* First page has no top margin */
                     @page :first {
                         margin-top: 0;
-                        @top-center {
-                            content: none;
-                        }
                     }
                     
-                    /* All other pages */
-                    @page :not(:first) {
+                    /* All other pages have 100px top margin */
+                    @page {
                         margin-top: 100px;
                     }
                     
@@ -4262,33 +4258,25 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         page-break-before: auto;
                     }
                     
-                    /* Work progress sections */
+                    /* Add margin to all work progress sections */
                     .work-progress-section {
-                        page-break-inside: avoid;
-                        break-inside: avoid;
-                        margin: 0;
-                        padding: 0;
-                    }
-
-                    /* First section on first page */
-                    .work-progress-section:first-child {
-                        margin-top: 20px;
-                    }
-                    
-                    /* All other sections */
-                    .work-progress-section ~ .work-progress-section {
-                        page-break-before: always;
-                        margin-top: 0;
-                    }
-                    
-                    /* Ensure consistent layout on all pages */
-                    @page {
                         margin-top: 100px;
                     }
                     
-                    /* First page exception */
-                    @page :first {
+                    /* Remove margin from first work progress section */
+                    .work-progress-section:first-child {
                         margin-top: 0;
+                    }
+                    
+                    /* Ensure proper page breaks */
+                    .work-progress-section {
+                        page-break-inside: avoid;
+                    }
+                    
+                    @page :first {
+                        .work-progress-section {
+                            margin-top: 20px !important;
+                        }
                     }
 
                     .progress-step-item {
