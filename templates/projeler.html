@@ -4041,7 +4041,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
     const generateStepHtml = (steps) => {
         if (steps.length === 0) return '';
-        return steps.map((step) => {
+        return steps.map((step, index) => {
             // Try different possible field names for the title
             const stepTitle = step.title || step.name || step.step_name || step.progress_title || 'Başlık bilgisi yok';
             
@@ -4051,7 +4051,20 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             
             const stepId = step.progress_id || step.id;
             const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
+            
+            // Add page header for print every few items to ensure visibility
+            const pageHeader = index > 0 && index % 3 === 0 ? `
+                <div class="print-page-header" style="display: none;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding: 15px 0; border-bottom: 2px solid #005c9d; margin-bottom: 20px;">
+                        <img src="https://serotomasyon.tr/static/serlogo.png" alt="Logo" style="height: 40px;">
+                        <h2 style="font-size: 18px; color: #005c9d; margin: 0;">Proje Takip Formu</h2>
+                        <div style="font-size: 11px; color: #6c757d;">${formatDateForDisplay(new Date())}</div>
+                    </div>
+                </div>
+            ` : '';
+            
             return `
+                ${pageHeader}
                 <div class="progress-step-item" style="margin-bottom:12px;">
                     <div style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
                         ${stepTitle} <span style="font-weight: normal; float: right;">${getStepStatusHtml(step)}</span>
