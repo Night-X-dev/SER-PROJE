@@ -4162,13 +4162,16 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     /* Header styling */
                     /* Fixed header that appears on each printed page */
                     .print-header {
-                        position: running(header);
-                        text-align: center;
-                        width: 100%;
-                        padding: 10px 0;
-                        border-bottom: 1px solid #ddd;
-                        margin-bottom: 15px;
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        height: 70px;
+                        background-color: #fff;
+                        padding: 0 20mm;
+                        box-sizing: border-box;
                         -webkit-print-color-adjust: exact;
+                        z-index: 1000;
                     }
                     
                     /* Reset body and page margins */
@@ -4221,12 +4224,8 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     /* Page setup */
                     /* Page setup */
                     @page {
-                        margin: 2cm 1cm 1cm 1cm;
-                        size: A4;
-                    }
-                    
-                    @page :first {
-                        margin-top: 2cm;
+                        margin: 0;
+                        size: auto;
                     }
                     
                     /* Main content area */
@@ -4241,14 +4240,13 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     
                     /* Add margin to work progress section on second page */
                     .work-progress-section {
-                        margin-top: 20px !important;
+                        margin-top: 80px !important;
                     }
                     
-                    /* Add padding to the first element after page break */
-                    /* Add space at the top of each page */
-                    @page {
-                        @top-center {
-                            content: element(header);
+                    /* Reset margin for first page */
+                    @page :first {
+                        .work-progress-section {
+                            margin-top: 20px !important;
                         }
                     }
 
@@ -4285,7 +4283,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         </head>
         <body>
             <!-- Static header and footer for print -->
-            <div class="print-header" style="padding: 20px 20mm 10px; height: auto;">
+            <div class="print-header" style="padding-top: 15px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                     <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 40px; margin-right: 15px;">
                     <h1 style="font-size: 18px; color: #005c9d; margin: 0; text-align: center; flex-grow: 1;">Proje Takip Formu</h1>
