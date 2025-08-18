@@ -4093,9 +4093,14 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                @page { 
-                    size: A4; 
-                    margin: 0; 
+                @page {
+                    size: A4;
+                    margin: 0;
+                    @top-center {
+                        content: element(header);
+                    }
+                    margin-top: 80px; /* Space for header */
+                    margin-bottom: 20px; /* Space for footer */
                 }
                 body { 
                     font-family: 'Segoe UI', Arial, sans-serif; 
@@ -4142,8 +4147,8 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     body { 
                         background-color: #fff; 
                         -webkit-print-color-adjust: exact;
-                        margin-top: 70px; /* Sabit başlık için boşluk bırakır */
-                        margin-bottom: 60px; /* Sabit altbilgi için boşluk bırakır */
+                        margin: 0;
+                        padding: 0;
                     }
                     .pdf-container { 
                         margin: 0; 
@@ -4162,16 +4167,17 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     /* Header styling */
                     /* Fixed header that appears on each printed page */
                     .print-header {
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        right: 0;
+                        position: running(header);
+                        width: 100%;
                         height: 70px;
                         background-color: #fff;
-                        padding: 0 20mm;
+                        padding: 10px 20mm;
                         box-sizing: border-box;
                         -webkit-print-color-adjust: exact;
-                        z-index: 1000;
+                        border-bottom: 1px solid #eee;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
                     }
                     
                     /* Reset body and page margins */
@@ -4183,8 +4189,9 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     /* Main container with space for fixed header */
                     .pdf-container {
                         margin: 0;
-                        padding: 0 20mm;
-                        padding-top: 70px; /* Space for header */
+                        padding: 20px 20mm 0;
+                        page-break-before: always;
+                        page-break-after: always;
                     }
                     .print-footer {
                         display: block;
@@ -4245,6 +4252,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     .main-content {
                         margin: 0;
                         padding: 20px 0 0 0;
+                        page-break-inside: avoid;
                     }
                     
                     /* Her yeni sayfa için boşluk */
@@ -4254,7 +4262,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     }
 
                     .pdf-section-title {
-                        page-break-before: auto;
+                        page-break-after: auto;
                     }
                     
                     /* Add margin to work progress section on second page */
@@ -4529,7 +4537,7 @@ async function exportAllProjectsToPdf() {
                     </tbody>
                 </table>
                 <div style="text-align: center; font-size: 10px; color: #6c757d; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;">
-                    © 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır.
+                    2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır.
                 </div>
             </div>
         `;
