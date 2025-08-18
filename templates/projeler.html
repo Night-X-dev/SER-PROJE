@@ -3892,31 +3892,43 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         }
     }
 
+/**
+ * Verilen proje nesnesi için bir PDF raporu önizlemesi oluşturur.
+ * Proje verilerini API'den çeker ve bu verileri kullanarak yeni bir pencerede
+ * yazdırılabilir bir HTML sayfası oluşturur.
+ * @param {object} project - Raporu oluşturulacak proje nesnesi.
+ */
 async function generateProjectPdf(project) {
     let progressSteps = [];
     let revisionCounts = {};
-
+    
     try {
-        // Fetch project progress steps
+        // Proje ilerleme adımlarını çekme
         const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
         if (progressResponse.ok) {
             progressSteps = await progressResponse.json();
+            console.log('Progress Steps API Response:', JSON.stringify(progressSteps, null, 2));
+            
+            // Check if we have steps and what fields are available
+            if (progressSteps && progressSteps.length > 0) {
+                console.log('First step object fields:', Object.keys(progressSteps[0]));
+            }
         } else {
-            console.error("Error fetching project progress steps. HTTP Status:", progressResponse.status);
+            console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
         }
-
-        // Fetch revision counts
+        
+        // Revizyon sayılarını çekme
         const revisionCountResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/revision-counts-by-step`);
         if (revisionCountResponse.ok) {
             revisionCounts = await revisionCountResponse.json();
         } else {
-            console.error("Error fetching revision counts. HTTP Status:", revisionCountResponse.status);
+            console.error("Revizyon sayıları çekilirken hata oluştu. HTTP Status:", revisionCountResponse.status);
         }
     } catch (e) {
-        console.error("An unexpected error occurred while fetching data:", e);
+        console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
-    // Helper functions
+    // Yardımcı fonksiyonlar
     const formatDateForDisplay = (dateStr) => {
         if (!dateStr || dateStr === '-') return '-';
         try {
@@ -3924,7 +3936,7 @@ async function generateProjectPdf(project) {
             if (isNaN(date.getTime())) throw new Error("Invalid date format");
             return date.toLocaleDateString('tr-TR');
         } catch (error) {
-            console.error("Error converting date format:", dateStr, error);
+            console.error("Tarih formatı dönüştürülürken hata:", dateStr, error);
             return '-';
         }
     };
@@ -4011,11 +4023,11 @@ async function generateProjectPdf(project) {
         let completedPercentage = (totalCompletedDays / totalDuration) * 100;
         let delayPercentage = (totalDelayedDays / totalDuration) * 100;
         let remainingPercentage = 100 - completedPercentage - delayPercentage;
-
+        
         completedPercentage = Math.round(Math.max(0, completedPercentage));
         delayPercentage = Math.round(Math.max(0, delayPercentage));
         remainingPercentage = Math.round(Math.max(0, remainingPercentage));
-
+        
         const totalPercentage = completedPercentage + delayPercentage + remainingPercentage;
         if (totalPercentage !== 100) {
             remainingPercentage += 100 - totalPercentage;
@@ -4080,55 +4092,39 @@ async function generateProjectPdf(project) {
             <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* Page layout for printing */
                 @page {
                     size: A4;
-                    /* Set margins to create space for header and footer */
-                    margin: 2.5cm 1.5cm 2.5cm 1.5cm; /* top, right, bottom, left */
-
-                    /* Define what goes into the margin boxes */
-                    @top-center {
-                        content: element(printHeader);
-                    }
-                    @bottom-center {
-                        content: element(printFooter);
-                    }
+                    margin: 1.5cm 1cm 2cm 1cm;
+                    @top-center { content: element(printHeader); }
+                    @bottom-center { content: element(printFooter); }
                 }
-
-                /* General body styles */
                 body {
                     font-family: 'Segoe UI', Arial, sans-serif;
                     margin: 0;
                     padding: 0;
                     background-color: #f0f2f5;
-                    counter-reset: page; /* Initialize page counter */
+                    counter-reset: page-number;
                 }
-
-                /* Styles for the running header element */
                 #printHeader {
                     position: running(printHeader);
                     width: 100%;
+                    text-align: center;
+                    padding-bottom: 10px;
+                    border-bottom: 1px solid #ddd;
                 }
-
-                /* Styles for the running footer element */
                 #printFooter {
                     position: running(printFooter);
                     width: 100%;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    font-size: 10px;
-                    color: #666;
+                    text-align: center;
                     padding-top: 10px;
                     border-top: 1px solid #ddd;
+                    font-size: 10px;
+                    color: #666;
                 }
-
-                /* Use a pseudo-element to generate the page number */
-                .footer-page-number::after {
-                    counter-increment: page;
-                    content: "Sayfa " counter(page);
+                #printFooter::after {
+                    counter-increment: page-number;
+                    content: "Sayfa " counter(page-number);
                 }
-
                 .pdf-container {
                     width: 210mm;
                     margin: 0 auto;
@@ -4160,7 +4156,6 @@ async function generateProjectPdf(project) {
                 .main-content {
                     box-sizing: border-box;
                 }
-
                 /* PRINT STYLES */
                 @media print {
                     body {
@@ -4173,12 +4168,15 @@ async function generateProjectPdf(project) {
                         box-shadow: none;
                         padding: 0;
                         width: auto;
-                        min-height: 0;
                     }
                     .print-button-container,
                     .screen-header,
                     .screen-footer {
                         display: none;
+                    }
+                    #printHeader,
+                    #printFooter {
+                        display: block;
                     }
                     .avoid-break {
                         page-break-inside: avoid;
@@ -4197,10 +4195,7 @@ async function generateProjectPdf(project) {
                         padding-top: 0;
                     }
                 }
-
-                /* SCREEN STYLES */
                 @media screen {
-                    /* Hide elements meant only for printing */
                     #printHeader,
                     #printFooter {
                         display: none;
@@ -4212,16 +4207,16 @@ async function generateProjectPdf(project) {
                     }
                 }
                 .pdf-section-title {
-                    font-size:18px;
-                    color:#005c9d;
-                    border-bottom:1px solid #e1e5e9;
-                    padding-bottom:5px;
+                    font-size:18px; 
+                    color:#005c9d; 
+                    border-bottom:1px solid #e1e5e9; 
+                    padding-bottom:5px; 
                     margin-bottom:15px;
                 }
             </style>
         </head>
         <body>
-            <!-- Header for printing. This will be placed at the top of each page. -->
+            <!-- Yazdırma için header -->
             <div id="printHeader">
                 <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                     <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 30px; margin-right: 15px;">
@@ -4231,15 +4226,14 @@ async function generateProjectPdf(project) {
                     </div>
                 </div>
             </div>
-
-            <!-- Footer for printing. This will be placed at the bottom of each page. -->
+            
+            <!-- Yazdırma için footer -->
             <div id="printFooter">
-                <span class="footer-text">${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu | ${project.reference_no || '-'} | ${formatDateForDisplay(new Date())}</span>
-                <span class="footer-page-number"></span>
+                <div>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu | ${project.reference_no || '-'} | ${formatDateForDisplay(new Date())}</div>
             </div>
 
             <div class="pdf-container">
-                <!-- Header for screen view -->
+                <!-- Header and footer for screen view -->
                 <div class="screen-header">
                     <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
                     <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
@@ -4247,7 +4241,7 @@ async function generateProjectPdf(project) {
                         ${formatDateForDisplay(new Date())}
                     </div>
                 </div>
-
+                
                 <div class="main-content">
                     <!-- Section 1: Project Basic Information -->
                     <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
@@ -4282,11 +4276,11 @@ async function generateProjectPdf(project) {
                                 <p><strong>Gerçek Toplam Süre:</strong> ${progressBarData.totalRealDays || '-'} gün</p>
                             </div>
                         </div>
-
+                        
                         <h4 style="text-align: center; font-size: 16px; margin-top: 20px; color: #005c9d;">
                             ${getProjectPhaseText(project.display_status)}
                         </h4>
-
+                        
                         <div style="height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px;">
                             <div style="height: 100%; display: flex;">
                                 <div style="background-color: #4CAF50; width: ${progressBarData.completedPercentage}%;"></div>
@@ -4297,11 +4291,11 @@ async function generateProjectPdf(project) {
                         <div style="font-size: 12px; margin-top: 5px; display: flex; justify-content: space-between;">
                             <div style="text-align: left;"><span style="color: #4CAF50;">■</span> Tamamlanan Süre: ${progressBarData.totalRealDays} gün</div>
                             <div style="text-align: center;"><span style="color: #f44336;">■</span> Gecikme Süresi: ${progressBarData.totalDelayedDays} gün</div>
-                            <div style="text-align: right;"><span style="color: #ccc;">■</span> Kalan Süre: ${Math.max(0, progressBarData.totalPlannedDays - progressBarData.totalRealDays)} gün</div>
+                            <div style="text-align: right;"><span style="color: #ccc;">■</span> Kalan Süre: ${progressBarData.totalPlannedDays - progressBarData.totalRealDays} gün</div>
                         </div>
                     </div>
-
-                    <!-- First 2 Project Progress Steps -->
+                    
+                    <!-- İlk 2 Proje İlerleme Adımı -->
                     ${firstStepsHtml.length > 0 ? `
                     <div style="margin-top: 30px; padding-top: 20px;" class="avoid-break">
                         <div class="pdf-section-title"><i class="fas fa-tasks"></i> İş Gidişatı</div>
@@ -4311,9 +4305,9 @@ async function generateProjectPdf(project) {
                     </div>
                     ` : ''}
 
-                    <!-- Remaining Project Progress Steps (Starts on a new page if necessary) -->
+                    <!-- Kalan Proje İlerleme Adımları (Yeni Sayfada Başlar) -->
                     ${remainingStepsHtml.length > 0 ? `
-                    <div style="margin-top: 30px; padding-top: 20px;" class="page-break-before">
+                    <div style="margin-top: 30px; padding-top: 20px;" class="avoid-break page-break-before">
                         <div class="pdf-section-title"><i class="fas fa-tasks"></i> İş Gidişatı (Devamı)</div>
                         <div>
                             ${remainingStepsHtml}
@@ -4321,12 +4315,12 @@ async function generateProjectPdf(project) {
                     </div>
                     ` : ''}
                 </div>
-
+                
                 <div class="screen-footer">
                     ${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu | ${project.reference_no || '-'} | ${formatDateForDisplay(new Date())}
                 </div>
             </div>
-
+            
             <div class="print-button-container">
                 <button class="print-button" onclick="window.print()" style="background-color: #005c9d; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background-color 0.3s ease;">
                     <i class="fas fa-print"></i> PDF Kaydet / Yazdır
@@ -4338,6 +4332,15 @@ async function generateProjectPdf(project) {
 
     newWindow.document.write(fullHtmlContent);
     newWindow.document.close();
+
+    newWindow.onload = () => {
+        // showToast ve addActivity fonksiyonlarının projenizin ana dosyasında tanımlı olduğunu varsayıyorum
+        // showToast(`${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi hazır.`);
+        // addActivity(
+        //     "PDF Raporu Önizlendi",
+        //     `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi oluşturuldu.`
+        // );
+    };
 }
 
 async function exportAllProjectsToPdf() {
