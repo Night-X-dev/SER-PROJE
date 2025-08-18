@@ -4087,13 +4087,10 @@ async function generateProjectPdf(project) {
                 /* YAZDIRMA VE EKRAN GÖRÜNÜMÜ İÇİN GÜNCELLENMİŞ CSS */
                 @page {
                     size: A4;
-                    margin: 2.5cm 1cm 1.5cm 1cm;
+                    margin: 2.5cm 1cm 1cm 1cm;
                     
                     @top-center {
                         content: element(printHeader);
-                    }
-                    @bottom-center {
-                        content: element(printFooter);
                     }
                 }
                 
@@ -4107,16 +4104,7 @@ async function generateProjectPdf(project) {
                     margin-bottom: 15px;
                 }
                 
-                /* Footer for all pages */
-                #printFooter {
-                    position: running(printFooter);
-                    text-align: center;
-                    width: 100%;
-                    padding: 10px 0;
-                    border-top: 1px solid #ddd;
-                    font-size: 10px;
-                    color: #666;
-                }
+                /* Footer removed as per request */
 
                 body {
                     font-family: 'Segoe UI', Arial, sans-serif;
@@ -4194,16 +4182,6 @@ async function generateProjectPdf(project) {
                         border-bottom: 1px solid #ddd;
                         margin-bottom: 15px;
                     }
-                    #printFooter {
-                        display: block;
-                        position: running(printFooter);
-                        text-align: center;
-                        width: 100%;
-                        padding: 10px 0;
-                        border-top: 1px solid #ddd;
-                        font-size: 10px;
-                        color: #666;
-                    }
                     .avoid-break {
                         page-break-inside: avoid;
                     }
@@ -4267,7 +4245,7 @@ async function generateProjectPdf(project) {
                 </div>
                 
                 <div class="main-content">
-                    <!-- Bölüm 1: Proje Temel Bilgileri -->
+                    <!-- Bölüm 1: Proje Temel Bilgileri ve İlk 2 İş Gidişatı -->
                     <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
                         <div style="display: flex; justify-content: space-between; font-size: 14px;">
                             <div style="width: 50%;">
@@ -4281,7 +4259,18 @@ async function generateProjectPdf(project) {
                                 <p style="margin-top: 10px;"><strong>Sözleşme imzalanalı:</strong> ${calculateDaysSinceContract(project.contract_date)} gün oldu</p>
                             </div>
                         </div>
-                    </div>
+                        
+                        <!-- İlk 2 İş Gidişatı -->
+                        ${firstStepsHtml.length > 0 ? `
+                        <div style="margin-top: 30px;">
+                            <h3 style="color: #005c9d; border-bottom: 1px solid #e1e5e9; padding-bottom: 5px; margin-bottom: 15px;">
+                                <i class="fas fa-tasks"></i> İlk 2 İş Gidişatı
+                            </h3>
+                            <div class="progress-steps-container">
+                                ${firstStepsHtml}
+                            </div>
+                        </div>
+                        ` : ''}
 
                     <!-- Bölüm 2: Proje Süre ve İlerleme Durumu -->
                     <div style="border-top: 1px solid #ccc; margin-top: 20px; padding-top: 20px;">
@@ -4317,21 +4306,17 @@ async function generateProjectPdf(project) {
                         </div>
                     </div>
                     
-                    <!-- İlk 2 Proje İlerleme Adımı -->
-                    ${firstStepsHtml.length > 0 ? `
+                    <!-- Kalan İş Gidişatları -->
+                    ${remainingStepsHtml.length > 0 ? `
                     <div style="margin-top: 30px; padding-top: 20px;" class="avoid-break">
-                        <div class="pdf-section-title"><i class="fas fa-tasks"></i> İş Gidişatı</div>
+                        <div class="pdf-section-title"><i class="fas fa-tasks"></i> Diğer İş Gidişatları</div>
                         <div class="progress-steps-container">
-                            ${firstStepsHtml}
                             ${remainingStepsHtml}
                         </div>
                     </div>
                     ` : ''}
                 </div>
                 
-                <div class="screen-footer">
-                    ${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu | ${project.reference_no || '-'} | ${formatDateForDisplay(new Date())}
-                </div>
             </div>
             
             <div class="print-button-container">
