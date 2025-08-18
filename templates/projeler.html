@@ -4224,19 +4224,26 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     /* Page setup */
                     /* Page setup */
                     @page {
+                        size: A4;
                         margin: 0;
-                        size: auto;
+                        @top-center {
+                            content: element(header);
+                        }
                     }
                     
-                    /* İlk sayfa dışındaki tüm sayfalar için üst boşluk ekle */
-                    @page :not(:first) {
-                        margin-top: 80px;
+                    /* Header'ı sayfanın en üstüne sabitle */
+                    .print-header {
+                        position: running(header);
+                        width: 100%;
+                        padding: 10px 0;
+                        background: white;
+                        -webkit-print-color-adjust: exact;
                     }
                     
-                    /* Main content area */
+                    /* Ana içerik alanı - header için boşluk bırak */
                     .main-content {
                         margin: 0;
-                        padding: 10px 0;
+                        padding-top: 60px; /* Header yüksekliği kadar üstten boşluk */
                     }
 
                     .pdf-section-title {
@@ -4248,9 +4255,9 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         margin-top: 20px !important;
                     }
                     
-                    /* İlk sayfadaki içerik için normal boşluk */
-                    .main-content {
-                        padding-top: 20px;
+                    /* İlk sayfadaki içerik için özel boşluk */
+                    @page :first {
+                        margin-top: 60px; /* İlk sayfada header için boşluk */
                     }
 
                     .progress-step-item {
