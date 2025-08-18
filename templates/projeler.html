@@ -4144,18 +4144,19 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         margin: 0;
                     }
                     
-                    /* Add margin to all pages after the first */
-                    @page :not(:first) {
-                        margin-top: 100px;
-                    }
-                    
-                    /* Alternative method using body content */
-                    body > *:not(.print-header) {
-                        margin-top: 100px;
-                    }
-                    
-                    body > :first-child:not(.print-header) {
+                    /* First page has no top margin */
+                    @page :first {
                         margin-top: 0;
+                    }
+                    
+                    /* All other pages have 100px top margin */
+                    @page {
+                        margin-top: 100px;
+                    }
+                    
+                    /* Ensure content starts below header */
+                    .pdf-container {
+                        padding-top: 0;
                     }
                     
                     body { 
@@ -4257,20 +4258,19 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         page-break-before: auto;
                     }
                     
-                    /* Add margin to work progress section on second page */
+                    /* Add margin to all work progress sections */
                     .work-progress-section {
-                        margin-top: 80px !important;
+                        margin-top: 100px;
                     }
                     
-                    /* Reset margin for first page */
-                    /* Page break and spacing for content sections */
-                    .work-progress-section {
+                    /* Remove margin from first work progress section */
+                    .work-progress-section:first-child {
                         margin-top: 0;
                     }
                     
-                    /* Add top margin to all sections except the first one */
-                    .work-progress-section ~ .work-progress-section {
-                        margin-top: 100px;
+                    /* Ensure proper page breaks */
+                    .work-progress-section {
+                        page-break-inside: avoid;
                     }
                     
                     @page :first {
