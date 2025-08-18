@@ -3892,525 +3892,262 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         }
     }
 
-        async function generateProjectPdf(project) {
-        let progressSteps = [];
-        let revisionCounts = {};
-        
-        try {
-            // Proje ilerleme adımlarını çekme
-            const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
-            if (progressResponse.ok) {
-                progressSteps = await progressResponse.json();
-                console.log('Progress Steps API Response:', JSON.stringify(progressSteps, null, 2));
-                
-                // Check if we have steps and what fields are available
-                if (progressSteps && progressSteps.length > 0) {
-                    console.log('First step object fields:', Object.keys(progressSteps[0]));
-                }
-            } else {
-                console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
-            }
-            
-            // Revizyon sayılarını çekme
-            const revisionCountResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/revision-counts-by-step`);
-            if (revisionCountResponse.ok) {
-                revisionCounts = await revisionCountResponse.json();
-            } else {
-                console.error("Revizyon sayıları çekilirken hata oluştu. HTTP Status:", revisionCountResponse.status);
-            }
-        } catch (e) {
-            console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
-        }
+    async function generateProjectPdf(project) {
+  const STEPS_PER_PAGE = 3; // her sayfada kaç adım gösterileceği
 
-        // Yardımcı fonksiyonlar (mevcut koddan alınmıştır)
-        const formatDateForDisplay = (dateStr) => {
-            if (!dateStr || dateStr === '-') return '-';
-            try {
-                const date = new Date(dateStr);
-                if (isNaN(date.getTime())) throw new Error("Invalid date format");
-                return date.toLocaleDateString('tr-TR');
-            } catch (error) {
-                console.error("Tarih formatı dönüştürülürken hata:", dateStr, error);
-                return '-';
-            }
-        };
+  let progressSteps = [];
+  let revisionCounts = {};
 
-        const calculateDaysSinceContract = (contractDateStr) => {
-            if (!contractDateStr) return 0;
-            const contractDate = new Date(contractDateStr);
-            const today = new Date();
-            const diffTime = today.getTime() - contractDate.getTime();
-            return Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        };
+  // --- Verileri Çek ---
+  try {
+    const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
+    if (progressResponse.ok) progressSteps = await progressResponse.json();
 
-        const getProjectStatusHtml = (statusText) => {
-            const isDelayed = statusText && statusText.includes('Gecikmeli');
-            const color = isDelayed ? 'red' : '#4CAF50';
-            const text = isDelayed ? 'Gecikmeli devam ediyor' : 'Gecikmesiz devam ediyor';
-            return `<span style="color: ${color}; font-weight: bold; margin: 0;">${text}</span>`;
-        };
+    const revisionCountResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/revision-counts-by-step`);
+    if (revisionCountResponse.ok) revisionCounts = await revisionCountResponse.json();
+  } catch (e) {
+    console.error("Veri çekme hatası:", e);
+  }
 
-        const getProjectPhaseText = (statusText) => {
-            if (!statusText) return 'Aşama bilgisi bulunamadı';
-            const phaseName = statusText.split('(')[0].trim();
-            return `${phaseName} Aşamasında`;
-        };
+  // --- Yardımcılar ---
+  const formatDateForDisplay = (dateStr) => {
+    if (!dateStr || dateStr === '-') return '-';
+    try { const d = new Date(dateStr); return d.toLocaleDateString('tr-TR'); } catch { return '-'; }
+  };
+  const calculateDaysSinceContract = (contractDateStr) => {
+    if (!contractDateStr) return 0; const c = new Date(contractDateStr); const t = new Date();
+    return Math.floor((t - c) / (1000*60*60*24));
+  };
+  const getProjectStatusHtml = (statusText) => {
+    const isDelayed = statusText && statusText.includes('Gecikmeli');
+    const color = isDelayed ? 'red' : '#4CAF50';
+    const text = isDelayed ? 'Gecikmeli devam ediyor' : 'Gecikmesiz devam ediyor';
+    return `<span style="color:${color}; font-weight:bold;">${text}</span>`;
+  };
+  const getProjectPhaseText = (statusText) => {
+    if (!statusText) return 'Aşama bilgisi bulunamadı';
+    return `${statusText.split('(')[0].trim()} Aşamasında`;
+  };
+  const getStepStatusHtml = (step) => {
+    const today = new Date(); const startDate = new Date(step.start_date);
+    if (step.is_completed) return `Tamamlandı <i class="fas fa-check-circle" style="color:green;"></i>`;
+    if (today < startDate) return `Bekliyor <i class="fas fa-hourglass-start" style="color:grey;"></i>`;
+    return `Devam Ediyor <i class="fas fa-spinner fa-spin" style="color:orange;"></i>`;
+  };
+  const calculatePlannedDuration = (s, e) => { if (!s||!e) return '-'; return Math.floor((new Date(e)-new Date(s))/(1000*60*60*24))+1; };
+  const calculateActualDuration = (s, re) => { if (!s) return '-'; const end=re?new Date(re):new Date(); return Math.floor((end-new Date(s))/(1000*60*60*24))+1; };
+  const calculateProgressBarData = (steps) => {
+    let totalPlanned = 0, totalCompleted = 0, totalDelayed = 0; const today = new Date();
+    steps.forEach(step=>{ const st=new Date(step.start_date), en=new Date(step.end_date);
+      totalPlanned += (en - st)/(1000*60*60*24) + 1;
+      if (step.is_completed) { const re=new Date(step.real_end_date); totalCompleted += (re-st)/(1000*60*60*24)+1; if (re>en) totalDelayed += (re-en)/(1000*60*60*24); }
+      else if (today>=st) { totalCompleted += (today-st)/(1000*60*60*24)+1; }
+      totalDelayed += (step.delay_days||0)+(step.custom_delay_days||0);
+    });
+    const totalDuration = totalPlanned + totalDelayed;
+    let completedPct = Math.round((totalCompleted/totalDuration)*100) || 0;
+    let delayPct = Math.round((totalDelayed/totalDuration)*100) || 0;
+    let remainPct = 100 - completedPct - delayPct; if (remainPct<0) remainPct=0;
+    return { totalPlannedDays: Math.ceil(totalPlanned||0), totalDelayedDays: Math.ceil(totalDelayed||0), totalRealDays: Math.ceil((totalCompleted||0)+(totalDelayed||0)), completedPercentage: completedPct, delayPercentage: delayPct, remainingPercentage: remainPct };
+  };
 
-        const getStepStatusHtml = (step) => {
-            const today = new Date();
-            const startDate = new Date(step.start_date);
-            let statusText = '';
-            if (step.is_completed) {
-                statusText = `Tamamlandı <i class="fas fa-check-circle" style="color: green;"></i>`;
-            } else if (today < startDate) {
-                statusText = `Bekliyor <i class="fas fa-hourglass-start" style="color: grey;"></i>`;
-            } else {
-                statusText = `Devam Ediyor <i class="fas fa-spinner fa-spin" style="color: orange;"></i>`;
-            }
-            return statusText;
-        };
+  const progressBarData = calculateProgressBarData(progressSteps);
 
-        const calculatePlannedDuration = (startDateStr, endDateStr) => {
-            if (!startDateStr || !endDateStr) return '-';
-            const startDate = new Date(startDateStr);
-            const endDate = new Date(endDateStr);
-            const diffTime = endDate.getTime() - startDate.getTime();
-            return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-        };
+  const stepCard = (step, stepIndex) => {
+    const stepTitle = step.title || step.name || step.step_name || step.progress_title || `Adım #${stepIndex+1}`;
+    const stepId = step.progress_id || step.id; const revCount = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
+    return `
+      <div class="progress-step-item">
+        <div class="psi-title">
+          ${stepTitle}
+          <span class="psi-status">${getStepStatusHtml(step)}</span>
+        </div>
+        <div class="psi-grid">
+          <div>
+            <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(step.start_date)}</p>
+            <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(step.end_date)}</p>
+            <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(step.real_end_date)}</p>
+            <p><strong>Revize Sayısı:</strong> ${revCount}</p>
+          </div>
+          <div class="psi-right">
+            <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.end_date)} gün</p>
+            <p><strong>Gecikme Toplam Süre:</strong> ${(step.delay_days||0)+(step.custom_delay_days||0)} gün</p>
+            <p><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.real_end_date)} gün</p>
+          </div>
+        </div>
+        ${step.description ? `<div class="psi-desc">Açıklama: ${step.description}</div>` : ''}
+      </div>`;
+  };
 
-        const calculateActualDuration = (startDateStr, realEndDateStr) => {
-            if (!startDateStr) return '-';
-            const startDate = new Date(startDateStr);
-            const endDate = realEndDateStr ? new Date(realEndDateStr) : new Date();
-            const diffTime = endDate.getTime() - startDate.getTime();
-            return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-        };
+  // Sayfalara böl (DOM içinde manuel paginate)
+  const chunks = [];
+  for (let i = 0; i < progressSteps.length; i += STEPS_PER_PAGE) {
+    chunks.push(progressSteps.slice(i, i + STEPS_PER_PAGE));
+  }
 
-        const calculateProgressBarData = (progressSteps) => {
-            let totalPlannedDays = 0;
-            let totalCompletedDays = 0;
-            let totalDelayedDays = 0;
-            const today = new Date();
+  const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
+  if (!newWindow) return;
 
-            progressSteps.forEach(step => {
-                const startDate = new Date(step.start_date);
-                const endDate = new Date(step.end_date);
-                const plannedDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
-                totalPlannedDays += plannedDays;
-                if (step.is_completed) {
-                    const realEndDate = new Date(step.real_end_date);
-                    const stepCompletedDays = (realEndDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
-                    totalCompletedDays += stepCompletedDays;
-                    if (realEndDate > endDate) {
-                        totalDelayedDays += (realEndDate.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24);
-                    }
-                } else {
-                    if (today >= startDate) {
-                        const stepPassedDays = (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
-                        totalCompletedDays += stepPassedDays;
-                    }
-                }
-                totalDelayedDays += (step.delay_days || 0) + (step.custom_delay_days || 0);
-            });
+  // İlk sayfada proje özet + bar, diğer sayfalarda sadece adımlar
+  const firstPageBody = `
+    <div class="section-basic">
+      <div class="basic-left">
+        <h3 class="refno">${project.reference_no || '-'}</h3>
+        <p><strong>Proje Yöneticisi:</strong> ${project.project_manager_name || '-'}</p>
+        <p><strong>İşin Adı:</strong> ${project.project_name ? project.project_name.normalize('NFC') : '-'}</p>
+        <p><strong>Müşteri Adı:</strong> ${project.customer_name || '-'}</p>
+      </div>
+      <div class="basic-right">
+        <p class="status">${getProjectStatusHtml(project.display_status)}</p>
+        <p><strong>Sözleşme imzalanalı:</strong> ${calculateDaysSinceContract(project.contract_date)} gün oldu</p>
+      </div>
+    </div>
 
-            const totalDuration = totalPlannedDays + totalDelayedDays;
-            let completedPercentage = (totalCompletedDays / totalDuration) * 100;
-            let delayPercentage = (totalDelayedDays / totalDuration) * 100;
-            let remainingPercentage = 100 - completedPercentage - delayPercentage;
-            
-            completedPercentage = Math.round(Math.max(0, completedPercentage));
-            delayPercentage = Math.round(Math.max(0, delayPercentage));
-            remainingPercentage = Math.round(Math.max(0, remainingPercentage));
-            
-            const totalPercentage = completedPercentage + delayPercentage + remainingPercentage;
-            if (totalPercentage !== 100) {
-                remainingPercentage += 100 - totalPercentage;
-            }
+    <div class="section-dates">
+      <div>
+        <p><strong>Sözleşme Tarihi:</strong> ${formatDateForDisplay(project.contract_date || '-')}</p>
+        <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(project.start_date || '-')}</p>
+        <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(project.end_date || '-')}</p>
+        <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(project.real_end_date || '-')}</p>
+      </div>
+      <div class="right">
+        <p><strong>Planlanan Toplam Süre:</strong> ${progressBarData.totalPlannedDays || '-'} gün</p>
+        <p><strong>Gecikme Toplam Süre:</strong> ${progressBarData.totalDelayedDays || '-'} gün</p>
+        <p><strong>Gerçek Toplam Süre:</strong> ${progressBarData.totalRealDays || '-'} gün</p>
+      </div>
+    </div>
 
-            return {
-                totalPlannedDays: Math.ceil(totalPlannedDays),
-                totalDelayedDays: Math.ceil(totalDelayedDays),
-                totalRealDays: Math.ceil(totalCompletedDays + totalDelayedDays),
-                completedPercentage,
-                delayPercentage,
-                remainingPercentage
-            };
-        };
+    <h4 class="phase">${getProjectPhaseText(project.display_status)}</h4>
 
-        const progressBarData = calculateProgressBarData(progressSteps);
+    <div class="progressbar">
+      <div class="bar">
+        <div class="done" style="width:${progressBarData.completedPercentage}%;"></div>
+        <div class="delay" style="width:${progressBarData.delayPercentage}%;"></div>
+        <div class="remain" style="width:${progressBarData.remainingPercentage}%;"></div>
+      </div>
+      <div class="legend">
+        <div>■ Tamamlanan Süre: ${progressBarData.totalRealDays} gün</div>
+        <div>■ Gecikme Süresi: ${progressBarData.totalDelayedDays} gün</div>
+        <div>■ Kalan Süre: ${Math.max(0,(progressBarData.totalPlannedDays - progressBarData.totalRealDays))} gün</div>
+      </div>
+    </div>
 
-        const generateStepHtml = (steps) => {
-            if (steps.length === 0) return '';
-            return steps.map((step, index) => {
-                // Try different possible field names for the title
-                const stepTitle = step.title || step.name || step.step_name || step.progress_title || 'Başlık bilgisi yok';
-                
-                if (!step.title) {
-                    console.warn(`Uyarı: Proje ID ${project.project_id} için başlık alanı bulunamadı. Kullanılan alanlar:`, Object.keys(step));
-                }
-                
-                const stepId = step.progress_id || step.id;
-                const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
-                
-                // Add page header for print every few items to ensure visibility
-                const pageHeader = index > 0 && index % 3 === 0 ? `
-                    <div class="print-page-header" style="display: none;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding: 15px 0; border-bottom: 2px solid #005c9d; margin-bottom: 20px;">
-                            <img src="https://serotomasyon.tr/static/serlogo.png" alt="Logo" style="height: 40px;">
-                            <h2 style="font-size: 18px; color: #005c9d; margin: 0;">Proje Takip Formu</h2>
-                            <div style="font-size: 11px; color: #6c757d;">${formatDateForDisplay(new Date())}</div>
-                        </div>
-                    </div>
-                ` : '';
-                
-                return `
-                    ${pageHeader}
-                    <div class="progress-step-item" style="margin-bottom:12px;">
-                        <div style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
-                            ${stepTitle} <span style="font-weight: normal; float: right;">${getStepStatusHtml(step)}</span>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; font-size:13px; color:#555;">
-                            <div style="width:50%;">
-                                <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(step.start_date || '-')}</p>
-                                <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(step.end_date || '-')}</p>
-                                <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(step.real_end_date || '-')}</p>
-                                <p><strong>Revize Sayısı:</strong> ${revisionCountForStep}</p>
-                            </div>
-                            <div style="width:50%; text-align:right;">
-                                <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.end_date)} gün</p>
-                                <p><strong>Gecikme Toplam Süre:</strong> ${(step.delay_days || 0) + (step.custom_delay_days || 0)} gün</p>
-                                <p><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.real_end_date)} gün</p>
-                            </div>
-                        </div>
-                        ${step.description ? `<div style="font-size:13px; margin-top: 5px;">Açıklama: ${step.description}</div>` : ''}
-                    </div>
-                `;
-            }).join('');
-        };
+    ${chunks[0] && chunks[0].length ? `
+      <div class="section-title"><i class="fas fa-tasks"></i> İş Gidişatı</div>
+      ${chunks[0].map((s, idx)=>stepCard(s, idx)).join('')}
+    `: ''}
+  `;
 
-        const allStepsHtml = generateStepHtml(progressSteps);
+  const otherPagesHtml = chunks.slice(1).map((chunk, pageIdx)=>{
+    const pageSteps = chunk.map((s, idx)=> stepCard(s, (pageIdx+1)*STEPS_PER_PAGE + idx)).join('');
+    return `
+      <section class="page">
+        <div class="page-header">
+          <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" class="logo" />
+          <h1>Proje Takip Formu</h1>
+          <div class="date">${formatDateForDisplay(new Date())}</div>
+        </div>
+        <div class="page-body">
+          <div class="section-title"><i class="fas fa-tasks"></i> İş Gidişatı</div>
+          ${pageSteps}
+        </div>
+      </section>`;
+  }).join('');
 
-        const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
-        if (!newWindow) {
-            // showToast fonksiyonu projenizin ana dosyasında olmalı
-            // showToast("PDF önizlemesi için yeni pencere açılamadı. Tarayıcınızın pop-up engelleyicisini kontrol edin.", true);
-            return;
-        }
+  const fullHtml = `
+  <!DOCTYPE html>
+  <html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${project.project_name ? project.project_name.normalize('NFC') : 'Proje'} Raporu</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+      /* GENEL SAYFA AYARLARI */
+      @page { size: A4; margin: 0; }
+      html, body { margin: 0; padding: 0; }
+      body { background: #f0f2f5; font-family: 'Segoe UI', Arial, sans-serif; }
 
-        const fullHtmlContent = `
-            <!DOCTYPE html>
-            <html lang="tr">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
-                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-                <style>
-                    @page { 
-                        size: A4; 
-                        margin: 0; 
-                    }
-                    body { 
-                        font-family: 'Segoe UI', Arial, sans-serif; 
-                        margin: 0; 
-                        padding: 0; 
-                        background-color: #f0f2f5;
-                    }
-                    .pdf-container {
-                        width: 210mm;
-                        margin: 0 auto;
-                        background: #fff;
-                        box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                        min-height: 297mm;
-                        box-sizing: border-box;
-                        padding-top: 60px;
-                        padding-bottom: 60px;
-                    }
-                    .screen-header, .screen-footer {
-                        width: 170mm;
-                        margin: 0 auto;
-                        padding: 15px 0;
-                    }
-                    .screen-header {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        border-bottom: 1px solid #eee;
-                        margin-bottom: 15px;
-                    }
-                    .screen-footer {
-                        border-top: 1px solid #eee;
-                        margin-top: 15px;
-                        text-align: center;
-                        color: #6c757d;
-                        font-size: 12px;
-                    }
-                    .main-content {
-                        box-sizing: border-box;
-                        padding: 0 20mm;
-                    }
+      /* Her sayfa kendi kapsayıcısı: header DOM'un parçası -> ÇAKIŞMA YOK */
+      .page {
+        width: 210mm; min-height: 297mm; box-sizing: border-box; background:#fff; margin: 0 auto 10px; padding: 20mm; 
+      }
+      .page + .page { page-break-before: always; }
 
-                    /* PRINT STYLES */
-                    @media print {
-                        body { 
-                            background-color: #fff; 
-                            -webkit-print-color-adjust: exact;
-                            margin: 0;
-                            padding: 0;
-                        }
-                        .pdf-container { 
-                            margin: 0; 
-                            box-shadow: none; 
-                            padding: 0; 
-                            min-height: 100%;
-                        }
-                        .print-button-container { 
-                            display: none; 
-                        }
-                        .screen-header, .screen-footer {
-                            display: none;
-                        }
-                        
-                        /* Fixed header that appears on each printed page */
-                        .print-header {
-                            position: fixed;
-                            top: 0;
-                            left: 0;
-                            right: 0;
-                            height: 70px;
-                            background-color: #fff;
-                            padding: 0 20mm;
-                            box-sizing: border-box;
-                            -webkit-print-color-adjust: exact;
-                            z-index: 1000;
-                            border-bottom: 1px solid #eee;
-                        }
-                        
-                        .print-footer {
-                            display: block;
-                            position: fixed;
-                            bottom: 0;
-                            left: 0;
-                            right: 0;
-                            height: 50px;
-                            padding: 5px 20mm;
-                            box-sizing: border-box;
-                            background-color: #fff;
-                            border-top: 1px solid #eee;
-                            font-size: 12px;
-                            color: #6c757d;
-                            text-align: center;
-                            -webkit-print-color-adjust: exact;
-                            z-index: 1000;
-                        }
-                        
-                        .print-header > div, .print-footer > div {
-                            width: 170mm;
-                            margin: 0 auto;
-                            height: 100%;
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                        }
-                        
-                        .print-header img {
-                            height: 35px;
-                        }
-                        
-                        /* Main container with space for fixed header and footer */
-                        .pdf-container {
-                            margin: 0;
-                            padding: 0 20mm;
-                            padding-top: 90px; /* Space for header */
-                            padding-bottom: 70px; /* Space for footer */
-                            position: relative;
-                        }
-                        
-                        /* Add padding to all pages after the first one */
-                        @page :not(:first) {
-                            margin-top: 100px; /* Extra space for header on subsequent pages */
-                        }
-                        
-                        /* Ensure first section on each page has proper spacing */
-                        .work-progress-section {
-                            padding-top: 20px;
-                        }
-                        
-                        /* Add extra space after the first section on the first page */
-                        .work-progress-section:not(:first-child) {
-                            padding-top: 40px;
-                        }
-                        
-                        /* Reset margins and padding for the main content */
-                        .main-content {
-                            padding: 0 !important;
-                            margin: 0 !important;
-                        }
-                        
-                        /* Page setup */
-                            padding-top: 10px;
-                            page-break-after: avoid;
-                        }
-                        
-                        /* Progress step items */
-                        .progress-step-item {
-                            page-break-inside: avoid;
-                            break-inside: avoid;
-                            margin: 0 0 30px 0 !important;
-                            padding: 20px 0 !important;
-                            border-top: 1px solid #f0f0f0;
-                        }
-                        
-                        /* Ensure first step item has proper spacing */
-                        .progress-step-item:first-child {
-                            margin-top: 20px !important;
-                            padding-top: 0 !important;
-                            border-top: none;
-                        }
-                        
-                        /* Add page break before each section after the first one */
-                        .work-progress-section:not(:first-child) {
-                            page-break-before: always;
-                            padding-top: 30px;
-                        }
-                        
-                        /* Ensure content doesn't overlap with header */
-                        .work-progress-section .pdf-section-title {
-                            margin-top: 40px !important;
-                        }
+      /* Ekranda daha hoş görünüm */
+      @media screen { .page { box-shadow: 0 0 10px rgba(0,0,0,.08); } }
 
-                        /* Sayfa numaralandırma */
-                        body {
-                            counter-reset: page-number;
-                        }
-                        .print-footer::after {
-                            counter-increment: page-number;
-                            content: "Sayfa " counter(page-number);
-                            display: block;
-                            text-align: center;
-                        }
-                    }
-                    
-                    @media screen {
-                        .print-header, .print-footer {
-                            display: none;
-                        }
-                    }
-                </style>
-            </head>
-            <body>
-                <!-- Static header and footer for print -->
-                <div class="print-header">
-                    <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-                        <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 40px; margin-right: 15px;">
-                        <h1 style="font-size: 18px; color: #005c9d; margin: 0; text-align: center; flex-grow: 1;">Proje Takip Formu</h1>
-                        <div style="font-size: 11px; color: #6c757d; text-align: right; margin-left: 15px;">
-                            ${formatDateForDisplay(new Date())}
-                        </div>
-                    </div>
-                </div>
-                <div class="print-footer">
-                    <!-- Sayfa numarası burada otomatik olarak eklenecek -->
-                </div>
+      /* Yazdırmada kenar boşluklarını sabitle */
+      @media print {
+        body { background:#fff; }
+        .page { margin: 0; box-shadow: none; }
+      }
 
-                <div class="pdf-container">
-                    <!-- Header and footer for screen view -->
-                    <div class="screen-header">
-                        <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
-                        <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
-                        <div style="font-size: 14px; color: #555; text-align: right;">
-                            ${formatDateForDisplay(new Date())}
-                        </div>
-                    </div>
-                    <div class="main-content">
-                        <!-- Section 1: Project Basic Information -->
-                        <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
-                            <div style="display: flex; justify-content: space-between; font-size: 14px;">
-                                <div style="width: 50%;">
-                                    <h3 style="margin: 0 0 10px 0; color: #005c9d; font-size: 16px;">
-                                        ${project.reference_no || '-'}
-                                    </h3>
-                                    <p><strong>Proje Yöneticisi:</strong> ${project.project_manager_name || '-'}</p>
-                                    <p><strong>İşin Adı:</strong> ${project.project_name ? project.project_name.normalize('NFC') : '-'}</p>
-                                    <p><strong>Müşteri Adı:</strong> ${project.customer_name || '-'}</p>
-                                </div>
-                                <div style="width: 50%; text-align: right;">
-                                    <p style="margin: 0; font-weight: bold;">${getProjectStatusHtml(project.display_status)}</p>
-                                    <p style="margin-top: 10px;"><strong>Sözleşme imzalanalı:</strong> ${calculateDaysSinceContract(project.contract_date)} gün oldu</p>
-                                </div>
-                            </div>
-                        </div>
+      /* HEADER (SABİT DEĞİL) */
+      .page-header { display:flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid #eaeaea; }
+      .page-header .logo { height: 40px; }
+      .page-header h1 { font-size: 18px; color: #005c9d; margin: 0; text-align:center; flex:1; }
+      .page-header .date { font-size: 11px; color: #6c757d; }
 
-                        <!-- Section 2: Project Duration and Progress -->
-                        <div style="border-top: 1px solid #ccc; margin-top: 20px; padding-top: 20px;">
-                            <div style="display: flex; justify-content: space-between; font-size: 14px;">
-                                <div style="width: 50%;">
-                                    <p><strong>Sözleşme Tarihi:</strong> ${formatDateForDisplay(project.contract_date || '-')}</p>
-                                    <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(project.start_date || '-')}</p>
-                                    <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(project.end_date || '-')}</p>
-                                    <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(project.real_end_date || '-')}</p>
-                                </div>
-                                <div style="width: 50%; text-align: right;">
-                                    <p><strong>Planlanan Toplam Süre:</strong> ${progressBarData.totalPlannedDays || '-'} gün</p>
-                                    <p><strong>Gecikme Toplam Süre:</strong> ${progressBarData.totalDelayedDays || '-'} gün</p>
-                                    <p><strong>Gerçek Toplam Süre:</strong> ${progressBarData.totalRealDays || '-'} gün</p>
-                                </div>
-                            </div>
-                            
-                            <h4 style="text-align: center; font-size: 16px; margin-top: 20px; color: #005c9d;">
-                                ${getProjectPhaseText(project.display_status)}
-                            </h4>
-                            
-                            <div style="height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px;">
-                                <div style="height: 100%; display: flex;">
-                                    <div style="background-color: #4CAF50; width: ${progressBarData.completedPercentage}%;"></div>
-                                    <div style="background-color: #f44336; width: ${progressBarData.delayPercentage}%;"></div>
-                                    <div style="background-color: #ccc; width: ${progressBarData.remainingPercentage}%;"></div>
-                                </div>
-                            </div>
-                            <div style="font-size: 12px; margin-top: 5px; display: flex; justify-content: space-between;">
-                                <div style="text-align: left;"><span style="color: #4CAF50;">■</span> Tamamlanan Süre: ${progressBarData.totalRealDays} gün</div>
-                                <div style="text-align: center;"><span style="color: #f44336;">■</span> Gecikme Süresi: ${progressBarData.totalDelayedDays} gün</div>
-                                <div style="text-align: right;"><span style="color: #ccc;">■</span> Kalan Süre: ${progressBarData.totalPlannedDays - progressBarData.totalRealDays} gün</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Tüm Proje İlerleme Adımları -->
-                        ${allStepsHtml.length > 0 ? `
-                        <div style="margin-top: 20px; padding-top: 20px;" class="work-progress-section">
-                            <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
-                            <div>
-                                ${allStepsHtml}
-                            </div>
-                        </div>
-                        ` : ''}
-                    </div>
-                </div>
-                
-                <div class="print-button-container" style="text-align: center; margin-top: 20px; padding-bottom: 20px;">
-                    <button class="print-button" onclick="window.print()" style="background-color: #005c9d; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background-color 0.3s ease;">
-                        <i class="fas fa-print"></i> PDF Kaydet / Yazdır
-                    </button>
-                </div>
-            </body>
-            </html>
-        `;
+      /* İLK SAYFA: üst bilgi alanı */
+      .first-page-head { display:flex; justify-content:space-between; align-items:center; padding-bottom: 12px; border-bottom: 1px solid #eaeaea; }
+      .first-page-head .logo { height: 45px; }
+      .first-page-head h1 { font-size: 22px; color:#005c9d; margin:0; flex:1; text-align:center; }
 
-        newWindow.document.write(fullHtmlContent);
-        newWindow.document.close();
+      .page-body { margin-top: 16px; }
 
-        newWindow.onload = () => {
-            // showToast ve addActivity fonksiyonlarının projenizin ana dosyasında tanımlı olduğunu varsayıyorum
-            // showToast(`${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi hazır.`);
-            // addActivity(
-            //     "PDF Raporu Önizlendi",
-            //     `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi açıldı.`,
-            //     project.project_id,
-            //     "fas fa-file-pdf",
-            //     "pdf_preview"
-            // );
-        };
-    }
+      .section-basic { display:flex; justify-content:space-between; font-size: 14px; margin-top: 10px; }
+      .section-basic .refno { margin: 0 0 8px 0; color:#005c9d; font-size: 16px; }
+      .basic-right { text-align: right; }
+
+      .section-dates { display:flex; justify-content:space-between; font-size: 14px; margin-top: 16px; }
+      .section-dates .right { text-align:right; }
+
+      .phase { text-align:center; font-size: 16px; color:#005c9d; margin: 16px 0 8px; }
+
+      .progressbar .bar { height: 18px; background:#e0e0e0; border-radius: 10px; overflow: hidden; display:flex; }
+      .progressbar .bar .done { background:#4CAF50; }
+      .progressbar .bar .delay { background:#f44336; }
+      .progressbar .bar .remain { background:#ccc; }
+      .progressbar .legend { display:flex; justify-content:space-between; font-size: 12px; margin-top: 6px; }
+
+      .section-title { font-size: 18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:6px; margin: 18px 0 12px; }
+
+      .progress-step-item { page-break-inside: avoid; margin: 0 0 14px 0; padding: 12px 0; border-top: 1px solid #f0f0f0; }
+      .progress-step-item:first-child { border-top: none; }
+      .psi-title { font-weight:bold; font-size: 15px; display:flex; justify-content: space-between; align-items:center; }
+      .psi-status { font-weight: normal; }
+      .psi-grid { display:flex; justify-content:space-between; font-size: 13px; color:#555; }
+      .psi-right { text-align:right; }
+      .psi-desc { font-size: 13px; margin-top: 4px; }
+
+      .print-btn-area{ text-align:center; margin: 12px 0 20px; }
+      .print-btn { background-color:#005c9d; color:#fff; padding:10px 16px; border:none; border-radius:8px; font-size:16px; cursor:pointer; }
+    </style>
+  </head>
+  <body>
+
+    <section class="page">
+      <div class="first-page-head">
+        <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" class="logo" />
+        <h1>Proje Takip Formu</h1>
+        <div class="date">${formatDateForDisplay(new Date())}</div>
+      </div>
+      <div class="page-body">
+        ${firstPageBody}
+      </div>
+    </section>
+
+    ${otherPagesHtml}
+
+    <div class="print-btn-area"><button class="print-btn" onclick="window.print()"><i class="fas fa-print"></i> PDF Kaydet / Yazdır</button></div>
+
+  </body>
+  </html>`;
+
+  newWindow.document.write(fullHtml);
+  newWindow.document.close();
+}
 
     async function exportAllProjectsToPdf() {
         showToast("Tüm projeler PDF olarak hazırlanıyor...", false);
