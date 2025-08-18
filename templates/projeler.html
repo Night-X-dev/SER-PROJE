@@ -3892,21 +3892,27 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         }
     }
 
-    async function generateProjectPdf(project) {
+// Fonksiyon, her A4 sayfasını temsil eden HTML'i oluşturur.
+async function generateProjectPdf(project) {
     let progressSteps = [];
     let revisionCounts = {};
 
     try {
-        // Fetch project progress steps
+        // Proje ilerleme adımlarını çekme
         const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
         if (progressResponse.ok) {
             progressSteps = await progressResponse.json();
-            // Assuming progressSteps is an array of objects
+            console.log('Progress Steps API Response:', JSON.stringify(progressSteps, null, 2));
+
+            // Check if we have steps and what fields are available
+            if (progressSteps && progressSteps.length > 0) {
+                console.log('First step object fields:', Object.keys(progressSteps[0]));
+            }
         } else {
             console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
         }
 
-        // Fetch revision counts
+        // Revizyon sayılarını çekme
         const revisionCountResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/revision-counts-by-step`);
         if (revisionCountResponse.ok) {
             revisionCounts = await revisionCountResponse.json();
@@ -3917,7 +3923,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
-    // Helper functions (taken from your existing code)
+    // Yardımcı fonksiyonlar (mevcut koddan alınmıştır)
     const formatDateForDisplay = (dateStr) => {
         if (!dateStr || dateStr === '-') return '-';
         try {
@@ -3992,7 +3998,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             const endDate = new Date(step.end_date);
             const plannedDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
             totalPlannedDays += plannedDays;
-
             if (step.is_completed) {
                 const realEndDate = new Date(step.real_end_date);
                 const stepCompletedDays = (realEndDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
@@ -4010,24 +4015,10 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         });
 
         const totalDuration = totalPlannedDays + totalDelayedDays;
-        
-        // Handle division by zero
-        if (totalDuration === 0) {
-            return {
-                totalPlannedDays: 0,
-                totalDelayedDays: 0,
-                totalRealDays: 0,
-                completedPercentage: 0,
-                delayPercentage: 0,
-                remainingPercentage: 100
-            };
-        }
-
         let completedPercentage = (totalCompletedDays / totalDuration) * 100;
         let delayPercentage = (totalDelayedDays / totalDuration) * 100;
         let remainingPercentage = 100 - completedPercentage - delayPercentage;
         
-        // Ensure percentages are within a valid range and sum to 100
         completedPercentage = Math.round(Math.max(0, completedPercentage));
         delayPercentage = Math.round(Math.max(0, delayPercentage));
         remainingPercentage = Math.round(Math.max(0, remainingPercentage));
@@ -4049,7 +4040,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
     const progressBarData = calculateProgressBarData(progressSteps);
 
-    // Helper function to generate HTML for each step
+    // Her bir adımı temsil eden HTML kodunu oluşturan yardımcı fonksiyon
     const generateStepHtml = (step) => {
         const stepTitle = step.title || step.name || step.step_name || step.progress_title || 'Başlık bilgisi yok';
         const stepId = step.progress_id || step.id;
@@ -4078,14 +4069,21 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         `;
     };
 
-    // Logic for creating dynamic pages
-    const stepsPerPage = 4;
+    // Dinamik olarak sayfa oluşturma mantığı
+    const stepsPerPage = 4; // Her sayfada kaç adım olacağını belirler
     let pagesHtml = '';
     let stepIndex = 0;
 
-    // Add first page with project info
+    // İlk sayfa için proje bilgileri ve ilk adımları ekleme
+    let firstPageStepsHtml = '';
+    const firstPageStepCount = Math.min(stepsPerPage, progressSteps.length);
+    for (let i = 0; i < firstPageStepCount; i++) {
+        firstPageStepsHtml += generateStepHtml(progressSteps[stepIndex]);
+        stepIndex++;
+    }
+
     pagesHtml += `
-        <div class="pdf-page first-page">
+        <div class="pdf-page">
             <div class="page-header">
                 <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 40px; margin-right: 15px;">
                 <h1 style="font-size: 18px; color: #005c9d; margin: 0; text-align: center; flex-grow: 1;">Proje Takip Formu</h1>
@@ -4146,7 +4144,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             
                 <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px; margin-top:20px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
                 <div class="work-progress-section">
-                    <!-- Steps will be added here dynamically by JavaScript to prevent overflow -->
+                    ${firstPageStepsHtml}
                 </div>
             </div>
             <div class="page-footer">
@@ -4155,31 +4153,16 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         </div>
     `;
 
-    // Add remaining pages, including the first set of steps
-    let pageNumber = 1;
-    let stepHtmlChunks = [];
-    let currentChunk = '';
-    let currentChunkLength = 0;
-    const maxChunkLength = 3; // Number of steps per chunk, adjust as needed
-
-    // Break steps into chunks for pagination
-    for (let i = 0; i < progressSteps.length; i++) {
-        currentChunk += generateStepHtml(progressSteps[i]);
-        currentChunkLength++;
-        if (currentChunkLength === maxChunkLength || i === progressSteps.length - 1) {
-            stepHtmlChunks.push(currentChunk);
-            currentChunk = '';
-            currentChunkLength = 0;
+    // Sonraki sayfalar için kalan adımları ekleme
+    let pageNumber = 2;
+    while (stepIndex < progressSteps.length) {
+        let currentPageStepsHtml = '';
+        const currentPageStepCount = Math.min(stepsPerPage, progressSteps.length - stepIndex);
+        for (let i = 0; i < currentPageStepCount; i++) {
+            currentPageStepsHtml += generateStepHtml(progressSteps[stepIndex]);
+            stepIndex++;
         }
-    }
 
-    // Combine first page with the first chunk of steps
-    let firstPageContent = pagesHtml.replace('<!-- Steps will be added here dynamically by JavaScript to prevent overflow -->', stepHtmlChunks[0]);
-    pagesHtml = firstPageContent;
-
-    // Add remaining chunks to new pages
-    for (let i = 1; i < stepHtmlChunks.length; i++) {
-        pageNumber++;
         pagesHtml += `
             <div class="pdf-page">
                 <div class="page-header">
@@ -4192,7 +4175,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                 <div class="page-body">
                     <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px; margin-top:20px;'><i class="fas fa-tasks"></i> İş Gidişatı (devamı)</div>
                     <div class="work-progress-section">
-                        ${stepHtmlChunks[i]}
+                        ${currentPageStepsHtml}
                     </div>
                 </div>
                 <div class="page-footer">
@@ -4200,6 +4183,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                 </div>
             </div>
         `;
+        pageNumber++;
     }
 
     const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
@@ -4217,32 +4201,23 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                /* Reset default browser styles for consistency */
-                html, body {
-                    margin: 0;
-                    padding: 0;
-                }
                 body { 
                     font-family: 'Segoe UI', Arial, sans-serif; 
+                    margin: 0; 
+                    padding: 20px; 
                     background-color: #f0f2f5;
                 }
                 .pdf-page {
-                    /* Use border-box to include padding within the 210mm width */
-                    box-sizing: border-box;
                     width: 210mm;
                     min-height: 297mm;
                     margin: 20px auto;
                     background: #fff;
                     box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                    box-sizing: border-box;
                     padding: 20mm;
                     display: flex;
                     flex-direction: column;
                     justify-content: space-between;
-                    border: 1px solid #e1e5e9; /* Added border for visual preview */
-                }
-                /* Explicitly set height for the first page for a more robust A4 layout */
-                .pdf-page.first-page {
-                    height: 297mm;
                 }
                 .page-header, .page-footer {
                     width: 100%;
@@ -4294,25 +4269,19 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     transition: background-color 0.3s ease;
                 }
                 @media print {
-                    /* Reset body margins for printing to use the full page */
                     body {
                         background-color: #fff;
-                        margin: 0;
                         padding: 0;
                     }
                     .pdf-page {
                         margin: 0;
-                        border: none; /* Hide the visual border during print */
+                        border: none;
                         box-shadow: none;
-                        page-break-after: always;
+                        page-break-after: always; /* Her sayfanın sonunda yeni sayfa başlatır */
                         padding: 20mm;
                     }
                     .pdf-page:last-child {
-                        page-break-after: avoid;
-                    }
-                    /* Prevent content from being split between pages */
-                    .progress-step-item {
-                        page-break-inside: avoid;
+                        page-break-after: avoid; /* Son sayfadan sonra yeni sayfa başlatmaz */
                     }
                     .print-button-container {
                         display: none;
@@ -4338,15 +4307,14 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         // showToast ve addActivity fonksiyonlarının projenizin ana dosyasında tanımlı olduğunu varsayıyorum
         // showToast(`${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi hazır.`);
         // addActivity(
-        //      "PDF Raporu Önizlendi",
-        //      `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi açıldı.`,
-        //      project.project_id,
-        //      "fas fa-file-pdf",
-        //      "pdf_preview"
+        //     "PDF Raporu Önizlendi",
+        //     `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi açıldı.`,
+        //     project.project_id,
+        //     "fas fa-file-pdf",
+        //     "pdf_preview"
         // );
     };
 }
-
 
     async function exportAllProjectsToPdf() {
         showToast("Tüm projeler PDF olarak hazırlanıyor...", false);
