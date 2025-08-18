@@ -3902,12 +3902,7 @@ async function generateProjectPdf(project) {
         const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
         if (progressResponse.ok) {
             progressSteps = await progressResponse.json();
-            console.log('Progress Steps API Response:', JSON.stringify(progressSteps, null, 2));
-
-            // Check if we have steps and what fields are available
-            if (progressSteps && progressSteps.length > 0) {
-                console.log('First step object fields:', Object.keys(progressSteps[0]));
-            }
+            // Assuming progressSteps is an array of objects
         } else {
             console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
         }
@@ -3998,6 +3993,7 @@ async function generateProjectPdf(project) {
             const endDate = new Date(step.end_date);
             const plannedDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
             totalPlannedDays += plannedDays;
+
             if (step.is_completed) {
                 const realEndDate = new Date(step.real_end_date);
                 const stepCompletedDays = (realEndDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
@@ -4015,10 +4011,24 @@ async function generateProjectPdf(project) {
         });
 
         const totalDuration = totalPlannedDays + totalDelayedDays;
+        
+        // Handle division by zero
+        if (totalDuration === 0) {
+            return {
+                totalPlannedDays: 0,
+                totalDelayedDays: 0,
+                totalRealDays: 0,
+                completedPercentage: 0,
+                delayPercentage: 0,
+                remainingPercentage: 100
+            };
+        }
+
         let completedPercentage = (totalCompletedDays / totalDuration) * 100;
         let delayPercentage = (totalDelayedDays / totalDuration) * 100;
         let remainingPercentage = 100 - completedPercentage - delayPercentage;
         
+        // Ensure percentages are within a valid range and sum to 100
         completedPercentage = Math.round(Math.max(0, completedPercentage));
         delayPercentage = Math.round(Math.max(0, delayPercentage));
         remainingPercentage = Math.round(Math.max(0, remainingPercentage));
@@ -4277,11 +4287,16 @@ async function generateProjectPdf(project) {
                         margin: 0;
                         border: none;
                         box-shadow: none;
-                        page-break-after: always; /* Her sayfanın sonunda yeni sayfa başlatır */
+                        /* This is the key change to ensure each page is treated as a separate page */
+                        page-break-after: always;
                         padding: 20mm;
                     }
                     .pdf-page:last-child {
                         page-break-after: avoid; /* Son sayfadan sonra yeni sayfa başlatmaz */
+                    }
+                    /* This is also a key addition to prevent steps from being split between pages */
+                    .progress-step-item {
+                        page-break-inside: avoid;
                     }
                     .print-button-container {
                         display: none;
@@ -4307,11 +4322,11 @@ async function generateProjectPdf(project) {
         // showToast ve addActivity fonksiyonlarının projenizin ana dosyasında tanımlı olduğunu varsayıyorum
         // showToast(`${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi hazır.`);
         // addActivity(
-        //     "PDF Raporu Önizlendi",
-        //     `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi açıldı.`,
-        //     project.project_id,
-        //     "fas fa-file-pdf",
-        //     "pdf_preview"
+        //      "PDF Raporu Önizlendi",
+        //      `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi açıldı.`,
+        //      project.project_id,
+        //      "fas fa-file-pdf",
+        //      "pdf_preview"
         // );
     };
 }
