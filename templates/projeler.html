@@ -4139,21 +4139,19 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
                 /* PRINT STYLES */
                 @media print {
-                    /* Base page settings */
                     @page {
                         size: A4;
                         margin: 0;
                     }
                     
-                    /* First page - no top margin */
+                    /* First page has no top margin */
                     @page :first {
                         margin-top: 0;
-                        margin-bottom: 0;
                     }
                     
-                    /* All other pages - force top margin */
-                    @page :not(:first) {
-                        margin-top: 100px !important;
+                    /* All other pages have 100px top margin */
+                    @page {
+                        margin-top: 100px;
                     }
                     
                     /* Ensure content starts below header */
@@ -4260,46 +4258,24 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         page-break-before: auto;
                     }
                     
-                    /* Work progress sections */
+                    /* Add margin to all work progress sections */
+                    .work-progress-section {
+                        margin-top: 100px;
+                    }
+                    
+                    /* Remove margin from first work progress section */
+                    .work-progress-section:first-child {
+                        margin-top: 0;
+                    }
+                    
+                    /* Ensure proper page breaks */
                     .work-progress-section {
                         page-break-inside: avoid;
-                        break-inside: avoid;
-                        margin: 0;
-                        padding: 0;
                     }
                     
-                    /* Add page break before each section except first */
-                    .work-progress-section:not(:first-child) {
-                        page-break-before: always;
-                        padding-top: 0;
-                        margin-top: 0;
-                    }
-                    
-                    /* Add space at the top of each page */
-                    .work-progress-section::before {
-                        content: "";
-                        display: block;
-                        height: 100px;
-                        margin-bottom: 20px;
-                    }
-                    
-                    /* Remove the space for first section */
-                    .work-progress-section:first-child::before {
-                        display: none;
-                    }
-                    
-                    /* Ensure content starts below header on all pages */
-                    .pdf-container {
-                        padding-top: 0;
-                        margin-top: 0;
-                    }
-                    
-                    /* First page specific styles */
                     @page :first {
-                        margin-top: 0;
-                        @top-center {
-                            content: '';
-                            display: none;
+                        .work-progress-section {
+                            margin-top: 20px !important;
                         }
                     }
 
