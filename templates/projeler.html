@@ -3892,13 +3892,12 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         }
     }
 
-// Fonksiyon, her A4 sayfasını temsil eden HTML'i oluşturur.
-async function generateProjectPdf(project) {
+    async function generateProjectPdf(project) {
     let progressSteps = [];
     let revisionCounts = {};
 
     try {
-        // Proje ilerleme adımlarını çekme
+        // Fetch project progress steps
         const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
         if (progressResponse.ok) {
             progressSteps = await progressResponse.json();
@@ -3907,7 +3906,7 @@ async function generateProjectPdf(project) {
             console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
         }
 
-        // Revizyon sayılarını çekme
+        // Fetch revision counts
         const revisionCountResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/revision-counts-by-step`);
         if (revisionCountResponse.ok) {
             revisionCounts = await revisionCountResponse.json();
@@ -3918,7 +3917,7 @@ async function generateProjectPdf(project) {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
-    // Yardımcı fonksiyonlar (mevcut koddan alınmıştır)
+    // Helper functions (taken from your existing code)
     const formatDateForDisplay = (dateStr) => {
         if (!dateStr || dateStr === '-') return '-';
         try {
@@ -4050,7 +4049,7 @@ async function generateProjectPdf(project) {
 
     const progressBarData = calculateProgressBarData(progressSteps);
 
-    // Her bir adımı temsil eden HTML kodunu oluşturan yardımcı fonksiyon
+    // Helper function to generate HTML for each step
     const generateStepHtml = (step) => {
         const stepTitle = step.title || step.name || step.step_name || step.progress_title || 'Başlık bilgisi yok';
         const stepId = step.progress_id || step.id;
@@ -4079,12 +4078,12 @@ async function generateProjectPdf(project) {
         `;
     };
 
-    // Dinamik olarak sayfa oluşturma mantığı
-    const stepsPerPage = 4; // Her sayfada kaç adım olacağını belirler
+    // Logic for creating dynamic pages
+    const stepsPerPage = 4;
     let pagesHtml = '';
     let stepIndex = 0;
 
-    // İlk sayfa için proje bilgileri ve ilk adımları ekleme
+    // Add first page with project info and initial steps
     let firstPageStepsHtml = '';
     const firstPageStepCount = Math.min(stepsPerPage, progressSteps.length);
     for (let i = 0; i < firstPageStepCount; i++) {
@@ -4163,7 +4162,7 @@ async function generateProjectPdf(project) {
         </div>
     `;
 
-    // Sonraki sayfalar için kalan adımları ekleme
+    // Add remaining pages
     let pageNumber = 2;
     while (stepIndex < progressSteps.length) {
         let currentPageStepsHtml = '';
@@ -4211,23 +4210,28 @@ async function generateProjectPdf(project) {
             <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
+                /* Reset default browser styles for consistency */
+                html, body {
+                    margin: 0;
+                    padding: 0;
+                }
                 body { 
                     font-family: 'Segoe UI', Arial, sans-serif; 
-                    margin: 0; 
-                    padding: 20px; 
                     background-color: #f0f2f5;
                 }
                 .pdf-page {
+                    /* Use border-box to include padding within the 210mm width */
+                    box-sizing: border-box;
                     width: 210mm;
                     min-height: 297mm;
                     margin: 20px auto;
                     background: #fff;
                     box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                    box-sizing: border-box;
                     padding: 20mm;
                     display: flex;
                     flex-direction: column;
                     justify-content: space-between;
+                    border: 1px solid #e1e5e9; /* Added border for visual preview */
                 }
                 .page-header, .page-footer {
                     width: 100%;
@@ -4279,22 +4283,23 @@ async function generateProjectPdf(project) {
                     transition: background-color 0.3s ease;
                 }
                 @media print {
+                    /* Reset body margins for printing to use the full page */
                     body {
                         background-color: #fff;
+                        margin: 0;
                         padding: 0;
                     }
                     .pdf-page {
                         margin: 0;
-                        border: none;
+                        border: none; /* Hide the visual border during print */
                         box-shadow: none;
-                        /* This is the key change to ensure each page is treated as a separate page */
                         page-break-after: always;
                         padding: 20mm;
                     }
                     .pdf-page:last-child {
-                        page-break-after: avoid; /* Son sayfadan sonra yeni sayfa başlatmaz */
+                        page-break-after: avoid;
                     }
-                    /* This is also a key addition to prevent steps from being split between pages */
+                    /* Prevent content from being split between pages */
                     .progress-step-item {
                         page-break-inside: avoid;
                     }
