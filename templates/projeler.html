@@ -4161,9 +4161,14 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     /* Ortak yazdırma başlığı ve altbilgisi */
                     /* Header styling */
                     /* Fixed header that appears on each printed page */
-                    /* Remove the running header approach */
-                    #printHeader {
-                        display: none;
+                    .print-header {
+                        position: running(header);
+                        text-align: center;
+                        width: 100%;
+                        padding: 10px 0;
+                        border-bottom: 1px solid #ddd;
+                        margin-bottom: 15px;
+                        -webkit-print-color-adjust: exact;
                     }
                     
                     /* Reset body and page margins */
@@ -4216,20 +4221,18 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     /* Page setup */
                     /* Page setup */
                     @page {
-                        margin: 2.5cm 1.5cm 1.5cm 1.5cm;
+                        margin: 2cm 1cm 1cm 1cm;
                         size: A4;
                     }
                     
-                    /* Add space after page break */
-                    .page-break {
-                        page-break-before: always;
-                        padding-top: 3cm;
+                    @page :first {
+                        margin-top: 2cm;
                     }
                     
                     /* Main content area */
                     .main-content {
                         margin: 0;
-                        padding: 0;
+                        padding: 10px 0;
                     }
 
                     .pdf-section-title {
@@ -4238,14 +4241,15 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     
                     /* Add margin to work progress section on second page */
                     .work-progress-section {
-                        margin-top: 40px !important;
+                        margin-top: 20px !important;
                     }
                     
                     /* Add padding to the first element after page break */
                     /* Add space at the top of each page */
-                    /* Work progress section styling */
-                    .work-progress-section {
-                        margin-top: 30px;
+                    @page {
+                        @top-center {
+                            content: element(header);
+                        }
                     }
 
                     .progress-step-item {
@@ -4280,17 +4284,27 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             </style>
         </head>
         <body>
-            <!-- Header will be duplicated on each page -->
+            <!-- Static header and footer for print -->
+            <div class="print-header" style="padding: 20px 20mm 10px; height: auto;">
+                <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                    <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 40px; margin-right: 15px;">
+                    <h1 style="font-size: 18px; color: #005c9d; margin: 0; text-align: center; flex-grow: 1;">Proje Takip Formu</h1>
+                    <div style="font-size: 11px; color: #6c757d; text-align: right; margin-left: 15px;">
+                        ${formatDateForDisplay(new Date())}
+                    </div>
+                </div>
+            </div>
+            <div class="print-footer">
+                <!-- Sayfa numarası burada otomatik olarak eklenecek -->
+            </div>
 
             <div class="pdf-container">
-                <!-- Header for first page -->
-                <div class="print-header" style="margin-bottom: 30px; padding: 15px 0; border-bottom: 1px solid #eee;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 40px;">
-                        <h1 style="font-size: 20px; color: #005c9d; margin: 0; text-align: center; flex-grow: 1;">Proje Takip Formu</h1>
-                        <div style="font-size: 12px; color: #6c757d; text-align: right; min-width: 120px;">
-                            ${formatDateForDisplay(new Date())}
-                        </div>
+                <!-- Header and footer for screen view -->
+                <div class="screen-header">
+                    <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
+                    <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
+                    <div style="font-size: 14px; color: #555; text-align: right;">
+                        ${formatDateForDisplay(new Date())}
                     </div>
                 </div>
                 <div class="main-content">
