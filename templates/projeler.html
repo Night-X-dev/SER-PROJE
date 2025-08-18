@@ -4139,26 +4139,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
                 /* PRINT STYLES */
                 @media print {
-                    @page {
-                        size: A4;
-                        margin: 0;
-                    }
-                    
-                    /* First page has no top margin */
-                    @page :first {
-                        margin-top: 0;
-                    }
-                    
-                    /* All other pages have 100px top margin */
-                    @page {
-                        margin-top: 100px;
-                    }
-                    
-                    /* Ensure content starts below header */
-                    .pdf-container {
-                        padding-top: 0;
-                    }
-                    
                     body { 
                         background-color: #fff; 
                         -webkit-print-color-adjust: exact;
@@ -4178,8 +4158,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         display: none;
                     }
                     
-                    /* Ortak yazdırma başlığı ve altbilgisi */
-                    /* Header styling */
                     /* Fixed header that appears on each printed page */
                     .print-header {
                         position: fixed;
@@ -4192,20 +4170,9 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         box-sizing: border-box;
                         -webkit-print-color-adjust: exact;
                         z-index: 1000;
+                        border-bottom: 1px solid #eee;
                     }
                     
-                    /* Reset body and page margins */
-                    body {
-                        margin: 0;
-                        padding: 0;
-                    }
-                    
-                    /* Main container with space for fixed header */
-                    .pdf-container {
-                        margin: 0;
-                        padding: 0 20mm;
-                        padding-top: 70px; /* Space for header */
-                    }
                     .print-footer {
                         display: block;
                         position: fixed;
@@ -4223,6 +4190,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         -webkit-print-color-adjust: exact;
                         z-index: 1000;
                     }
+                    
                     .print-header > div, .print-footer > div {
                         width: 170mm;
                         margin: 0 auto;
@@ -4231,8 +4199,17 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         justify-content: space-between;
                         align-items: center;
                     }
+                    
                     .print-header img {
                         height: 35px;
+                    }
+                    
+                    /* Main container with space for fixed header and footer */
+                    .pdf-container {
+                        margin: 0;
+                        padding: 0 20mm;
+                        padding-top: 90px; /* Increased space for header */
+                        padding-bottom: 70px; /* Space for footer */
                     }
                     
                     /* Reset margins and padding for the main content */
@@ -4242,54 +4219,43 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     }
                     
                     /* Page setup */
-                    /* Page setup */
                     @page {
                         margin: 0;
                         size: auto;
                     }
                     
-                    /* Main content area */
-                    .main-content {
-                        margin: 0;
-                        padding: 10px 0;
+                    /* Work progress section specific styling */
+                    .work-progress-section {
+                        margin-top: 30px !important;
                     }
-
+                    
+                    /* Section titles with proper spacing */
                     .pdf-section-title {
-                        page-break-before: auto;
+                        margin-top: 20px !important;
+                        margin-bottom: 20px !important;
+                        padding-top: 10px;
+                        page-break-after: avoid;
                     }
                     
-                    /* Add margin to all work progress sections */
-                    .work-progress-section {
-                        margin-top: 100px;
-                    }
-                    
-                    /* Remove margin from first work progress section */
-                    .work-progress-section:first-child {
-                        margin-top: 0;
-                    }
-                    
-                    /* Ensure proper page breaks */
-                    .work-progress-section {
-                        page-break-inside: avoid;
-                    }
-                    
-                    @page :first {
-                        .work-progress-section {
-                            margin-top: 20px !important;
-                        }
-                    }
-
+                    /* Progress step items */
                     .progress-step-item {
                         page-break-inside: avoid;
                         break-inside: avoid;
-                        margin: 0 0 25px 0;
-                        padding: 15px 0 0 0;
+                        margin: 0 0 30px 0 !important;
+                        padding: 20px 0 !important;
                         border-top: 1px solid #f0f0f0;
                     }
                     
-                    /* Ensure first item starts right after header */
+                    /* Ensure first step item has proper spacing */
                     .progress-step-item:first-child {
-                        margin-top: 0;
+                        margin-top: 20px !important;
+                        padding-top: 10px !important;
+                        border-top: none;
+                    }
+                    
+                    /* Ensure content doesn't overlap with header */
+                    .work-progress-section .pdf-section-title {
+                        margin-top: 40px !important;
                     }
 
                     /* Sayfa numaralandırma */
@@ -4303,6 +4269,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         text-align: center;
                     }
                 }
+                
                 @media screen {
                     .print-header, .print-footer {
                         display: none;
@@ -4423,7 +4390,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         // );
     };
 }
-
 async function exportAllProjectsToPdf() {
         showToast("Tüm projeler PDF olarak hazırlanıyor...", false);
 
