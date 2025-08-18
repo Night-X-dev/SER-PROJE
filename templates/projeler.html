@@ -4142,8 +4142,8 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     body { 
                         background-color: #fff; 
                         -webkit-print-color-adjust: exact;
-                        margin: 0;
-                        padding: 0;
+                        margin-top: 70px; /* Sabit başlık için boşluk bırakır */
+                        margin-bottom: 60px; /* Sabit altbilgi için boşluk bırakır */
                     }
                     .pdf-container { 
                         margin: 0; 
@@ -4158,6 +4158,8 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         display: none;
                     }
                     
+                    /* Ortak yazdırma başlığı ve altbilgisi */
+                    /* Header styling */
                     /* Fixed header that appears on each printed page */
                     .print-header {
                         position: fixed;
@@ -4170,9 +4172,20 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         box-sizing: border-box;
                         -webkit-print-color-adjust: exact;
                         z-index: 1000;
-                        border-bottom: 1px solid #eee;
                     }
                     
+                    /* Reset body and page margins */
+                    body {
+                        margin: 0;
+                        padding: 0;
+                    }
+                    
+                    /* Main container with space for fixed header */
+                    .pdf-container {
+                        margin: 0;
+                        padding: 0 20mm;
+                        padding-top: 90px; /* Space for header */
+                    }
                     .print-footer {
                         display: block;
                         position: fixed;
@@ -4190,7 +4203,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         -webkit-print-color-adjust: exact;
                         z-index: 1000;
                     }
-                    
                     .print-header > div, .print-footer > div {
                         width: 170mm;
                         margin: 0 auto;
@@ -4199,17 +4211,8 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         justify-content: space-between;
                         align-items: center;
                     }
-                    
                     .print-header img {
                         height: 35px;
-                    }
-                    
-                    /* Main container with space for fixed header and footer */
-                    .pdf-container {
-                        margin: 0;
-                        padding: 0 20mm;
-                        padding-top: 90px; /* Increased space for header */
-                        padding-bottom: 70px; /* Space for footer */
                     }
                     
                     /* Reset margins and padding for the main content */
@@ -4219,43 +4222,45 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     }
                     
                     /* Page setup */
+                    /* Page setup */
                     @page {
                         margin: 0;
                         size: auto;
                     }
                     
-                    /* Work progress section specific styling */
-                    .work-progress-section {
-                        margin-top: 30px !important;
+                    /* Main content area */
+                    .main-content {
+                        margin: 0;
+                        padding: 10px 0;
                     }
-                    
-                    /* Section titles with proper spacing */
+
                     .pdf-section-title {
-                        margin-top: 20px !important;
-                        margin-bottom: 20px !important;
-                        padding-top: 10px;
-                        page-break-after: avoid;
+                        page-break-before: auto;
                     }
                     
-                    /* Progress step items */
+                    /* Add margin to work progress section on second page */
+                    .work-progress-section {
+                        margin-top: 80px !important;
+                    }
+                    
+                    /* Reset margin for first page */
+                    @page :first {
+                        .work-progress-section {
+                            margin-top: 20px !important;
+                        }
+                    }
+
                     .progress-step-item {
                         page-break-inside: avoid;
                         break-inside: avoid;
-                        margin: 0 0 30px 0 !important;
-                        padding: 20px 0 !important;
+                        margin: 0 0 25px 0;
+                        padding: 15px 0 0 0;
                         border-top: 1px solid #f0f0f0;
                     }
                     
-                    /* Ensure first step item has proper spacing */
+                    /* Ensure first item starts right after header */
                     .progress-step-item:first-child {
-                        margin-top: 20px !important;
-                        padding-top: 10px !important;
-                        border-top: none;
-                    }
-                    
-                    /* Ensure content doesn't overlap with header */
-                    .work-progress-section .pdf-section-title {
-                        margin-top: 40px !important;
+                        margin-top: 0;
                     }
 
                     /* Sayfa numaralandırma */
@@ -4269,7 +4274,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         text-align: center;
                     }
                 }
-                
                 @media screen {
                     .print-header, .print-footer {
                         display: none;
@@ -4303,7 +4307,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                 </div>
                 <div class="main-content">
                     <!-- Section 1: Project Basic Information -->
-                    <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
+                    <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 20px;">
                         <div style="display: flex; justify-content: space-between; font-size: 14px;">
                             <div style="width: 50%;">
                                 <h3 style="margin: 0 0 10px 0; color: #005c9d; font-size: 16px;">
@@ -4390,6 +4394,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         // );
     };
 }
+
 async function exportAllProjectsToPdf() {
         showToast("Tüm projeler PDF olarak hazırlanıyor...", false);
 
@@ -4501,7 +4506,7 @@ async function exportAllProjectsToPdf() {
         allProjectsHtml += `
                     </tbody>
                 </table>
-                <div style="text-align: center; font-size: 10px; color: #6c757d; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;">
+                <div style="text-align: center; font-size: 10px; color: #6c757d; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
                     © 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır.
                 </div>
             </div>
