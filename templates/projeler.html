@@ -4139,9 +4139,11 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
                 /* PRINT STYLES */
                 @media print {
+                    /* Default page style for all pages */
                     @page {
                         size: A4;
                         margin: 0;
+                        margin-top: 100px;
                     }
                     
                     /* First page has no top margin */
@@ -4149,9 +4151,9 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         margin-top: 0;
                     }
                     
-                    /* All other pages have 100px top margin */
-                    @page {
-                        margin-top: 100px;
+                    /* Force margin on all pages after the first */
+                    @page :not(:first) {
+                        margin-top: 100px !important;
                     }
                     
                     /* Ensure content starts below header */
@@ -4258,22 +4260,17 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         page-break-before: auto;
                     }
                     
-                    /* Add margin to all work progress sections */
-                    /* Add margin to all work progress sections */
-                    .work-progress-section {
-                        margin-top: 100px;
-                        break-before: page;
-                    }
-                    
-                    /* Remove margin from first work progress section */
-                    .work-progress-section:first-child {
-                        margin-top: 0;
-                        break-before: auto;
-                    }
-                    
-                    /* Ensure proper page breaks */
+                    /* Work progress sections */
                     .work-progress-section {
                         page-break-inside: avoid;
+                        break-inside: avoid;
+                        margin-top: 0;
+                    }
+                    
+                    /* Add page break before all work progress sections except first */
+                    .work-progress-section:not(:first-child) {
+                        page-break-before: always;
+                        margin-top: 100px;
                     }
                     
                     /* First page specific styles */
