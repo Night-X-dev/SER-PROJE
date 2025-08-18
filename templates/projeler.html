@@ -4083,14 +4083,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
     let pagesHtml = '';
     let stepIndex = 0;
 
-    // Add first page with project info and initial steps
-    let firstPageStepsHtml = '';
-    const firstPageStepCount = Math.min(stepsPerPage, progressSteps.length);
-    for (let i = 0; i < firstPageStepCount; i++) {
-        firstPageStepsHtml += generateStepHtml(progressSteps[stepIndex]);
-        stepIndex++;
-    }
-
+    // Add first page with project info
     pagesHtml += `
         <div class="pdf-page first-page">
             <div class="page-header">
@@ -4153,7 +4146,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             
                 <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px; margin-top:20px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
                 <div class="work-progress-section">
-                    ${firstPageStepsHtml}
+                    <!-- Steps will be added here dynamically by JavaScript to prevent overflow -->
                 </div>
             </div>
             <div class="page-footer">
@@ -4162,16 +4155,31 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         </div>
     `;
 
-    // Add remaining pages
-    let pageNumber = 2;
-    while (stepIndex < progressSteps.length) {
-        let currentPageStepsHtml = '';
-        const currentPageStepCount = Math.min(stepsPerPage, progressSteps.length - stepIndex);
-        for (let i = 0; i < currentPageStepCount; i++) {
-            currentPageStepsHtml += generateStepHtml(progressSteps[stepIndex]);
-            stepIndex++;
-        }
+    // Add remaining pages, including the first set of steps
+    let pageNumber = 1;
+    let stepHtmlChunks = [];
+    let currentChunk = '';
+    let currentChunkLength = 0;
+    const maxChunkLength = 3; // Number of steps per chunk, adjust as needed
 
+    // Break steps into chunks for pagination
+    for (let i = 0; i < progressSteps.length; i++) {
+        currentChunk += generateStepHtml(progressSteps[i]);
+        currentChunkLength++;
+        if (currentChunkLength === maxChunkLength || i === progressSteps.length - 1) {
+            stepHtmlChunks.push(currentChunk);
+            currentChunk = '';
+            currentChunkLength = 0;
+        }
+    }
+
+    // Combine first page with the first chunk of steps
+    let firstPageContent = pagesHtml.replace('<!-- Steps will be added here dynamically by JavaScript to prevent overflow -->', stepHtmlChunks[0]);
+    pagesHtml = firstPageContent;
+
+    // Add remaining chunks to new pages
+    for (let i = 1; i < stepHtmlChunks.length; i++) {
+        pageNumber++;
         pagesHtml += `
             <div class="pdf-page">
                 <div class="page-header">
@@ -4184,7 +4192,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                 <div class="page-body">
                     <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px; margin-top:20px;'><i class="fas fa-tasks"></i> İş Gidişatı (devamı)</div>
                     <div class="work-progress-section">
-                        ${currentPageStepsHtml}
+                        ${stepHtmlChunks[i]}
                     </div>
                 </div>
                 <div class="page-footer">
@@ -4192,7 +4200,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                 </div>
             </div>
         `;
-        pageNumber++;
     }
 
     const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
@@ -4339,6 +4346,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         // );
     };
 }
+
 
     async function exportAllProjectsToPdf() {
         showToast("Tüm projeler PDF olarak hazırlanıyor...", false);
