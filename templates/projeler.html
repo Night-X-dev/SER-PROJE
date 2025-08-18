@@ -4228,15 +4228,29 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         size: auto;
                     }
                     
-                    /* İlk sayfa dışındaki tüm sayfalar için üst boşluk ekle */
-                    @page :not(:first) {
-                        margin-top: 80px;
+                    /* Header stilleri */
+                    .print-header {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        height: 80px;
+                        background: white;
+                        padding: 10px 0;
+                        z-index: 1000;
+                        -webkit-print-color-adjust: exact;
                     }
                     
-                    /* Main content area */
+                    /* Ana içerik alanı */
                     .main-content {
                         margin: 0;
-                        padding: 10px 0;
+                        padding: 20px 0 0 0;
+                    }
+                    
+                    /* Her yeni sayfa için boşluk */
+                    .page-break {
+                        page-break-before: always;
+                        padding-top: 80px;
                     }
 
                     .pdf-section-title {
@@ -4248,9 +4262,14 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         margin-top: 20px !important;
                     }
                     
-                    /* İlk sayfadaki içerik için normal boşluk */
-                    .main-content {
-                        padding-top: 20px;
+                    /* İlk sayfa için özel stil */
+                    @page :first {
+                        margin-top: 100px;
+                    }
+                    
+                    /* İçerik başlıkları için sayfa sonu kontrolü */
+                    .pdf-section-title {
+                        page-break-after: avoid;
                     }
 
                     .progress-step-item {
