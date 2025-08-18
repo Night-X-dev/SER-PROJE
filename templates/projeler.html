@@ -4039,30 +4039,9 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 
     const progressBarData = calculateProgressBarData(progressSteps);
 
-    // Header component olarak tanımlayalım
-    const createPageHeader = (isFirstPage = false) => {
-        return `
-            <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 2px solid #005c9d; margin-bottom: 30px; ${isFirstPage ? '' : 'page-break-before: always;'}">
-                <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
-                <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center; flex-grow: 1;">Proje Takip Formu</h1>
-                <div style="font-size: 14px; color: #555; text-align: right;">
-                    ${formatDateForDisplay(new Date())}
-                </div>
-            </div>
-        `;
-    };
-
     const generateStepHtml = (steps) => {
         if (steps.length === 0) return '';
-        
-        let result = '';
-        
-        steps.forEach((step, index) => {
-            // Her 4 item'da bir yeni sayfa header'ı ekle (ikinci sayfadan itibaren)
-            if (index > 0 && index % 4 === 0) {
-                result += createPageHeader(false);
-            }
-            
+        return steps.map((step, index) => {
             // Try different possible field names for the title
             const stepTitle = step.title || step.name || step.step_name || step.progress_title || 'Başlık bilgisi yok';
             
@@ -4073,9 +4052,21 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             const stepId = step.progress_id || step.id;
             const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
             
-            result += `
-                <div class="progress-step-item" style="margin-bottom:25px; padding: 20px 0; border-bottom: 1px solid #f0f0f0;">
-                    <div style="font-weight:bold; font-size:15px; margin-bottom: 15px; margin-top: 0;">
+            // Add page header for print every few items to ensure visibility
+            const pageHeader = index > 0 && index % 3 === 0 ? `
+                <div class="print-page-header" style="display: none;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding: 15px 0; border-bottom: 2px solid #005c9d; margin-bottom: 20px;">
+                        <img src="https://serotomasyon.tr/static/serlogo.png" alt="Logo" style="height: 40px;">
+                        <h2 style="font-size: 18px; color: #005c9d; margin: 0;">Proje Takip Formu</h2>
+                        <div style="font-size: 11px; color: #6c757d;">${formatDateForDisplay(new Date())}</div>
+                    </div>
+                </div>
+            ` : '';
+            
+            return `
+                ${pageHeader}
+                <div class="progress-step-item" style="margin-bottom:12px;">
+                    <div style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
                         ${stepTitle} <span style="font-weight: normal; float: right;">${getStepStatusHtml(step)}</span>
                     </div>
                     <div style="display:flex; justify-content:space-between; font-size:13px; color:#555;">
@@ -4091,18 +4082,18 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                             <p><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.real_end_date)} gün</p>
                         </div>
                     </div>
-                    ${step.description ? `<div style="font-size:13px; margin-top: 10px; color: #666;">Açıklama: ${step.description}</div>` : ''}
+                    ${step.description ? `<div style="font-size:13px; margin-top: 5px;">Açıklama: ${step.description}</div>` : ''}
                 </div>
             `;
-        });
-        
-        return result;
+        }).join('');
     };
 
     const allStepsHtml = generateStepHtml(progressSteps);
 
     const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
     if (!newWindow) {
+        // showToast fonksiyonu projenizin ana dosyasında olmalı
+        // showToast("PDF önizlemesi için yeni pencere açılamadı. Tarayıcınızın pop-up engelleyicisini kontrol edin.", true);
         return;
     }
 
@@ -4117,14 +4108,13 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             <style>
                 @page { 
                     size: A4; 
-                    margin: 20mm; 
+                    margin: 0; 
                 }
                 body { 
                     font-family: 'Segoe UI', Arial, sans-serif; 
                     margin: 0; 
                     padding: 0; 
                     background-color: #f0f2f5;
-                    line-height: 1.4;
                 }
                 .pdf-container {
                     width: 210mm;
@@ -4133,71 +4123,197 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                     box-shadow: 0 0 10px rgba(0,0,0,0.1);
                     min-height: 297mm;
                     box-sizing: border-box;
-                    padding: 40px;
+                    padding-top: 60px;
+                    padding-bottom: 60px;
                 }
-                
+                .screen-header, .screen-footer {
+                    width: 170mm;
+                    margin: 0 auto;
+                    padding: 15px 0;
+                }
+                .screen-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    border-bottom: 1px solid #eee;
+                    margin-bottom: 15px;
+                }
+                .screen-footer {
+                    border-top: 1px solid #eee;
+                    margin-top: 15px;
+                    text-align: center;
+                    color: #6c757d;
+                    font-size: 12px;
+                }
+                .main-content {
+                    box-sizing: border-box;
+                    padding: 0 20mm;
+                }
+
                 /* PRINT STYLES */
                 @media print {
                     body { 
-                        background-color: #fff !important; 
+                        background-color: #fff; 
                         -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                        margin: 0 !important;
-                        padding: 0 !important;
+                        margin: 0;
+                        padding: 0;
                     }
-                    
                     .pdf-container { 
-                        margin: 0 !important; 
-                        box-shadow: none !important; 
-                        padding: 0 !important;
-                        width: 100% !important;
-                        min-height: auto !important;
+                        margin: 0; 
+                        box-shadow: none; 
+                        padding: 0; 
+                        min-height: 100%;
                     }
-                    
                     .print-button-container { 
-                        display: none !important; 
+                        display: none; 
+                    }
+                    .screen-header, .screen-footer {
+                        display: none;
                     }
                     
-                    /* Page headers */
-                    .page-header {
-                        page-break-inside: avoid !important;
-                        margin-bottom: 30px !important;
+                    /* Fixed header that appears on each printed page */
+                    .print-header {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        height: 70px;
+                        background-color: #fff;
+                        padding: 0 20mm;
+                        box-sizing: border-box;
+                        -webkit-print-color-adjust: exact;
+                        z-index: 1000;
+                        border-bottom: 1px solid #eee;
+                    }
+                    
+                    .print-footer {
+                        display: block;
+                        position: fixed;
+                        bottom: 0;
+                        left: 0;
+                        right: 0;
+                        height: 50px;
+                        padding: 5px 20mm;
+                        box-sizing: border-box;
+                        background-color: #fff;
+                        border-top: 1px solid #eee;
+                        font-size: 12px;
+                        color: #6c757d;
+                        text-align: center;
+                        -webkit-print-color-adjust: exact;
+                        z-index: 1000;
+                    }
+                    
+                    .print-header > div, .print-footer > div {
+                        width: 170mm;
+                        margin: 0 auto;
+                        height: 100%;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                    }
+                    
+                    .print-header img {
+                        height: 35px;
+                    }
+                    
+                    /* Main container with space for fixed header and footer */
+                    .pdf-container {
+                        margin: 0;
+                        padding: 0 20mm;
+                        padding-top: 90px; /* Increased space for header */
+                        padding-bottom: 70px; /* Space for footer */
+                    }
+                    
+                    /* Reset margins and padding for the main content */
+                    .main-content {
+                        padding: 0 !important;
+                        margin: 0 !important;
+                    }
+                    
+                    /* Page setup */
+                    @page {
+                        margin: 0;
+                        size: auto;
+                    }
+                    
+                    /* Work progress section specific styling */
+                    .work-progress-section {
+                        margin-top: 30px !important;
+                    }
+                    
+                    /* Section titles with proper spacing */
+                    .pdf-section-title {
+                        margin-top: 20px !important;
+                        margin-bottom: 20px !important;
+                        padding-top: 10px;
+                        page-break-after: avoid;
                     }
                     
                     /* Progress step items */
                     .progress-step-item {
-                        page-break-inside: avoid !important;
-                        break-inside: avoid !important;
-                        margin-bottom: 25px !important;
+                        page-break-inside: avoid;
+                        break-inside: avoid;
+                        margin: 0 0 30px 0 !important;
                         padding: 20px 0 !important;
+                        border-top: 1px solid #f0f0f0;
                     }
                     
-                    /* Work progress section */
-                    .work-progress-section {
-                        page-break-before: always !important;
-                        margin-top: 0 !important;
+                    /* Ensure first step item has proper spacing */
+                    .progress-step-item:first-child {
+                        margin-top: 20px !important;
+                        padding-top: 10px !important;
+                        border-top: none;
                     }
                     
-                    /* Section titles */
-                    .pdf-section-title {
-                        margin-top: 0 !important;
-                        margin-bottom: 20px !important;
-                        page-break-after: avoid !important;
+                    /* Ensure content doesn't overlap with header */
+                    .work-progress-section .pdf-section-title {
+                        margin-top: 40px !important;
+                    }
+
+                    /* Sayfa numaralandırma */
+                    body {
+                        counter-reset: page-number;
+                    }
+                    .print-footer::after {
+                        counter-increment: page-number;
+                        content: "Sayfa " counter(page-number);
+                        display: block;
+                        text-align: center;
                     }
                 }
                 
                 @media screen {
-                    .page-header:not(:first-child) {
+                    .print-header, .print-footer {
                         display: none;
                     }
                 }
             </style>
         </head>
         <body>
+            <!-- Static header and footer for print -->
+            <div class="print-header">
+                <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                    <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 40px; margin-right: 15px;">
+                    <h1 style="font-size: 18px; color: #005c9d; margin: 0; text-align: center; flex-grow: 1;">Proje Takip Formu</h1>
+                    <div style="font-size: 11px; color: #6c757d; text-align: right; margin-left: 15px;">
+                        ${formatDateForDisplay(new Date())}
+                    </div>
+                </div>
+            </div>
+            <div class="print-footer">
+                <!-- Sayfa numarası burada otomatik olarak eklenecek -->
+            </div>
+
             <div class="pdf-container">
-                <!-- İlk sayfa header'ı -->
-                ${createPageHeader(true)}
-                
+                <!-- Header and footer for screen view -->
+                <div class="screen-header">
+                    <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
+                    <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
+                    <div style="font-size: 14px; color: #555; text-align: right;">
+                        ${formatDateForDisplay(new Date())}
+                    </div>
+                </div>
                 <div class="main-content">
                     <!-- Section 1: Project Basic Information -->
                     <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
