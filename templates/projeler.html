@@ -4071,10 +4071,6 @@ async function generateProjectPdf(project) {
         return;
     }
 
-    // Project status text for the header
-    const statusText = project.display_status || 'Bilinmiyor';
-    const statusColor = statusText.includes('Gecikmeli') ? 'red' : '#4CAF50';
-    
     const fullHtmlContent = `
         <!DOCTYPE html>
         <html lang="tr">
@@ -4087,24 +4083,17 @@ async function generateProjectPdf(project) {
                 /* YAZDIRMA VE EKRAN GÖRÜNÜMÜ İÇİN GÜNCELLENMİŞ CSS */
                 @page {
                     size: A4;
-                    margin: 2.5cm 1cm 1cm 1cm;
-                    
-                    @top-center {
-                        content: element(printHeader);
-                    }
+                    /* Header ve footer için sayfa kenar boşluklarını ayarla */
+                    margin: 2.5cm 1cm;
                 }
-                
-                /* Header for all pages */
-                #printHeader {
-                    position: running(printHeader);
-                    text-align: center;
-                    width: 100%;
-                    padding: 10px 0;
-                    border-bottom: 1px solid #ddd;
-                    margin-bottom: 15px;
+
+                /* Bu sahte elemanlar, @page içinde header ve footer'ı tanımlamak için kullanılır */
+                @top-center {
+                    content: element(printHeader);
                 }
-                
-                /* Footer removed as per request */
+                @bottom-center {
+                    content: element(printFooter);
+                }
 
                 body {
                     font-family: 'Segoe UI', Arial, sans-serif;
@@ -4119,7 +4108,7 @@ async function generateProjectPdf(project) {
                     box-shadow: 0 0 10px rgba(0,0,0,0.1);
                     min-height: 297mm;
                     box-sizing: border-box;
-                    padding: 0 25px 25px 25px;
+                    padding: 20px 25px;
                 }
                 .screen-header, .screen-footer {
                     width: 100%;
@@ -4157,30 +4146,26 @@ async function generateProjectPdf(project) {
                         background-color: #fff;
                         -webkit-print-color-adjust: exact;
                         color-adjust: exact;
-                        margin: 0;
-                        padding: 0;
                     }
                     .pdf-container {
                         margin: 0;
                         box-shadow: none;
                         padding: 0;
-                        width: 100%;
+                        width: auto;
                         min-height: 0;
-                        page-break-after: always;
                     }
                     .print-button-container,
                     .screen-header,
                     .screen-footer {
-                        display: none !important;
+                        display: none;
                     }
                     #printHeader {
                         display: block;
-                        position: running(printHeader);
-                        text-align: center;
-                        width: 100%;
-                        padding: 10px 0;
-                        border-bottom: 1px solid #ddd;
-                        margin-bottom: 15px;
+                        position: running(printHeader); /* Akıştan çıkar ve @page için kullanılabilir yap */
+                    }
+                    #printFooter {
+                        display: block;
+                        position: running(printFooter); /* Akıştan çıkar ve @page için kullanılabilir yap */
                     }
                     .avoid-break {
                         page-break-inside: avoid;
@@ -4245,11 +4230,13 @@ async function generateProjectPdf(project) {
                 </div>
                 
                 <div class="main-content">
-                    <!-- Bölüm 1: Proje Temel Bilgileri ve İlk 2 İş Gidişatı -->
+                    <!-- Bölüm 1: Proje Temel Bilgileri -->
                     <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
                         <div style="display: flex; justify-content: space-between; font-size: 14px;">
                             <div style="width: 50%;">
-                                <h3 style='font-size:28px;color:#005c9d;margin-bottom:5px;'>${project.reference_no || '-'}</h3>
+                                <h3 style="margin: 0 0 10px 0; color: #005c9d; font-size: 16px;">
+                                    ${project.reference_no || '-'}
+                                </h3>
                                 <p><strong>Proje Yöneticisi:</strong> ${project.project_manager_name || '-'}</p>
                                 <p><strong>İşin Adı:</strong> ${project.project_name ? project.project_name.normalize('NFC') : '-'}</p>
                                 <p><strong>Müşteri Adı:</strong> ${project.customer_name || '-'}</p>
@@ -4259,18 +4246,7 @@ async function generateProjectPdf(project) {
                                 <p style="margin-top: 10px;"><strong>Sözleşme imzalanalı:</strong> ${calculateDaysSinceContract(project.contract_date)} gün oldu</p>
                             </div>
                         </div>
-                        
-                        <!-- İlk 2 İş Gidişatı -->
-                        ${firstStepsHtml.length > 0 ? `
-                        <div style="margin-top: 30px;">
-                            <h3 style="color: #005c9d; border-bottom: 1px solid #e1e5e9; padding-bottom: 5px; margin-bottom: 15px;">
-                                <i class="fas fa-tasks"></i> İlk 2 İş Gidişatı
-                            </h3>
-                            <div class="progress-steps-container">
-                                ${firstStepsHtml}
-                            </div>
-                        </div>
-                        ` : ''}
+                    </div>
 
                     <!-- Bölüm 2: Proje Süre ve İlerleme Durumu -->
                     <div style="border-top: 1px solid #ccc; margin-top: 20px; padding-top: 20px;">
@@ -4306,17 +4282,30 @@ async function generateProjectPdf(project) {
                         </div>
                     </div>
                     
-                    <!-- Kalan İş Gidişatları -->
-                    ${remainingStepsHtml.length > 0 ? `
+                    <!-- İlk 2 Proje İlerleme Adımı -->
+                    ${firstStepsHtml.length > 0 ? `
                     <div style="margin-top: 30px; padding-top: 20px;" class="avoid-break">
-                        <div class="pdf-section-title"><i class="fas fa-tasks"></i> Diğer İş Gidişatları</div>
-                        <div class="progress-steps-container">
+                        <div class="pdf-section-title"><i class="fas fa-tasks"></i> İş Gidişatı</div>
+                        <div>
+                            ${firstStepsHtml}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <!-- Kalan Proje İlerleme Adımları (Yeni Sayfada Başlar) -->
+                    ${remainingStepsHtml.length > 0 ? `
+                    <div style="margin-top: 30px; padding-top: 20px;" class="page-break-before">
+                        <div class="pdf-section-title"><i class="fas fa-tasks"></i> İş Gidişatı (Devamı)</div>
+                        <div>
                             ${remainingStepsHtml}
                         </div>
                     </div>
                     ` : ''}
                 </div>
                 
+                <div class="screen-footer">
+                    ${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu | ${project.reference_no || '-'} | ${formatDateForDisplay(new Date())}
+                </div>
             </div>
             
             <div class="print-button-container">
@@ -4444,7 +4433,7 @@ async function exportAllProjectsToPdf() {
                     </tbody>
                 </table>
                 <div style="text-align: center; font-size: 10px; color: #6c757d; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;">
-                    2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır.
+                    © 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır.
                 </div>
             </div>
         `;
