@@ -4146,91 +4146,65 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         margin: 0;
                         padding: 0;
                     }
-                    .pdf-container { 
-                        margin: 0 auto; 
-                        box-shadow: none; 
-                        padding: 0; 
+
+                    .pdf-container {
+                        width: 100%;
+                        margin: 0;
+                        box-shadow: none;
                         min-height: 100%;
+                        box-sizing: border-box;
+                        padding: 0 20mm;
                     }
-                    .print-button-container { 
+                    
+                    .print-button-container, .screen-header, .screen-footer { 
                         display: none; 
                     }
-                    .screen-header, .screen-footer {
-                        display: none;
-                    }
                     
-                    /* Fixed header that appears on each printed page */
+                    /* Başlık ve altbilgi için @page kuralları */
+                    @page {
+                        size: A4;
+                        margin: 20mm;
+                        @bottom-center {
+                            content: "Sayfa " counter(page);
+                            font-family: 'Segoe UI', Arial, sans-serif;
+                            font-size: 12px;
+                            color: #6c757d;
+                        }
+                    }
+
+                    /* İlk sayfa için özel stil */
+                    @page :first {
+                        margin-top: 50mm; /* Başlık ve içerik için boşluk */
+                        @top-center {
+                            content: element(header);
+                        }
+                    }
+
+                    /* Başlığı her sayfada tekrarlatmak için */
                     .print-header {
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        right: 0;
-                        height: 70px;
-                        background-color: #fff;
-                        padding: 0 20mm;
-                        box-sizing: border-box;
-                        -webkit-print-color-adjust: exact;
-                        z-index: 1000;
-                        border-bottom: 1px solid #eee;
-                    }
-                    
-                    .print-footer {
-                        display: block;
-                        position: fixed;
-                        bottom: 0;
-                        left: 0;
-                        right: 0;
-                        height: 50px;
-                        padding: 5px 20mm;
-                        box-sizing: border-box;
-                        background-color: #fff;
-                        border-top: 1px solid #eee;
-                        font-size: 12px;
-                        color: #6c757d;
-                        text-align: center;
-                        -webkit-print-color-adjust: exact;
-                        z-index: 1000;
-                    }
-                    
-                    .print-header > div, .print-footer > div {
+                        position: running(header);
                         width: 170mm;
                         margin: 0 auto;
-                        height: 100%;
+                        padding: 15px 0;
+                        border-bottom: 1px solid #eee;
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
+                        box-sizing: border-box;
+                        -webkit-print-color-adjust: exact;
+                        page-break-after: avoid;
                     }
                     
-                    .print-header img {
-                        height: 35px;
-                    }
-                    
-                    /* Main container with space for fixed header and footer */
+                    /* Main container for print with adjusted padding */
                     .pdf-container {
-                        margin: 0;
-                        padding: 0 20mm;
-                        padding-top: 90px; /* Space for header */
-                        padding-bottom: 70px; /* Space for footer */
-                        position: relative;
+                        padding-top: 20mm; /* Diğer sayfalar için üst boşluk */
                     }
                     
-                    /* Add padding to all pages after the first one */
-                    @page :not(:first) {
-                        margin-top: 100px; /* Extra space for header on subsequent pages */
-                    }
-                    
-                    /* Ensure content doesn't overlap with header */
-                    .main-content {
-                        padding: 0 !important;
-                        /* margin: 0 !important; BU SATIR SİLİNDİ, ÇÜNKÜ BOŞLUK SORUNUNA YOL AÇABİLİR */
-                    }
-                    
-                    /* Page setup */
+                    /* Sayfayı bölme ayarları */
                     .work-progress-section {
                         page-break-after: avoid;
                     }
                     
-                    /* Progress step items */
                     .progress-step-item {
                         page-break-inside: avoid;
                         break-inside: avoid;
@@ -4239,22 +4213,15 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         border-top: 1px solid #f0f0f0;
                     }
                     
-                    /* Ensure first step item has proper spacing */
                     .progress-step-item:first-child {
                         margin-top: 20px !important;
                         padding-top: 0 !important;
                         border-top: none;
                     }
-                    
-                    /* Sayfa numaralandırma */
-                    body {
-                        counter-reset: page-number;
-                    }
-                    .print-footer::after {
-                        counter-increment: page-number;
-                        content: "Sayfa " counter(page-number);
-                        display: block;
-                        text-align: center;
+
+                    /* İlk sayfa başlığının içeriğe ek boşluk bırakması */
+                    .main-content .project-info {
+                         margin-top: 0 !important;
                     }
                 }
                 
@@ -4266,7 +4233,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
             </style>
         </head>
         <body>
-            <!-- Static header and footer for print -->
+            <!-- Static header for print and screen -->
             <div class="print-header">
                 <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                     <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 40px; margin-right: 15px;">
@@ -4275,9 +4242,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
                         ${formatDateForDisplay(new Date())}
                     </div>
                 </div>
-            </div>
-            <div class="print-footer">
-                <!-- Sayfa numarası burada otomatik olarak eklenecek -->
             </div>
 
             <div class="pdf-container">
