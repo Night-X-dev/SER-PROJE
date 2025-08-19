@@ -3921,6 +3921,13 @@ async function generateProjectPdf(project) {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
+    // Determine the actual project end date from the last completed step
+    const lastCompletedStep = progressSteps
+        .filter(step => step.is_completed && step.real_end_date)
+        .sort((a, b) => new Date(b.real_end_date) - new Date(a.real_end_date))[0];
+
+    const actualProjectEndDate = lastCompletedStep ? lastCompletedStep.real_end_date : null;
+
     // Helper functions (taken from existing code)
     const formatDateForDisplay = (dateStr) => {
         if (!dateStr || dateStr === '-') return '-';
@@ -3978,9 +3985,25 @@ async function generateProjectPdf(project) {
     };
 
     const calculateActualDuration = (startDateStr, realEndDateStr) => {
-        if (!startDateStr) return '-';
+        if (!startDateStr || !realEndDateStr) return '-'; // Added check for realEndDateStr
         const startDate = new Date(startDateStr);
-        const endDate = realEndDateStr ? new Date(realEndDateStr) : new Date();
+        const endDate = new Date(realEndDateStr);
+        const diffTime = endDate.getTime() - startDate.getTime();
+        return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    };
+    
+    const calculateTotalPlannedDuration = () => {
+        if (!project.start_date || !project.end_date) return '-';
+        const startDate = new Date(project.start_date);
+        const endDate = new Date(project.end_date);
+        const diffTime = endDate.getTime() - startDate.getTime();
+        return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    };
+
+    const calculateTotalActualDuration = () => {
+        if (!project.start_date || !actualProjectEndDate) return '-';
+        const startDate = new Date(project.start_date);
+        const endDate = new Date(actualProjectEndDate);
         const diffTime = endDate.getTime() - startDate.getTime();
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
@@ -4275,13 +4298,12 @@ async function generateProjectPdf(project) {
                             <div style="width: 50%;">
                                 <p><strong>Sözleşme Tarihi:</strong> ${formatDateForDisplay(project.contract_date || '-')}</p>
                                 <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(project.start_date || '-')}</p>
-                                <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(project.end_date || '-')}</p>
-                                <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(project.real_end_date || '-')}</p>
+                                <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(actualProjectEndDate || '-')}</p>
                             </div>
                             <div style="width: 50%; text-align: right;">
-                                <p><strong>Planlanan Toplam Süre:</strong> ${progressBarData.totalPlannedDays || '-'} gün</p>
-                                <p><strong>Gecikme Toplam Süre:</strong> ${progressBarData.totalDelayedDays || '-'} gün</p>
-                                <p><strong>Gerçek Toplam Süre:</strong> ${progressBarData.totalRealDays || '-'} gün</p>
+                                <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(project.end_date || '-')}</p>
+                                <p><strong>Planlanan Toplam Süre:</strong> ${calculateTotalPlannedDuration()} gün</p>
+                                <p><strong>Gerçek Toplam Süre:</strong> ${calculateTotalActualDuration()} gün</p>
                             </div>
                         </div>
                         
