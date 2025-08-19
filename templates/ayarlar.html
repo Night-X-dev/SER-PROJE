@@ -1133,6 +1133,48 @@
                 margin-top: 10px;
             }
         }
+        /* Gece modu için tablolar */
+[data-theme="dark"] .data-table th,
+[data-theme="dark"] .data-table td,
+[data-theme="dark"] .data-table tr {
+    background-color: var(--card-bg) !important;
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .data-table tr:hover {
+    background-color: #2a2a2a !important;
+}
+
+/* Sayfalama butonu stilleri */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    gap: 10px;
+}
+
+.pagination-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background-color: var(--primary-light);
+    color: var(--white);
+    border-color: var(--primary-light);
+}
+
+.pagination-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
         /* Bootstrap modal arka plan overlay düzeltmesi */
         .modal-backdrop {
             opacity: 0.5 !important;
@@ -1581,28 +1623,23 @@
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover" id="revisionRequestsTable">
-                <thead class="table-light">
+            <table class="data-table" id="requestsTable">
+                <thead>
                     <tr>
-                        <th>Proje</th>
-                        <th>Başlık</th>
-                        <th>İsteyen</th>
-                        <th>Tarih</th>
                         <th>Durum</th>
+                        <th>Başlık</th>
+                        <th>Açıklama</th>
+                        <th>Tarih</th>
                         <th>İşlemler</th>
                     </tr>
                 </thead>
-                <tbody id="revisionRequestsBody">
+                <tbody>
                     <!-- Revizyon istekleri buraya yüklenecek -->
                 </tbody>
             </table>
-            <!-- Pagination Controls -->
-            <div class="d-flex justify-content-between align-items-center mt-3">
-                <div class="text-muted" id="revisionRequestsPaginationInfo"></div>
-                <ul class="pagination mb-0" id="revisionRequestsPagination">
-                    <!-- Pagination buttons will be inserted here -->
-                </ul>
-            </div>
+        </div>
+        <div class="pagination-container" id="paginationContainer">
+            <!-- Sayfalama butonları buraya JS ile eklenecek -->
         </div>
     </div>
 </div>
@@ -1824,6 +1861,138 @@
                 showToast('Hata', 'Revizyon istekleri yüklenirken bir hata oluştu', 'error');
             }
         }
+// Sayfalama için global değişkenler
+let currentPage = 1;
+const requestsPerPage = 10;
+let allRequests = [];
+
+// API'den revizyon isteklerini çeken ve sayfalamayı yöneten fonksiyon
+async function loadRequests() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/revision-requests`);
+        if (!response.ok) {
+            throw new Error('Revizyon istekleri yüklenirken bir hata oluştu.');
+        }
+        allRequests = await response.json();
+        
+        // Verileri tarihe göre sırala (en yeniler en üstte)
+        allRequests.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        renderRequests(currentPage);
+        createPaginationButtons();
+
+    } catch (error) {
+        console.error('Error loading requests:', error);
+        showToast('Revizyon istekleri yüklenemedi: ' + error.message, true);
+    }
+}
+
+// Belirli bir sayfadaki istekleri render eden fonksiyon
+function renderRequests(page) {
+    const tableBody = document.getElementById('requestsTable').querySelector('tbody');
+    tableBody.innerHTML = ''; // Tabloyu temizle
+
+    const start = (page - 1) * requestsPerPage;
+    const end = start + requestsPerPage;
+    const paginatedRequests = allRequests.slice(start, end);
+
+    if (paginatedRequests.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Henüz bir revizyon isteği bulunmamaktadır.</td></tr>';
+        return;
+    }
+
+    paginatedRequests.forEach(request => {
+        const row = document.createElement('tr');
+        const statusClass = request.is_active ? 'badge-success' : 'badge-danger';
+        const statusText = request.is_active ? 'Aktif' : 'Pasif';
+        const date = new Date(request.created_at).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' });
+
+        row.innerHTML = `
+            <td><span class="badge ${statusClass}">${statusText}</span></td>
+            <td>${request.title}</td>
+            <td>${request.description}</td>
+            <td>${date}</td>
+            <td>
+                <div class="btn-group gap-2">
+                    <button class="action-btn" onclick="editRequest(${request.id})"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn btn-danger" onclick="deleteRequest(${request.id})"><i class="fas fa-trash-alt"></i></button>
+                </div>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+// Sayfalama butonlarını oluşturan fonksiyon
+function createPaginationButtons() {
+    const paginationContainer = document.getElementById('paginationContainer');
+    paginationContainer.innerHTML = '';
+    const totalPages = Math.ceil(allRequests.length / requestsPerPage);
+
+    // Önceki sayfa butonu
+    const prevBtn = document.createElement('button');
+    prevBtn.id = 'prevPageBtn';
+    prevBtn.className = 'pagination-btn';
+    prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.onclick = () => {
+        currentPage--;
+        renderRequests(currentPage);
+        updatePaginationButtons();
+    };
+    paginationContainer.appendChild(prevBtn);
+
+    // Sayfa numarası butonları
+    for (let i = 1; i <= totalPages; i++) {
+        const pageBtn = document.createElement('button');
+        pageBtn.className = 'pagination-btn';
+        if (i === currentPage) {
+            pageBtn.classList.add('active'); // Aktif sayfa sınıfı
+            pageBtn.disabled = true;
+        }
+        pageBtn.innerText = i;
+        pageBtn.onclick = () => {
+            currentPage = i;
+            renderRequests(currentPage);
+            updatePaginationButtons();
+        };
+        paginationContainer.appendChild(pageBtn);
+    }
+
+    // Sonraki sayfa butonu
+    const nextBtn = document.createElement('button');
+    nextBtn.id = 'nextPageBtn';
+    nextBtn.className = 'pagination-btn';
+    nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+    nextBtn.disabled = currentPage === totalPages || totalPages === 0;
+    nextBtn.onclick = () => {
+        currentPage++;
+        renderRequests(currentPage);
+        updatePaginationButtons();
+    };
+    paginationContainer.appendChild(nextBtn);
+}
+
+// Buton durumlarını güncelleyen fonksiyon
+function updatePaginationButtons() {
+    const totalPages = Math.ceil(allRequests.length / requestsPerPage);
+    document.getElementById('prevPageBtn').disabled = currentPage === 1;
+    document.getElementById('nextPageBtn').disabled = currentPage === totalPages || totalPages === 0;
+
+    // Aktif sayfa butonunu belirle
+    document.querySelectorAll('.pagination-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (parseInt(btn.innerText) === currentPage) {
+            btn.classList.add('active');
+        }
+    });
+}
+
+// Sayfa yüklendiğinde istekleri yükle
+document.addEventListener('DOMContentLoaded', () => {
+    // Diğer DOMContentLoaded kodları...
+    loadRequests();
+});
 // Durum etiketi oluştur
 function getStatusBadge(status) {
     const statuses = {
