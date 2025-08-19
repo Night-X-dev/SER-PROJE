@@ -4044,33 +4044,31 @@ async function generateProjectPdf(project) {
      * @param {Array<object>} steps - Proje adımlarının listesi.
      * @returns {number} Toplam gerçekleşen gün sayısı.
      */
-    const calculateTotalActualDuration = (steps) => {
-        if (!steps || steps.length === 0) return 0;
+     const calculateTotalActualDuration = (steps) => {
+    if (!steps || steps.length === 0) return 0;
 
-        let total = 0;
-        const today = new Date();
+    let total = 0;
 
-        steps.forEach(step => {
-            if (step.start_date) {
-                const startDate = new Date(step.start_date);
-                let duration = 0;
+    steps.forEach(step => {
+        if (step.start_date) {
+            const startDate = new Date(step.start_date);
+            const endDate = step.end_date 
+                ? new Date(step.end_date) 
+                : (step.real_end_date ? new Date(step.real_end_date) : null);
 
-                // Tamamlanmış adımlar için Gerçek Bitiş tarihini kullan.
-                if (step.is_completed && step.end_date) {
-                    const endDate = new Date(step.end_date);
-                    duration = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
-                }
-                // Devam eden adımlar için bugünün tarihini kullan.
-                else {
-                    duration = (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
-                }
+            if (endDate) {
+                const diffTime = endDate.getTime() - startDate.getTime();
+                const duration = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
                 if (!isNaN(duration) && duration > 0) {
-                    total += Math.ceil(duration);
+                    total += duration;
                 }
             }
-        });
-        return total;
-    };
+        }
+    });
+
+    return total;
+};
+
 
 
     /**
