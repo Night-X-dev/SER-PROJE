@@ -4005,16 +4005,32 @@ async function generateProjectPdf(project) {
         return total;
     };
 
-    // GÜNCELLENDİ: Gerçek Toplam Süreyi tüm tamamlanmış adımların gerçek sürelerinin toplamı olarak hesaplar.
+    // GÜNCELLENDİ: Gerçek Toplam Süreyi, tüm iş adımlarının (tamamlanmış veya tamamlanmamış) gerçek sürelerinin toplamı olarak hesaplar.
     const calculateTotalActualDuration = (steps) => {
-        const completedSteps = steps.filter(step => step.is_completed);
-        if (completedSteps.length === 0) return 0;
+        if (steps.length === 0) return 0;
 
         let total = 0;
-        completedSteps.forEach(step => {
-            const actualDuration = calculateActualDuration(step.start_date, step.end_date);
-            if (typeof actualDuration === 'number') {
-                total += actualDuration;
+        const today = new Date();
+
+        steps.forEach(step => {
+            if (step.start_date) {
+                const startDate = new Date(step.start_date);
+                let duration = 0;
+
+                // Tamamlanmış adımlar için Gerçek Bitiş tarihini kullan.
+                if (step.is_completed && step.end_date) {
+                    const endDate = new Date(step.end_date);
+                    duration = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
+                } 
+                // Devam eden veya bekleyen adımlar için bugünü veya Planlanan Bitiş tarihini kullan.
+                else {
+                    const endDate = today;
+                    duration = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
+                }
+                
+                if (!isNaN(duration) && duration > 0) {
+                    total += Math.ceil(duration); // Gün sayısını yuvarla
+                }
             }
         });
         return total;
