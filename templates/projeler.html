@@ -3893,12 +3893,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
     }
 
 
-/**
- * Asenkron olarak proje verilerini çeker ve bir proje raporu PDF'i oluşturur.
- *
- * @param {object} project Proje detaylarını içeren nesne.
- * @returns {void}
- */
 async function generateProjectPdf(project) {
     let progressSteps = [];
     let revisionCounts = {};
@@ -3909,9 +3903,6 @@ async function generateProjectPdf(project) {
         if (progressResponse.ok) {
             progressSteps = await progressResponse.json();
             console.log('Progress Steps API Response:', JSON.stringify(progressSteps, null, 2));
-
-            // Adımları başlangıç tarihine göre sırala
-            progressSteps.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
 
             if (progressSteps && progressSteps.length > 0) {
                 console.log('First step object fields:', Object.keys(progressSteps[0]));
@@ -3931,20 +3922,17 @@ async function generateProjectPdf(project) {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
-    // Gerçek Proje Bitiş tarihini belirleme: En son tamamlanan adımın `end_date` alanı kullanılır.
-    const lastCompletedStep = progressSteps
-        .filter(step => step.is_completed)
-        .sort((a, b) => new Date(b.end_date) - new Date(a.end_date))[0];
-    const actualProjectEndDate = lastCompletedStep ? lastCompletedStep.end_date : null;
-
+    // Gerçek Proje Bitiş tarihini belirleme: En son adımdaki `end_date` alanı kullanılır.
+    // Bu, adım tamamlanmamışsa null olabilir ve ekranda '-' olarak gösterilir.
+    const lastStep = progressSteps.length > 0 ? progressSteps[progressSteps.length - 1] : null;
+    const actualProjectEndDate = lastStep ? lastStep.end_date : null;
+    
     // Genel planlanan bitiş tarihini son adımın planlanan bitiş tarihinden belirleme
     const lastPlannedStep = progressSteps
+        .filter(step => step.real_end_date)
         .sort((a, b) => new Date(b.real_end_date) - new Date(a.real_end_date))[0];
-
-    const lastPlannedEndDate = lastPlannedStep ? lastPlannedStep.real_end_date : null;
     
-    // Proje başlangıç tarihini proje nesnesinden alıyoruz.
-    const projectStartDate = project.start_date;
+    const lastPlannedEndDate = lastPlannedStep ? lastPlannedStep.real_end_date : null;
 
     // Tarihleri okunabilir formatta göstermek için yardımcı fonksiyon
     const formatDateForDisplay = (dateStr) => {
@@ -3957,15 +3945,6 @@ async function generateProjectPdf(project) {
             console.error("Tarih formatı dönüştürülürken hata:", dateStr, error);
             return '-';
         }
-    };
-
-    // İki tarih arasındaki gün sayısını hesaplayan yardımcı fonksiyon
-    const calculateDaysBetween = (startDateStr, endDateStr) => {
-        if (!startDateStr || !endDateStr) return 0;
-        const startDate = new Date(startDateStr);
-        const endDate = new Date(endDateStr);
-        const diffTime = endDate.getTime() - startDate.getTime();
-        return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
 
     // Sözleşme tarihinden bu yana geçen gün sayısını hesaplayan yardımcı fonksiyon
@@ -4024,7 +4003,7 @@ async function generateProjectPdf(project) {
         const diffTime = endDate.getTime() - startDate.getTime();
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
-
+    
     // Planlanan Toplam Süreyi tüm adımların planlanan sürelerinin toplamı olarak hesaplar.
     const calculateTotalPlannedDuration = (steps) => {
         if (steps.length === 0) return 0;
@@ -4056,7 +4035,7 @@ async function generateProjectPdf(project) {
                     if (step.is_completed && step.end_date) {
                         const endDate = new Date(step.end_date);
                         duration = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
-                    }
+                    } 
                     // Devam eden adımlar için bugünü kullan.
                     else {
                         duration = (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
@@ -4071,99 +4050,98 @@ async function generateProjectPdf(project) {
         return total;
     };
 
-    /**
-     * İlerleme çubuğu verilerini hesaplayan yardımcı fonksiyon.
-     * Projenin genel planlanan süresi, tamamlanan ve gecikme sürelerine göre yüzdelikleri hesaplar.
-     * @param {string} projectStartDate Projenin planlanan başlangıç tarihi.
-     * @param {string} lastPlannedEndDate Projenin planlanan son bitiş tarihi.
-     * @param {Array<object>} progressSteps Tüm proje adımları.
-     * @returns {object} İlerleme çubuğu için gerekli verileri içeren nesne.
-     */
-    const calculateProgressBarData = (projectStartDate, lastPlannedEndDate, progressSteps) => {
-        if (!projectStartDate || !lastPlannedEndDate) {
-            return {
-                totalPlannedDays: 0,
-                totalActualDays: 0,
-                totalDelayedDays: 0,
-                completedPercentage: 0,
-                delayPercentage: 0,
-                remainingPercentage: 100
-            };
-        }
-
-        // Toplam planlanan süreyi projenin başlangıç ve bitiş tarihinden hesapla
-        const totalPlannedDays = calculateDaysBetween(projectStartDate, lastPlannedEndDate);
-
-        // Tamamlanan (veya devam eden) süreyi hesapla
-        let totalActualDays = calculateTotalActualDuration(progressSteps);
-        
-        // Toplam gecikme süresini tüm adımların gecikme günlerini toplayarak bul
+    // İlerleme çubuğu verilerini hesaplayan yardımcı fonksiyon
+    const calculateProgressBarData = (progressSteps) => {
+        let totalPlannedDays = 0;
+        let totalCompletedDays = 0;
         let totalDelayedDays = 0;
+        const today = new Date();
+
         progressSteps.forEach(step => {
+            const startDate = new Date(step.start_date);
+            const endDate = new Date(step.real_end_date); // planned
+            const plannedDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
+            totalPlannedDays += plannedDays;
+            
+            if (step.is_completed) {
+                const realEndDate = new Date(step.end_date); // actual
+                const stepCompletedDays = (realEndDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
+                totalCompletedDays += stepCompletedDays;
+                if (realEndDate > endDate) {
+                    totalDelayedDays += (realEndDate.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24);
+                }
+            } else {
+                if (today >= startDate) {
+                    const stepPassedDays = (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
+                    totalCompletedDays += stepPassedDays;
+                }
+            }
             totalDelayedDays += (step.delay_days || 0) + (step.custom_delay_days || 0);
         });
 
-        // Yüzdelikleri hesapla
-        const completedPercentage = Math.max(0, Math.min(100, (totalActualDays / totalPlannedDays) * 100));
-        const delayPercentage = Math.max(0, Math.min(100, (totalDelayedDays / totalPlannedDays) * 100));
-        let remainingPercentage = Math.max(0, 100 - completedPercentage - delayPercentage);
+        const totalDuration = totalPlannedDays + totalDelayedDays;
+        let completedPercentage = (totalCompletedDays / totalDuration) * 100;
+        let delayPercentage = (totalDelayedDays / totalDuration) * 100;
+        let remainingPercentage = 100 - completedPercentage - delayPercentage;
         
-        // Yüzdeliklerin toplamını 100'e yuvarla
-        const totalPercentage = Math.round(completedPercentage + delayPercentage + remainingPercentage);
+        completedPercentage = Math.round(Math.max(0, completedPercentage));
+        delayPercentage = Math.round(Math.max(0, delayPercentage));
+        remainingPercentage = Math.round(Math.max(0, remainingPercentage));
+        
+        const totalPercentage = completedPercentage + delayPercentage + remainingPercentage;
         if (totalPercentage !== 100) {
             remainingPercentage += 100 - totalPercentage;
         }
 
         return {
-            totalPlannedDays,
-            totalActualDays,
-            totalDelayedDays,
-            completedPercentage: Math.round(completedPercentage),
-            delayPercentage: Math.round(delayPercentage),
-            remainingPercentage: Math.round(remainingPercentage)
+            totalPlannedDays: Math.ceil(totalPlannedDays),
+            totalDelayedDays: Math.ceil(totalDelayedDays),
+            totalRealDays: Math.ceil(totalCompletedDays + totalDelayedDays),
+            completedPercentage,
+            delayPercentage,
+            remainingPercentage
         };
     };
-    
-    // Yeni fonksiyonu doğru parametrelerle çağır
-    const progressBarData = calculateProgressBarData(projectStartDate, lastPlannedEndDate, progressSteps);
+
+    const progressBarData = calculateProgressBarData(progressSteps);
 
     // Adımların HTML listesini oluşturan fonksiyon
     const generateStepHtml = (steps) => {
         if (steps.length === 0) return '';
         return steps.map((step, index) => {
             const stepTitle = step.title || step.name || step.step_name || step.progress_title || 'Başlık bilgisi yok';
-
+            
             if (!step.title) {
                 console.warn(`Uyarı: Proje ID ${project.project_id} için başlık alanı bulunamadı. Kullanılan alanlar:`, Object.keys(step));
             }
-
+            
             const stepId = step.progress_id || step.id;
             const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
-
+            
             // Üçüncü adımdan (index 2) önce sayfa sonu eklemek için sınıf
             const pageBreakClass = index === 2 ? 'page-break-after-first-two' : '';
 
             return `
-                 <div class="progress-step-item ${pageBreakClass}">
-                     <div style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
-                         ${stepTitle} <span style="font-weight: normal; float: right;">${getStepStatusHtml(step)}</span>
-                     </div>
-                     <div style="display:flex; justify-content:space-between; font-size:13px; color:#555;">
-                         <div style="width:50%;">
-                             <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(step.start_date || '-')}</p>
-                             <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(step.real_end_date || '-')}</p>
-                             <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(step.end_date || '-')}</p>
-                             <p><strong>Revize Sayısı:</strong> ${revisionCountForStep}</p>
-                         </div>
-                         <div style="width:50%; text-align:right;">
-                             <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.real_end_date)} gün</p>
-                             <p><strong>Gecikme Toplam Süre:</strong> ${(step.delay_days || 0) + (step.custom_delay_days || 0)} gün</p>
-                             <p><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.end_date)} gün</p>
-                         </div>
-                     </div>
-                     ${step.description ? `<div style="font-size:13px; margin-top: 5px;">Açıklama: ${step.description}</div>` : ''}
-                 </div>
-             `;
+                <div class="progress-step-item ${pageBreakClass}">
+                    <div style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
+                        ${stepTitle} <span style="font-weight: normal; float: right;">${getStepStatusHtml(step)}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; color:#555;">
+                        <div style="width:50%;">
+                            <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(step.start_date || '-')}</p>
+                            <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(step.real_end_date || '-')}</p>
+                            <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(step.end_date || '-')}</p>
+                            <p><strong>Revize Sayısı:</strong> ${revisionCountForStep}</p>
+                        </div>
+                        <div style="width:50%; text-align:right;">
+                            <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.real_end_date)} gün</p>
+                            <p><strong>Gecikme Toplam Süre:</strong> ${(step.delay_days || 0) + (step.custom_delay_days || 0)} gün</p>
+                            <p><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.end_date)} gün</p>
+                        </div>
+                    </div>
+                    ${step.description ? `<div style="font-size:13px; margin-top: 5px;">Açıklama: ${step.description}</div>` : ''}
+                </div>
+            `;
         }).join('');
     };
 
@@ -4176,244 +4154,244 @@ async function generateProjectPdf(project) {
     }
 
     const fullHtmlContent = `
-         <!DOCTYPE html>
-         <html lang="tr">
-         <head>
-             <meta charset="UTF-8">
-             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-             <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
-             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-             <style>
-                 body {
-                     font-family: 'Segoe UI', Arial, sans-serif;
-                     margin: 0;
-                     padding: 0;
-                     background-color: #f0f2f5;
-                 }
-                 .pdf-container {
-                     width: 210mm;
-                     margin: 0 auto;
-                     background: #fff;
-                     box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                     min-height: 297mm;
-                     box-sizing: border-box;
-                     padding-top: 60px;
-                     padding-bottom: 60px;
-                 }
-                 .screen-header, .screen-footer {
-                     width: 170mm;
-                     margin: 0 auto;
-                     padding: 15px 0;
-                 }
-                 .screen-header {
-                     display: flex;
-                     justify-content: space-between;
-                     align-items: center;
-                     border-bottom: 1px solid #eee;
-                     margin-bottom: 15px;
-                 }
-                 .screen-footer {
-                     border-top: 1px solid #eee;
-                     margin-top: 15px;
-                     text-align: center;
-                     color: #6c757d;
-                     font-size: 12px;
-                 }
-                 .main-content {
-                     box-sizing: border-box;
-                     padding: 0 20mm;
-                 }
-                 /* PRINT STYLES */
-                 @media print {
-                     @page {
-                         size: A4;
-                         margin: 0;
-                     }
-                     body {
-                         background-color: #fff;
-                         -webkit-print-color-adjust: exact;
-                         margin: 0;
-                         padding: 0;
-                     }
-                     .pdf-container {
-                         margin: 0 auto;
-                         box-shadow: none;
-                         padding: 0 10mm;
-                         padding-top: 25mm;
-                         padding-bottom: 20mm;
-                         min-height: 100%;
-                         position: relative;
-                     }
-                     .print-button-container, .screen-header, .screen-footer {
-                         display: none;
-                     }
-                      
-                     /* The print-header will be part of the normal document flow */
-                     .print-header {
-                         position: absolute;
-                         top: 10mm;
-                         left: 10mm;
-                         right: 10mm;
-                         background-color: #fff;
-                         box-sizing: border-box;
-                         -webkit-print-color-adjust: exact;
-                         border-bottom: 1px solid #eee;
-                         padding-bottom: 5px;
-                     }
-                      
-                     .print-header img {
-                         height: 40px;
-                         margin-right: 15px;
-                     }
-                      
-                     .print-header h1 {
-                         font-size: 18px;
-                         color: #005c9d;
-                         margin: 0;
-                         text-align: center;
-                         flex-grow: 1;
-                     }
-                      
-                     .print-header div {
-                         font-size: 11px;
-                         color: #6c757d;
-                         text-align: right;
-                         margin-left: 15px;
-                     }
+        <!DOCTYPE html>
+        <html lang="tr">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <style>
+                body {
+                    font-family: 'Segoe UI', Arial, sans-serif;
+                    margin: 0;
+                    padding: 0;
+                    background-color: #f0f2f5;
+                }
+                .pdf-container {
+                    width: 210mm;
+                    margin: 0 auto;
+                    background: #fff;
+                    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                    min-height: 297mm;
+                    box-sizing: border-box;
+                    padding-top: 60px;
+                    padding-bottom: 60px;
+                }
+                .screen-header, .screen-footer {
+                    width: 170mm;
+                    margin: 0 auto;
+                    padding: 15px 0;
+                }
+                .screen-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    border-bottom: 1px solid #eee;
+                    margin-bottom: 15px;
+                }
+                .screen-footer {
+                    border-top: 1px solid #eee;
+                    margin-top: 15px;
+                    text-align: center;
+                    color: #6c757d;
+                    font-size: 12px;
+                }
+                .main-content {
+                    box-sizing: border-box;
+                    padding: 0 20mm;
+                }
+                /* PRINT STYLES */
+                @media print {
+                    @page {
+                        size: A4;
+                        margin: 0;
+                    }
+                    body {
+                        background-color: #fff;
+                        -webkit-print-color-adjust: exact;
+                        margin: 0;
+                        padding: 0;
+                    }
+                    .pdf-container {
+                        margin: 0 auto;
+                        box-shadow: none;
+                        padding: 0 10mm;
+                        padding-top: 25mm;
+                        padding-bottom: 20mm;
+                        min-height: 100%;
+                        position: relative;
+                    }
+                    .print-button-container, .screen-header, .screen-footer {
+                        display: none;
+                    }
+                    
+                    /* The print-header will be part of the normal document flow */
+                    .print-header {
+                        position: absolute;
+                        top: 10mm; 
+                        left: 10mm;
+                        right: 10mm;
+                        background-color: #fff;
+                        box-sizing: border-box;
+                        -webkit-print-color-adjust: exact;
+                        border-bottom: 1px solid #eee;
+                        padding-bottom: 5px;
+                    }
+                    
+                    .print-header img {
+                        height: 40px;
+                        margin-right: 15px;
+                    }
+                    
+                    .print-header h1 {
+                        font-size: 18px;
+                        color: #005c9d;
+                        margin: 0;
+                        text-align: center;
+                        flex-grow: 1;
+                    }
+                    
+                    .print-header div {
+                        font-size: 11px;
+                        color: #6c757d;
+                        text-align: right;
+                        margin-left: 15px;
+                    }
 
-                     /* NEW: Add a top margin for pages other than the first one */
-                     @page:not(:first) {
-                         margin-top: 20mm;
-                     }
+                    /* NEW: Add a top margin for pages other than the first one */
+                    @page:not(:first) {
+                        margin-top: 20mm;
+                    }
 
-                     .print-footer {
-                         display: block;
-                         position: fixed;
-                         bottom: 10mm;
-                         right: 10mm;
-                         font-size: 10px;
-                         color: #6c757d;
-                         -webkit-print-color-adjust: exact;
-                     }
+                    .print-footer {
+                        display: block;
+                        position: fixed;
+                        bottom: 10mm;
+                        right: 10mm;
+                        font-size: 10px;
+                        color: #6c757d;
+                        -webkit-print-color-adjust: exact;
+                    }
 
-                     .work-progress-section, .progress-step-item {
-                         page-break-inside: avoid;
-                         break-inside: avoid;
-                         margin-bottom: 20px;
-                     }
+                    .work-progress-section, .progress-step-item {
+                        page-break-inside: avoid;
+                        break-inside: avoid;
+                        margin-bottom: 20px;
+                    }
 
-                     .progress-step-item:first-of-type {
-                         margin-top: 0;
-                     }
-                      
-                     /* Force a page break before the third item in the list */
-                     .page-break-after-first-two {
-                         page-break-before: always;
-                     }
-                 }
-                  
-                 @media screen {
-                     .print-header, .print-footer {
-                         display: none;
-                     }
-                 }
-             </style>
-         </head>
-         <body>
-             <div class="pdf-container">
-                 <!-- Header for the first printed page -->
-                 <div class="print-header">
-                     <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-                         <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 40px; margin-right: 15px;">
-                         <h1 style="font-size: 18px; color: #005c9d; margin: 0; text-align: center; flex-grow: 1;">Proje Takip Formu</h1>
-                         <div style="font-size: 11px; color: #6c757d; text-align: right; margin-left: 15px;">
-                             ${formatDateForDisplay(new Date())}
-                         </div>
-                     </div>
-                 </div>
-              
-                 <!-- Header and footer for screen view -->
-                 <div class="screen-header">
-                     <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
-                     <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
-                     <div style="font-size: 14px; color: #555; text-align: right;">
-                         ${formatDateForDisplay(new Date())}
-                     </div>
-                 </div>
-                 <div class="main-content">
-                     <!-- Section 1: Project Basic Information -->
-                     <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
-                         <div style="display: flex; justify-content: space-between; font-size: 14px;">
-                             <div style="width: 50%;">
-                                 <h3 style="margin: 0 0 10px 0; color: #005c9d; font-size: 16px;">
-                                     ${project.reference_no || '-'}
-                                 </h3>
-                                 <p><strong>Proje Yöneticisi:</strong> ${project.project_manager_name || '-'}</p>
-                                 <p><strong>İşin Adı:</strong> ${project.project_name ? project.project_name.normalize('NFC') : '-'}</p>
-                                 <p><strong>Müşteri Adı:</strong> ${project.customer_name || '-'}</p>
-                             </div>
-                             <div style="width: 50%; text-align: right;">
-                                 <p style="margin: 0; font-weight: bold;">${getProjectStatusHtml(project.display_status)}</p>
-                                 <p style="margin-top: 10px;"><strong>Sözleşme imzalanalı:</strong> ${calculateDaysSinceContract(project.contract_date)} gün oldu</p>
-                             </div>
-                         </div>
-                     </div>
+                    .progress-step-item:first-of-type {
+                        margin-top: 0;
+                    }
+                    
+                    /* Force a page break before the third item in the list */
+                    .page-break-after-first-two {
+                        page-break-before: always;
+                    }
+                }
+                
+                @media screen {
+                    .print-header, .print-footer {
+                        display: none;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="pdf-container">
+                <!-- Header for the first printed page -->
+                <div class="print-header">
+                    <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                        <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 40px; margin-right: 15px;">
+                        <h1 style="font-size: 18px; color: #005c9d; margin: 0; text-align: center; flex-grow: 1;">Proje Takip Formu</h1>
+                        <div style="font-size: 11px; color: #6c757d; text-align: right; margin-left: 15px;">
+                            ${formatDateForDisplay(new Date())}
+                        </div>
+                    </div>
+                </div>
+            
+                <!-- Header and footer for screen view -->
+                <div class="screen-header">
+                    <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
+                    <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
+                    <div style="font-size: 14px; color: #555; text-align: right;">
+                        ${formatDateForDisplay(new Date())}
+                    </div>
+                </div>
+                <div class="main-content">
+                    <!-- Section 1: Project Basic Information -->
+                    <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                            <div style="width: 50%;">
+                                <h3 style="margin: 0 0 10px 0; color: #005c9d; font-size: 16px;">
+                                    ${project.reference_no || '-'}
+                                </h3>
+                                <p><strong>Proje Yöneticisi:</strong> ${project.project_manager_name || '-'}</p>
+                                <p><strong>İşin Adı:</strong> ${project.project_name ? project.project_name.normalize('NFC') : '-'}</p>
+                                <p><strong>Müşteri Adı:</strong> ${project.customer_name || '-'}</p>
+                            </div>
+                            <div style="width: 50%; text-align: right;">
+                                <p style="margin: 0; font-weight: bold;">${getProjectStatusHtml(project.display_status)}</p>
+                                <p style="margin-top: 10px;"><strong>Sözleşme imzalanalı:</strong> ${calculateDaysSinceContract(project.contract_date)} gün oldu</p>
+                            </div>
+                        </div>
+                    </div>
 
-                     <!-- Section 2: Project Duration and Progress -->
-                     <div style="border-top: 1px solid #ccc; margin-top: 20px; padding-top: 20px;">
-                         <div style="display: flex; justify-content: space-between; font-size: 14px;">
-                             <div style="width: 50%;">
-                                 <p><strong>Sözleşme Tarihi:</strong> ${formatDateForDisplay(project.contract_date || '-')}</p>
-                                 <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(projectStartDate || '-')}</p>
-                                 <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(lastPlannedEndDate || '-')}</p>
-                             </div>
-                             <div style="width: 50%; text-align: right;">
-                                 <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(actualProjectEndDate || '-')}</p>
-                                 <p><strong>Planlanan Toplam Süre:</strong> ${progressBarData.totalPlannedDays} gün</p>
-                                 <p><strong>Gerçekleşen Süre:</strong> ${progressBarData.totalActualDays} gün</p>
-                             </div>
-                         </div>
-                          
-                         <h4 style="text-align: center; font-size: 16px; margin-top: 20px; color: #005c9d;">
-                             ${getProjectPhaseText(project.display_status)}
-                         </h4>
-                          
-                         <div style="height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px;">
-                             <div style="height: 100%; display: flex;">
-                                 <div style="background-color: #4CAF50; width: ${progressBarData.completedPercentage}%;"></div>
-                                 <div style="background-color: #f44336; width: ${progressBarData.delayPercentage}%;"></div>
-                                 <div style="background-color: #ccc; width: ${progressBarData.remainingPercentage}%;"></div>
-                             </div>
-                         </div>
-                         <div style="font-size: 12px; margin-top: 5px; display: flex; justify-content: space-between;">
-                             <div style="text-align: left;"><span style="color: #4CAF50;">■</span> Tamamlanan Süre: ${progressBarData.totalActualDays} gün</div>
-                             <div style="text-align: center;"><span style="color: #f44336;">■</span> Gecikme Süresi: ${progressBarData.totalDelayedDays} gün</div>
-                             <div style="text-align: right;"><span style="color: #ccc;">■</span> Kalan Süre: ${Math.max(0, progressBarData.totalPlannedDays - progressBarData.totalActualDays)} gün</div>
-                         </div>
-                     </div>
-                      
-                     <!-- Tüm Proje İlerleme Adımları -->
-                     ${allStepsHtml.length > 0 ? `
-                     <div style="margin-top: 20px; padding-top: 20px;" class="work-progress-section">
-                         <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
-                         <div>
-                             ${allStepsHtml}
-                         </div>
-                     </div>
-                     ` : ''}
-                 </div>
-                 <!-- YENİ: Her sayfanın sağ altında referans numarasını gösterecek footer -->
-                 <div class="print-footer">${project.reference_no || '-'}</div>
-             </div>
-              
-             <div class="print-button-container" style="text-align: center; margin-top: 20px; padding-bottom: 20px;">
-                 <button class="print-button" onclick="window.print()" style="background-color: #005c9d; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background-color 0.3s ease;">
-                     <i class="fas fa-print"></i> PDF Kaydet / Yazdır
-                 </button>
-             </div>
-         </body>
-         </html>
-     `;
+                    <!-- Section 2: Project Duration and Progress -->
+                    <div style="border-top: 1px solid #ccc; margin-top: 20px; padding-top: 20px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                            <div style="width: 50%;">
+                                <p><strong>Sözleşme Tarihi:</strong> ${formatDateForDisplay(project.contract_date || '-')}</p>
+                                <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(project.start_date || '-')}</p>
+                                <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(lastPlannedEndDate || '-')}</p>
+                            </div>
+                            <div style="width: 50%; text-align: right;">
+                                <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(actualProjectEndDate || '-')}</p>
+                                <p><strong>Planlanan Toplam Süre:</strong> ${calculateTotalPlannedDuration(progressSteps)} gün</p>
+                                <p><strong>Gerçek Toplam Süre:</strong> ${calculateTotalActualDuration(progressSteps)} gün</p>
+                            </div>
+                        </div>
+                        
+                        <h4 style="text-align: center; font-size: 16px; margin-top: 20px; color: #005c9d;">
+                            ${getProjectPhaseText(project.display_status)}
+                        </h4>
+                        
+                        <div style="height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px;">
+                            <div style="height: 100%; display: flex;">
+                                <div style="background-color: #4CAF50; width: ${progressBarData.completedPercentage}%;"></div>
+                                <div style="background-color: #f44336; width: ${progressBarData.delayPercentage}%;"></div>
+                                <div style="background-color: #ccc; width: ${progressBarData.remainingPercentage}%;"></div>
+                            </div>
+                        </div>
+                        <div style="font-size: 12px; margin-top: 5px; display: flex; justify-content: space-between;">
+                            <div style="text-align: left;"><span style="color: #4CAF50;">■</span> Tamamlanan Süre: ${progressBarData.totalRealDays} gün</div>
+                            <div style="text-align: center;"><span style="color: #f44336;">■</span> Gecikme Süresi: ${progressBarData.totalDelayedDays} gün</div>
+                            <div style="text-align: right;"><span style="color: #ccc;">■</span> Kalan Süre: ${progressBarData.totalPlannedDays - progressBarData.totalRealDays} gün</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tüm Proje İlerleme Adımları -->
+                    ${allStepsHtml.length > 0 ? `
+                    <div style="margin-top: 20px; padding-top: 20px;" class="work-progress-section">
+                        <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
+                        <div>
+                            ${allStepsHtml}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+                <!-- YENİ: Her sayfanın sağ altında referans numarasını gösterecek footer -->
+                <div class="print-footer">${project.reference_no || '-'}</div>
+            </div>
+            
+            <div class="print-button-container" style="text-align: center; margin-top: 20px; padding-bottom: 20px;">
+                <button class="print-button" onclick="window.print()" style="background-color: #005c9d; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background-color 0.3s ease;">
+                    <i class="fas fa-print"></i> PDF Kaydet / Yazdır
+                </button>
+            </div>
+        </body>
+        </html>
+    `;
 
     newWindow.document.write(fullHtmlContent);
     newWindow.document.close();
