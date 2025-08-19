@@ -3992,19 +3992,24 @@ async function generateProjectPdf(project) {
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
     
-    // Calculate total planned duration based on the project's planned start and end dates
-    const calculateTotalPlannedDuration = () => {
-        if (!project.start_date || !project.real_end_date) return '-';
-        const startDate = new Date(project.start_date);
-        const endDate = new Date(project.real_end_date);
-        const diffTime = endDate.getTime() - startDate.getTime();
-        return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    // YENİ: Planlanan Toplam Süreyi tüm adımların planlanan sürelerinin toplamı olarak hesaplar.
+    const calculateTotalPlannedDuration = (steps) => {
+        let totalDuration = 0;
+        steps.forEach(step => {
+            if (step.start_date && step.real_end_date) {
+                const startDate = new Date(step.start_date);
+                const endDate = new Date(step.real_end_date);
+                const diffTime = endDate.getTime() - startDate.getTime();
+                totalDuration += Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            }
+        });
+        return totalDuration;
     };
 
-    // YENİ: Gerçek Toplam Süreyi tüm adımların gerçek sürelerinin toplamı olarak hesaplar.
-    const calculateTotalActualDuration = () => {
+    // YENİ: Gerçek Toplam Süreyi tüm tamamlanmış adımların gerçek sürelerinin toplamı olarak hesaplar.
+    const calculateTotalActualDuration = (steps) => {
         let totalDuration = 0;
-        progressSteps.forEach(step => {
+        steps.forEach(step => {
             if (step.is_completed && step.end_date && step.start_date) {
                 const startDate = new Date(step.start_date);
                 const endDate = new Date(step.end_date);
@@ -4310,8 +4315,8 @@ async function generateProjectPdf(project) {
                             </div>
                             <div style="width: 50%; text-align: right;">
                                 <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(actualProjectEndDate || '-')}</p>
-                                <p><strong>Planlanan Toplam Süre:</strong> ${calculateTotalPlannedDuration()} gün</p>
-                                <p><strong>Gerçek Toplam Süre:</strong> ${calculateTotalActualDuration()} gün</p>
+                                <p><strong>Planlanan Toplam Süre:</strong> ${calculateTotalPlannedDuration(progressSteps)} gün</p>
+                                <p><strong>Gerçek Toplam Süre:</strong> ${calculateTotalActualDuration(progressSteps)} gün</p>
                             </div>
                         </div>
                         
