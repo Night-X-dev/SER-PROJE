@@ -3892,12 +3892,27 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         }
     }
 
+/**
+ * Asenkron bir şekilde API'den proje verilerini çeker ve
+ * projenin durumunu, ilerleme adımlarını ve revizyon sayılarını içeren
+ * bir HTML raporu oluşturur. Bu rapor, yazdırılmaya uygun (PDF'e dönüştürülebilir)
+ * olarak tasarlanmıştır.
+ * * @param {object} project - Proje bilgilerini içeren bir nesne.
+ * @param {string} project.project_id - Projenin benzersiz kimliği.
+ * @param {string} project.project_name - Projenin adı.
+ * @param {string} project.reference_no - Projenin referans numarası.
+ * @param {string} project.project_manager_name - Proje yöneticisinin adı.
+ * @param {string} project.customer_name - Müşterinin adı.
+ * @param {string} project.display_status - Projenin mevcut durumu.
+ * @param {string} project.contract_date - Sözleşme tarihi (ISO 8601 formatında).
+ * @param {string} project.start_date - Projenin başlangıç tarihi (ISO 8601 formatında).
+ */
 async function generateProjectPdf(project) {
     let progressSteps = [];
     let revisionCounts = {};
 
     try {
-        // Fetch project progress steps
+        // Proje ilerleme adımlarını API'den çekme
         const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
         if (progressResponse.ok) {
             progressSteps = await progressResponse.json();
@@ -3910,7 +3925,7 @@ async function generateProjectPdf(project) {
             console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
         }
 
-        // Fetch revision counts
+        // Revizyon sayılarını API'den çekme
         const revisionCountResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/revision-counts-by-step`);
         if (revisionCountResponse.ok) {
             revisionCounts = await revisionCountResponse.json();
@@ -3921,21 +3936,19 @@ async function generateProjectPdf(project) {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
-    // Determine the actual project end date from the last completed step
-    const lastCompletedStep = progressSteps
-        .filter(step => step.is_completed && step.end_date)
-        .sort((a, b) => new Date(b.end_date) - new Date(a.end_date))[0];
-
-    const actualProjectEndDate = lastCompletedStep ? lastCompletedStep.end_date : null;
+    // Gerçek Proje Bitiş tarihini belirleme: En son adımdaki `end_date` alanı kullanılır.
+    // Bu, adım tamamlanmamışsa null olabilir ve ekranda '-' olarak gösterilir.
+    const lastStep = progressSteps.length > 0 ? progressSteps[progressSteps.length - 1] : null;
+    const actualProjectEndDate = lastStep ? lastStep.end_date : null;
     
-    // NEW: Determine the overall planned end date from the last step's planned end date
+    // Genel planlanan bitiş tarihini son adımın planlanan bitiş tarihinden belirleme
     const lastPlannedStep = progressSteps
         .filter(step => step.real_end_date)
         .sort((a, b) => new Date(b.real_end_date) - new Date(a.real_end_date))[0];
     
     const lastPlannedEndDate = lastPlannedStep ? lastPlannedStep.real_end_date : null;
 
-    // Helper functions (taken from existing code)
+    // Tarihleri okunabilir formatta göstermek için yardımcı fonksiyon
     const formatDateForDisplay = (dateStr) => {
         if (!dateStr || dateStr === '-') return '-';
         try {
@@ -3948,6 +3961,7 @@ async function generateProjectPdf(project) {
         }
     };
 
+    // Sözleşme tarihinden bu yana geçen gün sayısını hesaplayan yardımcı fonksiyon
     const calculateDaysSinceContract = (contractDateStr) => {
         if (!contractDateStr) return 0;
         const contractDate = new Date(contractDateStr);
@@ -3956,6 +3970,7 @@ async function generateProjectPdf(project) {
         return Math.floor(diffTime / (1000 * 60 * 60 * 24));
     };
 
+    // Proje durumu için HTML çıktısı üreten yardımcı fonksiyon
     const getProjectStatusHtml = (statusText) => {
         const isDelayed = statusText && statusText.includes('Gecikmeli');
         const color = isDelayed ? 'red' : '#4CAF50';
@@ -3963,12 +3978,14 @@ async function generateProjectPdf(project) {
         return `<span style="color: ${color}; font-weight: bold; margin: 0;">${text}</span>`;
     };
 
+    // Proje aşama metnini döndüren yardımcı fonksiyon
     const getProjectPhaseText = (statusText) => {
         if (!statusText) return 'Aşama bilgisi bulunamadı';
         const phaseName = statusText.split('(')[0].trim();
         return `${phaseName} Aşamasında`;
     };
 
+    // Adım durumu için HTML çıktısı üreten yardımcı fonksiyon
     const getStepStatusHtml = (step) => {
         const today = new Date();
         const startDate = new Date(step.start_date);
@@ -3983,6 +4000,7 @@ async function generateProjectPdf(project) {
         return statusText;
     };
 
+    // İki tarih arasındaki planlanan süreyi hesaplayan yardımcı fonksiyon
     const calculatePlannedDuration = (startDateStr, endDateStr) => {
         if (!startDateStr || !endDateStr) return '-';
         const startDate = new Date(startDateStr);
@@ -3991,6 +4009,7 @@ async function generateProjectPdf(project) {
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
 
+    // İki tarih arasındaki gerçekleşen süreyi hesaplayan yardımcı fonksiyon
     const calculateActualDuration = (startDateStr, realEndDateStr) => {
         if (!startDateStr || !realEndDateStr) return '-';
         const startDate = new Date(startDateStr);
@@ -3999,7 +4018,7 @@ async function generateProjectPdf(project) {
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
     
-    // GÜNCELLENDİ: Planlanan Toplam Süreyi tüm adımların planlanan sürelerinin toplamı olarak hesaplar.
+    // Planlanan Toplam Süreyi tüm adımların planlanan sürelerinin toplamı olarak hesaplar.
     const calculateTotalPlannedDuration = (steps) => {
         if (steps.length === 0) return 0;
         let total = 0;
@@ -4012,7 +4031,7 @@ async function generateProjectPdf(project) {
         return total;
     };
 
-    // GÜNCELLENDİ: Gerçek Toplam Süreyi, tüm iş adımlarının (tamamlanmış veya tamamlanmamış) gerçek sürelerinin toplamı olarak hesaplar.
+    // Gerçek Toplam Süreyi, tamamlanmış ve devam eden iş adımlarının gerçek sürelerinin toplamı olarak hesaplar.
     const calculateTotalActualDuration = (steps) => {
         if (steps.length === 0) return 0;
 
@@ -4024,15 +4043,17 @@ async function generateProjectPdf(project) {
                 const startDate = new Date(step.start_date);
                 let duration = 0;
 
-                // Tamamlanmış adımlar için Gerçek Bitiş tarihini kullan.
-                if (step.is_completed && step.end_date) {
-                    const endDate = new Date(step.end_date);
-                    duration = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
-                } 
-                // Devam eden veya bekleyen adımlar için bugünü veya Planlanan Bitiş tarihini kullan.
-                else {
-                    const endDate = today;
-                    duration = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
+                // Sadece başlamış olan adımların süresini hesapla
+                if (today >= startDate) {
+                    // Tamamlanmış adımlar için Gerçek Bitiş tarihini kullan.
+                    if (step.is_completed && step.end_date) {
+                        const endDate = new Date(step.end_date);
+                        duration = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
+                    } 
+                    // Devam eden adımlar için bugünü kullan.
+                    else {
+                        duration = (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
+                    }
                 }
                 
                 if (!isNaN(duration) && duration > 0) {
@@ -4043,6 +4064,7 @@ async function generateProjectPdf(project) {
         return total;
     };
 
+    // İlerleme çubuğu verilerini hesaplayan yardımcı fonksiyon
     const calculateProgressBarData = (progressSteps) => {
         let totalPlannedDays = 0;
         let totalCompletedDays = 0;
@@ -4097,6 +4119,7 @@ async function generateProjectPdf(project) {
 
     const progressBarData = calculateProgressBarData(progressSteps);
 
+    // Adımların HTML listesini oluşturan fonksiyon
     const generateStepHtml = (steps) => {
         if (steps.length === 0) return '';
         return steps.map((step, index) => {
@@ -4109,7 +4132,7 @@ async function generateProjectPdf(project) {
             const stepId = step.progress_id || step.id;
             const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
             
-            // Add a page break before the third step (index 2) to force it onto a new page.
+            // Üçüncü adımdan (index 2) önce sayfa sonu eklemek için sınıf
             const pageBreakClass = index === 2 ? 'page-break-after-first-two' : '';
 
             return `
