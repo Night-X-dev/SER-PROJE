@@ -3929,32 +3929,18 @@ async function generateProjectPdf(project) {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
-    // Gerçek Proje Bitiş tarihini belirleme: Tüm tamamlanmış adımlar arasından en son tarihi bulur.
-    const lastCompletedStep = progressSteps.reduce((latestStep, currentStep) => {
-        // Yalnızca tamamlanmış adımları ve geçerli bir bitiş tarihi olanları dikkate al.
-        if (currentStep.is_completed && currentStep.end_date) {
-            // Eğer daha önce bir adım bulunmadıysa veya mevcut adım daha yeni bir tarihe sahipse, onu seç.
-            if (!latestStep || new Date(currentStep.end_date) > new Date(latestStep.end_date)) {
-                return currentStep;
-            }
-        }
-        return latestStep;
-    }, null);
-
+    // Gerçek Proje Bitiş tarihini belirleme: En son tamamlanan adımı bulur ve onun gerçek bitiş tarihini kullanır.
+    // Bu kısım, en son tamamlanan adımı güvenilir bir şekilde bulmak için güncellendi.
+    const completedSteps = progressSteps.filter(step => step.is_completed && step.end_date);
+    completedSteps.sort((a, b) => new Date(b.end_date) - new Date(a.end_date));
+    const lastCompletedStep = completedSteps.length > 0 ? completedSteps[0] : null;
     const actualProjectEndDate = lastCompletedStep ? lastCompletedStep.end_date : null;
 
-    // Genel planlanan bitiş tarihini belirleme: Tüm adımlar arasından en son planlı bitiş tarihini bulur.
-    const lastPlannedStep = progressSteps.reduce((latestStep, currentStep) => {
-        // Yalnızca geçerli bir planlı bitiş tarihi olan adımları dikkate al.
-        if (currentStep.real_end_date) {
-            // Eğer daha önce bir adım bulunmadıysa veya mevcut adım daha yeni bir tarihe sahipse, onu seç.
-            if (!latestStep || new Date(currentStep.real_end_date) > new Date(latestStep.real_end_date)) {
-                return currentStep;
-            }
-        }
-        return latestStep;
-    }, null);
-    
+    // Genel planlanan bitiş tarihini en son adımın planlanan bitiş tarihinden belirleme.
+    // Bu kısım da tutarlılık için güncellendi.
+    const allStepsWithPlannedDates = progressSteps.filter(step => step.real_end_date);
+    allStepsWithPlannedDates.sort((a, b) => new Date(b.real_end_date) - new Date(a.real_end_date));
+    const lastPlannedStep = allStepsWithPlannedDates.length > 0 ? allStepsWithPlannedDates[0] : null;
     const lastPlannedEndDate = lastPlannedStep ? lastPlannedStep.real_end_date : null;
 
     // Tarihleri okunabilir formatta göstermek için yardımcı fonksiyon
@@ -4003,6 +3989,7 @@ async function generateProjectPdf(project) {
         const today = new Date();
         const startDate = new Date(step.start_date);
         const plannedEndDate = new Date(step.real_end_date);
+        const endDate = new Date(step.end_date);
 
         // Eğer adım tamamlanmışsa, daima "Tamamlandı" göster.
         if (step.is_completed) {
@@ -4033,10 +4020,10 @@ async function generateProjectPdf(project) {
     };
 
     // İki tarih arasındaki gerçekleşen süreyi hesaplayan yardımcı fonksiyon
-    const calculateActualDuration = (startDateStr, actualEndDateStr) => {
-        if (!startDateStr || !actualEndDateStr) return '-';
+    const calculateActualDuration = (startDateStr, realEndDateStr) => {
+        if (!startDateStr || !realEndDateStr) return '-';
         const startDate = new Date(startDateStr);
-        const endDate = new Date(actualEndDateStr);
+        const endDate = new Date(realEndDateStr);
         const diffTime = endDate.getTime() - startDate.getTime();
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
@@ -4206,7 +4193,7 @@ async function generateProjectPdf(project) {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>${project.project_name ? project.project_name : "Proje"} Raporu </title>
-            <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
                 body {
                     font-family: 'Segoe UI', Arial, sans-serif;
@@ -4345,7 +4332,7 @@ async function generateProjectPdf(project) {
                 <!-- Header for the first printed page -->
                 <div class="print-header">
                     <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-                        <img src="[https://serotomasyon.tr/static/serlogo.png](https://serotomasyon.tr/static/serlogo.png)" alt="Ser Elektrik Otomasyon Logo" style="height: 40px; margin-right: 15px;">
+                        <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 40px; margin-right: 15px;">
                         <h1 style="font-size: 18px; color: #005c9d; margin: 0; text-align: center; flex-grow: 1;">Proje Takip Formu</h1>
                         <div style="font-size: 11px; color: #6c757d; text-align: right; margin-left: 15px;">
                             ${formatDateForDisplay(new Date())}
@@ -4355,7 +4342,7 @@ async function generateProjectPdf(project) {
 
                 <!-- Header and footer for screen view -->
                 <div class="screen-header">
-                    <img src="[https://serotomasyon.tr/static/serlogo.png](https://serotomasyon.tr/static/serlogo.png)" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
+                    <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
                     <h1 style="font-size: 24px; color: #005c9d; margin: 0; text-align: center;">Proje Takip Formu</h1>
                     <div style="font-size: 14px; color: #555; text-align: right;">
                         ${formatDateForDisplay(new Date())}
