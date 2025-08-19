@@ -3985,13 +3985,14 @@ async function generateProjectPdf(project) {
     };
 
     const calculateActualDuration = (startDateStr, realEndDateStr) => {
-        if (!startDateStr || !realEndDateStr) return '-'; // Added check for realEndDateStr
+        if (!startDateStr || !realEndDateStr) return '-';
         const startDate = new Date(startDateStr);
         const endDate = new Date(realEndDateStr);
         const diffTime = endDate.getTime() - startDate.getTime();
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
     
+    // Calculate total planned duration based on the project's planned start and end dates
     const calculateTotalPlannedDuration = () => {
         if (!project.start_date || !project.end_date) return '-';
         const startDate = new Date(project.start_date);
@@ -4000,6 +4001,7 @@ async function generateProjectPdf(project) {
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
 
+    // Calculate total actual duration based on the project's planned start date and the last step's actual end date
     const calculateTotalActualDuration = () => {
         if (!project.start_date || !actualProjectEndDate) return '-';
         const startDate = new Date(project.start_date);
@@ -4298,10 +4300,10 @@ async function generateProjectPdf(project) {
                             <div style="width: 50%;">
                                 <p><strong>Sözleşme Tarihi:</strong> ${formatDateForDisplay(project.contract_date || '-')}</p>
                                 <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(project.start_date || '-')}</p>
-                                <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(actualProjectEndDate || '-')}</p>
+                                <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(project.end_date || '-')}</p>
                             </div>
                             <div style="width: 50%; text-align: right;">
-                                <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(project.end_date || '-')}</p>
+                                <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(actualProjectEndDate || '-')}</p>
                                 <p><strong>Planlanan Toplam Süre:</strong> ${calculateTotalPlannedDuration()} gün</p>
                                 <p><strong>Gerçek Toplam Süre:</strong> ${calculateTotalActualDuration()} gün</p>
                             </div>
