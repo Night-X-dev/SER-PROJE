@@ -3924,10 +3924,9 @@ async function generateProjectPdf(project) {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
-    // Gerçek Proje Bitiş tarihini belirleme: En son tamamlanan adımın `end_date` alanı kullanılır.
-    const completedSteps = progressSteps.filter(step => step.is_completed && step.end_date);
-    const lastCompletedStep = completedSteps.length > 0 ? completedSteps.reduce((prev, current) => (new Date(prev.end_date) > new Date(current.end_date)) ? prev : current) : null;
-    const actualProjectEndDate = lastCompletedStep ? lastCompletedStep.end_date : null;
+    // Gerçek Proje Bitiş tarihini belirleme: En son adımı bulur ve onun gerçek bitiş tarihini kullanır.
+    const lastStep = progressSteps.length > 0 ? progressSteps[progressSteps.length - 1] : null;
+    const actualProjectEndDate = lastStep ? (lastStep.end_date || lastStep.real_end_date) : null;
     
     // Genel planlanan bitiş tarihini en son adımın planlanan bitiş tarihinden belirleme.
     const lastPlannedStep = progressSteps.length > 0 ? progressSteps.reduce((prev, current) => (new Date(prev.real_end_date) > new Date(current.real_end_date)) ? prev : current) : null;
