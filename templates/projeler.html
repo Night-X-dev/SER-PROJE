@@ -3904,6 +3904,10 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
  * Bu rapor, yazdırma ve PDF olarak kaydetme için optimize edilmiştir.
  * @param {object} project - Proje ana bilgilerini içeren nesne.
  */
+/**
+ * @description Proje bilgilerini ve ilerleme adımlarını kullanarak bir PDF raporu oluşturur.
+ * @param {object} project - Proje ana bilgileri.
+ */
 async function generateProjectPdf(project) {
     // API'den çekilecek veriler için boş diziler ve nesneler tanımla.
     let progressSteps = [];
@@ -3930,10 +3934,10 @@ async function generateProjectPdf(project) {
     }
 
     // Gerçek Proje Bitiş tarihini belirleme: En son tamamlanan adımı bulur ve onun gerçek bitiş tarihini kullanır.
-   const lastStepWithEndDate = progressSteps.filter(step => step.end_date).reduce(
-    (prev, current) => (new Date(prev.end_date) > new Date(current.end_date)) ? prev : current
-);
-const actualProjectEndDate = lastStepWithEndDate ? lastStepWithEndDate.end_date : null;
+    const lastStepWithEndDate = progressSteps.filter(step => step.end_date).reduce(
+        (prev, current) => (new Date(prev.end_date) > new Date(current.end_date)) ? prev : current
+    );
+    const actualProjectEndDate = lastStepWithEndDate ? lastStepWithEndDate.end_date : null;
 
 
     // Genel planlanan bitiş tarihini en son adımın planlanan bitiş tarihinden belirleme.
@@ -3982,7 +3986,7 @@ const actualProjectEndDate = lastStepWithEndDate ? lastStepWithEndDate.end_date 
      * @param {object} step - İş adımının verileri.
      * @returns {string} Durum metni ve ikonunu içeren HTML dizesi.
      */
-     const getStepStatusHtml = (step) => {
+    const getStepStatusHtml = (step) => {
         const today = new Date();
         const startDate = new Date(step.start_date);
         const plannedEndDate = new Date(step.real_end_date);
@@ -3997,12 +4001,12 @@ const actualProjectEndDate = lastStepWithEndDate ? lastStepWithEndDate.end_date 
         if (today < startDate) {
             return `Bekliyor <i class="fas fa-hourglass-start" style="color: grey;"></i>`;
         }
-        
+
         // If the planned end date has passed, show "Delayed". This addresses the user's feedback.
         // Gecikme durumu, planlanan bitiş tarihi (plannedEndDate) geçildiğinde başlar.
         // Bu, işin planlanandan sapma gösterdiğini belirtir.
         if (today > endDate) {
-             return `Gecikmeli <i class="fas fa-exclamation-triangle" style="color: red;"></i>`;
+            return `Gecikmeli <i class="fas fa-exclamation-triangle" style="color: red;"></i>`;
         }
 
         // Otherwise (it's currently ongoing and within the planned period), show "Ongoing".
@@ -4028,24 +4032,35 @@ const actualProjectEndDate = lastStepWithEndDate ? lastStepWithEndDate.end_date 
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
 
-    // Planlanan Toplam Süreyi tüm adımların planlanan sürelerinin toplamı olarak hesaplar.
-   const calculateTotalPlannedDuration = (steps) => {
-        if (steps.length === 0) return 0;
-        const firstStartDate = steps[0].start_date;
-        const lastEndDate = lastPlannedEndDate;
-        
-        if (!firstStartDate || !lastEndDate) return '-';
-        
-        const startDate = new Date(firstStartDate);
-        const endDate = new Date(lastEndDate);
-        
-        const diffTime = endDate.getTime() - startDate.getTime();
-        return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    /**
+     * @description İsteğin üzerine: Planlanan Toplam Süreyi, tüm adımların planlanan sürelerinin toplamı olarak hesaplar.
+     * @param {Array<object>} steps - Proje adımlarının listesi.
+     * @returns {number} Toplam planlanan gün sayısı.
+     */
+    const calculateTotalPlannedDuration = (steps) => {
+        if (!steps || steps.length === 0) return 0;
+        let total = 0;
+        steps.forEach(step => {
+            if (step.start_date && step.real_end_date) {
+                const startDate = new Date(step.start_date);
+                const endDate = new Date(step.real_end_date);
+                // Her bir adımın planlanan süresini toplayarak toplamı bul.
+                const diffTime = endDate.getTime() - startDate.getTime();
+                total += Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            }
+        });
+        return total;
     };
 
-    // Gerçek Toplam Süreyi, tamamlanmış ve devam eden iş adımlarının gerçek sürelerinin toplamı olarak hesaplar.
+
+    /**
+     * @description İsteğin üzerine: Gerçek Toplam Süreyi, her bir adımın gerçek başlangıç ve bitiş sürelerini toplayarak hesaplar.
+     * Tamamlanmış adımlar için gerçek bitiş tarihini, devam eden adımlar için ise bugünün tarihini kullanır.
+     * @param {Array<object>} steps - Proje adımlarının listesi.
+     * @returns {number} Toplam gerçekleşen gün sayısı.
+     */
     const calculateTotalActualDuration = (steps) => {
-        if (steps.length === 0) return 0;
+        if (!steps || steps.length === 0) return 0;
 
         let total = 0;
         const today = new Date();
@@ -4055,26 +4070,23 @@ const actualProjectEndDate = lastStepWithEndDate ? lastStepWithEndDate.end_date 
                 const startDate = new Date(step.start_date);
                 let duration = 0;
 
-                // Sadece başlamış olan adımların süresini hesapla
-                if (today >= startDate) {
-                    // Tamamlanmış adımlar için Gerçek Bitiş tarihini kullan.
-                    if (step.is_completed && step.end_date) {
-                        const endDate = new Date(step.end_date);
-                        duration = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
-                    }
-                    // Devam eden adımlar için bugünü kullan.
-                    else {
-                        duration = (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
-                    }
+                // Tamamlanmış adımlar için Gerçek Bitiş tarihini kullan.
+                if (step.is_completed && step.end_date) {
+                    const endDate = new Date(step.end_date);
+                    duration = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
                 }
-
+                // Devam eden adımlar için bugünün tarihini kullan.
+                else {
+                    duration = (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
+                }
                 if (!isNaN(duration) && duration > 0) {
-                    total += Math.ceil(duration); // Gün sayısını yuvarla
+                    total += Math.ceil(duration);
                 }
             }
         });
         return total;
     };
+
 
     /**
      * @description İlerleme çubuğu verilerini kullanıcı talebine göre doğru şekilde hesaplar.
