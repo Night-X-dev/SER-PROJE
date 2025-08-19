@@ -3893,7 +3893,7 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
     }
 
 
-async function generateProjectPdf(project) {
+    async function generateProjectPdf(project) {
     // API'den çekilecek veriler için boş diziler ve nesneler tanımla.
     let progressSteps = [];
     let revisionCounts = {};
@@ -3920,13 +3920,12 @@ async function generateProjectPdf(project) {
 
     // Gerçek Proje Bitiş tarihini belirleme: En son tamamlanan adımı bulur ve onun gerçek bitiş tarihini kullanır.
     const lastStepWithEndDate = progressSteps.filter(step => step.end_date).reduce(
-        (prev, current) => (new Date(prev.end_date) > new Date(current.end_date)) ? prev : current
+        (prev, current) => (new Date(prev.end_date) > new Date(current.end_date)) ? prev : current, null
     );
     const actualProjectEndDate = lastStepWithEndDate ? lastStepWithEndDate.end_date : null;
 
-
     // Genel planlanan bitiş tarihini en son adımın planlanan bitiş tarihinden belirleme.
-    const lastPlannedStep = progressSteps.length > 0 ? progressSteps.reduce((prev, current) => (new Date(prev.real_end_date) > new Date(current.real_end_date)) ? prev : current) : null;
+    const lastPlannedStep = progressSteps.length > 0 ? progressSteps.reduce((prev, current) => (new Date(prev.real_end_date) > new Date(current.real_end_date)) ? prev : current, null) : null;
     const lastPlannedEndDate = lastPlannedStep ? lastPlannedStep.real_end_date : null;
 
     // Tarihleri okunabilir formatta göstermek için yardımcı fonksiyon
@@ -4037,52 +4036,51 @@ async function generateProjectPdf(project) {
         return total;
     };
 
-
     /**
      * @description İsteğin üzerine: Gerçek Toplam Süreyi, her bir adımın gerçek başlangıç ve bitiş sürelerini toplayarak hesaplar.
      * Tamamlanmış adımlar için gerçek bitiş tarihini, devam eden adımlar için ise bugünün tarihini kullanır.
      * @param {Array<object>} steps - Proje adımlarının listesi.
      * @returns {number} Toplam gerçekleşen gün sayısı.
      */
-     const calculateTotalActualDuration = (steps) => {
-    if (!steps || steps.length === 0) return 0;
+    const calculateTotalActualDuration = (steps) => {
+        if (!steps || steps.length === 0) return 0;
 
-    let total = 0;
+        let total = 0;
 
-    steps.forEach(step => {
-        if (step.start_date) {
-            const startDate = new Date(step.start_date);
-            const endDate = step.end_date 
-                ? new Date(step.end_date) 
-                : (step.real_end_date ? new Date(step.real_end_date) : null);
+        steps.forEach(step => {
+            if (step.start_date) {
+                const startDate = new Date(step.start_date);
+                const endDate = step.end_date
+                    ? new Date(step.end_date)
+                    : (step.real_end_date ? new Date(step.real_end_date) : null);
 
-            if (endDate) {
-                const diffTime = endDate.getTime() - startDate.getTime();
-                const duration = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-                if (!isNaN(duration) && duration > 0) {
-                    total += duration;
+                if (endDate) {
+                    const diffTime = endDate.getTime() - startDate.getTime();
+                    const duration = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                    if (!isNaN(duration) && duration > 0) {
+                        total += duration;
+                    }
                 }
             }
-        }
-    });
+        });
 
-    return total;
-};
-
+        return total;
+    };
 
 
     /**
      * @description İlerleme çubuğu verilerini kullanıcı talebine göre doğru şekilde hesaplar.
      * @param {Array<object>} progressSteps - Proje adımlarının listesi.
      * @param {object} project - Proje ana bilgileri.
+     * @param {string} actualProjectEndDate - Projenin gerçek bitiş tarihi.
      * @returns {object} Yüzde ve gün değerlerini içeren bir nesne.
      */
-    const calculateProgressBarData = (progressSteps, project) => {
+    const calculateProgressBarData = (progressSteps, project, actualProjectEndDate) => {
         const today = new Date();
         const projectStartDate = new Date(project.start_date);
-        const projectEndDate = lastPlannedEndDate ? new Date(lastPlannedEndDate) : null;
+        const actualEndDate = actualProjectEndDate ? new Date(actualProjectEndDate) : null;
 
-        // 1. Tamamlanan Süre: bugünün tarihi - Planlı Başlangıç tarihi
+        // 1. Tamamlanan Süre: Planlı başlangıç tarihi ile bugünün tarihi arasındaki fark.
         let completedDays = 0;
         if (today >= projectStartDate) {
             completedDays = Math.floor((today.getTime() - projectStartDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -4093,13 +4091,16 @@ async function generateProjectPdf(project) {
             return sum + ((step.delay_days || 0) + (step.custom_delay_days || 0));
         }, 0);
 
-        // 3. Kalan Süre: Planlı bitiş tarihi - bugünün tarihi
+        // 3. Kalan Süre: Bugünün tarihi ile projenin gerçek bitiş tarihi arasındaki fark.
         let remainingDays = 0;
-        if (projectEndDate && projectEndDate > today) {
-            remainingDays = Math.floor((projectEndDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        if (actualEndDate && actualEndDate > today) {
+            remainingDays = Math.floor((actualEndDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        } else if (!actualEndDate && lastPlannedEndDate && new Date(lastPlannedEndDate) > today) {
+            // Eğer gerçek bitiş tarihi yoksa, planlanan son bitiş tarihini kullan.
+            remainingDays = Math.floor((new Date(lastPlannedEndDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         }
 
-        // Toplam süre, yüzdeleri hesaplamak için kullanılır
+        // Toplam süre, tüm sürelerin toplamı olarak hesaplanır.
         const totalDuration = completedDays + totalDelayedDays + remainingDays;
 
         if (totalDuration === 0) {
@@ -4118,9 +4119,14 @@ async function generateProjectPdf(project) {
         let delayPercentage = (totalDelayedDays / totalDuration) * 100;
         let remainingPercentage = (remainingDays / totalDuration) * 100;
 
-        // Yüzdelerin toplamını kontrol et ve gerekirse kalan yüzdeliği ayarla
+        // Yüzdelerin toplamını 100'e sabitlemek için düzeltme
         const totalPercentage = completedPercentage + delayPercentage + remainingPercentage;
-        remainingPercentage += (100 - totalPercentage);
+        if (totalPercentage > 0) {
+            const factor = 100 / totalPercentage;
+            completedPercentage *= factor;
+            delayPercentage *= factor;
+            remainingPercentage *= factor;
+        }
 
         return {
             completedDays: Math.max(0, completedDays),
@@ -4132,7 +4138,8 @@ async function generateProjectPdf(project) {
         };
     };
 
-    const progressBarData = calculateProgressBarData(progressSteps, project);
+    // calculateProgressBarData fonksiyonu çağrılırken gerçek bitiş tarihi parametresi eklendi.
+    const progressBarData = calculateProgressBarData(progressSteps, project, actualProjectEndDate);
 
     // Adımların HTML listesini oluşturan fonksiyon
     const generateStepHtml = (steps) => {
