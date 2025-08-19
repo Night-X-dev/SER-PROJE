@@ -3921,12 +3921,12 @@ async function generateProjectPdf(project) {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
-    // Determine the actual project end date from the last completed step
-    const lastCompletedStep = progressSteps
-        .filter(step => step.is_completed && step.real_end_date)
-        .sort((a, b) => new Date(b.real_end_date) - new Date(a.real_end_date))[0];
+    // Gerçek Bitiş tarihini, tamamlanmış olup olmadığına bakılmaksızın, en son iş adımının planlı bitiş tarihi (end_date) olarak ayarla.
+    const lastStep = progressSteps.length > 0 
+        ? progressSteps.sort((a, b) => new Date(a.end_date) - new Date(b.end_date))[progressSteps.length - 1] 
+        : null;
 
-    const actualProjectEndDate = lastCompletedStep ? lastCompletedStep.real_end_date : null;
+    const actualProjectEndDate = lastStep ? lastStep.end_date : null;
 
     // Helper functions (taken from existing code)
     const formatDateForDisplay = (dateStr) => {
@@ -4086,8 +4086,8 @@ async function generateProjectPdf(project) {
                     <div style="display:flex; justify-content:space-between; font-size:13px; color:#555;">
                         <div style="width:50%;">
                             <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(step.start_date || '-')}</p>
-                            <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(step.real_end_date || '-')}</p>
-                            <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(step.end_date || '-')}</p>
+                            <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(step.end_date || '-')}</p>
+                            <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(step.real_end_date || '-')}</p>
                             <p><strong>Revize Sayısı:</strong> ${revisionCountForStep}</p>
                         </div>
                         <div style="width:50%; text-align:right;">
