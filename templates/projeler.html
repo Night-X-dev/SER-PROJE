@@ -4148,9 +4148,7 @@ async function generateProjectPdf(project) {
                     .pdf-container {
                         margin: 0 auto;
                         box-shadow: none;
-                        /* Kenar boşlukları azaltıldı */
                         padding: 0 10mm;
-                        /* Başlık için üstten boşluk azaltıldı */
                         padding-top: 25mm;
                         padding-bottom: 20mm;
                         min-height: 100%;
@@ -4163,9 +4161,9 @@ async function generateProjectPdf(project) {
                     /* The print-header will be part of the normal document flow */
                     .print-header {
                         position: absolute;
-                        top: 10mm; /* Üst boşluğa göre konumu ayarlandı */
-                        left: 10mm; /* Kenar boşluklarına göre ayarlandı */
-                        right: 10mm; /* Kenar boşluklarına göre ayarlandı */
+                        top: 10mm; 
+                        left: 10mm;
+                        right: 10mm;
                         background-color: #fff;
                         box-sizing: border-box;
                         -webkit-print-color-adjust: exact;
@@ -4193,10 +4191,21 @@ async function generateProjectPdf(project) {
                         margin-left: 15px;
                     }
 
-                    .print-footer {
-                        display: none; /* Hide the footer for printing */
+                    /* NEW: Add a top margin for pages other than the first one */
+                    @page:not(:first) {
+                        margin-top: 20mm;
                     }
-                    
+
+                    .print-footer {
+                        display: block;
+                        position: fixed;
+                        bottom: 10mm;
+                        right: 10mm;
+                        font-size: 10px;
+                        color: #6c757d;
+                        -webkit-print-color-adjust: exact;
+                    }
+
                     .work-progress-section, .progress-step-item {
                         page-break-inside: avoid;
                         break-inside: avoid;
@@ -4210,12 +4219,6 @@ async function generateProjectPdf(project) {
                     /* Force a page break before the third item in the list */
                     .page-break-after-first-two {
                         page-break-before: always;
-                    }
-                    
-                    /* Remove the specific margins for pages other than the first one */
-                    @page:not(:first) {
-                        margin-top: 20mm;
-                        margin-bottom: 20mm;
                     }
                 }
                 
@@ -4310,6 +4313,8 @@ async function generateProjectPdf(project) {
                     </div>
                     ` : ''}
                 </div>
+                <!-- YENİ: Her sayfanın sağ altında referans numarasını gösterecek footer -->
+                <div class="print-footer">${project.reference_no || '-'}</div>
             </div>
             
             <div class="print-button-container" style="text-align: center; margin-top: 20px; padding-bottom: 20px;">
@@ -4328,7 +4333,6 @@ async function generateProjectPdf(project) {
         // showToast and addActivity functions should be defined in your main file
     };
 }
-
 
     async function exportAllProjectsToPdf() {
         showToast("Tüm projeler PDF olarak hazırlanıyor...", false);
