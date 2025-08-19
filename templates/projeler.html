@@ -3893,6 +3893,12 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
     }
 
 
+/**
+ * Asenkron olarak proje verilerini çeker ve bir proje raporu PDF'i oluşturur.
+ *
+ * @param {object} project Proje detaylarını içeren nesne.
+ * @returns {void}
+ */
 async function generateProjectPdf(project) {
     let progressSteps = [];
     let revisionCounts = {};
@@ -3903,6 +3909,9 @@ async function generateProjectPdf(project) {
         if (progressResponse.ok) {
             progressSteps = await progressResponse.json();
             console.log('Progress Steps API Response:', JSON.stringify(progressSteps, null, 2));
+
+            // Adımları başlangıç tarihine göre sırala
+            progressSteps.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
 
             if (progressSteps && progressSteps.length > 0) {
                 console.log('First step object fields:', Object.keys(progressSteps[0]));
