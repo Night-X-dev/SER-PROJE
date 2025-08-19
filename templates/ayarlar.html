@@ -364,7 +364,7 @@
 
         .search-container input {
             width: 100%;
-            padding: 10px 15px 10px 40px;
+            padding: 10px 15px;
             border-radius: 8px;
             border: 1px solid var(--border-color);
             background-color: var(--input-bg);
@@ -1581,8 +1581,8 @@
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover table-dark" id="revisionRequestsTable">
-                <thead class="table-dark">
+            <table class="table table-hover" id="revisionRequestsTable">
+                <thead>
                     <tr>
                         <th>Proje</th>
                         <th>Başlık</th>
@@ -1864,7 +1864,7 @@ function renderRevisionRequests() {
     if (!revisionRequests || revisionRequests.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center text-light">Bekleyen revizyon isteği bulunmamaktadır.</td>
+                <td colspan="6" class="text-center theme-text">Bekleyen revizyon isteği bulunmamaktadır.</td>
             </tr>
         `;
         paginationInfo.textContent = 'Gösterilecek kayıt yok';
@@ -1885,10 +1885,10 @@ function renderRevisionRequests() {
             const row = document.createElement('tr');
             row.className = 'align-middle';
             row.innerHTML = `
-                <td class="text-light">${escapeHtml(rev.project_name || 'Bilinmeyen Proje')}</td>
-                <td class="text-light">${escapeHtml(rev.title || '')}</td>
-                <td class="text-light">${escapeHtml(rev.requester_name || 'Bilinmeyen Kullanıcı')}</td>
-                <td class="text-light">${date}</td>
+                <td class="theme-text">${escapeHtml(rev.project_name || 'Bilinmeyen Proje')}</td>
+                <td class="theme-text">${escapeHtml(rev.title || '')}</td>
+                <td class="theme-text">${escapeHtml(rev.requester_name || 'Bilinmeyen Kullanıcı')}</td>
+                <td class="theme-text">${date}</td>
                 <td>${statusBadge}</td>
                 <td>
                     <div class="btn-group btn-group-sm">
@@ -1915,13 +1915,13 @@ function renderRevisionRequests() {
     const startItem = startIndex + 1;
     const endItem = Math.min(startIndex + REVISIONS_PER_PAGE, revisionRequests.length);
     paginationInfo.textContent = `${startItem}-${endItem} / ${revisionRequests.length} kayıt`;
-    paginationInfo.className = 'text-light';
+    paginationInfo.className = 'theme-text';
 
     // Render pagination buttons
     if (totalPages > 1) {
         // Previous button
         const prevLi = document.createElement('li');
-        prevLi.className = `page-item ${currentRevisionPage === 1 ? 'disabled' : ''} dark`;
+        prevLi.className = `page-item ${currentRevisionPage === 1 ? 'disabled' : ''} theme-pagination`;
         prevLi.innerHTML = `
             <a class="page-link" href="#" aria-label="Previous" data-page="${currentRevisionPage - 1}">
                 <span aria-hidden="true">&laquo;</span>
@@ -1932,14 +1932,14 @@ function renderRevisionRequests() {
         // Page numbers
         for (let i = 1; i <= totalPages; i++) {
             const pageLi = document.createElement('li');
-            pageLi.className = `page-item dark ${i === currentRevisionPage ? 'active' : ''}`;
+            pageLi.className = `page-item theme-pagination ${i === currentRevisionPage ? 'active' : ''}`;
             pageLi.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
             pagination.appendChild(pageLi);
         }
 
         // Next button
         const nextLi = document.createElement('li');
-        nextLi.className = `page-item dark ${currentRevisionPage === totalPages ? 'disabled' : ''}`;
+        nextLi.className = `page-item theme-pagination ${currentRevisionPage === totalPages ? 'disabled' : ''}`;
         nextLi.innerHTML = `
             <a class="page-link" href="#" aria-label="Next" data-page="${currentRevisionPage + 1}">
                 <span aria-hidden="true">&raquo;</span>
