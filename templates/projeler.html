@@ -3984,26 +3984,33 @@ async function generateProjectPdf(project) {
         const today = new Date();
         const startDate = new Date(step.start_date);
         const plannedEndDate = new Date(step.real_end_date);
+        const endDate = new Date(step.end_date);
 
-        // If the step is completed, always show "Completed".
+        // Tamamlandıysa her zaman tamamlandı olarak göster
         if (step.is_completed) {
             return `Tamamlandı <i class="fas fa-check-circle" style="color: green;"></i>`;
         }
-
-        // If the step hasn't started yet, show "Pending".
+        
+        // Henüz başlamadıysa "Bekliyor" olarak göster
         if (today < startDate) {
             return `Bekliyor <i class="fas fa-hourglass-start" style="color: grey;"></i>`;
         }
-        
-        // If the planned end date has passed, show "Delayed". This addresses the user's feedback.
-        if (today > plannedEndDate) {
-             return `Gecikmeli <i class="fas fa-exclamation-triangle" style="color: red;"></i>`;
+
+        // Başlangıç tarihi geçtiyse ve planlanan bitiş tarihine gelindiyse "Devam Ediyor" olarak göster
+        if (today >= startDate && today <= plannedEndDate) {
+            return `Devam Ediyor <i class="fas fa-spinner fa-spin" style="color: orange;"></i>`;
         }
 
-        // Otherwise (it's currently ongoing and within the planned period), show "Ongoing".
-        // The user's specific request for "devam ediyor" is covered by this and the new logic above.
-        return `Devam Ediyor <i class="fas fa-spinner fa-spin" style="color: orange;"></i>`;
+        // Planlanan bitiş tarihi geçtiyse ve tamamlanmadıysa "Gecikmeli" olarak göster
+        if (today > plannedEndDate) {
+            return `Gecikmeli <i class="fas fa-exclamation-triangle" style="color: red;"></i>`;
+        }
+       
+        
+        // Varsayılan durum
+        return `Bilinmiyor <i class="fas fa-question-circle" style="color: lightgrey;"></i>`;
     };
+
     // İki tarih arasındaki planlanan süreyi hesaplayan yardımcı fonksiyon
     const calculatePlannedDuration = (startDateStr, endDateStr) => {
         if (!startDateStr || !endDateStr) return '-';
