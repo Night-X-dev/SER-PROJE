@@ -3897,13 +3897,12 @@ async function generateProjectPdf(project) {
     let revisionCounts = {};
 
     try {
-        // Proje ilerleme adımlarını çekme
+        // Fetch project progress steps
         const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
         if (progressResponse.ok) {
             progressSteps = await progressResponse.json();
             console.log('Progress Steps API Response:', JSON.stringify(progressSteps, null, 2));
 
-            // Check if we have steps and what fields are available
             if (progressSteps && progressSteps.length > 0) {
                 console.log('First step object fields:', Object.keys(progressSteps[0]));
             }
@@ -3911,7 +3910,7 @@ async function generateProjectPdf(project) {
             console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
         }
 
-        // Revizyon sayılarını çekme
+        // Fetch revision counts
         const revisionCountResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/revision-counts-by-step`);
         if (revisionCountResponse.ok) {
             revisionCounts = await revisionCountResponse.json();
@@ -3922,7 +3921,7 @@ async function generateProjectPdf(project) {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
-    // Yardımcı fonksiyonlar (mevcut koddan alınmıştır)
+    // Helper functions (taken from existing code)
     const formatDateForDisplay = (dateStr) => {
         if (!dateStr || dateStr === '-') return '-';
         try {
@@ -4079,8 +4078,7 @@ async function generateProjectPdf(project) {
 
     const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
     if (!newWindow) {
-        // showToast fonksiyonu projenizin ana dosyasında olmalı
-        // showToast("PDF önizlemesi için yeni pencere açılamadı. Tarayıcınızın pop-up engelleyicisini kontrol edin.", true);
+        // showToast function should be in your main file
         return;
     }
 
@@ -4093,10 +4091,10 @@ async function generateProjectPdf(project) {
             <title>${project.project_name ? project.project_name.normalize('NFC') : "Proje"} Raporu Önizlemesi</title>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                body { 
-                    font-family: 'Segoe UI', Arial, sans-serif; 
-                    margin: 0; 
-                    padding: 0; 
+                body {
+                    font-family: 'Segoe UI', Arial, sans-serif;
+                    margin: 0;
+                    padding: 0;
                     background-color: #f0f2f5;
                 }
                 .pdf-container {
@@ -4132,30 +4130,29 @@ async function generateProjectPdf(project) {
                     box-sizing: border-box;
                     padding: 0 20mm;
                 }
-
                 /* PRINT STYLES */
                 @media print {
-                    @page { 
-                        size: A4; 
-                        margin: 0; /* Kenar boşluklarını sabit header/footer ile yöneteceğiz */
+                    @page {
+                        size: A4;
+                        margin: 0;
                     }
-                    body { 
-                        background-color: #fff; 
+                    body {
+                        background-color: #fff;
                         -webkit-print-color-adjust: exact;
                         margin: 0;
                         padding: 0;
                     }
-                    .pdf-container { 
-                        margin: 0 auto; 
-                        box-shadow: none; 
-                        padding: 0 20mm; /* Sadece yan boşluklar */
-                        padding-top: 100px; /* Header boşluğu */
-                        padding-bottom: 80px; /* Footer boşluğu */
+                    .pdf-container {
+                        margin: 0 auto;
+                        box-shadow: none;
+                        padding: 0 20mm;
+                        padding-top: 100px;
+                        padding-bottom: 80px;
                         min-height: 100%;
                         position: relative;
                     }
-                    .print-button-container, .screen-header, .screen-footer { 
-                        display: none; 
+                    .print-button-container, .screen-header, .screen-footer {
+                        display: none;
                     }
                     
                     /* Fixed header that appears on each printed page */
@@ -4164,7 +4161,7 @@ async function generateProjectPdf(project) {
                         top: 0;
                         left: 0;
                         right: 0;
-                        height: 80px; /* Yükseklik artırıldı */
+                        height: 80px;
                         background-color: #fff;
                         padding: 0 20mm;
                         box-sizing: border-box;
@@ -4179,7 +4176,7 @@ async function generateProjectPdf(project) {
                         bottom: 0;
                         left: 0;
                         right: 0;
-                        height: 60px; /* Yükseklik artırıldı */
+                        height: 60px;
                         padding: 5px 20mm;
                         box-sizing: border-box;
                         background-color: #fff;
@@ -4201,40 +4198,39 @@ async function generateProjectPdf(project) {
                     }
                     
                     .print-header img {
-                        height: 40px; /* Logo boyutu ayarlandı */
+                        height: 40px;
                     }
                     
-                    /* Bu kural sorun yaratıyordu, artık gereksiz */
                     .main-content {
-                        padding: 0 !important; /* Bu satır silindi */
+                        padding: 0 !important;
                     }
                     
-                    /* Add padding to all pages after the first one (already handled by container padding) */
-                    /* @page :not(:first) {
-                         margin-top: 100px;
-                    } */
-                    
-                    /* Ensure content breaks correctly between pages */
                     .work-progress-section, .progress-step-item {
                         page-break-inside: avoid;
                         break-inside: avoid;
-                        margin-bottom: 20px; /* Adımlar arası boşluk */
+                        margin-bottom: 20px;
                     }
 
                     .progress-step-item:first-of-type {
                         margin-top: 0;
                     }
                     
-                    /* Sayfa numaralandırma */
                     body {
                         counter-reset: page-number;
                     }
+                    
+                    /* Add page counter to the footer */
                     .print-footer::after {
-                        counter-increment: page-number;
                         content: "Sayfa " counter(page-number);
                         display: block;
                         text-align: center;
                         line-height: 20px;
+                    }
+
+                    /* Important: Adjust page padding after the first page to avoid overlap with header/footer */
+                    @page:not(:first) {
+                        margin-top: 80px; /* Header height */
+                        margin-bottom: 60px; /* Footer height */
                     }
                 }
                 
@@ -4257,7 +4253,7 @@ async function generateProjectPdf(project) {
                 </div>
             </div>
             <div class="print-footer">
-                <!-- Sayfa numarası burada otomatik olarak eklenecek -->
+                <!-- Page number will be added here automatically -->
             </div>
 
             <div class="pdf-container">
@@ -4347,15 +4343,7 @@ async function generateProjectPdf(project) {
     newWindow.document.close();
 
     newWindow.onload = () => {
-        // showToast ve addActivity fonksiyonlarının projenizin ana dosyasında tanımlı olduğunu varsayıyorum
-        // showToast(`${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi hazır.`);
-        // addActivity(
-        //     "PDF Raporu Önizlendi",
-        //     `${project.project_name ? project.project_name.normalize('NFC') : "proje"} için PDF raporu önizlemesi açıldı.`,
-        //     project.project_id,
-        //     "fas fa-file-pdf",
-        //     "pdf_preview"
-        // );
+        // showToast and addActivity functions should be defined in your main file
     };
 }
 
