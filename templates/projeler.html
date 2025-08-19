@@ -4005,8 +4005,11 @@ async function generateProjectPdf(project) {
         if (today > plannedEndDate) {
             return `Gecikmeli <i class="fas fa-exclamation-triangle" style="color: red;"></i>`;
         }
-       
-        
+       //ben istiyorum ki iş gidişat adımının gerçek bitiş tarihi gelmemiş ve tamamlanmamışsa devam ediyor yazsın
+       if (today > plannedEndDate && !step.is_completed && !step.real_end_date) {
+           return `Devam Ediyor <i class="fas fa-spinner fa-spin" style="color: orange;"></i>`;
+       }
+
         // Varsayılan durum
         return `Bilinmiyor <i class="fas fa-question-circle" style="color: lightgrey;"></i>`;
     };
