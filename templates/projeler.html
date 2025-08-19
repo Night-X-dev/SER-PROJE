@@ -3930,12 +3930,17 @@ async function generateProjectPdf(project) {
     }
 
     // Gerçek Proje Bitiş tarihini belirleme: En son tamamlanan adımı bulur ve onun gerçek bitiş tarihini kullanır.
-    const lastCompletedStep = progressSteps.filter(step => step.is_completed).length > 0 ?
-        progressSteps.filter(step => step.is_completed).reduce((prev, current) => (new Date(prev.end_date) > new Date(current.end_date)) ? prev : current) : null;
+    // Bu kısım, en son tamamlanan adımı güvenilir bir şekilde bulmak için güncellendi.
+    const completedSteps = progressSteps.filter(step => step.is_completed && step.end_date);
+    completedSteps.sort((a, b) => new Date(b.end_date) - new Date(a.end_date));
+    const lastCompletedStep = completedSteps.length > 0 ? completedSteps[0] : null;
     const actualProjectEndDate = lastCompletedStep ? lastCompletedStep.end_date : null;
 
     // Genel planlanan bitiş tarihini en son adımın planlanan bitiş tarihinden belirleme.
-    const lastPlannedStep = progressSteps.length > 0 ? progressSteps.reduce((prev, current) => (new Date(prev.real_end_date) > new Date(current.real_end_date)) ? prev : current) : null;
+    // Bu kısım da tutarlılık için güncellendi.
+    const allStepsWithPlannedDates = progressSteps.filter(step => step.real_end_date);
+    allStepsWithPlannedDates.sort((a, b) => new Date(b.real_end_date) - new Date(a.real_end_date));
+    const lastPlannedStep = allStepsWithPlannedDates.length > 0 ? allStepsWithPlannedDates[0] : null;
     const lastPlannedEndDate = lastPlannedStep ? lastPlannedStep.real_end_date : null;
 
     // Tarihleri okunabilir formatta göstermek için yardımcı fonksiyon
@@ -3980,31 +3985,28 @@ async function generateProjectPdf(project) {
      * @param {object} step - İş adımının verileri.
      * @returns {string} Durum metni ve ikonunu içeren HTML dizesi.
      */
-     const getStepStatusHtml = (step) => {
+    const getStepStatusHtml = (step) => {
         const today = new Date();
         const startDate = new Date(step.start_date);
         const plannedEndDate = new Date(step.real_end_date);
         const endDate = new Date(step.end_date);
 
-        // If the step is completed, always show "Completed".
+        // Eğer adım tamamlanmışsa, daima "Tamamlandı" göster.
         if (step.is_completed) {
             return `Tamamlandı <i class="fas fa-check-circle" style="color: green;"></i>`;
         }
 
-        // If the step hasn't started yet, show "Pending".
+        // Eğer adım henüz başlamadıysa, "Bekliyor" göster.
         if (today < startDate) {
             return `Bekliyor <i class="fas fa-hourglass-start" style="color: grey;"></i>`;
         }
         
-        // If the planned end date has passed, show "Delayed". This addresses the user's feedback.
-        // Gecikme durumu, planlanan bitiş tarihi (plannedEndDate) geçildiğinde başlar.
-        // Bu, işin planlanandan sapma gösterdiğini belirtir.
-        if (today > endDate) {
-             return `Gecikmeli <i class="fas fa-exclamation-triangle" style="color: red;"></i>`;
+        // Eğer planlanan bitiş tarihi geçmişse, "Gecikmeli" göster.
+        if (today > plannedEndDate) {
+            return `Gecikmeli <i class="fas fa-exclamation-triangle" style="color: red;"></i>`;
         }
 
-        // Otherwise (it's currently ongoing and within the planned period), show "Ongoing".
-        // Bu kısım, işin başlangıç tarihi ile planlanan bitiş tarihi arasındayken "Devam Ediyor" durumunu gösterir.
+        // Diğer durumlarda (devam ediyor ve planlanan süre içinde) "Devam Ediyor" göster.
         return `Devam Ediyor <i class="fas fa-spinner fa-spin" style="color: orange;"></i>`;
     };
 
@@ -4027,15 +4029,14 @@ async function generateProjectPdf(project) {
     };
 
     // Planlanan Toplam Süreyi tüm adımların planlanan sürelerinin toplamı olarak hesaplar.
-   const calculateTotalPlannedDuration = (steps) => {
+    const calculateTotalPlannedDuration = (steps) => {
         if (steps.length === 0) return 0;
-        const firstStartDate = steps[0].start_date;
-        const lastEndDate = lastPlannedEndDate;
+        const firstStartDate = steps.length > 0 ? steps[0].start_date : null;
         
-        if (!firstStartDate || !lastEndDate) return '-';
+        if (!firstStartDate || !lastPlannedEndDate) return '-';
         
         const startDate = new Date(firstStartDate);
-        const endDate = new Date(lastEndDate);
+        const endDate = new Date(lastPlannedEndDate);
         
         const diffTime = endDate.getTime() - startDate.getTime();
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
