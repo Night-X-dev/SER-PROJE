@@ -3969,34 +3969,17 @@ async function generateProjectPdf(project) {
         return `${phaseName} Aşamasında`;
     };
 
-    /**
-     * @description Adım durumu için HTML çıktısı üreten yardımcı fonksiyon.
-     * Bu fonksiyon, adımın başlangıç ve bitiş tarihlerine göre durumu belirler.
-     * @param {object} step - İş adımı nesnesi.
-     * @returns {string} Durum metni ve simgelerini içeren HTML dizesi.
-     */
+    // Adım durumu için HTML çıktısı üreten yardımcı fonksiyon
     const getStepStatusHtml = (step) => {
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // Sadece tarih karşılaştırması için saat bilgisini sıfırla.
-        const startDate = step.start_date ? new Date(step.start_date) : null;
-        const endDate = step.real_end_date ? new Date(step.real_end_date) : null;
-        
+        const startDate = new Date(step.start_date);
         let statusText = '';
         if (step.is_completed) {
-            // Adım tamamlandıysa
             statusText = `Tamamlandı <i class="fas fa-check-circle" style="color: green;"></i>`;
-        } else if (startDate && today < startDate) {
-            // Adım henüz başlamadıysa
+        } else if (today < startDate) {
             statusText = `Bekliyor <i class="fas fa-hourglass-start" style="color: grey;"></i>`;
-        } else if (startDate && endDate && today >= startDate && today <= endDate) {
-            // Adım planlanan tarih aralığındaysa
-            statusText = `Devam Ediyor <i class="fas fa-spinner fa-spin" style="color: orange;"></i>`;
-        } else if (endDate && today > endDate) {
-            // Adımın bitiş tarihi geçmişse ve tamamlanmadıysa
-            statusText = `Gecikmeli <i class="fas fa-exclamation-triangle" style="color: red;"></i>`;
         } else {
-            // Diğer durumlar için varsayılan
-            statusText = `Durum Belirsiz <i class="fas fa-question-circle" style="color: #6c757d;"></i>`;
+            statusText = `Devam Ediyor <i class="fas fa-spinner fa-spin" style="color: orange;"></i>`;
         }
         return statusText;
     };
