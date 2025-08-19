@@ -4131,7 +4131,7 @@ async function generateProjectPdf(project) {
                 }
                 .main-content {
                     box-sizing: border-box;
-                    padding: 0 20mm;
+                    padding: 0 10mm;
                 }
                 /* PRINT STYLES */
                 @media print {
@@ -4148,9 +4148,7 @@ async function generateProjectPdf(project) {
                     .pdf-container {
                         margin: 0 auto;
                         box-shadow: none;
-                        /* Kenar boşlukları azaltıldı */
                         padding: 0 10mm;
-                        /* Başlık için üstten boşluk azaltıldı */
                         padding-top: 25mm;
                         padding-bottom: 20mm;
                         min-height: 100%;
@@ -4160,17 +4158,31 @@ async function generateProjectPdf(project) {
                         display: none;
                     }
                     
-                    /* The print-header will be part of the normal document flow */
-                    .print-header {
-                        position: absolute;
-                        top: 10mm; /* Üst boşluğa göre konumu ayarlandı */
-                        left: 10mm; /* Kenar boşluklarına göre ayarlandı */
-                        right: 10mm; /* Kenar boşluklarına göre ayarlandı */
+                    /* Başlık ve alt bilgi her sayfada görünür olacak */
+                    .print-header, .print-footer {
+                        position: fixed;
+                        width: 100%;
+                        left: 0;
                         background-color: #fff;
                         box-sizing: border-box;
                         -webkit-print-color-adjust: exact;
+                        padding: 0 10mm;
+                    }
+
+                    .print-header {
+                        top: 10mm;
                         border-bottom: 1px solid #eee;
                         padding-bottom: 5px;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                    }
+
+                    .print-footer {
+                        bottom: 10mm;
+                        text-align: right;
+                        font-size: 9px;
+                        color: #6c757d;
                     }
                     
                     .print-header img {
@@ -4191,10 +4203,6 @@ async function generateProjectPdf(project) {
                         color: #6c757d;
                         text-align: right;
                         margin-left: 15px;
-                    }
-
-                    .print-footer {
-                        display: none; /* Hide the footer for printing */
                     }
                     
                     .work-progress-section, .progress-step-item {
@@ -4227,17 +4235,21 @@ async function generateProjectPdf(project) {
             </style>
         </head>
         <body>
-            <div class="pdf-container">
-                <!-- Header for the first printed page -->
-                <div class="print-header">
-                    <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-                        <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 40px; margin-right: 15px;">
-                        <h1 style="font-size: 18px; color: #005c9d; margin: 0; text-align: center; flex-grow: 1;">Proje Takip Formu</h1>
-                        <div style="font-size: 11px; color: #6c757d; text-align: right; margin-left: 15px;">
-                            ${formatDateForDisplay(new Date())}
-                        </div>
-                    </div>
+            <!-- Header for the first printed page -->
+            <div class="print-header">
+                <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo">
+                <h1 style="font-size: 18px; color: #005c9d; margin: 0; text-align: center; flex-grow: 1;">Proje Takip Formu</h1>
+                <div style="font-size: 11px; color: #6c757d; text-align: right; margin-left: 15px;">
+                    ${formatDateForDisplay(new Date())}
                 </div>
+            </div>
+
+            <!-- Footer for every printed page -->
+            <div class="print-footer">
+                Referans No: ${project.reference_no || '-'}
+            </div>
+        
+            <div class="pdf-container">
             
                 <!-- Header and footer for screen view -->
                 <div class="screen-header">
