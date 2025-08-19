@@ -3899,6 +3899,11 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
  * Rapor, PDF olarak kaydedilmeye veya yazdırılmaya uygun şekilde tasarlanmıştır.
  * @param {object} project - Proje ana bilgilerini içeren nesne (project_id, project_name vb.).
  */
+/**
+ * Proje verilerini API'den çeker, işler ve çıktı olarak bir HTML raporu oluşturur.
+ * Bu rapor, yazdırma ve PDF olarak kaydetme için optimize edilmiştir.
+ * @param {object} project - Proje ana bilgilerini içeren nesne.
+ */
 async function generateProjectPdf(project) {
     // API'den çekilecek veriler için boş diziler ve nesneler tanımla.
     let progressSteps = [];
@@ -3924,10 +3929,11 @@ async function generateProjectPdf(project) {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
-    // Gerçek Proje Bitiş tarihini belirleme: En son adımı bulur ve onun gerçek bitiş tarihini kullanır.
-    const lastStep = progressSteps.length > 0 ? progressSteps[progressSteps.length - 1] : null;
-    const actualProjectEndDate = lastStep ? (lastStep.end_date || lastStep.real_end_date) : null;
-    
+    // Gerçek Proje Bitiş tarihini belirleme: En son tamamlanan adımı bulur ve onun gerçek bitiş tarihini kullanır.
+    const lastCompletedStep = progressSteps.filter(step => step.is_completed).length > 0 ?
+        progressSteps.filter(step => step.is_completed).reduce((prev, current) => (new Date(prev.end_date) > new Date(current.end_date)) ? prev : current) : null;
+    const actualProjectEndDate = lastCompletedStep ? lastCompletedStep.end_date : null;
+
     // Genel planlanan bitiş tarihini en son adımın planlanan bitiş tarihinden belirleme.
     const lastPlannedStep = progressSteps.length > 0 ? progressSteps.reduce((prev, current) => (new Date(prev.real_end_date) > new Date(current.real_end_date)) ? prev : current) : null;
     const lastPlannedEndDate = lastPlannedStep ? lastPlannedStep.real_end_date : null;
@@ -3969,19 +3975,38 @@ async function generateProjectPdf(project) {
         return `${phaseName} Aşamasında`;
     };
 
-    // Adım durumu için HTML çıktısı üreten yardımcı fonksiyon
+    /**
+     * @description İş adımının durumuna göre HTML çıktısı üreten yardımcı fonksiyon.
+     * @param {object} step - İş adımının verileri.
+     * @returns {string} Durum metni ve ikonunu içeren HTML dizesi.
+     */
     const getStepStatusHtml = (step) => {
         const today = new Date();
         const startDate = new Date(step.start_date);
-        let statusText = '';
+        const plannedEndDate = new Date(step.real_end_date);
+        
+        // Tamamlandıysa her zaman tamamlandı olarak göster
         if (step.is_completed) {
-            statusText = `Tamamlandı <i class="fas fa-check-circle" style="color: green;"></i>`;
-        } else if (today < startDate) {
-            statusText = `Bekliyor <i class="fas fa-hourglass-start" style="color: grey;"></i>`;
-        } else {
-            statusText = `Devam Ediyor <i class="fas fa-spinner fa-spin" style="color: orange;"></i>`;
+            return `Tamamlandı <i class="fas fa-check-circle" style="color: green;"></i>`;
         }
-        return statusText;
+        
+        // Henüz başlamadıysa "Bekliyor" olarak göster
+        if (today < startDate) {
+            return `Bekliyor <i class="fas fa-hourglass-start" style="color: grey;"></i>`;
+        }
+
+        // Başlangıç tarihi geçtiyse ve planlanan bitiş tarihine gelindiyse "Devam Ediyor" olarak göster
+        if (today >= startDate && today <= plannedEndDate) {
+            return `Devam Ediyor <i class="fas fa-spinner fa-spin" style="color: orange;"></i>`;
+        }
+
+        // Planlanan bitiş tarihi geçtiyse ve tamamlanmadıysa "Gecikmeli" olarak göster
+        if (today > plannedEndDate) {
+            return `Gecikmeli <i class="fas fa-exclamation-triangle" style="color: red;"></i>`;
+        }
+        
+        // Varsayılan durum
+        return `Bilinmiyor <i class="fas fa-question-circle" style="color: lightgrey;"></i>`;
     };
 
     // İki tarih arasındaki planlanan süreyi hesaplayan yardımcı fonksiyon
@@ -4001,7 +4026,7 @@ async function generateProjectPdf(project) {
         const diffTime = endDate.getTime() - startDate.getTime();
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
-    
+
     // Planlanan Toplam Süreyi tüm adımların planlanan sürelerinin toplamı olarak hesaplar.
     const calculateTotalPlannedDuration = (steps) => {
         if (steps.length === 0) return 0;
@@ -4033,13 +4058,13 @@ async function generateProjectPdf(project) {
                     if (step.is_completed && step.end_date) {
                         const endDate = new Date(step.end_date);
                         duration = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
-                    } 
+                    }
                     // Devam eden adımlar için bugünü kullan.
                     else {
                         duration = (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
                     }
                 }
-                
+
                 if (!isNaN(duration) && duration > 0) {
                     total += Math.ceil(duration); // Gün sayısını yuvarla
                 }
@@ -4058,7 +4083,7 @@ async function generateProjectPdf(project) {
         const today = new Date();
         const projectStartDate = new Date(project.start_date);
         const projectEndDate = lastPlannedEndDate ? new Date(lastPlannedEndDate) : null;
-        
+
         // 1. Tamamlanan Süre: bugünün tarihi - Planlı Başlangıç tarihi
         let completedDays = 0;
         if (today >= projectStartDate) {
@@ -4116,14 +4141,14 @@ async function generateProjectPdf(project) {
         if (steps.length === 0) return '';
         return steps.map((step, index) => {
             const stepTitle = step.title || step.name || step.step_name || step.progress_title || 'Başlık bilgisi yok';
-            
+
             if (!step.title) {
                 console.warn(`Uyarı: Proje ID ${project.project_id} için başlık alanı bulunamadı. Kullanılan alanlar:`, Object.keys(step));
             }
-            
+
             const stepId = step.progress_id || step.id;
             const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
-            
+
             // Üçüncü adımdan (index 2) önce sayfa sonu eklemek için sınıf
             const pageBreakClass = index === 2 ? 'page-break-after-first-two' : '';
 
@@ -4231,10 +4256,10 @@ async function generateProjectPdf(project) {
                     .print-button-container, .screen-header, .screen-footer {
                         display: none;
                     }
-                    
+
                     .print-header {
                         position: absolute;
-                        top: 10mm; 
+                        top: 10mm;
                         left: 10mm;
                         right: 10mm;
                         background-color: #fff;
@@ -4243,12 +4268,12 @@ async function generateProjectPdf(project) {
                         border-bottom: 1px solid #eee;
                         padding-bottom: 5px;
                     }
-                    
+
                     .print-header img {
                         height: 40px;
                         margin-right: 15px;
                     }
-                    
+
                     .print-header h1 {
                         font-size: 18px;
                         color: #005c9d;
@@ -4256,7 +4281,7 @@ async function generateProjectPdf(project) {
                         text-align: center;
                         flex-grow: 1;
                     }
-                    
+
                     .print-header div {
                         font-size: 11px;
                         color: #6c757d;
@@ -4287,12 +4312,12 @@ async function generateProjectPdf(project) {
                     .progress-step-item:first-of-type {
                         margin-top: 0;
                     }
-                    
+
                     .page-break-after-first-two {
                         page-break-before: always;
                     }
                 }
-                
+
                 @media screen {
                     .print-header, .print-footer {
                         display: none;
@@ -4312,7 +4337,7 @@ async function generateProjectPdf(project) {
                         </div>
                     </div>
                 </div>
-            
+
                 <!-- Header and footer for screen view -->
                 <div class="screen-header">
                     <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 50px;">
@@ -4354,11 +4379,11 @@ async function generateProjectPdf(project) {
                                 <p><strong>Gerçek Toplam Süre:</strong> ${calculateTotalActualDuration(progressSteps)} gün</p>
                             </div>
                         </div>
-                        
+
                         <h4 style="text-align: center; font-size: 16px; margin-top: 20px; color: #005c9d;">
                             ${getProjectPhaseText(project.display_status)}
                         </h4>
-                        
+
                         <div style="height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px;">
                             <div style="height: 100%; display: flex;">
                                 <div style="background-color: #4CAF50; width: ${progressBarData.completedPercentage}%;"></div>
@@ -4372,7 +4397,7 @@ async function generateProjectPdf(project) {
                             <div style="text-align: right;"><span style="color: #ccc;">■</span> Kalan Süre: ${progressBarData.remainingDays} gün</div>
                         </div>
                     </div>
-                    
+
                     <!-- Tüm Proje İlerleme Adımları -->
                     ${allStepsHtml.length > 0 ? `
                     <div style="margin-top: 20px; padding-top: 20px;" class="work-progress-section">
@@ -4386,7 +4411,7 @@ async function generateProjectPdf(project) {
                 <!-- YENİ: Her sayfanın sağ altında referans numarasını gösterecek footer -->
                 <div class="print-footer">${project.reference_no || '-'}</div>
             </div>
-            
+
             <div class="print-button-container" style="text-align: center; margin-top: 20px; padding-bottom: 20px;">
                 <button class="print-button" onclick="window.print()" style="background-color: #005c9d; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background-color 0.3s ease;">
                     <i class="fas fa-print"></i> PDF Kaydet / Yazdır
