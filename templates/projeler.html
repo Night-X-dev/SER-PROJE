@@ -4146,7 +4146,7 @@ async function generateProjectPdf(project) {
                         margin: 0 auto;
                         box-shadow: none;
                         padding: 0 20mm;
-                        padding-top: 100px;
+                        padding-top: 60px; /* Adjusted padding to accommodate the header in flow */
                         padding-bottom: 80px;
                         min-height: 100%;
                         position: relative;
@@ -4155,54 +4155,22 @@ async function generateProjectPdf(project) {
                         display: none;
                     }
                     
-                    /* Fixed header that appears on each printed page */
+                    /* The print-header and print-footer will be part of the normal document flow */
                     .print-header {
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        right: 0;
-                        height: 80px;
+                        position: static;
+                        top: auto;
+                        left: auto;
+                        right: auto;
+                        height: auto;
                         background-color: #fff;
                         padding: 0 20mm;
                         box-sizing: border-box;
                         -webkit-print-color-adjust: exact;
-                        z-index: 1000;
                         border-bottom: 1px solid #eee;
                     }
-                    
+
                     .print-footer {
-                        display: block;
-                        position: fixed;
-                        bottom: 0;
-                        left: 0;
-                        right: 0;
-                        height: 60px;
-                        padding: 5px 20mm;
-                        box-sizing: border-box;
-                        background-color: #fff;
-                        border-top: 1px solid #eee;
-                        font-size: 12px;
-                        color: #6c757d;
-                        text-align: center;
-                        -webkit-print-color-adjust: exact;
-                        z-index: 1000;
-                    }
-                    
-                    .print-header > div, .print-footer > div {
-                        width: 170mm;
-                        margin: 0 auto;
-                        height: 100%;
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                    }
-                    
-                    .print-header img {
-                        height: 40px;
-                    }
-                    
-                    .main-content {
-                        padding: 0 !important;
+                        display: none; /* Hide the footer for printing */
                     }
                     
                     .work-progress-section, .progress-step-item {
@@ -4227,10 +4195,10 @@ async function generateProjectPdf(project) {
                         line-height: 20px;
                     }
 
-                    /* Important: Adjust page padding after the first page to avoid overlap with header/footer */
+                    /* Remove the specific margins for pages other than the first one */
                     @page:not(:first) {
-                        margin-top: 80px; /* Header height */
-                        margin-bottom: 60px; /* Footer height */
+                        margin-top: 0;
+                        margin-bottom: 0;
                     }
                 }
                 
@@ -4242,7 +4210,7 @@ async function generateProjectPdf(project) {
             </style>
         </head>
         <body>
-            <!-- Static header and footer for print -->
+            <!-- Header for the first printed page -->
             <div class="print-header">
                 <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                     <img src="https://serotomasyon.tr/static/serlogo.png" alt="Ser Elektrik Otomasyon Logo" style="height: 40px; margin-right: 15px;">
@@ -4252,6 +4220,7 @@ async function generateProjectPdf(project) {
                     </div>
                 </div>
             </div>
+            
             <div class="print-footer">
                 <!-- Page number will be added here automatically -->
             </div>
@@ -4346,6 +4315,7 @@ async function generateProjectPdf(project) {
         // showToast and addActivity functions should be defined in your main file
     };
 }
+
 
     async function exportAllProjectsToPdf() {
         showToast("Tüm projeler PDF olarak hazırlanıyor...", false);
