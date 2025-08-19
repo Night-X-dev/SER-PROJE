@@ -4051,59 +4051,70 @@ async function generateProjectPdf(project) {
     };
 
     // İlerleme çubuğu verilerini hesaplayan yardımcı fonksiyon
-    const calculateProgressBarData = (progressSteps) => {
-        let totalPlannedDays = 0;
-        let totalCompletedDays = 0;
-        let totalDelayedDays = 0;
+const calculateProgressBarData = (projectStartDate, lastPlannedEndDate, progressSteps) => {
         const today = new Date();
+        const totalPlannedDays = calculateDaysBetween(projectStartDate, lastPlannedEndDate);
+        
+        let totalCompletedDays = 0;
+        let remainingDays = 0;
+        let totalDelayedDays = 0;
 
-        progressSteps.forEach(step => {
-            const startDate = new Date(step.start_date);
-            const endDate = new Date(step.real_end_date); // planned
-            const plannedDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
-            totalPlannedDays += plannedDays;
-            
-            if (step.is_completed) {
-                const realEndDate = new Date(step.end_date); // actual
-                const stepCompletedDays = (realEndDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
-                totalCompletedDays += stepCompletedDays;
-                if (realEndDate > endDate) {
-                    totalDelayedDays += (realEndDate.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24);
-                }
-            } else {
-                if (today >= startDate) {
-                    const stepPassedDays = (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
-                    totalCompletedDays += stepPassedDays;
-                }
+        // Hesaplama mantığı güncellendi
+        // Tamamlanan süre: Projenin planlı başlangıcı ile bugün arasındaki fark
+        if (projectStartDate) {
+            const startDate = new Date(projectStartDate);
+            if (today > startDate) {
+                totalCompletedDays = calculateDaysBetween(projectStartDate, today.toISOString());
             }
+        }
+
+        // Kalan süre: Projenin planlı bitişi ile bugün arasındaki fark
+        if (lastPlannedEndDate) {
+            const endDate = new Date(lastPlannedEndDate);
+            if (endDate > today) {
+                remainingDays = calculateDaysBetween(today.toISOString(), lastPlannedEndDate);
+            }
+        }
+
+        // Tüm adımların gecikme sürelerinin toplamı
+        progressSteps.forEach(step => {
             totalDelayedDays += (step.delay_days || 0) + (step.custom_delay_days || 0);
         });
 
-        const totalDuration = totalPlannedDays + totalDelayedDays;
-        let completedPercentage = (totalCompletedDays / totalDuration) * 100;
-        let delayPercentage = (totalDelayedDays / totalDuration) * 100;
-        let remainingPercentage = 100 - completedPercentage - delayPercentage;
+        const totalDuration = totalPlannedDays; // Yüzdelik hesaplama için temel süre
         
-        completedPercentage = Math.round(Math.max(0, completedPercentage));
-        delayPercentage = Math.round(Math.max(0, delayPercentage));
-        remainingPercentage = Math.round(Math.max(0, remainingPercentage));
+        // Yüzdelikleri hesapla
+        let completedPercentage = Math.max(0, Math.min(100, (totalCompletedDays / totalDuration) * 100));
+        let delayPercentage = Math.max(0, Math.min(100, (totalDelayedDays / totalDuration) * 100));
+        let remainingPercentage = Math.max(0, Math.min(100, (remainingDays / totalDuration) * 100));
         
-        const totalPercentage = completedPercentage + delayPercentage + remainingPercentage;
+        // Yüzdeliklerin toplamını 100'e yuvarla
+        const totalPercentage = Math.round(completedPercentage + delayPercentage + remainingPercentage);
         if (totalPercentage !== 100) {
-            remainingPercentage += 100 - totalPercentage;
+            const difference = 100 - totalPercentage;
+            // Farkı en büyük yüzdeye ekleyerek yuvarlama hatasını düzelt
+            if (completedPercentage >= delayPercentage && completedPercentage >= remainingPercentage) {
+                completedPercentage += difference;
+            } else if (delayPercentage >= completedPercentage && delayPercentage >= remainingPercentage) {
+                delayPercentage += difference;
+            } else {
+                remainingPercentage += difference;
+            }
         }
 
         return {
-            totalPlannedDays: Math.ceil(totalPlannedDays),
-            totalDelayedDays: Math.ceil(totalDelayedDays),
-            totalRealDays: Math.ceil(totalCompletedDays + totalDelayedDays),
-            completedPercentage,
-            delayPercentage,
-            remainingPercentage
+            totalPlannedDays: totalPlannedDays,
+            totalCompletedDays: totalCompletedDays,
+            remainingDays: remainingDays,
+            totalDelayedDays: totalDelayedDays,
+            completedPercentage: Math.round(completedPercentage),
+            delayPercentage: Math.round(delayPercentage),
+            remainingPercentage: Math.round(remainingPercentage)
         };
     };
-
-    const progressBarData = calculateProgressBarData(progressSteps);
+    
+    // Yeni fonksiyonu doğru parametrelerle çağır
+    const progressBarData = calculateProgressBarData(projectStartDate, lastPlannedEndDate, progressSteps);
 
     // Adımların HTML listesini oluşturan fonksiyon
     const generateStepHtml = (steps) => {
