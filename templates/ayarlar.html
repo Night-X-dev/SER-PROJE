@@ -2567,13 +2567,28 @@ document.addEventListener('DOMContentLoaded', function() {
     // Admin kontrolü
     if (currentUser && currentUser.role === 'Admin') {
         console.log('Admin hesabı tespit edildi');
+        // Show admin-only elements
         const roleCard = document.getElementById('roleManagementCard');
+        const revisionCard = document.getElementById('revisionRequestsCard');
+        
         if (roleCard) {
             roleCard.style.display = 'block';
         } else {
             console.log('HATA: roleManagementCard elementi bulunamadı!');
         }
+        
+        if (revisionCard) {
+            revisionCard.style.display = 'block';
+            loadRevisionRequests();
+        } else {
+            console.log('HATA: revisionRequestsCard elementi bulunamadı!');
+        }
     } else {
+        // Hide admin-only elements for non-admin users
+        const revisionCard = document.getElementById('revisionRequestsCard');
+        if (revisionCard) {
+            revisionCard.style.display = 'none';
+        }
     }
 
             fetchRoles();
