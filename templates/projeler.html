@@ -3897,6 +3897,7 @@ async function generateProjectPdf(project) {
     // API'den çekilecek veriler için boş diziler ve nesneler tanımla.
     let progressSteps = [];
     let revisionCounts = {};
+    const API_BASE_URL = 'https://your-api-base-url.com'; // API URL'nizi buraya girin
 
     try {
         // Proje ilerleme adımlarını API'den çekme
@@ -3918,16 +3919,26 @@ async function generateProjectPdf(project) {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
-    // Gerçek Proje Bitiş tarihini belirleme: En son tamamlanan adımı bulur ve onun gerçek bitiş tarihini kullanır.
-    const lastStepWithEndDate = progressSteps.filter(step => step.end_date).reduce(
-        (prev, current) => (new Date(prev.end_date) > new Date(current.end_date)) ? prev : current,
-        null
-    );
-    const actualProjectEndDate = lastStepWithEndDate ? lastStepWithEndDate.end_date : null;
+    // Gerçek Proje Bitiş tarihini bulma: En son tamamlanan adımın gerçek bitiş tarihini kullanır.
+    // Orijinal kodunuzdaki TypeError'ı önlemek için bu kısmı daha güvenli hale getirdik.
+    const lastStepWithEndDate = progressSteps
+        .filter(step => step.end_date)
+        .sort((a, b) => new Date(b.end_date) - new Date(a.end_date));
+    const actualProjectEndDate = lastStepWithEndDate.length > 0 ? lastStepWithEndDate[0].end_date : null;
 
     // Genel planlanan bitiş tarihini en son adımın planlanan bitiş tarihinden belirleme.
-    const lastPlannedStep = progressSteps.length > 0 ? progressSteps.reduce((prev, current) => (new Date(prev.real_end_date) > new Date(current.real_end_date)) ? prev : current) : null;
-    const lastPlannedEndDate = lastPlannedStep ? lastPlannedStep.real_end_date : null;
+    // Orijinal kodunuzdaki TypeError'ı önlemek için bu kısmı daha güvenli hale getirdik.
+    const lastPlannedStep = progressSteps
+        .filter(step => step.real_end_date)
+        .sort((a, b) => new Date(b.real_end_date) - new Date(a.real_end_date));
+    const lastPlannedEndDate = lastPlannedStep.length > 0 ? lastPlannedStep[0].real_end_date : null;
+
+    // Projenin en erken planlanan başlangıç tarihini bulma
+    const firstPlannedStep = progressSteps
+        .filter(step => step.start_date)
+        .sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+    const projectStartDate = firstPlannedStep.length > 0 ? firstPlannedStep[0].start_date : project.start_date;
+
 
     // Tarihleri okunabilir formatta göstermek için yardımcı fonksiyon
     const formatDateForDisplay = (dateStr) => {
@@ -4005,51 +4016,44 @@ async function generateProjectPdf(project) {
     };
 
     /**
-     * @description İsteğiniz üzerine güncellendi:
-     * Gerçek Toplam Süreyi, tüm adımların planlanan başlangıç ve gerçek bitiş (yoksa bugünün) tarihleri arasındaki farkların toplamı olarak hesaplar.
+     * @description Projenin en erken başlangıç tarihinden en geç bitiş tarihine kadar olan toplam süreyi hesaplar.
+     * Bu, projenin gerçekte ne kadar sürdüğünü gösterir.
      * @param {Array<object>} steps - Proje adımlarının listesi.
+     * @param {string} projectStartDate - Projenin planlanan başlangıç tarihi.
      * @returns {number} Toplam gerçekleşen gün sayısı.
      */
-    const calculateTotalActualDuration = (steps) => {
-        if (!steps || steps.length === 0) return 0;
-        let total = 0;
-        const today = new Date();
-
-        steps.forEach(step => {
-            if (step.start_date) {
-                const startDate = new Date(step.start_date);
-                // Gerçek bitiş tarihi varsa onu kullan, yoksa bugünü kullan.
-                const endDate = step.end_date ? new Date(step.end_date) : today;
-                const duration = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
-                total += Math.max(0, duration); // Negatif sonuçları engelle
+    const calculateTotalActualDuration = (steps, projectStartDate) => {
+        if (!steps || steps.length === 0 || !projectStartDate) return 0;
+        
+        const earliestStartDate = new Date(projectStartDate);
+        
+        // En son tamamlanan adımı veya bugünü bul
+        const lastStepEndDate = steps.reduce((latestDate, step) => {
+            if (step.end_date) {
+                const stepEndDate = new Date(step.end_date);
+                if (stepEndDate > latestDate) {
+                    return stepEndDate;
+                }
             }
-        });
-        return Math.floor(total);
+            return latestDate;
+        }, new Date(0)); // Epoch zamanıyla başla
+        
+        const latestEndDate = lastStepEndDate.getTime() > 0 ? lastStepEndDate : new Date();
+        
+        const diffTime = latestEndDate.getTime() - earliestStartDate.getTime();
+        return Math.floor(Math.max(0, diffTime / (1000 * 60 * 60 * 24)) + 1);
     };
 
 
     /**
-     * @description İsteğiniz üzerine güncellendi:
-     * İlerleme çubuğu verilerini, projenin planlanan başlangıç tarihi ile gerçek bitiş tarihi (yoksa bugünün) arasındaki toplam süreye göre hesaplar.
+     * @description İlerleme çubuğu verilerini hesaplar.
      * @param {Array<object>} progressSteps - Proje adımlarının listesi.
      * @param {object} project - Proje ana bilgileri.
      * @returns {object} Yüzde ve gün değerlerini içeren bir nesne.
      */
     const calculateProgressBarData = (progressSteps, project) => {
-        const today = new Date();
-        const projectStartDate = new Date(project.start_date);
-        const lastCompletedStepEndDate = lastStepWithEndDate ? new Date(lastStepWithEndDate.end_date) : null;
-        
-        // Hesaplamada kullanılacak toplam bitiş tarihi: tamamlanmışsa son adımın bitişi, değilse bugünün tarihi.
-        const projectEndDateForCalc = lastCompletedStepEndDate || today;
-
-        // Projenin toplam süresi
-        let totalDuration = 0;
-        if (projectEndDateForCalc > projectStartDate) {
-            totalDuration = (projectEndDateForCalc.getTime() - projectStartDate.getTime()) / (1000 * 60 * 60 * 24);
-        } else {
-            totalDuration = 0;
-        }
+        const totalPlannedDuration = calculatePlannedDuration(projectStartDate, lastPlannedEndDate);
+        const totalActualDuration = calculateTotalActualDuration(progressSteps, projectStartDate);
 
         // Tamamlanan adımların sürelerinin toplamı
         const completedDays = progressSteps.reduce((sum, step) => {
@@ -4066,21 +4070,22 @@ async function generateProjectPdf(project) {
             return sum + ((step.delay_days || 0) + (step.custom_delay_days || 0));
         }, 0);
 
-        // Kalan süre, toplam süreden tamamlanan ve gecikme sürelerinin çıkarılmasıyla bulunur.
-        const remainingDays = Math.max(0, totalDuration - completedDays);
+        const remainingDays = Math.max(0, totalActualDuration - completedDays - totalDelayedDays);
 
-        if (totalDuration === 0) {
+        if (totalActualDuration <= 0) {
             return { completedDays: 0, delayedDays: 0, remainingDays: 0, completedPercentage: 0, delayPercentage: 0, remainingPercentage: 0 };
         }
 
         // Yüzde hesaplamaları
-        let completedPercentage = (completedDays / totalDuration) * 100;
-        let delayPercentage = (totalDelayedDays / totalDuration) * 100;
-        let remainingPercentage = (remainingDays / totalDuration) * 100;
+        let completedPercentage = (completedDays / totalActualDuration) * 100;
+        let delayPercentage = (totalDelayedDays / totalActualDuration) * 100;
+        let remainingPercentage = (remainingDays / totalActualDuration) * 100;
         
         // Yüzdelerin toplamını 100'e yuvarlamak için düzeltme
         const totalPercentage = completedPercentage + delayPercentage + remainingPercentage;
-        remainingPercentage += (100 - totalPercentage);
+        if (totalPercentage > 0) {
+             remainingPercentage += (100 - totalPercentage);
+        }
 
         return {
             completedDays: Math.max(0, completedDays),
@@ -4096,7 +4101,7 @@ async function generateProjectPdf(project) {
 
     // Adımların HTML listesini oluşturan fonksiyon
     const generateStepHtml = (steps) => {
-        if (steps.length === 0) return '';
+        if (!steps || steps.length === 0) return '';
         return steps.map((step, index) => {
             const stepTitle = step.title || step.name || step.step_name || step.progress_title || 'Başlık bilgisi yok';
 
@@ -4109,6 +4114,10 @@ async function generateProjectPdf(project) {
 
             // Üçüncü adımdan (index 2) önce sayfa sonu eklemek için sınıf
             const pageBreakClass = index === 2 ? 'page-break-after-first-two' : '';
+            
+            // calculatePlannedDuration fonksiyonunu doğru parametrelerle çağır
+            const plannedDuration = calculatePlannedDuration(step.start_date, step.real_end_date);
+            const actualDuration = calculatePlannedDuration(step.start_date, step.end_date);
 
             return `
                 <div class="progress-step-item ${pageBreakClass}">
@@ -4123,9 +4132,9 @@ async function generateProjectPdf(project) {
                             <p><strong>Revize Sayısı:</strong> ${revisionCountForStep}</p>
                         </div>
                         <div style="width:50%; text-align:right;">
-                            <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.real_end_date)} gün</p>
+                            <p><strong>Planlanan Toplam Süre:</strong> ${plannedDuration} gün</p>
                             <p><strong>Gecikme Toplam Süre:</strong> ${(step.delay_days || 0) + (step.custom_delay_days || 0)} gün</p>
-                            <p><strong>Gerçek Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.end_date)} gün</p>
+                            <p><strong>Gerçek Toplam Süre:</strong> ${actualDuration} gün</p>
                         </div>
                     </div>
                     ${step.description ? `<div style="font-size:13px; margin-top: 5px;">Açıklama: ${step.description}</div>` : ''}
@@ -4328,13 +4337,13 @@ async function generateProjectPdf(project) {
                         <div style="display: flex; justify-content: space-between; font-size: 14px;">
                             <div style="width: 50%;">
                                 <p><strong>Sözleşme Tarihi:</strong> ${formatDateForDisplay(project.contract_date || '-')}</p>
-                                <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(project.start_date || '-')}</p>
+                                <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(projectStartDate || '-')}</p>
                                 <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(lastPlannedEndDate || '-')}</p>
                             </div>
                             <div style="width: 50%; text-align: right;">
                                 <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(actualProjectEndDate || '-')}</p>
-                                <p><strong>Planlanan Toplam Süre:</strong> ${calculateTotalPlannedDuration(progressSteps)} gün</p>
-                                <p><strong>Gerçek Toplam Süre:</strong> ${calculateTotalActualDuration(progressSteps)} gün</p>
+                                <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(projectStartDate, lastPlannedEndDate)} gün</p>
+                                <p><strong>Gerçek Toplam Süre:</strong> ${calculateTotalActualDuration(progressSteps, projectStartDate)} gün</p>
                             </div>
                         </div>
 
