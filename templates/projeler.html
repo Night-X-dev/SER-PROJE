@@ -4077,62 +4077,77 @@ async function generateProjectPdf(project) {
      * @param {object} project - Proje ana bilgileri.
      * @returns {object} Yüzde ve gün değerlerini içeren bir nesne.
      */
-    const calculateProgressBarData = (progressSteps, project) => {
-        const today = new Date();
-        const projectStartDate = new Date(project.start_date);
-        const projectEndDate = lastPlannedEndDate ? new Date(lastPlannedEndDate) : null;
+     const calculateProgressBarData = (progressSteps, project, actualProjectEndDate) => {
+    const today = new Date();
+    const projectStartDate = new Date(project.start_date);
 
-        // 1. Tamamlanan Süre: bugünün tarihi - Planlı Başlangıç tarihi
-        let completedDays = 0;
-        if (today >= projectStartDate) {
-            completedDays = Math.floor((today.getTime() - projectStartDate.getTime()) / (1000 * 60 * 60 * 24));
+    // 1. Tamamlanan Süre: Planlı Başlangıç tarihi ile bugünün tarihi arasındaki fark.
+    let completedDays = 0;
+    if (today > projectStartDate) {
+        const diffTime = today.getTime() - projectStartDate.getTime();
+        completedDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    }
+    completedDays = Math.max(0, completedDays);
+
+    // 2. Kalan Süre: Bugünün tarihi ile projenin gerçek bitiş tarihi arasındaki fark.
+    // Eğer gerçek bitiş tarihi yoksa veya geçmişteyse, kalan süre 0 olarak kabul edilir.
+    let remainingDays = 0;
+    if (actualProjectEndDate) {
+        const actualEndDate = new Date(actualProjectEndDate);
+        if (actualEndDate > today) {
+            const diffTime = actualEndDate.getTime() - today.getTime();
+            remainingDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
         }
+    }
+    remainingDays = Math.max(0, remainingDays);
 
-        // 2. Gecikme Süresi: İş gidişat adımlarının toplam gecikme süresi
-        const totalDelayedDays = progressSteps.reduce((sum, step) => {
-            return sum + ((step.delay_days || 0) + (step.custom_delay_days || 0));
-        }, 0);
+    // 3. Gecikme Süresi: İş adımlarındaki toplam gecikme süresi.
+    const totalDelayedDays = progressSteps.reduce((sum, step) => {
+        return sum + ((step.delay_days || 0) + (step.custom_delay_days || 0));
+    }, 0);
+    const delayedDays = Math.max(0, totalDelayedDays);
 
-        // 3. Kalan Süre: Planlı bitiş tarihi - bugünün tarihi
-        let remainingDays = 0;
-        if (projectEndDate && projectEndDate > today) {
-            remainingDays = Math.floor((projectEndDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        }
 
-        // Toplam süre, yüzdeleri hesaplamak için kullanılır
-        const totalDuration = completedDays + totalDelayedDays + remainingDays;
+    // Toplam süre, yüzdeleri hesaplamak için kullanılır.
+    // Toplam süre, tamamlanan, gecikmeli ve kalan günlerin toplamıdır.
+    const totalDuration = completedDays + delayedDays + remainingDays;
 
-        if (totalDuration === 0) {
-            return {
-                completedDays: 0,
-                delayedDays: 0,
-                remainingDays: 0,
-                completedPercentage: 0,
-                delayPercentage: 0,
-                remainingPercentage: 0
-            };
-        }
-
-        // Yüzde hesaplamaları
-        let completedPercentage = (completedDays / totalDuration) * 100;
-        let delayPercentage = (totalDelayedDays / totalDuration) * 100;
-        let remainingPercentage = (remainingDays / totalDuration) * 100;
-
-        // Yüzdelerin toplamını kontrol et ve gerekirse kalan yüzdeliği ayarla
-        const totalPercentage = completedPercentage + delayPercentage + remainingPercentage;
-        remainingPercentage += (100 - totalPercentage);
-
+    if (totalDuration === 0) {
         return {
-            completedDays: Math.max(0, completedDays),
-            delayedDays: Math.max(0, totalDelayedDays),
-            remainingDays: Math.max(0, remainingDays),
-            completedPercentage: Math.max(0, completedPercentage),
-            delayPercentage: Math.max(0, delayPercentage),
-            remainingPercentage: Math.max(0, remainingPercentage)
+            completedDays: 0,
+            delayedDays: 0,
+            remainingDays: 0,
+            completedPercentage: 0,
+            delayPercentage: 0,
+            remainingPercentage: 0
         };
-    };
+    }
 
-    const progressBarData = calculateProgressBarData(progressSteps, project);
+    // Yüzde hesaplamaları.
+    let completedPercentage = (completedDays / totalDuration) * 100;
+    let delayPercentage = (delayedDays / totalDuration) * 100;
+    let remainingPercentage = (remainingDays / totalDuration) * 100;
+
+    // Yüzdelerin toplamını 100'e yuvarlamak için ayar yap.
+    const totalPercentage = completedPercentage + delayPercentage + remainingPercentage;
+    if (Math.round(totalPercentage) !== 100) {
+        const adjustment = 100 - totalPercentage;
+        remainingPercentage += adjustment;
+    }
+
+    return {
+        completedDays: completedDays,
+        delayedDays: delayedDays,
+        remainingDays: remainingDays,
+        completedPercentage: completedPercentage,
+        delayPercentage: delayPercentage,
+        remainingPercentage: remainingPercentage
+    };
+};
+
+// generateProjectPdf fonksiyonunun içinde, bu satırı bulun ve güncelleyin.
+// Önceki: const progressBarData = calculateProgressBarData(progressSteps, project);
+const progressBarData = calculateProgressBarData(progressSteps, project, actualProjectEndDate);
 
     // Adımların HTML listesini oluşturan fonksiyon
     const generateStepHtml = (steps) => {
