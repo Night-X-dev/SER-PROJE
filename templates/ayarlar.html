@@ -1582,7 +1582,7 @@
     <div class="card-body">
         <div class="table-responsive">
             <table class="table table-hover" id="revisionRequestsTable">
-                <thead>
+                <thead class="table-light">
                     <tr>
                         <th>Proje</th>
                         <th>Başlık</th>
@@ -1596,6 +1596,13 @@
                     <!-- Revizyon istekleri buraya yüklenecek -->
                 </tbody>
             </table>
+            <!-- Pagination Controls -->
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="text-muted" id="revisionRequestsPaginationInfo"></div>
+                <ul class="pagination mb-0" id="revisionRequestsPagination">
+                    <!-- Pagination buttons will be inserted here -->
+                </ul>
+            </div>
         </div>
     </div>
 </div>
@@ -1790,26 +1797,33 @@
 
         let confirmCallback = null; // Callback function to execute on confirmation
         let confirmationBootstrapModal; // Bootstrap modal instance
+        
+        // Pagination variables for revision requests
+        let revisionRequests = [];
+        let currentRevisionPage = 1;
+        const REVISIONS_PER_PAGE = 10;
         async function loadRevisionRequests() {
-    const tbody = document.getElementById('revisionRequestsBody');
-    if (!tbody) return;
-    
-    try {
-        const response = await fetch('/api/revision-requests');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const tbody = document.getElementById('revisionRequestsBody');
+            if (!tbody) return;
+            
+            try {
+                const response = await fetch('/api/revision-requests');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                if (data.success && Array.isArray(data.revisions)) {
+                    revisionRequests = data.revisions;
+                    currentRevisionPage = 1; // Reset to first page when loading new data
+                    renderRevisionRequests();
+                } else {
+                    throw new Error('Geçersiz yanıt formatı');
+                }
+            } catch (error) {
+                console.error('Error loading revision requests:', error);
+                showToast('Hata', 'Revizyon istekleri yüklenirken bir hata oluştu', 'error');
+            }
         }
-        const data = await response.json();
-        if (data.success && Array.isArray(data.revisions)) {
-            renderRevisionRequests(data.revisions);
-        } else {
-            throw new Error('Geçersiz yanıt formatı');
-        }
-    } catch (error) {
-        console.error('Error loading revision requests:', error);
-        showToast('Hata', 'Revizyon istekleri yüklenirken bir hata oluştu', 'error');
-    }
-}
 // Durum etiketi oluştur
 function getStatusBadge(status) {
     const statuses = {
@@ -1837,27 +1851,39 @@ function escapeHtml(unsafe) {
         .replace(/'/g, "&#039;");
 }
 // Revizyon isteklerini tabloda göster
-function renderRevisionRequests(revisions) {
+function renderRevisionRequests() {
     const tbody = document.getElementById('revisionRequestsBody');
-    if (!tbody) return;
+    const paginationInfo = document.getElementById('revisionRequestsPaginationInfo');
+    const pagination = document.getElementById('revisionRequestsPagination');
+    
+    if (!tbody || !paginationInfo || !pagination) return;
     
     tbody.innerHTML = '';
+    pagination.innerHTML = '';
 
-    if (!revisions || revisions.length === 0) {
+    if (!revisionRequests || revisionRequests.length === 0) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="6" class="text-center">Bekleyen revizyon isteği bulunmamaktadır.</td>
             </tr>
         `;
+        paginationInfo.textContent = 'Gösterilecek kayıt yok';
         return;
     }
 
-    revisions.forEach(rev => {
+    // Calculate pagination
+    const totalPages = Math.ceil(revisionRequests.length / REVISIONS_PER_PAGE);
+    const startIndex = (currentRevisionPage - 1) * REVISIONS_PER_PAGE;
+    const paginatedItems = revisionRequests.slice(startIndex, startIndex + REVISIONS_PER_PAGE);
+
+    // Render table rows
+    paginatedItems.forEach(rev => {
         try {
             const date = rev.created_at ? new Date(rev.created_at).toLocaleString('tr-TR') : 'Bilinmiyor';
             const statusBadge = getStatusBadge(rev.status);
             
             const row = document.createElement('tr');
+            row.className = 'align-middle';
             row.innerHTML = `
                 <td>${escapeHtml(rev.project_name || 'Bilinmeyen Proje')}</td>
                 <td>${escapeHtml(rev.title || '')}</td>
@@ -1883,6 +1909,56 @@ function renderRevisionRequests(revisions) {
         } catch (e) {
             console.error('Satır oluşturulurken hata:', e, rev);
         }
+    });
+
+    // Update pagination info
+    const startItem = startIndex + 1;
+    const endItem = Math.min(startIndex + REVISIONS_PER_PAGE, revisionRequests.length);
+    paginationInfo.textContent = `${startItem}-${endItem} / ${revisionRequests.length} kayıt`;
+
+    // Render pagination buttons
+    if (totalPages > 1) {
+        // Previous button
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentRevisionPage === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `
+            <a class="page-link" href="#" aria-label="Previous" data-page="${currentRevisionPage - 1}">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        `;
+        pagination.appendChild(prevLi);
+
+        // Page numbers
+        for (let i = 1; i <= totalPages; i++) {
+            const pageLi = document.createElement('li');
+            pageLi.className = `page-item ${i === currentRevisionPage ? 'active' : ''}`;
+            pageLi.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
+            pagination.appendChild(pageLi);
+        }
+
+        // Next button
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentRevisionPage === totalPages ? 'disabled' : ''}`;
+        nextLi.innerHTML = `
+            <a class="page-link" href="#" aria-label="Next" data-page="${currentRevisionPage + 1}">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        `;
+        pagination.appendChild(nextLi);
+    }
+
+    // Add event listeners to pagination buttons
+    pagination.querySelectorAll('.page-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const page = parseInt(link.dataset.page);
+            if (!isNaN(page) && page >= 1 && page <= Math.ceil(revisionRequests.length / REVISIONS_PER_PAGE)) {
+                currentRevisionPage = page;
+                renderRevisionRequests();
+                // Scroll to top of the table
+                tbody.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
     });
 }
 
