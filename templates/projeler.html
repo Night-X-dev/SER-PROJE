@@ -4077,7 +4077,7 @@ async function generateProjectPdf(project) {
      * @param {object} project - Proje ana bilgileri.
      * @returns {object} Yüzde ve gün değerlerini içeren bir nesne.
      */
-     const calculateProgressBarData = (progressSteps, project, actualProjectEndDate) => {
+    const calculateProgressBarData = (progressSteps, project, actualProjectEndDate) => {
     const today = new Date();
     const projectStartDate = new Date(project.start_date);
 
@@ -4096,7 +4096,8 @@ async function generateProjectPdf(project) {
         const actualEndDate = new Date(actualProjectEndDate);
         if (actualEndDate > today) {
             const diffTime = actualEndDate.getTime() - today.getTime();
-            remainingDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            // Zaman farkı nedeniyle oluşan kaymayı düzeltmek için 1 eklenir.
+            remainingDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
         }
     }
     remainingDays = Math.max(0, remainingDays);
@@ -4148,6 +4149,7 @@ async function generateProjectPdf(project) {
 // generateProjectPdf fonksiyonunun içinde, bu satırı bulun ve güncelleyin.
 // Önceki: const progressBarData = calculateProgressBarData(progressSteps, project);
 const progressBarData = calculateProgressBarData(progressSteps, project, actualProjectEndDate);
+
 
     // Adımların HTML listesini oluşturan fonksiyon
     const generateStepHtml = (steps) => {
