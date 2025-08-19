@@ -3895,7 +3895,6 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 async function generateProjectPdf(project) {
     let progressSteps = [];
     let revisionCounts = {};
-    const API_BASE_URL = window.location.origin; // Assuming API is on the same origin
 
     try {
         // Fetch project progress steps
@@ -3922,20 +3921,14 @@ async function generateProjectPdf(project) {
         console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
     }
 
-    // Gerçek Bitiş tarihini, tamamlanmış olup olmadığına bakılmaksızın, en son iş adımının planlı bitiş tarihi (end_date) olarak ayarla.
-    const lastStep = progressSteps.length > 0
-        ? progressSteps.sort((a, b) => new Date(a.end_date) - new Date(b.end_date))[progressSteps.length - 1]
-        : null;
+    // Determine the actual project end date from the last completed step
+    const lastCompletedStep = progressSteps
+        .filter(step => step.is_completed && step.real_end_date)
+        .sort((a, b) => new Date(b.real_end_date) - new Date(a.real_end_date))[0];
 
-    const actualProjectEndDate = lastStep ? lastStep.end_date : null;
+    const actualProjectEndDate = lastCompletedStep ? lastCompletedStep.real_end_date : null;
 
-    // --- HELPER FUNCTIONS ---
-
-    /**
-     * Formats a date string to a displayable 'tr-TR' locale format.
-     * @param {string} dateStr - The date string to format.
-     * @returns {string} The formatted date string or '-' if invalid.
-     */
+    // Helper functions (taken from existing code)
     const formatDateForDisplay = (dateStr) => {
         if (!dateStr || dateStr === '-') return '-';
         try {
@@ -3948,11 +3941,6 @@ async function generateProjectPdf(project) {
         }
     };
 
-    /**
-     * Calculates the number of days since the contract date.
-     * @param {string} contractDateStr - The contract date string.
-     * @returns {number} The number of days passed.
-     */
     const calculateDaysSinceContract = (contractDateStr) => {
         if (!contractDateStr) return 0;
         const contractDate = new Date(contractDateStr);
@@ -3961,11 +3949,6 @@ async function generateProjectPdf(project) {
         return Math.floor(diffTime / (1000 * 60 * 60 * 24));
     };
 
-    /**
-     * Generates HTML for the project status indicator.
-     * @param {string} statusText - The project's status text.
-     * @returns {string} HTML span element with colored text.
-     */
     const getProjectStatusHtml = (statusText) => {
         const isDelayed = statusText && statusText.includes('Gecikmeli');
         const color = isDelayed ? 'red' : '#4CAF50';
@@ -3973,22 +3956,12 @@ async function generateProjectPdf(project) {
         return `<span style="color: ${color}; font-weight: bold; margin: 0;">${text}</span>`;
     };
 
-    /**
-     * Extracts and formats the project phase text.
-     * @param {string} statusText - The project's status text.
-     * @returns {string} Formatted phase text.
-     */
     const getProjectPhaseText = (statusText) => {
         if (!statusText) return 'Aşama bilgisi bulunamadı';
         const phaseName = statusText.split('(')[0].trim();
         return `${phaseName} Aşamasında`;
     };
 
-    /**
-     * Generates an HTML string indicating the status of a single step.
-     * @param {object} step - The progress step object.
-     * @returns {string} HTML string with status text and icon.
-     */
     const getStepStatusHtml = (step) => {
         const today = new Date();
         const startDate = new Date(step.start_date);
@@ -4003,30 +3976,14 @@ async function generateProjectPdf(project) {
         return statusText;
     };
 
-    /**
-     * Calculates the planned duration in days between a start and end date.
-     * This is the function that calculates the value you requested.
-     * @param {string} startDateStr - The planned start date string.
-     * @param {string} endDateStr - The planned end date string.
-     * @returns {string|number} The duration in days, or '-' if dates are invalid.
-     */
     const calculatePlannedDuration = (startDateStr, endDateStr) => {
         if (!startDateStr || !endDateStr) return '-';
-        // Convert date strings to Date objects
         const startDate = new Date(startDateStr);
         const endDate = new Date(endDateStr);
-        // Calculate the difference in milliseconds
         const diffTime = endDate.getTime() - startDate.getTime();
-        // Convert milliseconds to days, then add 1 to include the start day
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
 
-    /**
-     * Calculates the actual duration in days.
-     * @param {string} startDateStr - The planned start date string.
-     * @param {string} realEndDateStr - The actual end date string.
-     * @returns {string|number} The duration in days, or '-' if dates are invalid.
-     */
     const calculateActualDuration = (startDateStr, realEndDateStr) => {
         if (!startDateStr || !realEndDateStr) return '-';
         const startDate = new Date(startDateStr);
@@ -4034,11 +3991,8 @@ async function generateProjectPdf(project) {
         const diffTime = endDate.getTime() - startDate.getTime();
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
-
-    /**
-     * Calculates the total planned duration for the entire project.
-     * @returns {string|number} The total duration in days, or '-' if dates are invalid.
-     */
+    
+    // Calculate total planned duration based on the project's planned start and end dates
     const calculateTotalPlannedDuration = () => {
         if (!project.start_date || !project.end_date) return '-';
         const startDate = new Date(project.start_date);
@@ -4047,10 +4001,7 @@ async function generateProjectPdf(project) {
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
 
-    /**
-     * Calculates the total actual duration of the project.
-     * @returns {string|number} The total duration in days, or '-' if dates are invalid.
-     */
+    // Calculate total actual duration based on the project's planned start date and the last step's actual end date
     const calculateTotalActualDuration = () => {
         if (!project.start_date || !actualProjectEndDate) return '-';
         const startDate = new Date(project.start_date);
@@ -4059,11 +4010,6 @@ async function generateProjectPdf(project) {
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
 
-    /**
-     * Calculates progress bar percentages and total days for the report.
-     * @param {array} progressSteps - Array of progress step objects.
-     * @returns {object} An object containing progress bar data.
-     */
     const calculateProgressBarData = (progressSteps) => {
         let totalPlannedDays = 0;
         let totalCompletedDays = 0;
@@ -4117,15 +4063,9 @@ async function generateProjectPdf(project) {
 
     const progressBarData = calculateProgressBarData(progressSteps);
 
-    /**
-     * Generates the HTML for each individual step.
-     * @param {array} steps - Array of progress step objects.
-     * @returns {string} The combined HTML string for all steps.
-     */
     const generateStepHtml = (steps) => {
         if (steps.length === 0) return '';
         return steps.map((step, index) => {
-            // Normalize the step title if it exists
             const stepTitle = step.title || step.name || step.step_name || step.progress_title || 'Başlık bilgisi yok';
             
             if (!step.title) {
@@ -4146,8 +4086,8 @@ async function generateProjectPdf(project) {
                     <div style="display:flex; justify-content:space-between; font-size:13px; color:#555;">
                         <div style="width:50%;">
                             <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(step.start_date || '-')}</p>
-                            <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(step.end_date || '-')}</p>
-                            <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(step.real_end_date || '-')}</p>
+                            <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(step.real_end_date || '-')}</p>
+                            <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(step.end_date || '-')}</p>
                             <p><strong>Revize Sayısı:</strong> ${revisionCountForStep}</p>
                         </div>
                         <div style="width:50%; text-align:right;">
