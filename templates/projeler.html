@@ -3992,32 +3992,32 @@ async function generateProjectPdf(project) {
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
     
-    // YENİ: Planlanan Toplam Süreyi tüm adımların planlanan sürelerinin toplamı olarak hesaplar.
+    // GÜNCELLENDİ: Planlanan Toplam Süreyi tüm adımların planlanan sürelerinin toplamı olarak hesaplar.
     const calculateTotalPlannedDuration = (steps) => {
-        let totalDuration = 0;
+        if (steps.length === 0) return 0;
+        let total = 0;
         steps.forEach(step => {
-            if (step.start_date && step.real_end_date) {
-                const startDate = new Date(step.start_date);
-                const endDate = new Date(step.real_end_date);
-                const diffTime = endDate.getTime() - startDate.getTime();
-                totalDuration += Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            const plannedDuration = calculatePlannedDuration(step.start_date, step.real_end_date);
+            if (typeof plannedDuration === 'number') {
+                total += plannedDuration;
             }
         });
-        return totalDuration;
+        return total;
     };
 
-    // YENİ: Gerçek Toplam Süreyi tüm tamamlanmış adımların gerçek sürelerinin toplamı olarak hesaplar.
+    // GÜNCELLENDİ: Gerçek Toplam Süreyi tüm tamamlanmış adımların gerçek sürelerinin toplamı olarak hesaplar.
     const calculateTotalActualDuration = (steps) => {
-        let totalDuration = 0;
-        steps.forEach(step => {
-            if (step.is_completed && step.end_date && step.start_date) {
-                const startDate = new Date(step.start_date);
-                const endDate = new Date(step.end_date);
-                const diffTime = endDate.getTime() - startDate.getTime();
-                totalDuration += Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        const completedSteps = steps.filter(step => step.is_completed);
+        if (completedSteps.length === 0) return 0;
+
+        let total = 0;
+        completedSteps.forEach(step => {
+            const actualDuration = calculateActualDuration(step.start_date, step.end_date);
+            if (typeof actualDuration === 'number') {
+                total += actualDuration;
             }
         });
-        return totalDuration;
+        return total;
     };
 
     const calculateProgressBarData = (progressSteps) => {
