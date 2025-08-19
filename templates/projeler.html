@@ -3930,11 +3930,13 @@ async function generateProjectPdf(project) {
     }
 
     // Gerçek Proje Bitiş tarihini belirleme: En son tamamlanan adımı bulur ve onun gerçek bitiş tarihini kullanır.
-    const lastCompletedStep = progressSteps.filter(step => step.is_completed).length > 0 ?
-        progressSteps.filter(step => step.is_completed).reduce((prev, current) => (new Date(prev.end_date) > new Date(current.end_date)) ? prev : current) : null;
-    const actualProjectEndDate = lastCompletedStep ? lastCompletedStep.end_date : null;
+    const completedSteps = progressSteps.filter(step => step.is_completed);
+    const actualProjectEndDate = completedSteps.length > 0
+        ? new Date(Math.max(...completedSteps.map(step => new Date(step.end_date))))
+        : null;
 
     // Genel planlanan bitiş tarihini en son adımın planlanan bitiş tarihinden belirleme.
+    // Bu, proje planının son tarihini temsil eder.
     const lastPlannedStep = progressSteps.length > 0 ? progressSteps.reduce((prev, current) => (new Date(prev.real_end_date) > new Date(current.real_end_date)) ? prev : current) : null;
     const lastPlannedEndDate = lastPlannedStep ? lastPlannedStep.real_end_date : null;
 
@@ -3984,32 +3986,28 @@ async function generateProjectPdf(project) {
         const today = new Date();
         const startDate = new Date(step.start_date);
         const plannedEndDate = new Date(step.real_end_date);
-        const endDate = new Date(step.end_date);
-
-        // If the step is completed, always show "Completed".
+        
+        // Adım tamamlandıysa, her zaman "Tamamlandı" göster.
         if (step.is_completed) {
             return `Tamamlandı <i class="fas fa-check-circle" style="color: green;"></i>`;
         }
 
-        // If the step hasn't started yet, show "Pending".
+        // Adım henüz başlamadıysa, "Bekliyor" göster.
         if (today < startDate) {
             return `Bekliyor <i class="fas fa-hourglass-start" style="color: grey;"></i>`;
         }
         
-        // If the planned end date has passed, show "Delayed". This addresses the user's feedback.
-        // Gecikme durumu, planlanan bitiş tarihi (plannedEndDate) geçildiğinde başlar.
-        // Bu, işin planlanandan sapma gösterdiğini belirtir.
-        if (today > endDate) {
-             return `Gecikmeli <i class="fas fa-exclamation-triangle" style="color: red;"></i>`;
+        // Planlanan bitiş tarihi geçmişse, "Gecikmeli" göster.
+        if (today > plannedEndDate) {
+            return `Gecikmeli <i class="fas fa-exclamation-triangle" style="color: red;"></i>`;
         }
 
-        // Otherwise (it's currently ongoing and within the planned period), show "Ongoing".
-        // Bu kısım, işin başlangıç tarihi ile planlanan bitiş tarihi arasındayken "Devam Ediyor" durumunu gösterir.
+        // Aksi takdirde (başlamış ve planlanan süre içinde), "Devam Ediyor" göster.
         return `Devam Ediyor <i class="fas fa-spinner fa-spin" style="color: orange;"></i>`;
     };
 
     // İki tarih arasındaki planlanan süreyi hesaplayan yardımcı fonksiyon
-    const calculatePlannedDuration = (startDateStr, endDateStr) => {
+    const calculateDurationInDays = (startDateStr, endDateStr) => {
         if (!startDateStr || !endDateStr) return '-';
         const startDate = new Date(startDateStr);
         const endDate = new Date(endDateStr);
@@ -4017,26 +4015,19 @@ async function generateProjectPdf(project) {
         return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
 
-    // İki tarih arasındaki gerçekleşen süreyi hesaplayan yardımcı fonksiyon
-    const calculateActualDuration = (startDateStr, realEndDateStr) => {
-        if (!startDateStr || !realEndDateStr) return '-';
-        const startDate = new Date(startDateStr);
-        const endDate = new Date(realEndDateStr);
-        const diffTime = endDate.getTime() - startDate.getTime();
-        return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    };
-
-    // Planlanan Toplam Süreyi tüm adımların planlanan sürelerinin toplamı olarak hesaplar.
+    // Düzeltildi: Planlanan Toplam Süreyi ilk adımın başlangıcı ile son adımın planlanan bitişi arasındaki fark olarak hesaplar.
     const calculateTotalPlannedDuration = (steps) => {
         if (steps.length === 0) return 0;
-        let total = 0;
-        steps.forEach(step => {
-            const plannedDuration = calculatePlannedDuration(step.start_date, step.real_end_date);
-            if (typeof plannedDuration === 'number') {
-                total += plannedDuration;
-            }
-        });
-        return total;
+        const firstStartDate = steps[0].start_date;
+        const lastEndDate = lastPlannedEndDate;
+        
+        if (!firstStartDate || !lastEndDate) return '-';
+        
+        const startDate = new Date(firstStartDate);
+        const endDate = new Date(lastEndDate);
+        
+        const diffTime = endDate.getTime() - startDate.getTime();
+        return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
 
     // Gerçek Toplam Süreyi, tamamlanmış ve devam eden iş adımlarının gerçek sürelerinin toplamı olarak hesaplar.
@@ -4164,9 +4155,9 @@ async function generateProjectPdf(project) {
                             <p><strong>Revize Sayısı:</strong> ${revisionCountForStep}</p>
                         </div>
                         <div style="width:50%; text-align:right;">
-                            <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.real_end_date)} gün</p>
+                            <p><strong>Planlanan Süre:</strong> ${calculateDurationInDays(step.start_date, step.real_end_date)} gün</p>
                             <p><strong>Gecikme Toplam Süre:</strong> ${(step.delay_days || 0) + (step.custom_delay_days || 0)} gün</p>
-                            <p><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.end_date)} gün</p>
+                            <p><strong>Gerçekleşen Süre:</strong> ${calculateDurationInDays(step.start_date, step.end_date)} gün</p>
                         </div>
                     </div>
                     ${step.description ? `<div style="font-size:13px; margin-top: 5px;">Açıklama: ${step.description}</div>` : ''}
