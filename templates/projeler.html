@@ -4040,7 +4040,7 @@ async function generateProjectPdf(project) {
 
     const generateStepHtml = (steps) => {
         if (steps.length === 0) return '';
-        return steps.map((step) => {
+        return steps.map((step, index) => {
             const stepTitle = step.title || step.name || step.step_name || step.progress_title || 'Başlık bilgisi yok';
             
             if (!step.title) {
@@ -4050,8 +4050,11 @@ async function generateProjectPdf(project) {
             const stepId = step.progress_id || step.id;
             const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
             
+            // Add a page break before the third step (index 2) to force it onto a new page.
+            const pageBreakClass = index === 2 ? 'page-break-after-first-two' : '';
+
             return `
-                <div class="progress-step-item">
+                <div class="progress-step-item ${pageBreakClass}">
                     <div style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
                         ${stepTitle} <span style="font-weight: normal; float: right;">${getStepStatusHtml(step)}</span>
                     </div>
@@ -4146,8 +4149,8 @@ async function generateProjectPdf(project) {
                         margin: 0 auto;
                         box-shadow: none;
                         padding: 0 20mm;
-                        padding-top: 60px; /* Adjusted padding to accommodate the header in flow */
-                        padding-bottom: 80px;
+                        padding-top: 20mm; /* Üst boşluk için ekledim */
+                        padding-bottom: 20mm;
                         min-height: 100%;
                         position: relative;
                     }
@@ -4157,16 +4160,35 @@ async function generateProjectPdf(project) {
                     
                     /* The print-header and print-footer will be part of the normal document flow */
                     .print-header {
-                        position: static;
-                        top: auto;
-                        left: auto;
-                        right: auto;
-                        height: auto;
+                        position: absolute;
+                        top: 20mm; /* pdf-container'ın üst boşluğuna göre hizalandı */
+                        left: 20mm;
+                        right: 20mm;
                         background-color: #fff;
-                        padding: 0 20mm;
                         box-sizing: border-box;
                         -webkit-print-color-adjust: exact;
                         border-bottom: 1px solid #eee;
+                        padding-bottom: 5px;
+                    }
+                    
+                    .print-header img {
+                        height: 40px;
+                        margin-right: 15px;
+                    }
+                    
+                    .print-header h1 {
+                        font-size: 18px;
+                        color: #005c9d;
+                        margin: 0;
+                        text-align: center;
+                        flex-grow: 1;
+                    }
+                    
+                    .print-header div {
+                        font-size: 11px;
+                        color: #6c757d;
+                        text-align: right;
+                        margin-left: 15px;
                     }
 
                     .print-footer {
@@ -4183,22 +4205,15 @@ async function generateProjectPdf(project) {
                         margin-top: 0;
                     }
                     
-                    body {
-                        counter-reset: page-number;
+                    /* Force a page break before the third item in the list */
+                    .page-break-after-first-two {
+                        page-break-before: always;
                     }
                     
-                    /* Add page counter to the footer */
-                    .print-footer::after {
-                        content: "Sayfa " counter(page-number);
-                        display: block;
-                        text-align: center;
-                        line-height: 20px;
-                    }
-
                     /* Remove the specific margins for pages other than the first one */
                     @page:not(:first) {
-                        margin-top: 0;
-                        margin-bottom: 0;
+                        margin-top: 20mm;
+                        margin-bottom: 20mm;
                     }
                 }
                 
