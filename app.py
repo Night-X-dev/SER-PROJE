@@ -1645,7 +1645,7 @@ def send_email_notification(recipient_email, subject, body):
     sender_email = os.getenv("EMAIL_SENDER")
     sender_password = os.getenv("EMAIL_PASSWORD")
     smtp_server = os.getenv("SMTP_SERVER")
-    smtp_port = int(os.getenv("SMTP_PORT", 587)) # Varsayılan 587 (TLS)
+    smtp_port = int(os.getenv("SMTP_PORT", 587))
 
     if not all([sender_email, sender_password, smtp_server]):
         print("UYARI: E-posta gönderme ayarları eksik. E-posta gönderilemedi.")
@@ -1685,25 +1685,144 @@ def send_email_notification(recipient_email, subject, body):
       </body>
     </html>
     """
-    # Düz metin içeriği, HTML'nin bir yedeği olarak kalır.
     part1 = MIMEText(body.replace('<p>','').replace('</p>','').replace('<table>','').replace('</table>','').replace('<tr>','').replace('</tr>','').replace('<th>','').replace('</th>','').replace('<td>','').replace('</td>',''), "plain")
     part2 = MIMEText(html_body, "html")
-
     message.attach(part1)
     message.attach(part2)
 
     try:
         context = ssl.create_default_context()
         with smtplib.SMTP(smtp_server, smtp_port) as server:
-            server.ehlo()  # Can be omitted
+            server.ehlo()
             server.starttls(context=context)
-            server.ehlo()  # Can be omitted
+            server.ehlo()
             server.login(sender_email, sender_password)
             server.sendmail(sender_email, recipient_email, message.as_string())
         print(f"E-posta başarıyla gönderildi: {recipient_email}")
     except Exception as e:
         print(f"E-posta gönderme hatası ({recipient_email}): {e}")
         traceback.print_exc()
+
+# send_notification fonksiyonu
+def send_notification(cursor, user_id, title, message):
+    """Sends a notification to a specific user using the provided cursor."""
+    try:
+        sql = "INSERT INTO notifications (user_id, title, message, created_at) VALUES (%s, %s, %s, NOW())"
+        cursor.execute(sql, (user_id, title, message))
+        print(f"Bildirim hazırlandı: Kullanıcı ID: {user_id}, Başlık: '{title}', Mesaj: '{message}'")
+    except pymysql.Error as e:
+        print(f"Bildirim hazırlanırken veritabanı hatası: {e}")
+        traceback.print_exc()
+    except Exception as e:
+        print(f"Bildirim hazırlanırken genel hata: {e}")
+        traceback.print_exc()
+
+# Diğer fonksiyonlar...
+
+@app.route('/api/projects/<int:project_id>', methods=['DELETE'])
+def delete_project_api(project_id):
+    """
+    Deletes a project from the database, including all related data.
+    """
+    connection = None
+    try:
+        data = request.get_json(silent=True)
+        user_id = data.get('user_id') if data else None
+
+        if not user_id:
+            return jsonify({'message': 'User ID is missing.'}), 400
+
+        connection = get_db_connection()
+        connection.autocommit(False) # Atomik işlem için autocommit'i kapat
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (project_id,))
+            project_info = cursor.fetchone()
+
+            if not project_info:
+                connection.rollback()
+                return jsonify({'message': 'Project could not be deleted or not found.'}), 404
+
+            project_name = project_info['project_name']
+            project_manager_id = project_info['project_manager_id']
+            
+            # İlişkili verileri silme
+            sql_delete_revisions = "DELETE FROM revision_requests WHERE project_id = %s"
+            cursor.execute(sql_delete_revisions, (project_id,))
+
+            sql_delete_steps = "DELETE FROM progress_steps WHERE project_id = %s"
+            cursor.execute(sql_delete_steps, (project_id,))
+
+            sql_delete_progress = "DELETE FROM project_progress WHERE project_id = %s"
+            cursor.execute(sql_delete_progress, (project_id,))
+            
+            # Projeyi silme
+            sql_delete_project = "DELETE FROM projects WHERE project_id = %s"
+            cursor.execute(sql_delete_project, (project_id,))
+
+            if cursor.rowcount == 0:
+                connection.rollback()
+                return jsonify({'message': 'Project could not be deleted or not found.'}), 404
+            
+            connection.commit()
+
+            # Bildirim ve aktivite logu işlemleri
+            # Bu işlemleri ayrı bir thread'de çalıştırıyoruz.
+            def background_notification_task():
+                try:
+                    # Not: Bu thread'in kendi veritabanı bağlantısına ihtiyacı olabilir
+                    # veya ana thread'in bağlantısını kullanmak için dikkatli olunmalıdır.
+                    # Basitlik için, burada yeni bir bağlantı açmak en güvenli yoldur.
+                    temp_conn = get_db_connection()
+                    temp_cursor = temp_conn.cursor(pymysql.cursors.DictCursor)
+                    
+                    send_notification(
+                        temp_cursor,
+                        project_manager_id,
+                        "Proje Silindi",
+                        f"Yönettiğiniz '{project_name}' Projesi silindi."
+                    )
+                    temp_conn.commit()
+
+                    temp_cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
+                    manager_email = temp_cursor.fetchone()
+                    if manager_email and manager_email['email']:
+                        send_email_notification(
+                            manager_email['email'],
+                            "Proje Silindi",
+                            f"Yönettiğiniz '{project_name}' Projesi silindi."
+                        )
+                    else:
+                        print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta adresi bulunamadı.")
+                    
+                    temp_conn.close()
+                except Exception as notif_e:
+                    print(f"Arka plan bildirim görevi sırasında hata oluştu: {notif_e}")
+                    traceback.print_exc()
+
+            # Thread'i başlatıyoruz. Bu işlem ana isteğin yanıtını beklemesine neden olmaz.
+            threading.Thread(target=background_notification_task).start()
+
+        return jsonify({'message': 'Project successfully deleted!'}), 200
+
+    except pymysql.Error as e:
+        print(f"Database error while deleting project: {e}")
+        traceback.print_exc()
+        if connection:
+            connection.rollback()
+        if e.args[0] == 1451:
+            return jsonify({'message': 'Proje ile ilişkili veriler (revizyonlar, adımlar vb.) bulunduğu için silinemedi.'}), 409
+        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+    except Exception as e:
+        print(f"General error while deleting project: {e}")
+        traceback.print_exc()
+        if connection:
+            connection.rollback()
+        return jsonify({'message': 'Server error, please try again later.'}), 500
+    finally:
+        if connection:
+            connection.close()
+
+
 def get_user_fullname_by_id(cursor, user_id):
     """Retrieves the full name of a user by their ID."""
     if not user_id:
@@ -1791,8 +1910,6 @@ def update_project(project_id):
     finally:
         if connection:
             connection.close()
-# Proje silme api (DELETE)
-# API to list project managers
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
 def delete_project_api(project_id):
     """
