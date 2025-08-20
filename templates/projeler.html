@@ -4163,12 +4163,16 @@ const progressBarData = calculateProgressBarData(progressSteps, project, actualP
 
             const stepId = step.progress_id || step.id;
             const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
+            
+            // Kullanıcı isteği: Gecikme süresini kontrol et ve renklendir.
+            const totalDelayDays = (step.delay_days || 0) + (step.custom_delay_days || 0);
+            const delayColor = totalDelayDays > 0 ? 'red' : '#555';
 
             // Üçüncü adımdan (index 2) önce sayfa sonu eklemek için sınıf
             const pageBreakClass = index === 2 ? 'page-break-after-first-two' : '';
 
             return `
-                <div class="progress-step-item ${pageBreakClass}">
+                <div class="progress-step-item ${pageBreakClass}" style="border-bottom: 1px solid #ddd; padding-bottom: 20px; margin-bottom: 20px;">
                     <div style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
                         ${stepTitle} <span style="font-weight: normal; float: right;">${getStepStatusHtml(step)}</span>
                     </div>
@@ -4181,7 +4185,7 @@ const progressBarData = calculateProgressBarData(progressSteps, project, actualP
                         </div>
                         <div style="width:50%; text-align:right;">
                             <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.real_end_date)} gün</p>
-                            <p><strong>Gecikme Toplam Süre:</strong> ${(step.delay_days || 0) + (step.custom_delay_days || 0)} gün</p>
+                            <p><strong>Gecikme Toplam Süre:</strong> <span style="color: ${delayColor};">${totalDelayDays} gün</span></p>
                             <p><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.end_date)} gün</p>
                         </div>
                     </div>
@@ -4443,7 +4447,6 @@ const progressBarData = calculateProgressBarData(progressSteps, project, actualP
         // showToast ve addActivity fonksiyonları ana dosyanızda tanımlı olmalıdır.
     };
 }
-
         async function exportAllProjectsToPdf() {
         showToast("Tüm projeler PDF olarak hazırlanıyor...", false);
 
