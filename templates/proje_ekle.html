@@ -1122,12 +1122,12 @@
                     
                     <div class="input-group">
                         <label for="start-date">Planlı Başlangıç Tarihi</label>
-                        <input type="text" id="start-date" class="datepicker" placeholder="Tarih seçin">
+                        <input type="text" id="start-date" class="datepicker" placeholder="İş gidişatından otomatik alınır" readonly>
                     </div>
                     
                     <div class="input-group">
                         <label for="end-date">Planlı Bitiş Tarihi</label>
-                        <input type="text" id="end-date" class="datepicker" placeholder="Tarih seçin">
+                        <input type="text" id="end-date" class="datepicker" placeholder="İş gidişatından otomatik alınır" readonly>
                     </div>
                 </div>
             </div>
@@ -1378,6 +1378,32 @@
             // --- Dinamik İş Gidişatı Ekleme/Yönetme ---
             let progressStepCounter = 0; // Her adıma benzersiz ID vermek için
 
+            function updateProjectDates() {
+                const progressItems = document.querySelectorAll('.progress-list .progress-item');
+                const startDateInput = document.getElementById('start-date');
+                const endDateInput = document.getElementById('end-date');
+
+                if (progressItems.length > 0) {
+                    const firstItemStartInput = progressItems[0].querySelector('input.progress-datepicker[placeholder="Başlangıç"]');
+                    const lastItemEndInput = progressItems[progressItems.length - 1].querySelector('input.progress-datepicker[placeholder="Bitiş"]');
+                    
+                    if (firstItemStartInput) {
+                       startDateInput.value = firstItemStartInput.value;
+                    } else {
+                       startDateInput.value = '';
+                    }
+
+                     if (lastItemEndInput) {
+                        endDateInput.value = lastItemEndInput.value;
+                    } else {
+                        endDateInput.value = '';
+                    }
+                } else {
+                    startDateInput.value = '';
+                    endDateInput.value = '';
+                }
+            }
+
             async function addProgressItem(itemData = {}) {
     const newItem = document.createElement('div');
     newItem.className = 'progress-item';
@@ -1416,12 +1442,16 @@
     flatpickr(newItem.querySelectorAll('.progress-datepicker'), {
         dateFormat: "Y-m-d",
         locale: "tr",
-        allowInput: true
+        allowInput: true,
+        onChange: function() {
+            updateProjectDates();
+        }
     });
 
     // Silme butonu
     newItem.querySelector('.delete-progress-btn').addEventListener('click', () => {
         newItem.remove();
+        updateProjectDates();
     });
 
     // API'den başlıkları çek ve select'e ekle
@@ -1456,7 +1486,10 @@
             }
 
             // Yeni iş gidişatı ekle butonu olayı
-            addProgressButton.addEventListener('click', () => addProgressItem());
+            addProgressButton.addEventListener('click', async () => {
+                await addProgressItem();
+                updateProjectDates();
+            });
 
 
             // --- Projeyi Kaydet ---
@@ -1517,20 +1550,13 @@
 
   if (progressValidationFailed) return;
   
-  // İş gidişatlarından projenin planlı başlangıç ve bitiş tarihlerini belirle
-  let startDate = null;
-  let endDate = null;
-  
-  if (progressSteps.length > 0) {
-    startDate = progressSteps[0].startDate;
-    endDate = progressSteps[progressSteps.length - 1].endDate;
-}
-
-
+  // Planlı başlangıç ve bitiş tarihlerini doğrudan formdan al (artık readonly ve otomatik dolu)
+  const startDate = document.getElementById('start-date').value;
+  const endDate = document.getElementById('end-date').value;
   
   // Tarihlerin belirlenip belirlenmediğini kontrol et
   if (!startDate || !endDate) {
-    showToast('İş gidişatı tarihlerinden proje başlangıç ve bitiş tarihleri belirlenemedi.', true);
+    showToast('Proje başlangıç ve bitiş tarihleri, iş gidişatı adımları eklendikçe otomatik olarak belirlenir. Lütfen en az bir iş gidişatı adımı ekleyin.', true);
     return;
   }
 
