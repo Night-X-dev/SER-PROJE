@@ -1196,11 +1196,6 @@
                 locale: "tr",
                 allowInput: true
             };
-            
-            // Planlı tarih alanlarını salt okunur yap
-            document.getElementById('start-date').readOnly = true;
-            document.getElementById('end-date').readOnly = true;
-            
             flatpickr(".datepicker", dateOptions);
 
             // Element Referansları (Topbar ve Oturum Kontrolü için)
@@ -1417,21 +1412,16 @@
     // Listeye ekle
     document.querySelector('.progress-list').appendChild(newItem);
 
-    // Tarih seçiciyi başlat ve değişiklik dinleyicisi ekle
-    const datePickers = newItem.querySelectorAll('.progress-datepicker');
-    flatpickr(datePickers, {
+    // Tarih seçiciyi başlat
+    flatpickr(newItem.querySelectorAll('.progress-datepicker'), {
         dateFormat: "Y-m-d",
         locale: "tr",
-        allowInput: true,
-        onChange: function(selectedDates, dateStr, instance) {
-            updatePlannedDates();
-        }
+        allowInput: true
     });
 
     // Silme butonu
     newItem.querySelector('.delete-progress-btn').addEventListener('click', () => {
         newItem.remove();
-        updatePlannedDates(); // Silme işleminden sonra tarihleri güncelle
     });
 
     // API'den başlıkları çek ve select'e ekle
@@ -1465,39 +1455,8 @@
                 });
             }
 
-            // İlerleme maddelerindeki tarihler değiştiğinde planlı tarihleri güncelle
-            function updatePlannedDates() {
-                const startInputs = document.querySelectorAll('.progress-datepicker[placeholder="Başlangıç"]');
-                const endInputs = document.querySelectorAll('.progress-datepicker[placeholder="Bitiş"]');
-                
-                if (startInputs.length > 0) {
-                    // Tüm başlangıç tarihlerini al ve en erken olanı seç
-                    const startDates = Array.from(startInputs)
-                        .map(input => input.value)
-                        .filter(date => date)
-                        .sort();
-                    
-                    if (startDates.length > 0) {
-                        document.getElementById('start-date').value = startDates[0];
-                    }
-                }
-                
-                if (endInputs.length > 0) {
-                    // Tüm bitiş tarihlerini al ve en geç olanı seç
-                    const endDates = Array.from(endInputs)
-                        .map(input => input.value)
-                        .filter(date => date)
-                        .sort((a, b) => b.localeCompare(a));
-                    
-                    if (endDates.length > 0) {
-                        document.getElementById('end-date').value = endDates[0];
-                    }
-                }
-            }
-
             // Yeni iş gidişatı ekle butonu olayı
             addProgressButton.addEventListener('click', () => addProgressItem());
-
 
 
             // --- Projeyi Kaydet ---
