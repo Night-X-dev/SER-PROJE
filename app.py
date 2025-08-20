@@ -1792,67 +1792,6 @@ def update_project(project_id):
         if connection:
             connection.close()
 # Proje silme api (DELETE)
-@app.route('/api/progress/<int:progress_id>/complete', methods=['POST'])
-def mark_progress_complete(progress_id):
-    data = request.get_json()
-    user_id = data.get('user_id')
-
-    if not user_id:
-        return jsonify({'message': 'User ID is missing.'}), 400
-
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # Get progress details
-            cursor.execute("SELECT project_id, title FROM project_progress WHERE progress_id = %s", (progress_id,))
-            progress = cursor.fetchone()
-            if not progress:
-                return jsonify({'message': 'Progress not found.'}), 404
-
-            project_id = progress['project_id']
-            progress_title = progress['title']
-
-            # Get project details
-            cursor.execute("""
-                SELECT p.project_name, p.project_manager_id, u.email AS manager_email
-                FROM projects p
-                JOIN users u ON p.project_manager_id = u.id
-                WHERE p.project_id = %s
-            """, (project_id,))
-            project = cursor.fetchone()
-            if not project:
-                return jsonify({'message': 'Project not found.'}), 404
-
-            project_name = project['project_name']
-            manager_email = project['manager_email']
-
-            # Get admin email
-            cursor.execute("SELECT email FROM users WHERE role = 'Admin' LIMIT 1")
-            admin = cursor.fetchone()
-            admin_email = admin['email'] if admin else None
-
-            # Send email to project manager
-            if manager_email:
-                subject = f"{project_name} Projesinde Bir Aşama Tamamlandı"
-                body = f"'{progress_title}' adlı iş gidişatı tamamlandı."
-                send_email_notification(manager_email, subject, body)
-
-            # Send email to admin
-            if admin_email and admin_email != manager_email:
-                subject = f"{project_name} Projesinde Bir Aşama Tamamlandı"
-                body = f"'{progress_title}' adlı iş gidişatı tamamlandı."
-                send_email_notification(admin_email, subject, body)
-
-        return jsonify({'message': 'Tamamlanma e-postası başarıyla gönderildi.'}), 200
-
-    except Exception as e:
-        print(f"Error sending completion email: {e}")
-        return jsonify({'message': 'E-posta gönderilirken bir hata oluştu.'}), 500
-    finally:
-        if connection:
-            connection.close()
-
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
 def delete_project_api(project_id):
     """Deletes a project from the database."""
