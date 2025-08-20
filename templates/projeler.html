@@ -2249,6 +2249,19 @@
             applyFiltersAndRenderTable(); // Filtreleri yeniden uygula
         });
 
+        // Event delegation for marking progress as complete
+        document.addEventListener('click', async function(e) {
+            if (e.target.classList.contains('save-progress-btn')) {
+                const progressId = e.target.dataset.progressId;
+                const projectId = e.target.dataset.projectId;
+                const isCompleted = document.getElementById(`progress-completed-${progressId}`).checked;
+
+                if (isCompleted) {
+                    await sendCompletionEmail(progressId);
+                }
+            }
+        });
+
 
         // Genel arama inputu
         document.getElementById("searchInput").addEventListener("keyup", applyFiltersAndRenderTable);
@@ -2295,6 +2308,31 @@
     });
 
     // --- Yardımcı Fonksiyonlar ---
+    // E-posta gönderme API'sini çağıran fonksiyon
+    async function sendCompletionEmail(progressId) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}/complete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userId: currentUser.id }) // Mevcut kullanıcı ID'sini gönder
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'E-posta gönderilemedi.');
+            }
+
+            const result = await response.json();
+            showToast(result.message || 'Tamamlanma e-postası başarıyla gönderildi.');
+
+        } catch (error) {
+            console.error('E-posta gönderme hatası:', error);
+            showToast(`E-posta gönderilirken bir hata oluştu: ${error.message}`, true);
+        }
+    }
+
     // Tarih formatlama (DD.MM.YYYY)
     function formatDateForDisplay(dateStr) {
         if (!dateStr) return "";
