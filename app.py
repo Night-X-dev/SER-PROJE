@@ -1835,6 +1835,8 @@ def delete_project_api(project_id):
             if progress_ids:
                 in_clause = ",".join(["%s"] * len(progress_ids))
                 cursor.execute(f"DELETE FROM revision_requests WHERE progress_id IN ({in_clause})", progress_ids)
+            else:
+                print(f"Bu projeye bağlı revizyon isteği bulunamadı: {project_id}")
             
             # 3. Ardından tasks ve project_progress verilerini sil
             print(f"Projeye bağlı görevler siliniyor: {project_id}")
@@ -1858,6 +1860,7 @@ def delete_project_api(project_id):
         print(f"Proje silinirken veritabanı hatası: {e}")
         if connection:
             connection.rollback()
+        # Eğer hala 1451 hatası alıyorsanız, projeye bağlı başka tablolar olabilir.
         if e.args and e.args[0] == 1451:
             return jsonify({'message': 'Bu projeye bağlı veriler (görevler, ilerleme durumu, revizyon istekleri vb.) olduğu için silinemiyor.'}), 409
         return jsonify({'message': f'Veritabanı hatası: {e.args[1] if len(e.args) > 1 else e}'}), 500
