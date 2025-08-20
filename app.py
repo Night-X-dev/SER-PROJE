@@ -1795,7 +1795,7 @@ def update_project(project_id):
 @app.route('/api/progress/<int:progress_id>/complete', methods=['POST'])
 def mark_progress_complete(progress_id):
     data = request.get_json()
-    user_id = data.get('userId')
+    user_id = data.get('user_id')
 
     if not user_id:
         return jsonify({'message': 'User ID is missing.'}), 400
