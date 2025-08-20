@@ -2118,7 +2118,7 @@ def add_project():
                     print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta adresi bulunamadı.")
 
 
-        return jsonify({"message": "Project successfully added", "projectId": new_project_id}), 201
+        return jsonify({"message": "Proje başarıyla eklendi!", "projectId": new_project_id}), 201
     except pymysql.Error as e:
         print(f"Database error while adding project: {e}")
         traceback.print_exc() # Print full traceback for database errors
