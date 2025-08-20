@@ -1834,6 +1834,9 @@ def delete_project_api(project_id):
             sql_delete_steps = "DELETE FROM progress_steps WHERE project_id = %s"
             cursor.execute(sql_delete_steps, (project_id,))
 
+            # project_progress tablosundan ilişkili verileri sil (Senin kodunda vardı)
+            sql_delete_progress = "DELETE FROM project_progress WHERE project_id = %s"
+            cursor.execute(sql_delete_progress, (project_id,))
 
             # 3. Son olarak projeyi sil
             sql_delete_project = "DELETE FROM projects WHERE project_id = %s"
@@ -1861,25 +1864,6 @@ def delete_project_api(project_id):
             # add_activity_log(activity_data) 
 
             # Proje yöneticisine bildirim gönder
-            send_notification(
-                cursor,
-                project_manager_id,
-                "Proje Silindi",
-                f"Yönettiğiniz '{project_name}' Projesi silindi."
-            )
-
-            # Proje yöneticisinin e-postasını al ve e-posta gönder
-            cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
-            manager_email = cursor.fetchone()
-            if manager_email and manager_email['email']:
-                send_email_notification(
-                    manager_email['email'],
-                    "Proje Silindi",
-                    f"Yönettiğiniz '{project_name}' Projesi silindi."
-                )
-            else:
-                print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta adresi bulunamadı.")
-
 
         return jsonify({'message': 'Project successfully deleted!'}), 200
 
