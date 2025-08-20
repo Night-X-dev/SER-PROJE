@@ -2310,12 +2310,18 @@
     // --- Yardımcı Fonksiyonlar ---
     // E-posta gönderme API'sini çağıran fonksiyon
     async function sendCompletionEmail(progressId) {
-        if (!currentUser) {
-            loadUserInfo();
+        let user = null;
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+            try {
+                user = JSON.parse(storedUser);
+            } catch (e) {
+                console.error("Error parsing user from localStorage", e);
+            }
         }
 
-        if (!currentUser || !currentUser.id) {
-            showToast('Kullanıcı bilgileri yüklenemedi, lütfen tekrar deneyin.', 'error');
+        if (!user || !user.id) {
+            showToast('Kullanıcı oturumu bulunamadı. Lütfen yeniden giriş yapın.', 'error');
             return;
         }
 
@@ -2325,7 +2331,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ userId: currentUser.id })
+                body: JSON.stringify({ userId: user.id })
             });
 
             if (!response.ok) {
