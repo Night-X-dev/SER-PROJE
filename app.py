@@ -1822,8 +1822,7 @@ def delete_project_api(project_id):
             project_name = project_info['project_name']
             project_manager_id = project_info['project_manager_id']
 
-            # 2. İlişkili verileri sil
-            cursor.execute("DELETE FROM tasks WHERE project_id = %s", (project_id,))
+            # 2. İlişkili verileri sil (Sadece project_progress)
             cursor.execute("DELETE FROM project_progress WHERE project_id = %s", (project_id,))
             
             # 3. Ana projeyi sil
@@ -1841,7 +1840,7 @@ def delete_project_api(project_id):
         if connection:
             connection.rollback()
         if e.args and e.args[0] == 1451:
-            return jsonify({'message': 'Bu projeye bağlı veriler (görevler, aktiviteler vb.) olduğu için silinemiyor.'}), 409
+            return jsonify({'message': 'Bu projeye bağlı veriler (görevler, ilerleme durumu vb.) olduğu için silinemiyor.'}), 409
         return jsonify({'message': f'Veritabanı hatası: {e.args[1] if len(e.args) > 1 else e}'}), 500
     except Exception as e:
         print(f"Proje silinirken genel bir hata oluştu: {e}")
@@ -1854,22 +1853,22 @@ def delete_project_api(project_id):
 
     # 6. E-posta ve aktivite loglama (commit'ten sonra, ana try bloğunun dışında)
     try:
-        log_activity(user_id, 'Proje Silindi', f'\"{project_name}\" isimli proje ve bağlı tüm veriler silindi.')
+        log_activity(user_id, 'Proje Silindi', f'\"{project_name}\" isimli proje silindi.')
         
         if project_manager_id:
-            # E-posta gönderimi için yeni bir veritabanı bağlantısı gerekir, çünkü önceki kapanmış olabilir.
+            # E-posta gönderimi için yeni bir veritabanı bağlantısı gerekir
             email_connection = get_db_connection()
             if email_connection:
                 with email_connection.cursor() as cursor:
                     cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
                     manager_email_info = cursor.fetchone()
                     if manager_email_info and manager_email_info['email']:
-                        send_email_notification(manager_email_info['email'], "Proje Silindi", f"Yönettiğiniz '{project_name}' projesi ve tüm verileri silindi.")
+                        send_email_notification(manager_email_info['email'], "Proje Silindi", f"Yönettiğiniz '{project_name}' projesi silindi.")
                 email_connection.close()
     except Exception as post_commit_error:
         print(f"Silme sonrası e-posta/loglama hatası: {post_commit_error}")
 
-    return jsonify({'message': 'Proje ve bağlı tüm veriler başarıyla silindi!'}), 200
+    return jsonify({'message': 'Proje başarıyla silindi!'}), 200
 
 @app.route('/api/project_managers', methods=['GET'])
 def get_project_managers():
