@@ -1888,7 +1888,7 @@ def delete_project_api(project_id):
 
                 # Tüm adminlerin e-postasını al (rolü 'admin' olanları varsayarak)
                 # Tablonuzun yapısına göre bu sorguyu düzenlemeniz gerekebilir.
-                cursor.execute("SELECT email FROM users WHERE role = 'admin'")
+                cursor.execute("SELECT email FROM users WHERE role = 'Admin'")
                 admin_emails = cursor.fetchall()
                 for admin in admin_emails:
                     if admin['email'] not in emails_to_notify:
