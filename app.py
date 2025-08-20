@@ -1803,8 +1803,8 @@ def update_project(project_id):
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
 def delete_project_api(project_id):
     """
-    Bir projeyi ve ona bağlı tüm verileri veritabanından siler.
-    (Yeni tabloların bağımlılıklarını çözmek ve hataları daha iyi yakalamak için güncellenmiş versiyon)
+    Bir projeyi ve ona bağlı tüm verileri (sadece revision_requests ve project_progress)
+    veritabanından siler.
     """
     data = request.get_json(silent=True)
     if not data or 'user_id' not in data:
@@ -1832,21 +1832,16 @@ def delete_project_api(project_id):
             project_manager_id = project_info['project_manager_id']
 
             # 2. Önce en bağımlı verileri sil (Yabancı anahtar kısıtlamalarını çözmek için)
-            # En çok bağımlı olan tablolardan başlayarak silme işlemini yapıyoruz.
             
-            # Öncelikle, revision_requests tablosundaki ilgili kayıtları sil.
-            # Tablonuzda "project_id" sütununun olduğunu varsayıyoruz.
+            # revision_requests tablosundaki ilgili kayıtları sil.
             print(f"Projeye bağlı revizyon istekleri siliniyor: {project_id}")
             cursor.execute("DELETE FROM revision_requests WHERE project_id = %s", (project_id,))
             
-            # 3. Ardından tasks ve project_progress verilerini sil
-            print(f"Projeye bağlı görevler siliniyor: {project_id}")
-            cursor.execute("DELETE FROM tasks WHERE project_id = %s", (project_id,))
-            
+            # 3. Proje ilerleme verilerini sil.
             print(f"Projeye bağlı ilerleme kayıtları siliniyor: {project_id}")
             cursor.execute("DELETE FROM project_progress WHERE project_id = %s", (project_id,))
 
-            # 4. Son olarak ana projeyi sil
+            # 4. Ana projeyi sil
             print(f"Ana proje siliniyor: {project_id}")
             cursor.execute("DELETE FROM projects WHERE project_id = %s", (project_id,))
 
@@ -1863,7 +1858,7 @@ def delete_project_api(project_id):
             connection.rollback()
         # Eğer hala 1451 hatası alıyorsanız, projeye bağlı başka tablolar olabilir.
         if e.args and e.args[0] == 1451:
-            return jsonify({'message': 'Bu projeye bağlı veriler (görevler, ilerleme durumu, revizyon istekleri vb.) olduğu için silinemiyor.'}), 409
+            return jsonify({'message': 'Bu projeye bağlı veriler olduğu için silinemiyor.'}), 409
         return jsonify({'message': f'Veritabanı hatası: {e.args[1] if len(e.args) > 1 else e}'}), 500
     except Exception as e:
         print(f"Proje silinirken genel bir hata oluştu: {e}")
