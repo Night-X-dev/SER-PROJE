@@ -1189,14 +1189,61 @@
             }, 3000); // 3 saniye sonra kaybolur
         }
 
+        // Planlı tarihleri güncelleyen fonksiyon
+        function updatePlannedDates() {
+            const startInputs = document.querySelectorAll('.progress-datepicker[placeholder="Başlangıç"]');
+            const endInputs = document.querySelectorAll('.progress-datepicker[placeholder="Bitiş"]');
+            
+            if (startInputs.length > 0) {
+                // Tüm başlangıç tarihlerini al ve en erken olanı bul
+                const startDates = Array.from(startInputs)
+                    .map(input => input.value)
+                    .filter(Boolean)
+                    .sort();
+                
+                if (startDates.length > 0) {
+                    document.getElementById('start-date').value = startDates[0];
+                }
+            }
+            
+            if (endInputs.length > 0) {
+                // Tüm bitiş tarihlerini al ve en geç olanı bul
+                const endDates = Array.from(endInputs)
+                    .map(input => input.value)
+                    .filter(Boolean)
+                    .sort((a, b) => b.localeCompare(a));
+                
+                if (endDates.length > 0) {
+                    document.getElementById('end-date').value = endDates[0];
+                }
+            }
+        }
+
         // Tarih seçicileri başlat
         document.addEventListener('DOMContentLoaded', function() {
             const dateOptions = {
                 dateFormat: "Y-m-d", // Veritabanı için ISO 8601 (YYYY-MM-DD) formatı daha uygun
                 locale: "tr",
-                allowInput: true
+                allowInput: true,
+                onChange: function(selectedDates, dateStr, instance) {
+                    updatePlannedDates();
+                }
             };
-            flatpickr(".datepicker", dateOptions);
+
+            // Ana tarih seçicileri başlat
+            flatpickr("#contract-date, #meeting-date", dateOptions);
+            
+            // Planlı başlangıç ve bitiş tarihlerini salt okunur yap
+            flatpickr("#start-date, #end-date", {
+                ...dateOptions,
+                onChange: null, // Planlı tarihler için değişiklik dinleyicisini devre dışı bırak
+                clickOpens: false, // Tıklamayla açılmasını engelle
+                allowInput: false // Manuel girişi engelle
+            });
+            
+            // Input'ları salt okunur yap
+            document.getElementById('start-date').readOnly = true;
+            document.getElementById('end-date').readOnly = true;
 
             // Element Referansları (Topbar ve Oturum Kontrolü için)
             const userNameElement = document.getElementById('userName');
@@ -1412,16 +1459,21 @@
     // Listeye ekle
     document.querySelector('.progress-list').appendChild(newItem);
 
-    // Tarih seçiciyi başlat
-    flatpickr(newItem.querySelectorAll('.progress-datepicker'), {
+    // Tarih seçiciyi başlat ve değişiklik dinleyicisi ekle
+    const datePickers = newItem.querySelectorAll('.progress-datepicker');
+    flatpickr(datePickers, {
         dateFormat: "Y-m-d",
         locale: "tr",
-        allowInput: true
+        allowInput: true,
+        onChange: function(selectedDates, dateStr, instance) {
+            updatePlannedDates();
+        }
     });
 
     // Silme butonu
     newItem.querySelector('.delete-progress-btn').addEventListener('click', () => {
         newItem.remove();
+        updatePlannedDates(); // Silme işleminden sonra tarihleri güncelle
     });
 
     // API'den başlıkları çek ve select'e ekle
@@ -1446,158 +1498,138 @@
         console.error('Başlık listesi yüklenemedi:', err);
     }
 
-                // Yeni eklenen tarih seçicileri başlat
-                flatpickr(newItem.querySelectorAll('.progress-datepicker'), dateOptions);
+    // Tarih seçicileri başlat ve değişiklik dinleyicisi ekle
+    flatpickr(newItem.querySelectorAll('.progress-datepicker'), {
+        dateFormat: "Y-m-d",
+        locale: "tr",
+        allowInput: true,
+        onChange: function() {
+            updatePlannedDates();
+        }
+    });
 
-                // Sil butonu için olay dinleyicisi
-                newItem.querySelector('.delete-progress-btn').addEventListener('click', () => {
-                    newItem.remove();
-                });
-            }
+    // Sil butonu için olay dinleyicisi
+    newItem.querySelector('.delete-progress-btn').addEventListener('click', () => {
+        newItem.remove();
+        updatePlannedDates();
+    });
+    const projectRef = document.getElementById('project-ref').value.trim();
+    const projectDescription = document.getElementById('project-description').value.trim();
+    let customerId = customerNameSelect.value;
+    const projectManagerId = projectManagerSelect.value;
+    const contractDate = document.getElementById('contract-date').value;
+    const meetingDate = document.getElementById('meeting-date').value;
+    const projectLocation = document.getElementById('project-location').value.trim();
 
-            // Yeni iş gidişatı ekle butonu olayı
-            addProgressButton.addEventListener('click', () => addProgressItem());
-
-
-            // --- Projeyi Kaydet ---
-            saveProjectButton.addEventListener('click', async () => {
-  const projectName = document.getElementById('project-name').value.trim();
-  const projectRef = document.getElementById('project-ref').value.trim();
-  const projectDescription = document.getElementById('project-description').value.trim();
-  let customerId = customerNameSelect.value;
-  const projectManagerId = projectManagerSelect.value;
-  const contractDate = document.getElementById('contract-date').value;
-  const meetingDate = document.getElementById('meeting-date').value;
-  const projectLocation = document.getElementById('project-location').value.trim();
-
-  // Temel validasyon
-  if (!projectName || !customerId || !projectManagerId) {
-    showToast('Lütfen Proje Adı, Müşteri ve Proje Yöneticisi alanlarını doldurun.', true);
-    return;
-  }
-  if (customerId === "") {
-    showToast("Lütfen bir müşteri seçin.", true);
-    return;
-  }
-  if (projectManagerId === "") {
-    showToast("Lütfen bir proje yöneticisi seçin.", true);
-    return;
-  }
-
-  const progressSteps = [];
-  const progressItems = progressList.querySelectorAll('.progress-item');
-  let progressValidationFailed = false;
-  
-  // İş gidişatı adımı hiç yoksa hata göster
-  if (progressItems.length === 0) {
-    showToast('Lütfen en az bir iş gidişatı adımı ekleyin.', true);
-    return;
-  }
-
-  progressItems.forEach(item => {
-    const titleSelect = item.querySelector('select[id$="-title"]'); 
-    const descTextarea = item.querySelector('.progress-description-textarea');
-    const startInput = item.querySelector('input.progress-datepicker[placeholder="Başlangıç"]');
-    const endInput = item.querySelector('input.progress-datepicker[placeholder="Bitiş"]');
-
-    if (!titleSelect || !titleSelect.value || !startInput.value || !endInput.value) {
-      showToast('Lütfen tüm iş gidişatı adımlarının başlık ve tarihlerini doldurun.', true);
-      progressValidationFailed = true;
-      return;
+    // Temel validasyon
+    if (!projectName || !customerId || !projectManagerId) {
+        showToast('Lütfen Proje Adı, Müşteri ve Proje Yöneticisi alanlarını doldurun.', true);
+        return;
+    }
+    if (customerId === "") {
+        showToast("Lütfen bir müşteri seçin.", true);
+        return;
+    }
+    if (projectManagerId === "") {
+        showToast("Lütfen bir proje yöneticisi seçin.", true);
+        return;
     }
 
-    progressSteps.push({
-    title: titleSelect.options[titleSelect.selectedIndex]?.text || '',
-    description: descTextarea?.value.trim() || '',
-    startDate: startInput.value,
-    endDate: endInput.value
-});
+    const progressSteps = [];
+    const progressItems = progressList.querySelectorAll('.progress-item');
+    let progressValidationFailed = false;
+    
+    // İş gidişatı adımı hiç yoksa hata göster
+    if (progressItems.length === 0) {
+        showToast('Lütfen en az bir iş gidişatı adımı ekleyin.', true);
+        return;
+    }
 
-  });
+    progressItems.forEach(item => {
+        const titleSelect = item.querySelector('select[id$="-title"]'); 
+        const descTextarea = item.querySelector('.progress-description-textarea');
+        const startInput = item.querySelector('input.progress-datepicker[placeholder="Başlangıç"]');
+        const endInput = item.querySelector('input.progress-datepicker[placeholder="Bitiş"]');
 
-  if (progressValidationFailed) return;
-  
-  // İş gidişatlarından projenin planlı başlangıç ve bitiş tarihlerini belirle
-  let startDate = null;
-  let endDate = null;
-  
-  if (progressSteps.length > 0) {
-    startDate = progressSteps[0].startDate;
-    endDate = progressSteps[progressSteps.length - 1].endDate;
+        if (!titleSelect || !titleSelect.value || !startInput.value || !endInput.value) {
+            showToast('Lütfen tüm iş gidişatı adımlarının başlık ve tarihlerini doldurun.', true);
+            progressValidationFailed = true;
+            return;
+        }
+
+        progressSteps.push({
+            title: titleSelect.options[titleSelect.selectedIndex]?.text || '',
+            description: descTextarea?.value.trim() || '',
+            startDate: startInput.value,
+            endDate: endInput.value
+        });
+
+    });
+
+    if (progressValidationFailed) return;
+    
+    // İş gidişatlarından projenin planlı başlangıç ve bitiş tarihlerini belirle
+    let startDate = null;
+    let endDate = null;
+    
+    if (progressSteps.length > 0) {
+        startDate = progressSteps[0].startDate;
+        endDate = progressSteps[progressSteps.length - 1].endDate;
+    }
+
+    // Tarihlerin belirlenip belirlenmediğini kontrol et
+    if (!startDate || !endDate) {
+        showToast('İş gidişatı tarihlerinden proje başlangıç ve bitiş tarihleri belirlenemedi.', true);
+        return;
+    }
+
+    const projectData = {
+        projectName,
+        projectRef: projectRef || null,
+        projectDescription: projectDescription || null,
+        customerId: parseInt(customerId),
+        projectManagerId: parseInt(projectManagerId),
+        contractDate: contractDate || null,
+        meetingDate: meetingDate || null,
+        startDate: startDate,  // İş gidişatından otomatik alınan tarih
+        endDate: endDate,      // İş gidişatından otomatik alınan tarih
+        projectLocation: projectLocation || null,
+        progressSteps: progressSteps
+    };
+    console.log(JSON.stringify(progressSteps, null, 2));
+
+    try {
+        const projectResponse = await fetch(`${API_BASE_URL}/api/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(projectData)
+        });
+
+        const projectResult = await projectResponse.json();
+        if (projectResponse.ok) {
+            showToast(projectResult.message || 'Proje başarıyla eklendi!', false);
+            // Proje başarıyla eklendikten sonra:
+            addActivity(
+                "Proje Eklendi",
+                `${projectName} adlı proje başarıyla eklendi.`,
+                projectResult.projectId,
+                "fas fa-plus",
+                "project_create"
+            );
+            // No immediate redirect, let the user see the notification, then maybe redirect after a short delay
+            setTimeout(() => {
+                window.location.href = 'index.html'; 
+            }, 3000); // Redirect after notification disappears
+        } else {
+            throw new Error(projectResult.message || 'Proje kaydedilirken bilinmeyen bir hata oluştu.');
+        }
+    } catch (error) {
+        console.error('Proje kaydetme hatası:', error);
+        showToast('Proje kaydedilirken hata oluştu: ' + error.message, true);
+    }
 }
 
-
-  
-  // Tarihlerin belirlenip belirlenmediğini kontrol et
-  if (!startDate || !endDate) {
-    showToast('İş gidişatı tarihlerinden proje başlangıç ve bitiş tarihleri belirlenemedi.', true);
-    return;
-  }
-
-  const projectData = {
-    projectName,
-    projectRef: projectRef || null,
-    projectDescription: projectDescription || null,
-    customerId: parseInt(customerId),
-    projectManagerId: parseInt(projectManagerId),
-    contractDate: contractDate || null,
-    meetingDate: meetingDate || null,
-    startDate: startDate,  // İş gidişatından otomatik alınan tarih
-    endDate: endDate,      // İş gidişatından otomatik alınan tarih
-    projectLocation: projectLocation || null,
-    progressSteps: progressSteps
-  };
-  console.log(JSON.stringify(progressSteps, null, 2));
-
-
-                try {
-                    const projectResponse = await fetch(`${API_BASE_URL}/api/projects`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(projectData)
-                    });
-
-                    const projectResult = await projectResponse.json();
-                    if (projectResponse.ok) {
-                        showToast(projectResult.message || 'Proje başarıyla eklendi!', false);
-                        // Proje başarıyla eklendikten sonra:
-                        addActivity(
-                          "Proje Eklendi",
-                          `${projectName} adlı proje başarıyla eklendi.`,
-                          projectResult.projectId,
-                          "fas fa-plus",
-                          "project_create"
-                        );
-                        // No immediate redirect, let the user see the notification, then maybe redirect after a short delay
-                        setTimeout(() => {
-                            window.location.href = 'index.html'; 
-                        }, 3000); // Redirect after notification disappears
-                    } else {
-                        throw new Error(projectResult.message || 'Proje kaydedilirken bilinmeyen bir hata oluştu.');
-                    }
-                } catch (error) {
-                    console.error('Proje kaydetme hatası:', error);
-                    showToast('Proje kaydedilirken hata oluştu: ' + error.message, true);
-                }
-            });
-
-            // İptal butonu
-           cancelProjectButton.addEventListener('click', () => {
-                showToast("Proje ekleme iptal edildi.", false); // Onay modalı olmadan doğrudan bildirim göster
-                setTimeout(() => {
-                    window.location.href = 'index.html'; // 1 saniye sonra ana sayfaya yönlendir
-                }, 1000);
-            });
-
-            // Çıkış Yap Butonu Olay Dinleyicisi
-            logoutButton.addEventListener('click', () => {
-                localStorage.removeItem('currentUser');
-                window.location.href = 'login.html';
-            });
-
-        }); // DOMContentLoaded bitişi
-
-        // Aktivite loglama fonksiyonu (frontend'den backend'e istek gönderecek)
+// Aktivite loglama fonksiyonu (frontend'den backend'e istek gönderecek)
         async function addActivity(title, description, project_id, icon = "fas fa-info-circle", actionType = "other") {
             if (!currentUser || !currentUser.id) {
                 console.warn("Kullanıcı oturumu bulunamadı, aktivite kaydedilemedi.");
@@ -1698,9 +1730,9 @@ async function checkPermission(permissionKey) {
     }
 }
 
-window.addEventListener('DOMContentLoaded', function() {
-    checkPermission('proje_ekle');
-});
+            // Sayfa yüklendiğinde izin kontrolü yap
+            checkPermission('proje_ekle');
+        }); // DOMContentLoaded kapanışı
 </script>
 <script src="static/bildirim.js"></script>
 <script src="static/user-avatar.js"></script>
