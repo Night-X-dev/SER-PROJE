@@ -3905,6 +3905,12 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
  * Fonksiyon, API'den gelen verileri işler ve okunabilir bir HTML formatına dönüştürür.
  * @param {object} project - Proje ana verilerini içeren nesne.
  */
+/**
+ * @description Proje verilerini alarak bir PDF raporu oluşturur ve yeni bir pencerede açar.
+ * İçerik, proje bilgileri, genel ilerleme çubuğu ve her bir adımın detaylarını içerir.
+ * Fonksiyon, API'den gelen verileri işler ve okunabilir bir HTML formatına dönüştürür.
+ * @param {object} project - Proje ana verilerini içeren nesne.
+ */
 async function generateProjectPdf(project) {
     // API'den çekilecek veriler için boş diziler ve nesneler tanımla.
     let progressSteps = [];
@@ -3963,19 +3969,16 @@ async function generateProjectPdf(project) {
     };
 
     // Proje durumu için HTML çıktısı üreten yardımcı fonksiyon
-    // GÜNCELLEME: Artık proje durumunu `progressSteps` dizisine göre dinamik olarak belirliyoruz.
     const getProjectStatusHtml = (isDelayed) => {
         const color = isDelayed ? 'red' : '#4CAF50';
         const text = isDelayed ? 'Gecikmeli devam ediyor' : 'Gecikmesiz devam ediyor';
         return `<span style="color: ${color}; font-weight: bold; margin: 0;">${text}</span>`;
     };
 
-    // GÜNCELLEME: Fonksiyonu çağırmadan önce projenin gecikmeli olup olmadığını kontrol et.
+    // GÜNCELLEME: Projenin genel durumunu belirlemek için herhangi bir adımda gecikme süresi olup olmadığını kontrol eder.
     const isProjectDelayed = progressSteps.some(step => {
-        const plannedEndDate = new Date(step.real_end_date);
-        const today = new Date();
-        // Eğer adım tamamlanmamış ve planlanan bitiş tarihi bugünden önceyse, gecikmeli demektir.
-        return !step.is_completed && plannedEndDate < today;
+        const totalDelayDays = (step.delay_days || 0) + (step.custom_delay_days || 0);
+        return totalDelayDays > 0;
     });
 
     // Proje aşama metnini döndüren yardımcı fonksiyon
@@ -3990,7 +3993,6 @@ async function generateProjectPdf(project) {
      * @param {object} step - İş adımının verileri.
      * @returns {string} Durum metni ve ikonunu içeren HTML dizesi.
      */
-    // GÜNCELLEME: `getStepStatusHtml` fonksiyonu, gecikme kontrolü için doğru olan `real_end_date` alanını kullanacak şekilde düzeltildi.
     const getStepStatusHtml = (step) => {
         const today = new Date();
         const startDate = new Date(step.start_date);
