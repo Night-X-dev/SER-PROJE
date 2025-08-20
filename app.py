@@ -1795,76 +1795,67 @@ def update_project(project_id):
 # API to list project managers
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
 def delete_project_api(project_id):
-    """Deletes a project from the database."""
+    """Deletes a project and all its associated data from the database."""
     data = request.get_json()
     user_id = data.get('user_id')
     if not user_id:
         return jsonify({'message': 'User ID is missing.'}), 400
 
-    project_name = "Unknown Project"
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # 1. Proje bilgilerini al (loglama ve bildirim için)
             cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (project_id,))
             project_info = cursor.fetchone()
-
             if not project_info:
-                return jsonify({'message': 'Project could not be deleted or not found.'}), 404
-
+                return jsonify({'message': 'Project not found.'}), 404
             project_name = project_info['project_name']
             project_manager_id = project_info['project_manager_id']
 
+            # 2. İlişkili tüm verileri sil (foreign key kısıtlamaları nedeniyle)
+            # Önce görevleri (tasks) sil
+            cursor.execute("DELETE FROM tasks WHERE project_id = %s", (project_id,))
+            # Sonra ilerleme adımlarını (project_progress) sil
             cursor.execute("DELETE FROM project_progress WHERE project_id = %s", (project_id,))
+            
+            # 3. Ana projeyi sil
+            cursor.execute("DELETE FROM projects WHERE project_id = %s", (project_id,))
 
-            sql = "DELETE FROM projects WHERE project_id = %s"
-            cursor.execute(sql, (project_id,))
+            # Değişiklikleri veritabanına işle
             connection.commit()
 
-            if cursor.rowcount == 0:
-                return jsonify({'message': 'Project could not be deleted or not found.'}), 404
+            # 4. Loglama ve bildirim (isteğe bağlı, silme başarılı olduktan sonra)
+            try:
+                # Aktiviteyi logla
+                add_activity(user_id, 'Proje Silindi', f'\"{project_name}\" isimli proje ve bağlı tüm veriler silindi.')
 
-            activity_data = {
-                'user_id': user_id,
-                'title': 'Project Deleted',
-                'description': f'Project named "{project_name}" deleted.',
-                'icon': 'fas fa-trash'
-            }
-            # Call add_activity API
+                # Proje yöneticisine bildirim gönder
+                send_notification(cursor, project_manager_id, "Proje Silindi", f"Yönettiğiniz '{project_name}' projesi ve tüm verileri silindi.")
 
-            # Send notification to project manager
-            send_notification(
-                cursor, # Pass the cursor
-                project_manager_id,
-                "Proje Silindi",
-                f"Yönettiğiniz '{project_name}' Projesi silindi.." # Message updated
-            )
+                # E-posta gönder
+                cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
+                manager_email_info = cursor.fetchone()
+                if manager_email_info and manager_email_info['email']:
+                    send_email_notification(manager_email_info['email'], "Proje Silindi", f"Yönettiğiniz '{project_name}' projesi ve tüm verileri silindi.")
 
-            # Proje yöneticisinin e-postasını al ve e-posta gönder
-            cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
-            manager_email = cursor.fetchone()
-            if manager_email and manager_email['email']:
-                send_email_notification(
-                    manager_email['email'],
-                    "Proje Silindi",
-                    f"Yönettiğiniz '{project_name}' Projesi silindi."
-                )
-            else:
-                print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta adresi bulunamadı.")
+            except Exception as post_deletion_error:
+                print(f"Silme sonrası loglama/bildirim hatası: {post_deletion_error}")
 
-
-        return jsonify({'message': 'Project successfully deleted!'}), 200
+        return jsonify({'message': 'Proje ve bağlı tüm veriler başarıyla silindi!'}), 200
 
     except pymysql.Error as e:
-        print(f"Database error while deleting project: {e}")
-        if e.args[0] == 1451: # Foreign key constraint fails
-            return jsonify({'message': 'There are projects associated with this customer. Please delete related projects first.'}), 409
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        print(f"Proje silinirken veritabanı hatası: {e}")
+        if connection:
+            connection.rollback()
+        return jsonify({'message': f'Veritabanı hatası: {e.args[1] if len(e.args) > 1 else e}'}), 500
     except Exception as e:
-        print(f"General error while deleting project: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Proje silinirken genel bir hata oluştu: {e}")
+        if connection:
+            connection.rollback()
+        return jsonify({'message': 'Sunucu hatası, lütfen tekrar deneyin.'}), 500
     finally:
-        if connection: # Hata düzeltmesi: connection'ın varlığını kontrol et
+        if connection:
             connection.close()
 
 @app.route('/api/project_managers', methods=['GET'])
