@@ -1122,12 +1122,12 @@
                     
                     <div class="input-group">
                         <label for="start-date">Planlı Başlangıç Tarihi</label>
-                        <input type="text" id="start-date" class="datepicker" placeholder="İş gidişatından otomatik alınır" readonly>
+                        <input type="text" id="start-date" class="datepicker" placeholder="İş gidişatından otomatik alınır" disabled>
                     </div>
                     
                     <div class="input-group">
                         <label for="end-date">Planlı Bitiş Tarihi</label>
-                        <input type="text" id="end-date" class="datepicker" placeholder="İş gidişatından otomatik alınır" readonly>
+                        <input type="text" id="end-date" class="datepicker" placeholder="İş gidişatından otomatik alınır" disabled>
                     </div>
                 </div>
             </div>
@@ -1383,23 +1383,36 @@
                 const startDateInput = document.getElementById('start-date');
                 const endDateInput = document.getElementById('end-date');
 
-                if (progressItems.length > 0) {
-                    const firstItemStartInput = progressItems[0].querySelector('input.progress-datepicker[placeholder="Başlangıç"]');
-                    const lastItemEndInput = progressItems[progressItems.length - 1].querySelector('input.progress-datepicker[placeholder="Bitiş"]');
-                    
-                    if (firstItemStartInput) {
-                       startDateInput.value = firstItemStartInput.value;
-                    } else {
-                       startDateInput.value = '';
-                    }
+                let minDate = null;
+                let maxDate = null;
 
-                     if (lastItemEndInput) {
-                        endDateInput.value = lastItemEndInput.value;
-                    } else {
-                        endDateInput.value = '';
+                progressItems.forEach(item => {
+                    const startValue = item.querySelector('input.progress-datepicker[placeholder="Başlangıç"]').value;
+                    const endValue = item.querySelector('input.progress-datepicker[placeholder="Bitiş"]').value;
+
+                    if (startValue) {
+                        const startDate = new Date(startValue);
+                        if (!minDate || startDate < minDate) {
+                            minDate = startDate;
+                        }
                     }
+                    if (endValue) {
+                        const endDate = new Date(endValue);
+                        if (!maxDate || endDate > maxDate) {
+                            maxDate = endDate;
+                        }
+                    }
+                });
+
+                if (minDate) {
+                    startDateInput.value = minDate.toISOString().split('T')[0];
                 } else {
                     startDateInput.value = '';
+                }
+
+                if (maxDate) {
+                    endDateInput.value = maxDate.toISOString().split('T')[0];
+                } else {
                     endDateInput.value = '';
                 }
             }
