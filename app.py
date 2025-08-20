@@ -1826,17 +1826,11 @@ def delete_project_api(project_id):
             project_manager_id = project_info['project_manager_id']
 
             # 2. Önce en bağımlı verileri sil (Yabancı anahtar kısıtlamalarını çözmek için)
+            # En çok bağımlı olan tablolardan başlayarak silme işlemini yapıyoruz.
             
-            # Öncelikle, project_progress tablosuna bağlı olan revision_requests tablosunu sil.
+            # Öncelikle, revision_requests tablosundaki ilgili kayıtları sil.
             print(f"Projeye bağlı revizyon istekleri siliniyor: {project_id}")
-            # Bu işlem için, önce projenin tüm ilerleme kaydı kimliklerini almamız gerekiyor.
-            cursor.execute("SELECT progress_id FROM project_progress WHERE project_id = %s", (project_id,))
-            progress_ids = [item['progress_id'] for item in cursor.fetchall()]
-            if progress_ids:
-                in_clause = ",".join(["%s"] * len(progress_ids))
-                cursor.execute(f"DELETE FROM revision_requests WHERE progress_id IN ({in_clause})", progress_ids)
-            else:
-                print(f"Bu projeye bağlı revizyon isteği bulunamadı: {project_id}")
+            cursor.execute("DELETE FROM revision_requests WHERE project_id = %s", (project_id,))
             
             # 3. Ardından tasks ve project_progress verilerini sil
             print(f"Projeye bağlı görevler siliniyor: {project_id}")
