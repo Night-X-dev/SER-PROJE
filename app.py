@@ -4157,13 +4157,17 @@ def complete_progress_step(progress_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # İş adımının bu projeye ait olduğunu kontrol et
+            # İş adımının bu projeye ait olduğunu kontrol et ve adım adını al
             cursor.execute(
-                "SELECT progress_id FROM project_progress WHERE progress_id = %s AND project_id = %s",
+                "SELECT progress_id, progress_name FROM project_progress WHERE progress_id = %s AND project_id = %s",
                 (progress_id, project_id)
             )
-            if not cursor.fetchone():
+            progress_info = cursor.fetchone()
+
+            if not progress_info:
                 return jsonify({'success': False, 'message': 'Geçersiz iş adımı veya proje ID'}), 404
+            
+            progress_name = progress_info.get('progress_name')
             
             # İş adımını güncelle
             cursor.execute(
@@ -4176,7 +4180,7 @@ def complete_progress_step(progress_id):
             
             connection.commit()
             
-            # YENİ EKLENEN KISIM: Eğer iş adımı tamamlandıysa ve proje de tamamlanmışsa mail gönder
+            # YENİ EKLENEN KISIM: Eğer iş adımı tamamlandıysa mail gönder
             if is_completed:
                 print("İş adımı tamamlandı, proje yöneticisi ve yöneticilere mail gönderiliyor...")
                 
@@ -4201,8 +4205,8 @@ def complete_progress_step(progress_id):
                     all_recipients = admin_emails + [project_manager_email]
                     all_recipients = list(set(all_recipients)) # Yinelenenleri kaldır
 
-                    subject = f"Proje Tamamlandı: {project_name}"
-                    body = f"{project_name}</b> projesi başarıyla tamamlanmıştır.</p><p>Projeyle ilgili detayları sistemden inceleyebilirsiniz.</p>"
+                    subject = f"Proje Adımı Tamamlandı: {project_name} - {progress_name}"
+                    body = f"<p>Merhaba,</p><p><b>{project_name}</b> projesindeki <b>{progress_name}</b> adlı iş adımı başarıyla tamamlanmıştır.</p><p>Projeyle ilgili detayları sistemden inceleyebilirsiniz.</p>"
                     
                     try:
                         for recipient in all_recipients:
@@ -4228,7 +4232,6 @@ def complete_progress_step(progress_id):
     finally:
         if connection:
             connection.close()
-
 @app.route('/api/projects/<int:project_id>/revision-counts-by-step', methods=['GET'])
 def get_revision_counts_by_step(project_id):
     """
