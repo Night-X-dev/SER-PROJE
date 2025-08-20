@@ -4157,7 +4157,7 @@ def complete_progress_step(progress_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # İş adımının gerçekten bu projeye ait olduğunu kontrol et
+            # İş adımının bu projeye ait olduğunu kontrol et
             cursor.execute(
                 "SELECT progress_id FROM project_progress WHERE progress_id = %s AND project_id = %s",
                 (progress_id, project_id)
@@ -4171,7 +4171,7 @@ def complete_progress_step(progress_id):
                 (1 if is_completed else 0, progress_id)
             )
             
-            # Proje durumunu güncelle
+            # Proje durumunu güncelle (Bu fonksiyon projenin tamamlanıp tamamlanmadığını kontrol eder)
             determine_and_update_project_status(cursor, project_id)
             
             connection.commit()
@@ -4182,7 +4182,8 @@ def complete_progress_step(progress_id):
                 
                 # Proje adını ve yönetici e-postasını al
                 cursor.execute(
-                    "SELECT p.project_name, u.email as project_manager_email FROM projects p JOIN users u ON p.project_manager_id = u.user_id WHERE p.project_id = %s",
+                    # FIX: u.user_id yerine u.id kullanıldı
+                    "SELECT p.project_name, u.email as project_manager_email FROM projects p JOIN users u ON p.project_manager_id = u.id WHERE p.project_id = %s",
                     (project_id,)
                 )
                 project_info = cursor.fetchone()
@@ -4227,7 +4228,6 @@ def complete_progress_step(progress_id):
     finally:
         if connection:
             connection.close()
-
 
 @app.route('/api/projects/<int:project_id>/revision-counts-by-step', methods=['GET'])
 def get_revision_counts_by_step(project_id):
