@@ -1792,6 +1792,7 @@ def update_project(project_id):
         if connection:
             connection.close()
 # Proje silme api (DELETE)
+# API to list project managers
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
 def delete_project_api(project_id):
     """
@@ -1901,9 +1902,6 @@ def delete_project_api(project_id):
     finally:
         if connection:
             connection.close()
-
-
-# API to list project managers
 @app.route('/api/project_managers', methods=['GET'])
 def get_project_managers():
     """Retrieves a list of users who can be assigned as project managers."""
