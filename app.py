@@ -1805,80 +1805,65 @@ def delete_project_api(project_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Önce proje bilgilerini al
             cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (project_id,))
             project_info = cursor.fetchone()
 
             if not project_info:
-                return jsonify({'message': 'Project not found.'}), 404
+                return jsonify({'message': 'Project could not be deleted or not found.'}), 404
 
             project_name = project_info['project_name']
             project_manager_id = project_info['project_manager_id']
 
-            # Proje yöneticisine bildirim ve e-posta gönder
-            try:
-                # Proje yöneticisinin e-postasını al
-                cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
-                manager_email_info = cursor.fetchone()
-                if manager_email_info and manager_email_info['email']:
-                    send_email_notification(
-                        manager_email_info['email'],
-                        "Proje Silindi",
-                        f"Yönettiğiniz '{project_name}' projesi silindi."
-                    )
-                else:
-                    print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta adresi bulunamadı.")
-
-                # Veritabanı bildirimi gönder
-                send_notification(
-                    cursor,
-                    project_manager_id,
-                    "Proje Silindi",
-                    f"Yönettiğiniz '{project_name}' projesi silindi."
-                )
-            except Exception as notification_error:
-                print(f"Bildirim gönderme hatası: {notification_error}")
-                # Bildirim hatası silme işlemini durdurmamalı, sadece loglanmalı
-
-            # Projeye bağlı ilerleme adımlarını sil
             cursor.execute("DELETE FROM project_progress WHERE project_id = %s", (project_id,))
 
-            # Son olarak projenin kendisini sil
-            cursor.execute("DELETE FROM projects WHERE project_id = %s", (project_id,))
-            
-            # Değişiklikleri veritabanına işle
+            sql = "DELETE FROM projects WHERE project_id = %s"
+            cursor.execute(sql, (project_id,))
             connection.commit()
 
-            # Aktiviteyi logla
-            try:
-                activity_data = {
-                    'user_id': user_id,
-                    'title': 'Proje Silindi',
-                    'description': f'\"{project_name}\" isimli proje silindi.',
-                    'icon': 'fas fa-trash'
-                }
-                # add_activity API'sini çağırmak yerine doğrudan loglama fonksiyonunu kullanabilirsiniz
-                # log_activity(user_id, 'Proje Silindi', f'\"{project_name}\" isimli proje silindi.')
-            except Exception as log_error:
-                print(f"Aktivite loglama hatası: {log_error}")
+            if cursor.rowcount == 0:
+                return jsonify({'message': 'Project could not be deleted or not found.'}), 404
 
-        return jsonify({'message': 'Proje başarıyla silindi!'}), 200
+            activity_data = {
+                'user_id': user_id,
+                'title': 'Project Deleted',
+                'description': f'Project named "{project_name}" deleted.',
+                'icon': 'fas fa-trash'
+            }
+            # Call add_activity API
+
+            # Send notification to project manager
+            send_notification(
+                cursor, # Pass the cursor
+                project_manager_id,
+                "Proje Silindi",
+                f"Yönettiğiniz '{project_name}' Projesi silindi.." # Message updated
+            )
+
+            # Proje yöneticisinin e-postasını al ve e-posta gönder
+            cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
+            manager_email = cursor.fetchone()
+            if manager_email and manager_email['email']:
+                send_email_notification(
+                    manager_email['email'],
+                    "Proje Silindi",
+                    f"Yönettiğiniz '{project_name}' Projesi silindi."
+                )
+            else:
+                print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta adresi bulunamadı.")
+
+
+        return jsonify({'message': 'Project successfully deleted!'}), 200
 
     except pymysql.Error as e:
-        print(f"Proje silinirken veritabanı hatası: {e}")
-        if connection:
-            connection.rollback()
-        # Foreign key hatası (1451)
-        if e.args[0] == 1451:
-            return jsonify({'message': 'Bu projeye bağlı veriler (örneğin görevler) olduğu için silinemiyor. Önce bağlı verileri silin.'}), 409
-        return jsonify({'message': f'Veritabanı hatası: {e.args[1]}'}), 500
+        print(f"Database error while deleting project: {e}")
+        if e.args[0] == 1451: # Foreign key constraint fails
+            return jsonify({'message': 'There are projects associated with this customer. Please delete related projects first.'}), 409
+        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"Proje silinirken genel bir hata oluştu: {e}")
-        if connection:
-            connection.rollback()
-        return jsonify({'message': 'Sunucu hatası, lütfen tekrar deneyin.'}), 500
+        print(f"General error while deleting project: {e}")
+        return jsonify({'message': 'Server error, please try again later.'}), 500
     finally:
-        if connection:
+        if connection: # Hata düzeltmesi: connection'ın varlığını kontrol et
             connection.close()
 
 # API to list project managers
@@ -3836,6 +3821,7 @@ def delete_work_progress_header(header_id):
     except Exception as e:
         print(f"Error deleting work progress header: {str(e)}")
         return jsonify({"error": "Başlık silinirken bir hata oluştu"}), 500
+@app.route('/api/work-progress-headers/<int:header_id>', methods=['PUT'])
 @app.route('/api/work-progress-headers/<int:header_id>', methods=['PUT'])
 def update_work_progress_header(header_id):
     if 'user_id' not in session:
