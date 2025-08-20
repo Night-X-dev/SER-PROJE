@@ -1208,7 +1208,7 @@ def add_customer():
             cursor.execute("SELECT customer_id FROM customers WHERE customer_name = %s", (customer_name,))
             existing_customer = cursor.fetchone()
             if existing_customer:
-                return jsonify({'message': 'This company name is already registered.'}), 409
+                return jsonify({'message': 'Bu şirket adı zaten kayıtlı.'}), 409
 
             sql = """
             INSERT INTO customers
@@ -1236,12 +1236,12 @@ def add_customer():
                 'description': f'New customer named "{customer_name}" added.',
                 'icon': 'fas fa-user-plus'
             }
-        return jsonify({'message': 'Customer successfully added!', 'customerId': new_customer_id}), 201
+        return jsonify({'message': 'Müşteri başarıyla eklendi!', 'customerId': new_customer_id}), 201
 
     except pymysql.Error as e:
         print(f"Database error while adding customer: {e}")
         if e.args[0] == 1062: # Duplicate entry error
-            return jsonify({'message': 'This email or company name is already registered.'}), 409
+            return jsonify({'message': 'Bu e-posta veya şirket adı zaten kayıtlı.'}), 409
         return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
     except Exception as e:
         print(f"General error while adding customer: {e}")
@@ -1421,7 +1421,7 @@ def update_customer(customer_id):
                 'icon': 'fas fa-user-edit'
             }
             # Call add_activity API
-        return jsonify({'message': 'Customer successfully updated!'}), 200
+        return jsonify({'message': 'Müşteri başarıyla güncellendi!'}), 200
 
     except pymysql.Error as e:
         print(f"Database error while updating customer: {e}")
@@ -1469,12 +1469,12 @@ def delete_customer(customer_id):
             }
             # Call add_activity API
 
-        return jsonify({'message': 'Customer successfully deleted!'}), 200
+        return jsonify({'message': 'Müşteri başarıyla silindi!'}), 200
 
     except pymysql.Error as e:
         print(f"Database error while deleting customer: {e}")
         if e.args[0] == 1451: # Foreign key constraint fails
-            return jsonify({'message': 'There are projects associated with this customer. Please delete related projects first.'}), 409
+            return jsonify({'message': 'Bu müşteri ile ilişkili projeler var. Lütfen önce ilgili projeleri silin.'}), 409
         return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
     except Exception as e:
         print(f"General error while deleting customer: {e}")
@@ -2124,13 +2124,13 @@ def add_project():
         traceback.print_exc() # Print full traceback for database errors
         if connection:
             connection.rollback() # Rollback on database error
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        return jsonify({'message': f'Database error : {e.args[1]}'}), 500
     except Exception as e:
         print(f"General error while adding project: {e}")
         traceback.print_exc() # Print full traceback for general errors
         if connection:
             connection.rollback() # Rollback on general error
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        return jsonify({'message': 'Server error, Lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
@@ -2228,11 +2228,11 @@ def get_project_progress_steps(project_id):
         return jsonify(steps), 200
     except pymysql.Error as e:
         print(f"Database error while fetching progress steps: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+        return jsonify({'message': f'Database error : {e.args[1]}'}), 500
     except Exception as e:
         print(f"General error while fetching progress steps: {e}")
         traceback.print_exc()
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        return jsonify({'message': 'Server error, lütfen daha sonra tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
