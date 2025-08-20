@@ -1828,7 +1828,7 @@ def delete_project_api(project_id):
             # 4. Loglama ve bildirim (isteğe bağlı, silme başarılı olduktan sonra)
             try:
                 # Aktiviteyi logla
-                add_activity(user_id, 'Proje Silindi', f'\"{project_name}\" isimli proje ve bağlı tüm veriler silindi.')
+                add_activity(user_id=user_id, title='Proje Silindi', description=f'\"{project_name}\" isimli proje ve bağlı tüm veriler silindi.')
 
                 # Proje yöneticisine bildirim gönder
                 send_notification(cursor, project_manager_id, "Proje Silindi", f"Yönettiğiniz '{project_name}' projesi ve tüm verileri silindi.")
