@@ -1814,8 +1814,13 @@ def delete_project_api(project_id):
             project_name = project_info['project_name']
             project_manager_id = project_info['project_manager_id']
 
+            # Önce projeye bağlı tüm aktiviteleri sil
+            cursor.execute("DELETE FROM activities WHERE project_id = %s", (project_id,))
+
+            # Sonra projeye bağlı ilerleme adımlarını sil
             cursor.execute("DELETE FROM project_progress WHERE project_id = %s", (project_id,))
 
+            # Son olarak projenin kendisini sil
             sql = "DELETE FROM projects WHERE project_id = %s"
             cursor.execute(sql, (project_id,))
             connection.commit()
@@ -3821,7 +3826,6 @@ def delete_work_progress_header(header_id):
     except Exception as e:
         print(f"Error deleting work progress header: {str(e)}")
         return jsonify({"error": "Başlık silinirken bir hata oluştu"}), 500
-@app.route('/api/work-progress-headers/<int:header_id>', methods=['PUT'])
 @app.route('/api/work-progress-headers/<int:header_id>', methods=['PUT'])
 def update_work_progress_header(header_id):
     if 'user_id' not in session:
