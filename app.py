@@ -1802,107 +1802,78 @@ def update_project(project_id):
 # API to list project managers
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
 def delete_project_api(project_id):
-    """
-    Bir projeyi ve ona bağlı tüm verileri (sadece revision_requests ve project_progress)
-    veritabanından siler.
-    """
-    data = request.get_json(silent=True)
-    if not data or 'user_id' not in data:
-        return jsonify({'message': 'İstek gövdesi geçersiz veya Kullanıcı Kimliği eksik.'}), 400
-        
+    """Deletes a project and all its associated data from the database."""
+    data = request.get_json()
     user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({'message': 'User ID is missing.'}), 400
 
     connection = None
     project_name = "Bilinmeyen Proje"
     project_manager_id = None
     
+    # --- Main Deletion Transaction ---
     try:
-        # Veritabanı bağlantısını kurmayı dene
         connection = get_db_connection()
-        if not connection:
-            return jsonify({'message': 'Veritabanı bağlantısı kurulamadı.'}), 500
-
         with connection.cursor() as cursor:
-            # 1. Proje bilgilerini al
             cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (project_id,))
             project_info = cursor.fetchone()
             if not project_info:
-                return jsonify({'message': 'Proje bulunamadı.'}), 404
+                return jsonify({'message': 'Project not found.'}), 404
             project_name = project_info['project_name']
             project_manager_id = project_info['project_manager_id']
 
-            # 2. Önce en bağımlı verileri sil (Yabancı anahtar kısıtlamalarını çözmek için)
-            
-            # revision_requests tablosundaki ilgili kayıtları sil.
-            print(f"Projeye bağlı revizyon istekleri siliniyor: {project_id}")
-            cursor.execute("DELETE FROM revision_requests WHERE project_id = %s", (project_id,))
-            
-            # 3. Proje ilerleme verilerini sil.
-            print(f"Projeye bağlı ilerleme kayıtları siliniyor: {project_id}")
             cursor.execute("DELETE FROM project_progress WHERE project_id = %s", (project_id,))
-
-            # 4. Ana projeyi sil
-            print(f"Ana proje siliniyor: {project_id}")
             cursor.execute("DELETE FROM projects WHERE project_id = %s", (project_id,))
 
-            # 5. Bildirimleri gönder (commit'ten önce)
             if project_manager_id:
-                send_notification(cursor, project_manager_id, "Proje Silindi", f"Yönettiğiniz '{project_name}' projesi ve tüm verileri silindi.")
+                send_notification(cursor, project_manager_id, "Proje Silindi", f"Yönettiğiniz '{project_name}' projesi silindi.")
             
-            # 6. Değişiklikleri commit et
             connection.commit()
 
     except pymysql.Error as e:
         print(f"Proje silinirken veritabanı hatası: {e}")
-        if connection:
-            connection.rollback()
-        # Eğer hala 1451 hatası alıyorsanız, projeye bağlı başka tablolar olabilir.
+        if connection: connection.rollback()
         if e.args and e.args[0] == 1451:
-            return jsonify({'message': 'Bu projeye bağlı veriler olduğu için silinemiyor.'}), 409
+            return jsonify({'message': 'Bu projeye bağlı veriler (ilerleme durumu vb.) olduğu için silinemiyor.'}), 409
         return jsonify({'message': f'Veritabanı hatası: {e.args[1] if len(e.args) > 1 else e}'}), 500
     except Exception as e:
         print(f"Proje silinirken genel bir hata oluştu: {e}")
-        if connection:
-            connection.rollback()
+        if connection: connection.rollback()
         return jsonify({'message': 'Sunucu hatası, lütfen tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
 
-    # 7. E-posta ve aktivite loglama (commit'ten sonra)
+    # --- Post-Deletion Logging & Email Notification ---
+    notification_status = "ancak bildirimler gönderilirken bir sorun oluştu."
     try:
-        log_activity(user_id, 'Proje Silindi', f'\"{project_name}\" isimli proje silindi.')
+        log_activity(user_id, 'Proje Silindi', f'"{project_name}" isimli proje silindi.', 'fas fa-trash')
         
-        # E-posta gönderimi için yeni bir veritabanı bağlantısı gerekir
-        email_connection = get_db_connection()
-        if email_connection:
-            with email_connection.cursor() as cursor:
-                emails_to_notify = []
-
-                # Proje yöneticisinin e-postasını al
-                if project_manager_id:
+        if project_manager_id:
+            email_connection = get_db_connection()
+            if email_connection:
+                with email_connection.cursor() as cursor:
                     cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
                     manager_email_info = cursor.fetchone()
                     if manager_email_info and manager_email_info['email']:
-                        emails_to_notify.append(manager_email_info['email'])
+                        send_email_notification(
+                            manager_email_info['email'], 
+                            "Proje Silindi", 
+                            f"Yönettiğiniz '{project_name}' projesi sistemden silinmiştir."
+                        )
+                        notification_status = "ve bildirimler başarıyla gönderildi."
+                    else:
+                        print(f"Yönetici {project_manager_id} için e-posta adresi bulunamadı.")
+                email_connection.close()
+        else:
+            notification_status = "proje yöneticisi olmadığı için bildirim gönderilmedi."
 
-                # Tüm adminlerin e-postasını al (rolü 'admin' olanları varsayarak)
-                # Tablonuzun yapısına göre bu sorguyu düzenlemeniz gerekebilir.
-                cursor.execute("SELECT email FROM users WHERE role = 'Admin'")
-                admin_emails = cursor.fetchall()
-                for admin in admin_emails:
-                    if admin['email'] not in emails_to_notify:
-                        emails_to_notify.append(admin['email'])
-                
-                # Toplanan e-postalara bildirim gönder
-                for email in emails_to_notify:
-                    send_email_notification(email, "Proje Silindi", f"Yönettiğiniz '{project_name}' projesi ve tüm verileri silindi.")
-
-            email_connection.close()
     except Exception as post_commit_error:
         print(f"Silme sonrası e-posta/loglama hatası: {post_commit_error}")
+        traceback.print_exc()
 
-    return jsonify({'message': 'Proje başarıyla silindi!'}), 200
+    return jsonify({'message': f'Proje başarıyla silindi, {notification_status}'}), 200
 
 @app.route('/api/project_managers', methods=['GET'])
 def get_project_managers():
