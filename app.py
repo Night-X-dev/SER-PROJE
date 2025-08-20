@@ -1834,9 +1834,6 @@ def delete_project_api(project_id):
             sql_delete_steps = "DELETE FROM progress_steps WHERE project_id = %s"
             cursor.execute(sql_delete_steps, (project_id,))
 
-            # project_progress tablosundan ilişkili verileri sil (Senin kodunda vardı)
-            sql_delete_progress = "DELETE FROM project_progress WHERE project_id = %s"
-            cursor.execute(sql_delete_progress, (project_id,))
 
             # 3. Son olarak projeyi sil
             sql_delete_project = "DELETE FROM projects WHERE project_id = %s"
