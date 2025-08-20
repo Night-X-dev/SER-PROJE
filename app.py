@@ -1802,11 +1802,14 @@ def update_project(project_id):
 # API to list project managers
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
 def delete_project_api(project_id):
-    """Deletes a project and all its associated data from the database."""
+    """
+    Bir projeyi ve ona bağlı tüm verileri veritabanından siler.
+    (Yeni tabloların bağımlılıklarını çözmek için güncellenmiş versiyon)
+    """
     data = request.get_json()
     user_id = data.get('user_id')
     if not user_id:
-        return jsonify({'message': 'User ID is missing.'}), 400
+        return jsonify({'message': 'Kullanıcı Kimliği eksik.'}), 400
 
     connection = None
     project_name = "Bilinmeyen Proje"
@@ -1818,21 +1821,37 @@ def delete_project_api(project_id):
             cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (project_id,))
             project_info = cursor.fetchone()
             if not project_info:
-                return jsonify({'message': 'Project not found.'}), 404
+                return jsonify({'message': 'Proje bulunamadı.'}), 404
             project_name = project_info['project_name']
             project_manager_id = project_info['project_manager_id']
 
-            # 2. İlişkili verileri sil (Sadece project_progress)
-            cursor.execute("DELETE FROM project_progress WHERE project_id = %s", (project_id,))
+            # 2. Önce en bağımlı verileri sil (Yabancı anahtar kısıtlamalarını çözmek için)
             
-            # 3. Ana projeyi sil
+            # Öncelikle, project_progress tablosuna bağlı olan revision_requests tablosunu sil.
+            print(f"Projeye bağlı revizyon istekleri siliniyor: {project_id}")
+            # Bu işlem için, önce projenin tüm ilerleme kaydı kimliklerini almamız gerekiyor.
+            cursor.execute("SELECT progress_id FROM project_progress WHERE project_id = %s", (project_id,))
+            progress_ids = [item['progress_id'] for item in cursor.fetchall()]
+            if progress_ids:
+                in_clause = ",".join(["%s"] * len(progress_ids))
+                cursor.execute(f"DELETE FROM revision_requests WHERE progress_id IN ({in_clause})", progress_ids)
+            
+            # 3. Ardından tasks ve project_progress verilerini sil
+            print(f"Projeye bağlı görevler siliniyor: {project_id}")
+            cursor.execute("DELETE FROM tasks WHERE project_id = %s", (project_id,))
+            
+            print(f"Projeye bağlı ilerleme kayıtları siliniyor: {project_id}")
+            cursor.execute("DELETE FROM project_progress WHERE project_id = %s", (project_id,))
+
+            # 4. Son olarak ana projeyi sil
+            print(f"Ana proje siliniyor: {project_id}")
             cursor.execute("DELETE FROM projects WHERE project_id = %s", (project_id,))
 
-            # 4. Bildirimleri gönder (commit'ten önce)
+            # 5. Bildirimleri gönder (commit'ten önce)
             if project_manager_id:
                 send_notification(cursor, project_manager_id, "Proje Silindi", f"Yönettiğiniz '{project_name}' projesi ve tüm verileri silindi.")
             
-            # 5. Değişiklikleri commit et
+            # 6. Değişiklikleri commit et
             connection.commit()
 
     except pymysql.Error as e:
@@ -1840,7 +1859,7 @@ def delete_project_api(project_id):
         if connection:
             connection.rollback()
         if e.args and e.args[0] == 1451:
-            return jsonify({'message': 'Bu projeye bağlı veriler (görevler, ilerleme durumu vb.) olduğu için silinemiyor.'}), 409
+            return jsonify({'message': 'Bu projeye bağlı veriler (görevler, ilerleme durumu, revizyon istekleri vb.) olduğu için silinemiyor.'}), 409
         return jsonify({'message': f'Veritabanı hatası: {e.args[1] if len(e.args) > 1 else e}'}), 500
     except Exception as e:
         print(f"Proje silinirken genel bir hata oluştu: {e}")
@@ -1851,12 +1870,11 @@ def delete_project_api(project_id):
         if connection:
             connection.close()
 
-    # 6. E-posta ve aktivite loglama (commit'ten sonra, ana try bloğunun dışında)
+    # 7. E-posta ve aktivite loglama (commit'ten sonra)
     try:
         log_activity(user_id, 'Proje Silindi', f'\"{project_name}\" isimli proje silindi.')
         
         if project_manager_id:
-            # E-posta gönderimi için yeni bir veritabanı bağlantısı gerekir
             email_connection = get_db_connection()
             if email_connection:
                 with email_connection.cursor() as cursor:
