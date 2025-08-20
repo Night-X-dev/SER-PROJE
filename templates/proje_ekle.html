@@ -1452,12 +1452,15 @@
     document.querySelector('.progress-list').appendChild(newItem);
 
     // Tarih seçiciyi başlat
-    flatpickr(newItem.querySelectorAll('.progress-datepicker'), {
+    const datepickers = newItem.querySelectorAll('.progress-datepicker');
+    flatpickr(datepickers, {
         dateFormat: "Y-m-d",
         locale: "tr",
         allowInput: true,
-        onChange: function() {
+        onChange: function(selectedDates, dateStr, instance) {
             updateProjectDates();
+            // Manually trigger change event to ensure updateProjectDates is called
+            instance.element.dispatchEvent(new Event('change'));
         }
     });
 
