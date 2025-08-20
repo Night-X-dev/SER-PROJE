@@ -4206,7 +4206,7 @@ def complete_progress_step(progress_id):
                     all_recipients = list(set(all_recipients)) # Yinelenenleri kaldır
 
                     subject = f"Proje Adımı Tamamlandı: {project_name} - {progress_name}"
-                    body = f"<p>Merhaba,</p><p><b>{project_name}</b> projesindeki <b>{progress_name}</b> adlı iş adımı başarıyla tamamlanmıştır.</p><p>Projeyle ilgili detayları sistemden inceleyebilirsiniz.</p>"
+                    body = f"{project_name}</b> projesindeki <b>{progress_name}</b> adlı iş adımı başarıyla tamamlanmıştır.</p><p>Projeyle ilgili detayları sistemden inceleyebilirsiniz.</p>"
                     
                     try:
                         for recipient in all_recipients:
