@@ -2310,13 +2310,22 @@
     // --- Yardımcı Fonksiyonlar ---
     // E-posta gönderme API'sini çağıran fonksiyon
     async function sendCompletionEmail(progressId) {
+        if (!currentUser) {
+            loadUserInfo();
+        }
+
+        if (!currentUser || !currentUser.id) {
+            showToast('Kullanıcı bilgileri yüklenemedi, lütfen tekrar deneyin.', 'error');
+            return;
+        }
+
         try {
             const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}/complete`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ userId: currentUser.id }) // Mevcut kullanıcı ID'sini gönder
+                body: JSON.stringify({ userId: currentUser.id })
             });
 
             if (!response.ok) {
