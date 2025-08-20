@@ -1645,7 +1645,7 @@ def send_email_notification(recipient_email, subject, body):
     sender_email = os.getenv("EMAIL_SENDER")
     sender_password = os.getenv("EMAIL_PASSWORD")
     smtp_server = os.getenv("SMTP_SERVER")
-    smtp_port = int(os.getenv("SMTP_PORT", 587))
+    smtp_port = int(os.getenv("SMTP_PORT", 587)) # Varsayılan 587 (TLS)
 
     if not all([sender_email, sender_password, smtp_server]):
         print("UYARI: E-posta gönderme ayarları eksik. E-posta gönderilemedi.")
@@ -1685,40 +1685,114 @@ def send_email_notification(recipient_email, subject, body):
       </body>
     </html>
     """
+    # Düz metin içeriği, HTML'nin bir yedeği olarak kalır.
     part1 = MIMEText(body.replace('<p>','').replace('</p>','').replace('<table>','').replace('</table>','').replace('<tr>','').replace('</tr>','').replace('<th>','').replace('</th>','').replace('<td>','').replace('</td>',''), "plain")
     part2 = MIMEText(html_body, "html")
+
     message.attach(part1)
     message.attach(part2)
 
     try:
         context = ssl.create_default_context()
         with smtplib.SMTP(smtp_server, smtp_port) as server:
-            server.ehlo()
+            server.ehlo()  # Can be omitted
             server.starttls(context=context)
-            server.ehlo()
+            server.ehlo()  # Can be omitted
             server.login(sender_email, sender_password)
             server.sendmail(sender_email, recipient_email, message.as_string())
         print(f"E-posta başarıyla gönderildi: {recipient_email}")
     except Exception as e:
         print(f"E-posta gönderme hatası ({recipient_email}): {e}")
         traceback.print_exc()
-
-# send_notification fonksiyonu
-def send_notification(cursor, user_id, title, message):
-    """Sends a notification to a specific user using the provided cursor."""
+def get_user_fullname_by_id(cursor, user_id):
+    """Retrieves the full name of a user by their ID."""
+    if not user_id:
+        return "Bilinmeyen Kullanıcı"
     try:
-        sql = "INSERT INTO notifications (user_id, title, message, created_at) VALUES (%s, %s, %s, NOW())"
-        cursor.execute(sql, (user_id, title, message))
-        print(f"Bildirim hazırlandı: Kullanıcı ID: {user_id}, Başlık: '{title}', Mesaj: '{message}'")
-    except pymysql.Error as e:
-        print(f"Bildirim hazırlanırken veritabanı hatası: {e}")
-        traceback.print_exc()
+        cursor.execute("SELECT fullname FROM users WHERE id = %s", (user_id,))
+        result = cursor.fetchone()
+        return result['fullname'] if result else "Bilinmeyen Kullanıcı"
     except Exception as e:
-        print(f"Bildirim hazırlanırken genel hata: {e}")
+        print(f"Error fetching user fullname: {e}")
+        return "Bilinmeyen Kullanıcı"
+
+# Project Update API (PUT) - for projects table
+# Find the update_project function in app.py and update it as follows:
+
+@app.route('/api/projects/<int:project_id>', methods=['PUT'])
+def update_project(project_id):
+    """Updates a project."""
+    data = request.get_json()
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({'message': 'User ID is required.'}), 400
+
+    # Tüm olası sütunlar
+    possible_columns = [
+        'project_name', 'reference_no', 'description', 'customer_id',
+        'project_location', 'status', 'project_manager_id', 'contract_date',
+        'meeting_date', 'start_date', 'end_date'
+    ]
+
+    # Hangi sütunların güncellendiğini takip et
+    updates = []
+    params = []
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Mevcut projeyi getir
+            cursor.execute("SELECT * FROM projects WHERE project_id = %s", (project_id,))
+            existing_project = cursor.fetchone()
+            if not existing_project:
+                return jsonify({'message': 'Project not found.'}), 404
+
+            # Güncellenecek değerleri belirle
+            for column in possible_columns:
+                # Sadece 'status' alanı için özel bir durum: Eğer manuel olarak 'Tamamlandı' gelmediyse, otomatik güncellemeye bırak
+                if column == 'status':
+                    if data.get(column) == 'Tamamlandı': # Eğer frontend'den Tamamlandı olarak gelirse güncelle
+                        updates.append(f"{column} = %s")
+                        params.append(data[column])
+                    # Aksi takdirde, status alanını bu API'de güncelleme, determine_and_update_project_status yönetsin
+                elif column in data and data[column] is not None:
+                    updates.append(f"{column} = %s")
+                    params.append(data[column])
+
+            # Hiçbir güncelleme yoksa
+            if not updates:
+                return jsonify({'message': 'No information to update.'}), 200
+
+            # SQL sorgusunu oluştur
+            sql = f"UPDATE projects SET {', '.join(updates)} WHERE project_id = %s"
+            params.append(project_id)
+
+            print(f"Güncelleme sorgusu: {sql}")
+            print(f"Parametre değerleri: {params}")
+
+            # Sorguyu çalıştır
+            cursor.execute(sql, params)
+            connection.commit() # update_project tarafından yapılan değişiklikleri commit et
+
+            # Projenin genel durumunu belirle ve güncelle
+            determine_and_update_project_status(cursor, project_id)
+            connection.commit() # determine_and_update_project_status tarafından yapılan değişiklikleri commit et
+
+            return jsonify({'message': 'Proje başarıyla güncellendi!'}), 200
+
+    except Exception as e:
+        print(f"Proje güncelleme hatası: {str(e)}")
         traceback.print_exc()
+        if connection:
+            connection.rollback()
+        return jsonify({'message': f'Server error: {str(e)}'}), 500
 
-# Diğer fonksiyonlar...
-
+    finally:
+        if connection:
+            connection.close()
+# Proje silme api (DELETE)
+# API to list project managers
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
 def delete_project_api(project_id):
     """
@@ -1821,192 +1895,6 @@ def delete_project_api(project_id):
     finally:
         if connection:
             connection.close()
-
-
-def get_user_fullname_by_id(cursor, user_id):
-    """Retrieves the full name of a user by their ID."""
-    if not user_id:
-        return "Bilinmeyen Kullanıcı"
-    try:
-        cursor.execute("SELECT fullname FROM users WHERE id = %s", (user_id,))
-        result = cursor.fetchone()
-        return result['fullname'] if result else "Bilinmeyen Kullanıcı"
-    except Exception as e:
-        print(f"Error fetching user fullname: {e}")
-        return "Bilinmeyen Kullanıcı"
-
-# Project Update API (PUT) - for projects table
-# Find the update_project function in app.py and update it as follows:
-
-@app.route('/api/projects/<int:project_id>', methods=['PUT'])
-def update_project(project_id):
-    """Updates a project."""
-    data = request.get_json()
-    user_id = data.get('user_id')
-    if not user_id:
-        return jsonify({'message': 'User ID is required.'}), 400
-
-    # Tüm olası sütunlar
-    possible_columns = [
-        'project_name', 'reference_no', 'description', 'customer_id',
-        'project_location', 'status', 'project_manager_id', 'contract_date',
-        'meeting_date', 'start_date', 'end_date'
-    ]
-
-    # Hangi sütunların güncellendiğini takip et
-    updates = []
-    params = []
-
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # Mevcut projeyi getir
-            cursor.execute("SELECT * FROM projects WHERE project_id = %s", (project_id,))
-            existing_project = cursor.fetchone()
-            if not existing_project:
-                return jsonify({'message': 'Project not found.'}), 404
-
-            # Güncellenecek değerleri belirle
-            for column in possible_columns:
-                # Sadece 'status' alanı için özel bir durum: Eğer manuel olarak 'Tamamlandı' gelmediyse, otomatik güncellemeye bırak
-                if column == 'status':
-                    if data.get(column) == 'Tamamlandı': # Eğer frontend'den Tamamlandı olarak gelirse güncelle
-                        updates.append(f"{column} = %s")
-                        params.append(data[column])
-                    # Aksi takdirde, status alanını bu API'de güncelleme, determine_and_update_project_status yönetsin
-                elif column in data and data[column] is not None:
-                    updates.append(f"{column} = %s")
-                    params.append(data[column])
-
-            # Hiçbir güncelleme yoksa
-            if not updates:
-                return jsonify({'message': 'No information to update.'}), 200
-
-            # SQL sorgusunu oluştur
-            sql = f"UPDATE projects SET {', '.join(updates)} WHERE project_id = %s"
-            params.append(project_id)
-
-            print(f"Güncelleme sorgusu: {sql}")
-            print(f"Parametre değerleri: {params}")
-
-            # Sorguyu çalıştır
-            cursor.execute(sql, params)
-            connection.commit() # update_project tarafından yapılan değişiklikleri commit et
-
-            # Projenin genel durumunu belirle ve güncelle
-            determine_and_update_project_status(cursor, project_id)
-            connection.commit() # determine_and_update_project_status tarafından yapılan değişiklikleri commit et
-
-            return jsonify({'message': 'Proje başarıyla güncellendi!'}), 200
-
-    except Exception as e:
-        print(f"Proje güncelleme hatası: {str(e)}")
-        traceback.print_exc()
-        if connection:
-            connection.rollback()
-        return jsonify({'message': f'Server error: {str(e)}'}), 500
-
-    finally:
-        if connection:
-            connection.close()
-@app.route('/api/projects/<int:project_id>', methods=['DELETE'])
-def delete_project_api(project_id):
-    """
-    Deletes a project from the database, including all related data.
-    """
-    connection = None
-    try:
-        data = request.get_json(silent=True)
-        user_id = data.get('user_id') if data else None
-
-        if not user_id:
-            return jsonify({'message': 'User ID is missing.'}), 400
-
-        connection = get_db_connection()
-        connection.autocommit(False) # Atomik işlem için autocommit'i kapat
-        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (project_id,))
-            project_info = cursor.fetchone()
-
-            if not project_info:
-                connection.rollback()
-                return jsonify({'message': 'Project could not be deleted or not found.'}), 404
-
-            project_name = project_info['project_name']
-            project_manager_id = project_info['project_manager_id']
-            
-            # İlişkili verileri silme
-            sql_delete_revisions = "DELETE FROM revision_requests WHERE project_id = %s"
-            cursor.execute(sql_delete_revisions, (project_id,))
-
-            sql_delete_steps = "DELETE FROM progress_steps WHERE project_id = %s"
-            cursor.execute(sql_delete_steps, (project_id,))
-
-            sql_delete_progress = "DELETE FROM project_progress WHERE project_id = %s"
-            cursor.execute(sql_delete_progress, (project_id,))
-            
-            # Projeyi silme
-            sql_delete_project = "DELETE FROM projects WHERE project_id = %s"
-            cursor.execute(sql_delete_project, (project_id,))
-
-            if cursor.rowcount == 0:
-                connection.rollback()
-                return jsonify({'message': 'Project could not be deleted or not found.'}), 404
-            
-            connection.commit()
-
-            # Bildirim ve aktivite logu işlemleri
-            # Bu işlemlerin başarısız olması durumunda ana işlemin etkilenmemesi için
-            # ayrı bir try-except bloğu kullanıyoruz.
-            try:
-                # add_activity API'sini çağır
-                # add_activity_log(activity_data) # Bu fonksiyonun gerçek implementasyonunu eklemelisin.
-                
-                # Proje yöneticisine bildirim gönder
-                send_notification(
-                    cursor,
-                    project_manager_id,
-                    "Proje Silindi",
-                    f"Yönettiğiniz '{project_name}' Projesi silindi."
-                )
-
-                cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
-                manager_email = cursor.fetchone()
-                if manager_email and manager_email['email']:
-                    send_email_notification(
-                        manager_email['email'],
-                        "Proje Silindi",
-                        f"Yönettiğiniz '{project_name}' Projesi silindi."
-                    )
-                else:
-                    print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta adresi bulunamadı.")
-            
-            except Exception as notif_e:
-                print(f"Bildirim veya e-posta gönderme sırasında hata oluştu: {notif_e}")
-                traceback.print_exc()
-                # Bu hata 500 hatası döndürmez, sadece loga yazılır.
-                # Ana işlem zaten başarılı olmuştur.
-
-        return jsonify({'message': 'Project successfully deleted!'}), 200
-
-    except pymysql.Error as e:
-        print(f"Database error while deleting project: {e}")
-        if connection:
-            connection.rollback()
-        if e.args[0] == 1451:
-            return jsonify({'message': 'Proje ile ilişkili veriler (revizyonlar, adımlar vb.) bulunduğu için silinemedi.'}), 409
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
-    except Exception as e:
-        print(f"General error while deleting project: {e}")
-        traceback.print_exc()
-        if connection:
-            connection.rollback()
-        return jsonify({'message': 'Server error, please try again later.'}), 500
-    finally:
-        if connection:
-            connection.close()
-
 
 @app.route('/api/project_managers', methods=['GET'])
 def get_project_managers():
