@@ -4159,7 +4159,7 @@ def complete_progress_step(progress_id):
         with connection.cursor() as cursor:
             # İş adımının bu projeye ait olduğunu kontrol et ve adım adını al
             cursor.execute(
-                "SELECT progress_id, progress_name FROM project_progress WHERE progress_id = %s AND project_id = %s",
+                "SELECT progress_id, title FROM project_progress WHERE progress_id = %s AND project_id = %s",
                 (progress_id, project_id)
             )
             progress_info = cursor.fetchone()
@@ -4167,7 +4167,7 @@ def complete_progress_step(progress_id):
             if not progress_info:
                 return jsonify({'success': False, 'message': 'Geçersiz iş adımı veya proje ID'}), 404
             
-            progress_name = progress_info.get('progress_name')
+            progress_name = progress_info.get('title')
             
             # İş adımını güncelle
             cursor.execute(
