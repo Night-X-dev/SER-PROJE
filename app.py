@@ -812,6 +812,27 @@ def add_notification():
         if connection:
             connection.close()
 
+def log_activity(user_id, title, description, icon='fas fa-info-circle'):
+    """Helper function to log an activity to the database."""
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            sql = """
+            INSERT INTO activities (user_id, title, description, icon, created_at)
+            VALUES (%s, %s, %s, %s, NOW())
+            """
+            cursor.execute(sql, (user_id, title, description, icon))
+            connection.commit()
+    except Exception as e:
+        print(f"Error logging activity: {e}")
+        if connection:
+            connection.rollback()
+        # Do not re-raise, as logging failure should not stop the main process.
+    finally:
+        if connection:
+            connection.close()
+
 # API to add new activity (for activities table)
 @app.route('/api/activities', methods=['POST'])
 def add_activity():
@@ -825,26 +846,12 @@ def add_activity():
     if not all([user_id, title, description]):
         return jsonify({'message': 'User ID, title, and description are required.'}), 400
 
-    connection = None
     try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            sql = """
-            INSERT INTO activities (user_id, title, description, icon, created_at)
-            VALUES (%s, %s, %s, %s, NOW())
-            """
-            cursor.execute(sql, (user_id, title, description, icon))
-            connection.commit()
+        log_activity(user_id, title, description, icon)
         return jsonify({'message': 'Activity successfully saved!'}), 201
-    except pymysql.Error as e:
-        print(f"Database error while saving activity: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
     except Exception as e:
-        print(f"General error while saving activity: {e}")
+        print(f"Error in add_activity route: {e}")
         return jsonify({'message': 'Server error, please try again later.'}), 500
-    finally:
-        if connection:
-            connection.close()
 
 
 @app.route('/api/pending-users', methods=['GET'])
@@ -1802,10 +1809,12 @@ def delete_project_api(project_id):
         return jsonify({'message': 'User ID is missing.'}), 400
 
     connection = None
+    project_name = "Bilinmeyen Proje"
+    project_manager_id = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # 1. Proje bilgilerini al (loglama ve bildirim için)
+            # 1. Proje bilgilerini al
             cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (project_id,))
             project_info = cursor.fetchone()
             if not project_info:
@@ -1813,41 +1822,27 @@ def delete_project_api(project_id):
             project_name = project_info['project_name']
             project_manager_id = project_info['project_manager_id']
 
-            # 2. İlişkili tüm verileri sil (foreign key kısıtlamaları nedeniyle)
-            # Önce görevleri (tasks) sil
+            # 2. İlişkili verileri sil
+            cursor.execute("DELETE FROM activities WHERE project_id = %s", (project_id,))
             cursor.execute("DELETE FROM tasks WHERE project_id = %s", (project_id,))
-            # Sonra ilerleme adımlarını (project_progress) sil
             cursor.execute("DELETE FROM project_progress WHERE project_id = %s", (project_id,))
             
             # 3. Ana projeyi sil
             cursor.execute("DELETE FROM projects WHERE project_id = %s", (project_id,))
 
-            # Değişiklikleri veritabanına işle
-            connection.commit()
-
-            # 4. Loglama ve bildirim (isteğe bağlı, silme başarılı olduktan sonra)
-            try:
-                # Aktiviteyi logla
-                add_activity(user_id=user_id, title='Proje Silindi', description=f'\"{project_name}\" isimli proje ve bağlı tüm veriler silindi.')
-
-                # Proje yöneticisine bildirim gönder
+            # 4. Bildirimleri gönder (commit'ten önce)
+            if project_manager_id:
                 send_notification(cursor, project_manager_id, "Proje Silindi", f"Yönettiğiniz '{project_name}' projesi ve tüm verileri silindi.")
-
-                # E-posta gönder
-                cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
-                manager_email_info = cursor.fetchone()
-                if manager_email_info and manager_email_info['email']:
-                    send_email_notification(manager_email_info['email'], "Proje Silindi", f"Yönettiğiniz '{project_name}' projesi ve tüm verileri silindi.")
-
-            except Exception as post_deletion_error:
-                print(f"Silme sonrası loglama/bildirim hatası: {post_deletion_error}")
-
-        return jsonify({'message': 'Proje ve bağlı tüm veriler başarıyla silindi!'}), 200
+            
+            # 5. Değişiklikleri commit et
+            connection.commit()
 
     except pymysql.Error as e:
         print(f"Proje silinirken veritabanı hatası: {e}")
         if connection:
             connection.rollback()
+        if e.args and e.args[0] == 1451:
+            return jsonify({'message': 'Bu projeye bağlı veriler (görevler, aktiviteler vb.) olduğu için silinemiyor.'}), 409
         return jsonify({'message': f'Veritabanı hatası: {e.args[1] if len(e.args) > 1 else e}'}), 500
     except Exception as e:
         print(f"Proje silinirken genel bir hata oluştu: {e}")
@@ -1857,6 +1852,25 @@ def delete_project_api(project_id):
     finally:
         if connection:
             connection.close()
+
+    # 6. E-posta ve aktivite loglama (commit'ten sonra, ana try bloğunun dışında)
+    try:
+        log_activity(user_id, 'Proje Silindi', f'"{project_name}" isimli proje ve bağlı tüm veriler silindi.')
+        
+        if project_manager_id:
+            # E-posta gönderimi için yeni bir veritabanı bağlantısı gerekir, çünkü önceki kapanmış olabilir.
+            email_connection = get_db_connection()
+            if email_connection:
+                with email_connection.cursor() as cursor:
+                    cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
+                    manager_email_info = cursor.fetchone()
+                    if manager_email_info and manager_email_info['email']:
+                        send_email_notification(manager_email_info['email'], "Proje Silindi", f"Yönettiğiniz '{project_name}' projesi ve tüm verileri silindi.")
+                email_connection.close()
+    except Exception as post_commit_error:
+        print(f"Silme sonrası e-posta/loglama hatası: {post_commit_error}")
+
+    return jsonify({'message': 'Proje ve bağlı tüm veriler başarıyla silindi!'}), 200
 
 @app.route('/api/project_managers', methods=['GET'])
 def get_project_managers():
