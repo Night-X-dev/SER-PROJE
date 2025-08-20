@@ -1804,18 +1804,24 @@ def update_project(project_id):
 def delete_project_api(project_id):
     """
     Bir projeyi ve ona bağlı tüm verileri veritabanından siler.
-    (Yeni tabloların bağımlılıklarını çözmek için güncellenmiş versiyon)
+    (Yeni tabloların bağımlılıklarını çözmek ve hataları daha iyi yakalamak için güncellenmiş versiyon)
     """
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not data or 'user_id' not in data:
+        return jsonify({'message': 'İstek gövdesi geçersiz veya Kullanıcı Kimliği eksik.'}), 400
+        
     user_id = data.get('user_id')
-    if not user_id:
-        return jsonify({'message': 'Kullanıcı Kimliği eksik.'}), 400
 
     connection = None
     project_name = "Bilinmeyen Proje"
     project_manager_id = None
+    
     try:
+        # Veritabanı bağlantısını kurmayı dene
         connection = get_db_connection()
+        if not connection:
+            return jsonify({'message': 'Veritabanı bağlantısı kurulamadı.'}), 500
+
         with connection.cursor() as cursor:
             # 1. Proje bilgilerini al
             cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (project_id,))
@@ -1829,6 +1835,7 @@ def delete_project_api(project_id):
             # En çok bağımlı olan tablolardan başlayarak silme işlemini yapıyoruz.
             
             # Öncelikle, revision_requests tablosundaki ilgili kayıtları sil.
+            # Tablonuzda "project_id" sütununun olduğunu varsayıyoruz.
             print(f"Projeye bağlı revizyon istekleri siliniyor: {project_id}")
             cursor.execute("DELETE FROM revision_requests WHERE project_id = %s", (project_id,))
             
