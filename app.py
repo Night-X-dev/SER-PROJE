@@ -1873,15 +1873,32 @@ def delete_project_api(project_id):
     try:
         log_activity(user_id, 'Proje Silindi', f'\"{project_name}\" isimli proje silindi.')
         
-        if project_manager_id:
-            email_connection = get_db_connection()
-            if email_connection:
-                with email_connection.cursor() as cursor:
+        # E-posta gönderimi için yeni bir veritabanı bağlantısı gerekir
+        email_connection = get_db_connection()
+        if email_connection:
+            with email_connection.cursor() as cursor:
+                emails_to_notify = []
+
+                # Proje yöneticisinin e-postasını al
+                if project_manager_id:
                     cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
                     manager_email_info = cursor.fetchone()
                     if manager_email_info and manager_email_info['email']:
-                        send_email_notification(manager_email_info['email'], "Proje Silindi", f"Yönettiğiniz '{project_name}' projesi silindi.")
-                email_connection.close()
+                        emails_to_notify.append(manager_email_info['email'])
+
+                # Tüm adminlerin e-postasını al (rolü 'admin' olanları varsayarak)
+                # Tablonuzun yapısına göre bu sorguyu düzenlemeniz gerekebilir.
+                cursor.execute("SELECT email FROM users WHERE role = 'admin'")
+                admin_emails = cursor.fetchall()
+                for admin in admin_emails:
+                    if admin['email'] not in emails_to_notify:
+                        emails_to_notify.append(admin['email'])
+                
+                # Toplanan e-postalara bildirim gönder
+                for email in emails_to_notify:
+                    send_email_notification(email, "Proje Silindi", f"Yönettiğiniz '{project_name}' projesi ve tüm verileri silindi.")
+
+            email_connection.close()
     except Exception as post_commit_error:
         print(f"Silme sonrası e-posta/loglama hatası: {post_commit_error}")
 
