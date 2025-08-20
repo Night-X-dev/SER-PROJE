@@ -1711,6 +1711,7 @@ def send_email_notification(recipient_email, subject, body):
     except Exception as e:
         print(f"E-posta gönderme hatası ({recipient_email}): {e}")
         traceback.print_exc()
+
 def get_user_fullname_by_id(cursor, user_id):
     """Retrieves the full name of a user by their ID."""
     if not user_id:
@@ -4156,7 +4157,7 @@ def complete_progress_step(progress_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # İş adımının gerçekten bu projeye ait olduğunu kontrol et
+            # İş adımının bu projeye ait olduğunu kontrol et
             cursor.execute(
                 "SELECT progress_id FROM project_progress WHERE progress_id = %s AND project_id = %s",
                 (progress_id, project_id)
@@ -4170,10 +4171,44 @@ def complete_progress_step(progress_id):
                 (1 if is_completed else 0, progress_id)
             )
             
-            # Proje durumunu güncelle
+            # Proje durumunu güncelle (Bu fonksiyon projenin tamamlanıp tamamlanmadığını kontrol eder)
             determine_and_update_project_status(cursor, project_id)
             
             connection.commit()
+            
+            # YENİ EKLENEN KISIM: Eğer iş adımı tamamlandıysa ve proje de tamamlanmışsa mail gönder
+            if is_completed:
+                print("İş adımı tamamlandı, proje yöneticisi ve yöneticilere mail gönderiliyor...")
+                
+                # Proje adını ve yönetici e-postasını al
+                cursor.execute(
+                    "SELECT p.project_name, u.email as project_manager_email FROM projects p JOIN users u ON p.project_manager_id = u.user_id WHERE p.project_id = %s",
+                    (project_id,)
+                )
+                project_info = cursor.fetchone()
+
+                if project_info:
+                    project_name = project_info['project_name']
+                    project_manager_email = project_info['project_manager_email']
+                    
+                    # Tüm yönetici e-postalarını al
+                    cursor.execute(
+                        "SELECT email FROM users WHERE role = 'admin'"
+                    )
+                    admin_emails = [row['email'] for row in cursor.fetchall()]
+                    
+                    all_recipients = admin_emails + [project_manager_email]
+                    all_recipients = list(set(all_recipients)) # Yinelenenleri kaldır
+
+                    subject = f"Proje Tamamlandı: {project_name}"
+                    body = f"<p>Merhaba,</p><p><b>{project_name}</b> projesi başarıyla tamamlanmıştır.</p><p>Projeyle ilgili detayları sistemden inceleyebilirsiniz.</p>"
+                    
+                    try:
+                        for recipient in all_recipients:
+                            send_email_notification(recipient, subject, body)
+                    except Exception as email_e:
+                        print(f"E-posta gönderme sırasında bir hata oluştu: {email_e}")
+
             return jsonify({
                 'success': True, 
                 'message': 'İş adımı başarıyla güncellendi',
@@ -4192,6 +4227,8 @@ def complete_progress_step(progress_id):
     finally:
         if connection:
             connection.close()
+
+
 @app.route('/api/projects/<int:project_id>/revision-counts-by-step', methods=['GET'])
 def get_revision_counts_by_step(project_id):
     """

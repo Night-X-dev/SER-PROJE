@@ -4922,54 +4922,20 @@ document.addEventListener('DOMContentLoaded', function() {
         // Mevcut click handler'lar...
         
         // Tamamlama checkbox'ı için
-       if (e.target.closest('.complete-step-checkbox')) {
+        if (e.target.closest('.complete-step-checkbox')) {
             const checkbox = e.target.closest('.complete-step-checkbox');
             const progressId = checkbox.dataset.id;
             const isChecked = checkbox.checked;
-
-            // Not: confirm() ve alert() gibi tarayıcı pop-up'ları yerine,
-            // kullanıcı deneyimi için daha iyi olan özel bir modal veya
-            // onay kutusu arayüzü kullanmanız önerilir.
-
+            
             if (isChecked) {
-                // Kullanıcı onayı alındıktan sonra, e-posta göndermek için
-                // kendi backend API'nize istek gönderiyoruz.
-                // Backend'inizin bu progressId'yi kullanarak gerekli bilgileri
-                // (alıcı e-postası, konu, içerik) veritabanından çekmesi ve
-                // ardından sizin send_email_notification fonksiyonunuzu çağırması gerekir.
-
-                fetch(`${API_BASE_URL}/api/send_email_notification`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ progressId: progressId })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP hata! Durum kodu: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        console.log('E-posta bildirim isteği başarıyla gönderildi.');
-                        // İlerleme durumunu güncelleme fonksiyonunuzu çağırın
-                        // updateProgressStatus(progressId, true);
-                    } else {
-                        console.error('E-posta gönderme hatası:', data.message);
-                        // Hata durumunda checkbox'ı eski haline getirin
-                        checkbox.checked = false;
-                    }
-                })
-                .catch(error => {
-                    console.error('API isteği sırasında bir hata oluştu:', error);
-                    // Ağ hatası durumunda checkbox'ı eski haline getirin
+                if (confirm('Bu iş gidişatını tamamlandı olarak işaretlemek istediğinize emin misiniz? (Bu işlem geri alınamaz)')) {
+                    updateProgressStatus(progressId, true);
+                } else {
                     checkbox.checked = false;
-                });
+                }
             } else {
                 // Eğer kullanıcı işareti kaldırmak isterse
-                // updateProgressStatus(progressId, false);
+                updateProgressStatus(progressId, false);
             }
         }
     });
