@@ -1798,20 +1798,17 @@ def delete_project_api(project_id):
     """
     Deletes a project from the database, including all related data.
     """
-    data = request.get_json()
-    # DELETE isteğinde body'de user_id almak yerine, projeyi silen kullanıcıya ait bilgiyi
-    # session veya token üzerinden almak daha güvenli bir yaklaşımdır.
-    # Bu kod, mevcut yapıyı korur ancak güvenlik uyarısı içerir.
-    user_id = data.get('user_id')
-    if not user_id:
-        return jsonify({'message': 'User ID is missing.'}), 400
-
     connection = None
     try:
+        data = request.get_json(silent=True)
+        user_id = data.get('user_id') if data else None
+
+        if not user_id:
+            return jsonify({'message': 'User ID is missing.'}), 400
+
         connection = get_db_connection()
         connection.autocommit(False) # Atomik işlem için autocommit'i kapat
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            # 1. Proje bilgilerini kontrol et ve projenin yöneticisini bul
             cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (project_id,))
             project_info = cursor.fetchone()
 
@@ -1821,49 +1818,58 @@ def delete_project_api(project_id):
 
             project_name = project_info['project_name']
             project_manager_id = project_info['project_manager_id']
-
-            # 2. İlişkili verileri silme (önemli adım)
-            # Bu, 409 Conflict hatasını çözmek için gerekli.
-            # Veritabanı şemanıza göre diğer ilişkili tabloları da ekleyin.
             
-            # revision_requests tablosundan ilişkili verileri sil
+            # İlişkili verileri silme
             sql_delete_revisions = "DELETE FROM revision_requests WHERE project_id = %s"
             cursor.execute(sql_delete_revisions, (project_id,))
 
-            # project_steps tablosundan ilişkili verileri sil
             sql_delete_steps = "DELETE FROM progress_steps WHERE project_id = %s"
             cursor.execute(sql_delete_steps, (project_id,))
 
-            # project_progress tablosundan ilişkili verileri sil (Senin kodunda vardı)
             sql_delete_progress = "DELETE FROM project_progress WHERE project_id = %s"
             cursor.execute(sql_delete_progress, (project_id,))
-
-            # 3. Son olarak projeyi sil
+            
+            # Projeyi silme
             sql_delete_project = "DELETE FROM projects WHERE project_id = %s"
             cursor.execute(sql_delete_project, (project_id,))
 
             if cursor.rowcount == 0:
                 connection.rollback()
                 return jsonify({'message': 'Project could not be deleted or not found.'}), 404
-
-            # Tüm işlemler başarılıysa commit yap
+            
             connection.commit()
 
-            # 4. Proje silme başarılı olduktan sonra bildirimleri ve aktivite logunu oluştur
-            # Burada 'add_activity' ve 'send_notification' fonksiyon çağrılarını ekliyoruz.
-            # Bu fonksiyonların kendi içinde rollback/commit yapmadığından emin olun.
-            
-            # add_activity API'sini çağır
-            activity_data = {
-                'user_id': user_id,
-                'title': 'Project Deleted',
-                'description': f'Project named "{project_name}" deleted.',
-                'icon': 'fas fa-trash'
-            }
-            # Bu fonksiyon çağrısı mock'tur. Gerçek implementasyonunu eklemelisin.
-            # add_activity_log(activity_data) 
+            # Bildirim ve aktivite logu işlemleri
+            # Bu işlemlerin başarısız olması durumunda ana işlemin etkilenmemesi için
+            # ayrı bir try-except bloğu kullanıyoruz.
+            try:
+                # add_activity API'sini çağır
+                # add_activity_log(activity_data) # Bu fonksiyonun gerçek implementasyonunu eklemelisin.
+                
+                # Proje yöneticisine bildirim gönder
+                send_notification(
+                    cursor,
+                    project_manager_id,
+                    "Proje Silindi",
+                    f"Yönettiğiniz '{project_name}' Projesi silindi."
+                )
 
-            # Proje yöneticisine bildirim gönder
+                cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
+                manager_email = cursor.fetchone()
+                if manager_email and manager_email['email']:
+                    send_email_notification(
+                        manager_email['email'],
+                        "Proje Silindi",
+                        f"Yönettiğiniz '{project_name}' Projesi silindi."
+                    )
+                else:
+                    print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta adresi bulunamadı.")
+            
+            except Exception as notif_e:
+                print(f"Bildirim veya e-posta gönderme sırasında hata oluştu: {notif_e}")
+                traceback.print_exc()
+                # Bu hata 500 hatası döndürmez, sadece loga yazılır.
+                # Ana işlem zaten başarılı olmuştur.
 
         return jsonify({'message': 'Project successfully deleted!'}), 200
 
@@ -1871,18 +1877,20 @@ def delete_project_api(project_id):
         print(f"Database error while deleting project: {e}")
         if connection:
             connection.rollback()
-        # Dış anahtar kısıtlaması hatası (örneğin 1451) olursa özel mesaj döndür
         if e.args[0] == 1451:
             return jsonify({'message': 'Proje ile ilişkili veriler (revizyonlar, adımlar vb.) bulunduğu için silinemedi.'}), 409
         return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
     except Exception as e:
         print(f"General error while deleting project: {e}")
+        traceback.print_exc()
         if connection:
             connection.rollback()
         return jsonify({'message': 'Server error, please try again later.'}), 500
     finally:
         if connection:
             connection.close()
+
+
 @app.route('/api/project_managers', methods=['GET'])
 def get_project_managers():
     """Retrieves a list of users who can be assigned as project managers."""
