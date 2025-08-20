@@ -1823,7 +1823,6 @@ def delete_project_api(project_id):
             project_manager_id = project_info['project_manager_id']
 
             # 2. İlişkili verileri sil
-            cursor.execute("DELETE FROM activities WHERE project_id = %s", (project_id,))
             cursor.execute("DELETE FROM tasks WHERE project_id = %s", (project_id,))
             cursor.execute("DELETE FROM project_progress WHERE project_id = %s", (project_id,))
             
@@ -1855,7 +1854,7 @@ def delete_project_api(project_id):
 
     # 6. E-posta ve aktivite loglama (commit'ten sonra, ana try bloğunun dışında)
     try:
-        log_activity(user_id, 'Proje Silindi', f'"{project_name}" isimli proje ve bağlı tüm veriler silindi.')
+        log_activity(user_id, 'Proje Silindi', f'\"{project_name}\" isimli proje ve bağlı tüm veriler silindi.')
         
         if project_manager_id:
             # E-posta gönderimi için yeni bir veritabanı bağlantısı gerekir, çünkü önceki kapanmış olabilir.
