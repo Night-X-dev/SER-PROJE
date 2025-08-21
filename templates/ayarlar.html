@@ -2033,73 +2033,93 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
         // Confirmation Modal'ı gösterme fonksiyonu
-        function showConfirmModal(title, message, confirmText = 'Evet', cancelText = 'İptal') {
-    return new Promise((resolve) => {
-        const modal = document.getElementById('confirmationModal');
-        if (!modal) {
-            console.error('Onay modalı bulunamadı');
-            resolve(false);
-            return;
+        function showConfirmModal(title, message, confirmText = 'Evet', cancelText = 'İptal', onConfirmCallback = null) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('confirmationModal');
+                if (!modal) {
+                    console.error('Onay modalı bulunamadı');
+                    resolve(false);
+                    return;
+                }
+
+                // Elementleri mevcut yapıya göre güncelle
+                const modalTitle = modal.querySelector('#confirmationModalLabel');
+                const modalBody = modal.querySelector('#confirmationMessage');
+                const confirmBtn = modal.querySelector('#confirmActionBtn');
+                const cancelBtn = modal.querySelector('.btn-secondary[data-bs-dismiss="modal"]');
+
+                if (!modalTitle || !modalBody || !confirmBtn || !cancelBtn) {
+                    console.error('Modal elementleri bulunamadı', {modalTitle, modalBody, confirmBtn, cancelBtn});
+                    resolve(false);
+                    return;
+                }
+
+                // Element değerlerini güncelle
+                modalTitle.textContent = title;
+                modalBody.textContent = message;
+                confirmBtn.textContent = confirmText;
+                cancelBtn.textContent = cancelText;
+
+                // Mevcut event listener'ları temizle
+                const cleanUp = () => {
+                    confirmBtn.removeEventListener('click', onConfirm);
+                    cancelBtn.removeEventListener('click', onCancel);
+                    modal.removeEventListener('hidden.bs.modal', onHidden);
+                    
+                    // Manually remove backdrop if it exists
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) {
+                        backdrop.remove();
+                    }
+                    // Remove modal-open class from body
+                    document.body.classList.remove('modal-open');
+                    // Reset body padding
+                    document.body.style.paddingRight = '';
+                };
+
+                const onConfirm = () => {
+                    cleanUp();
+                    const bsModal = bootstrap.Modal.getInstance(modal);
+                    if (bsModal) {
+                        bsModal.hide();
+                    }
+                    if (typeof onConfirmCallback === 'function') {
+                        onConfirmCallback();
+                    }
+                    resolve(true);
+                };
+
+                const onCancel = () => {
+                    cleanUp();
+                    const bsModal = bootstrap.Modal.getInstance(modal);
+                    if (bsModal) {
+                        bsModal.hide();
+                    }
+                    resolve(false);
+                };
+
+                const onHidden = () => {
+                    cleanUp();
+                    resolve(false);
+                };
+
+                // Yeni event listener'ları ekle
+                confirmBtn.addEventListener('click', onConfirm);
+                cancelBtn.addEventListener('click', onCancel);
+                modal.addEventListener('hidden.bs.modal', onHidden);
+
+                // Modal'ı göster
+                const bsModal = new bootstrap.Modal(modal, {
+                    backdrop: true,
+                    keyboard: true
+                });
+                
+                // Store the modal instance for later use
+                window.currentModal = bsModal;
+                
+                bsModal.show();
+            });
         }
-
-        // Elementleri mevcut yapıya göre güncelle
-        const modalTitle = modal.querySelector('#confirmationModalLabel');
-        const modalBody = modal.querySelector('#confirmationMessage');
-        const confirmBtn = modal.querySelector('#confirmActionBtn');
-        const cancelBtn = modal.querySelector('.btn-secondary[data-bs-dismiss="modal"]');
-
-        if (!modalTitle || !modalBody || !confirmBtn || !cancelBtn) {
-            console.error('Modal elementleri bulunamadı', {modalTitle, modalBody, confirmBtn, cancelBtn});
-            resolve(false);
-            return;
-        }
-
-        // Element değerlerini güncelle
-        modalTitle.textContent = title;
-        modalBody.textContent = message;
-        confirmBtn.textContent = confirmText;
-        cancelBtn.textContent = cancelText;
-
-        // Mevcut event listener'ları temizle
-        const cleanUp = () => {
-            confirmBtn.removeEventListener('click', onConfirm);
-            cancelBtn.removeEventListener('click', onCancel);
-            modal.removeEventListener('hidden.bs.modal', onHidden);
-        };
-
-        const onConfirm = () => {
-            cleanUp();
-            const bsModal = bootstrap.Modal.getInstance(modal);
-            if (bsModal) {
-                bsModal.hide();
-            }
-            resolve(true);
-        };
-
-        const onCancel = () => {
-            cleanUp();
-            const bsModal = bootstrap.Modal.getInstance(modal);
-            if (bsModal) {
-                bsModal.hide();
-            }
-            resolve(false);
-        };
-
-        const onHidden = () => {
-            cleanUp();
-            resolve(false);
-        };
-
-        // Yeni event listener'ları ekle
-        confirmBtn.addEventListener('click', onConfirm);
-        cancelBtn.addEventListener('click', onCancel);
-        modal.addEventListener('hidden.bs.modal', onHidden);
-
-        // Modalı göster
-        const bsModal = new bootstrap.Modal(modal);
-        bsModal.show();
-    });
-}
 
         // Kullanıcı bilgilerini localStorage'dan yükleyen fonksiyon
         function loadUserInfo() {
@@ -2887,7 +2907,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Kullanıcı ekle butonuna tıklanınca modalı aç
             var addUserModalElem = document.getElementById('addUserModal');
             if (addUserModalElem) {
-                addUserModalElem.addEventListener('show.bs.modal', function () {
+                addUserModalElem.addEventListener('shown.bs.modal', function() {
                     loadRolesForUserModal();
                 });
             }
@@ -3149,15 +3169,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const button = e.target.closest('.delete-user-btn');
                 const userId = button.getAttribute('data-userid');
                 const userName = button.closest('tr').querySelector('td:first-child').textContent;
-                if (userId) {
-                    showConfirmModal(
-                        'Kullanıcı Silme',
-                        `"${userName}" adlı kullanıcıyı silmek istediğinize emin misiniz?`,
-                        'Sil',
-                        'İptal',
-                        () => deleteUser(userId, userName)
-                    );
-                }
+
+                showConfirmModal(
+                    'Kullanıcı Silme',
+                    `"${userName}" adlı kullanıcıyı silmek istediğinize emin misiniz?`,
+                    'Sil',
+                    'İptal',
+                    () => deleteUser(userId, userName)
+                );
             }
         });
 
@@ -3252,39 +3271,50 @@ document.addEventListener('DOMContentLoaded', function() {
             showToast(`Bekleyen kullanıcılar yüklenirken hata oluştu: ${error.message}`, true);
         });
 }
-function approveUser(userId) {
-    // Find the selected role for this user
-    const roleSelect = document.querySelector(`.role-select[data-userid="${userId}"]`);
-    if (!roleSelect) {
-        showToast('Lütfen bir rol seçiniz.', true);
-        return;
-    }
-    
-    const selectedRole = roleSelect.value;
-    if (!selectedRole) {
-        showToast('Lütfen bir rol seçiniz.', true);
-        return;
-    }
-
-    fetch(`${API_BASE_URL}/api/users/approve/` + userId, {
-        method: 'PATCH',
-        headers: { 
-            'Content-Type': 'application/json',
-            'X-Selected-Role': selectedRole  // Send the selected role in the header
+async function approveUser(userId) {
+    try {
+        // Find the selected role for this user
+        const roleSelect = document.querySelector(`.role-select[data-userid="${userId}"]`);
+        if (!roleSelect) {
+            showToast('Hata', 'Lütfen bir rol seçiniz.', 'error');
+            return;
         }
-    })
-    .then(response => {
-        if (!response.ok) return response.json().then(err => { throw new Error(err.message || 'Kullanıcı onaylanırken hata oluştu.'); });
-        return response.json();
-    })
-    .then(data => {
-        showToast(data.message || 'Kullanıcı başarıyla onaylandı!');
-        loadPendingUsers();
-        loadUsersTable(); // Refresh the users table
-    })
-    .catch(error => {
-        showToast('Kullanıcı onaylanırken bir hata oluştu: ' + error.message, true);
-    });
+        
+        const selectedRole = roleSelect.value;
+        if (!selectedRole) {
+            showToast('Hata', 'Lütfen bir rol seçiniz.', 'error');
+            return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/api/users/approve/` + userId, {
+            method: 'PATCH',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Selected-Role': selectedRole
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Kullanıcı onaylanırken hata oluştu.');
+        }
+
+        const data = await response.json();
+        showToast('Başarılı', data.message || 'Kullanıcı başarıyla onaylandı!', 'success');
+        
+        // Refresh the pending users list
+        await loadPendingUsers();
+        
+        // If users table exists, refresh it
+        if (typeof loadUsersTable === 'function') {
+            loadUsersTable();
+        }
+        
+    } catch (error) {
+        console.error('Kullanıcı onaylama hatası:', error);
+        showToast('Hata', 'Kullanıcı onaylanırken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'), 'error');
+    }
 }
         // Bu fonksiyon zaten yukarıda tanımlıydı, ancak onay bekleyen kullanıcılar için de kullanıldığı için burada bırakıldı.
         // function deleteUser(userId) { ... } 
