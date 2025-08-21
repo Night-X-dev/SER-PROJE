@@ -1146,7 +1146,6 @@
     </style>
 </head>
 <body data-theme="light">
-    <!-- Confirmation Modal (Bu modal zaten vardı, yerinde bırakıldı) -->
     <div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-sm">
             <div class="modal-content">
@@ -1747,16 +1746,19 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     function showOrHideWorkProgressSection() {
-        const user = JSON.parse(localStorage.getItem('currentUser'));
-        const workProgressCard = document.getElementById('workProgressHeadersCard');
-        
-        if (user && user.role === 'Admin') {
-            workProgressCard.style.display = 'block';
-            loadHeaders(); // This function is already defined in your code
-        } else {
-            workProgressCard.style.display = 'none';
+            const user = JSON.parse(localStorage.getItem('currentUser'));
+            const workProgressCard = document.getElementById('workProgressHeadersCard');
+            
+            if (user && user.role === 'Admin') {
+                workProgressCard.style.display = 'block';
+                // Check if loadHeaders exists before calling it
+                if (typeof loadHeaders === 'function') {
+                    loadHeaders();
+                }
+            } else {
+                workProgressCard.style.display = 'none';
+            }
         }
-    }
 
     // Call this function when the page loads (add this to your existing DOMContentLoaded event listener)
     document.addEventListener('DOMContentLoaded', function() {
@@ -1764,6 +1766,24 @@
         showOrHidePendingApprovalsCard();
         showOrHideWorkProgressSection(); // Add this line
         // Rest of your existing code...
+
+        // Add event delegation for approve and delete buttons in the pending users table
+        const pendingUsersTableBody = document.getElementById('pendingUsersTableBody');
+        if (pendingUsersTableBody) {
+            pendingUsersTableBody.addEventListener('click', function(event) {
+                if (event.target.classList.contains('btn-approve')) {
+                    // Handle approve button click
+                    const userId = event.target.dataset.id;
+                    // Call the approve function here
+                    console.log(`Approve button clicked for user ${userId}`);
+                } else if (event.target.classList.contains('btn-reject')) {
+                    // Handle reject button click
+                    const userId = event.target.dataset.id;
+                    // Call the reject function here
+                    console.log(`Reject button clicked for user ${userId}`);
+                }
+            });
+        }
     });
         let currentUser = null; // Kullanıcı bilgisi burada veya başka bir global script'te ayarlanmalı
         // Genel Toast bildirim fonksiyonu (Sadece bir kez tanımlanacak)
@@ -3106,6 +3126,25 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+
+        // Event delegation for approve and delete buttons in pending users table
+        document.addEventListener('click', function(e) {
+            // Handle approve button click
+            if (e.target.closest('.approve-user-btn')) {
+                const userId = e.target.closest('.approve-user-btn').getAttribute('data-userid');
+                if (userId) {
+                    approveUser(userId);
+                }
+            }
+            // Handle delete button click
+            else if (e.target.closest('.delete-user-btn')) {
+                const userId = e.target.closest('.delete-user-btn').getAttribute('data-userid');
+                const userName = e.target.closest('tr').querySelector('td:first-child').textContent;
+                if (userId && confirm(`"${userName}" adlı kullanıcıyı silmek istediğinize emin misiniz?`)) {
+                    deleteUser(userId, userName);
+                }
+            }
+        });
 
         const refreshPendingUsersButton = document.getElementById('refreshPendingUsersButton');
         if (refreshPendingUsersButton) {
