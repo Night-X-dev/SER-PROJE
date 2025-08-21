@@ -3131,17 +3131,32 @@ document.addEventListener('DOMContentLoaded', function() {
         document.addEventListener('click', function(e) {
             // Handle approve button click
             if (e.target.closest('.approve-user-btn')) {
-                const userId = e.target.closest('.approve-user-btn').getAttribute('data-userid');
+                const button = e.target.closest('.approve-user-btn');
+                const userId = button.getAttribute('data-userid');
                 if (userId) {
-                    approveUser(userId);
+                    // Show confirmation modal before approving
+                    showConfirmModal(
+                        'Kullanıcı Onayı',
+                        'Bu kullanıcıyı onaylamak istediğinize emin misiniz?',
+                        'Onayla',
+                        'İptal',
+                        () => approveUser(userId)
+                    );
                 }
             }
             // Handle delete button click
             else if (e.target.closest('.delete-user-btn')) {
-                const userId = e.target.closest('.delete-user-btn').getAttribute('data-userid');
-                const userName = e.target.closest('tr').querySelector('td:first-child').textContent;
-                if (userId && confirm(`"${userName}" adlı kullanıcıyı silmek istediğinize emin misiniz?`)) {
-                    deleteUser(userId, userName);
+                const button = e.target.closest('.delete-user-btn');
+                const userId = button.getAttribute('data-userid');
+                const userName = button.closest('tr').querySelector('td:first-child').textContent;
+                if (userId) {
+                    showConfirmModal(
+                        'Kullanıcı Silme',
+                        `"${userName}" adlı kullanıcıyı silmek istediğinize emin misiniz?`,
+                        'Sil',
+                        'İptal',
+                        () => deleteUser(userId, userName)
+                    );
                 }
             }
         });
