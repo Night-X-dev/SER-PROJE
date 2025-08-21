@@ -856,59 +856,113 @@ def add_activity():
 
 @app.route('/api/pending-users', methods=['GET'])
 def get_pending_users():
-    """Retrieves users with 'onay' status 0."""
+    """
+    Retrieves users with 'onay' status 0 (pending approval).
+    Only accessible by Admin or Yönetici.
+    """
+    # Yetkilendirme kontrolü
+    if 'user_id' not in session:
+        return jsonify({"success": False, "message": "Oturum bulunamadı."}), 401
+    
+    user_role = get_user_role_from_db(session['user_id'])
+    if user_role not in ['Admin', 'Yönetici']:
+        return jsonify({"success": False, "message": "Bu işlemi yapmaya yetkiniz yok."}), 403
+
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            sql = "SELECT id, fullname, email, phone, role, created_at FROM users WHERE onay = 0"
+            # created_at'ı ISO formatında almak için DATE_FORMAT kullan
+            sql = "SELECT id, fullname, email, phone, role, DATE_FORMAT(created_at, '%Y-%m-%dT%H:%i:%sZ') as created_at FROM users WHERE onay = 0 ORDER BY created_at DESC"
             cursor.execute(sql)
             pending_users = cursor.fetchall()
-            return jsonify(pending_users), 200
-    except pymysql.Error as e:
-        print(f"Database error while fetching pending users: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+            return jsonify({"success": True, "users": pending_users}), 200
     except Exception as e:
-        print(f"General error while fetching pending users: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Error fetching pending users: {e}")
+        traceback.print_exc()
+        return jsonify({"success": False, "message": "Kullanıcılar alınırken bir sunucu hatası oluştu."}), 500
     finally:
         if connection:
             connection.close()
 
-@app.route('/api/users/approve/<int:user_id>', methods=['PATCH'])
+@app.route('/api/users/approve/<int:user_id>', methods=['POST'])
 def approve_user(user_id):
-    """Approves a user by setting their 'onay' status to 1 and updating their role."""
+    """
+    Approves a user by setting their 'onay' status to 1.
+    Only accessible by Admin or Yönetici.
+    """
+    if 'user_id' not in session:
+        return jsonify({"success": False, "message": "Oturum bulunamadı."}), 401
+        
+    user_role = get_user_role_from_db(session['user_id'])
+    if user_role not in ['Admin', 'Yönetici']:
+        return jsonify({"success": False, "message": "Bu işlemi yapmaya yetkiniz yok."}), 403
+
     connection = None
     try:
-        # Get the selected role from the request headers
-        selected_role = request.headers.get('X-Selected-Role')
-        if not selected_role:
-            return jsonify({'message': 'Rol seçimi bulunamadı.'}), 400
-
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # First, verify the user exists and is pending approval
-            cursor.execute("SELECT id, onay FROM users WHERE id = %s", (user_id,))
+            # Kullanıcının mevcut durumunu kontrol et
+            cursor.execute("SELECT onay FROM users WHERE id = %s", (user_id,))
             user = cursor.fetchone()
-
             if not user:
-                return jsonify({'message': 'Kullanıcı bulunamadı.'}), 404
+                return jsonify({"success": False, "message": "Kullanıcı bulunamadı."}), 404
             if user['onay'] == 1:
-                return jsonify({'message': 'Bu kullanıcı zaten onaylanmış.'}), 400
+                return jsonify({"success": False, "message": "Bu kullanıcı zaten onaylanmış."}), 400
 
-            # Update the user's status and role
-            sql = "UPDATE users SET onay = 1, role = %s WHERE id = %s"
-            cursor.execute(sql, (selected_role, user_id))
+            # Kullanıcının 'onay' durumunu güncelle
+            cursor.execute("UPDATE users SET onay = 1 WHERE id = %s", (user_id,))
+            connection.commit()
+            
+            return jsonify({"success": True, "message": "Kullanıcı başarıyla onaylandı."}), 200
+    except Exception as e:
+        print(f"Error approving user: {e}")
+        traceback.print_exc()
+        if connection: connection.rollback()
+        return jsonify({"success": False, "message": "Kullanıcı onaylanırken bir sunucu hatası oluştu."}), 500
+    finally:
+        if connection:
+            connection.close()
+
+@app.route('/api/users/reject/<int:user_id>', methods=['POST'])
+def reject_user(user_id):
+    """
+    Rejects and deletes a pending user (onay = 0).
+    Only accessible by Admin or Yönetici.
+    """
+    if 'user_id' not in session:
+        return jsonify({"success": False, "message": "Oturum bulunamadı."}), 401
+        
+    user_role = get_user_role_from_db(session['user_id'])
+    if user_role not in ['Admin', 'Yönetici']:
+        return jsonify({"success": False, "message": "Bu işlemi yapmaya yetkiniz yok."}), 403
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Kullanıcının mevcut durumunu kontrol et
+            cursor.execute("SELECT onay FROM users WHERE id = %s", (user_id,))
+            user = cursor.fetchone()
+            if not user:
+                return jsonify({"success": False, "message": "Kullanıcı bulunamadı."}), 404
+            if user['onay'] == 1:
+                return jsonify({"success": False, "message": "Bu kullanıcı zaten onaylandığı için reddedilemez."}), 400
+
+            # Onay bekleyen kullanıcıyı sil
+            cursor.execute("DELETE FROM users WHERE id = %s AND onay = 0", (user_id,))
             connection.commit()
 
-            return jsonify({'message': 'Kullanıcı başarıyla onaylandı ve rolü güncellendi.'}), 200
-
-    except pymysql.Error as e:
-        print(f"Veritabanı hatası: {e}")
-        return jsonify({'message': f'Veritabanı hatası: {e.args[1]}'}), 500
+            if cursor.rowcount == 0:
+                # Bu durum, başka bir adminin işlemi aynı anda yapması gibi bir durumda oluşabilir
+                return jsonify({"success": False, "message": "Kullanıcı bulunamadı veya zaten işleme alınmış."}), 404
+            
+            return jsonify({"success": True, "message": "Kullanıcı başarıyla reddedildi ve silindi."}), 200
     except Exception as e:
-        print(f"Genel hata: {e}")
-        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+        print(f"Error rejecting user: {e}")
+        traceback.print_exc()
+        if connection: connection.rollback()
+        return jsonify({"success": False, "message": "Kullanıcı reddedilirken bir sunucu hatası oluştu."}), 500
     finally:
         if connection:
             connection.close()

@@ -1746,24 +1746,152 @@
     <!-- Bootstrap JS (En altta olması performans için iyidir) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+    // --- Onay Bekleyen Kullanıcılar Fonksiyonları ---
+
+    function showOrHidePendingApprovalsCard() {
+        const user = JSON.parse(localStorage.getItem('currentUser'));
+        const card = document.getElementById('pendingApprovalsCard');
+        if (!card) return;
+
+        if (user && (user.role === 'Admin' || user.role === 'Yönetici')) {
+            card.style.display = 'block';
+            loadPendingUsers();
+        } else {
+            card.style.display = 'none';
+        }
+    }
+
+    async function loadPendingUsers() {
+        const tbody = document.getElementById('pendingUsersTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">Yükleniyor...</td></tr>';
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/pending-users`);
+            if (!response.ok) throw new Error(`HTTP Hatası: ${response.status}`);
+            
+            const data = await response.json();
+            renderPendingUsers(data.success && Array.isArray(data.users) ? data.users : []);
+        } catch (error) {
+            console.error('Onay bekleyen kullanıcılar yüklenirken hata:', error);
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color: var(--danger);">Kullanıcılar yüklenirken bir hata oluştu.</td></tr>`;
+        }
+    }
+
+    function renderPendingUsers(users) {
+        const tbody = document.getElementById('pendingUsersTableBody');
+        tbody.innerHTML = '';
+
+        if (users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">Onay bekleyen kullanıcı bulunamadı.</td></tr>';
+            return;
+        }
+
+        users.forEach(user => {
+            const row = document.createElement('tr');
+            const regDate = user.created_at ? new Date(user.created_at).toLocaleString('tr-TR') : 'N/A';
+            row.innerHTML = `
+                <td data-label="Ad Soyad">${escapeHtml(user.fullname)}</td>
+                <td data-label="Email">${escapeHtml(user.email)}</td>
+                <td data-label="Telefon">${escapeHtml(user.phone || '-')}</td>
+                <td data-label="Rolü">${escapeHtml(user.role)}</td>
+                <td data-label="Kayıt Tarihi">${regDate}</td>
+                <td data-label="İşlemler">
+                    <div class="btn-group btn-group-sm" style="gap: 5px;">
+                        <button class="btn btn-primary btn-sm btn-approve-user" data-user-id="${user.id}" data-user-name="${escapeHtml(user.fullname)}">Onayla</button>
+                        <button class="btn btn-danger btn-sm btn-reject-user" data-user-id="${user.id}" data-user-name="${escapeHtml(user.fullname)}">Reddet</button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    async function approveUser(userId) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/users/approve/${userId}`, { method: 'POST' });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.message || 'Onaylama işlemi başarısız.');
+            
+            showToast('Başarılı', result.message || 'Kullanıcı onaylandı.');
+            loadPendingUsers();
+            if (typeof loadUsersTable === 'function') loadUsersTable();
+        } catch (error) {
+            showToast('Hata', error.message, 'error');
+        }
+    }
+
+    async function rejectUser(userId) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/users/reject/${userId}`, { method: 'POST' });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.message || 'Reddetme işlemi başarısız.');
+
+            showToast('Başarılı', result.message || 'Kullanıcı reddedildi.');
+            loadPendingUsers();
+        } catch (error) {
+            showToast('Hata', error.message, 'error');
+        }
+    }
+
     function showOrHideWorkProgressSection() {
         const user = JSON.parse(localStorage.getItem('currentUser'));
         const workProgressCard = document.getElementById('workProgressHeadersCard');
-        
+        if (!workProgressCard) return;
+
         if (user && user.role === 'Admin') {
             workProgressCard.style.display = 'block';
-            loadHeaders(); // This function is already defined in your code
+            // loadHeaders(); // Bu fonksiyon tanımlı değil. Hata almamak için yorum satırına alındı.
         } else {
             workProgressCard.style.display = 'none';
         }
     }
 
-    // Call this function when the page loads (add this to your existing DOMContentLoaded event listener)
+    // Event Listeners
     document.addEventListener('DOMContentLoaded', function() {
-        // Existing code...
         showOrHidePendingApprovalsCard();
-        showOrHideWorkProgressSection(); // Add this line
-        // Rest of your existing code...
+        showOrHideWorkProgressSection();
+
+        const pendingUsersTableBody = document.getElementById('pendingUsersTableBody');
+        if(pendingUsersTableBody) {
+            pendingUsersTableBody.addEventListener('click', async (e) => {
+                const approveBtn = e.target.closest('.btn-approve-user');
+                const rejectBtn = e.target.closest('.btn-reject-user');
+                
+                if (approveBtn) {
+                    const userId = approveBtn.dataset.userId;
+                    const userName = approveBtn.dataset.userName;
+                    const confirmed = await showConfirmModal(
+                        'Kullanıcıyı Onayla',
+                        `'${userName}' adlı kullanıcıyı onaylamak istediğinizden emin misiniz?`,
+                        'Onayla',
+                        'İptal'
+                    );
+                    if (confirmed) {
+                        approveUser(userId);
+                    }
+                }
+
+                if (rejectBtn) {
+                    const userId = rejectBtn.dataset.userId;
+                    const userName = rejectBtn.dataset.userName;
+                    const confirmed = await showConfirmModal(
+                        'Kullanıcıyı Reddet',
+                        `'${userName}' adlı kullanıcıyı reddetmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`,
+                        'Reddet',
+                        'İptal'
+                    );
+                    if (confirmed) {
+                        rejectUser(userId);
+                    }
+                }
+            });
+        }
+
+        const refreshButton = document.getElementById('refreshPendingUsersButton');
+        if (refreshButton) {
+            refreshButton.addEventListener('click', loadPendingUsers);
+        }
     });
         let currentUser = null; // Kullanıcı bilgisi burada veya başka bir global script'te ayarlanmalı
         // Genel Toast bildirim fonksiyonu (Sadece bir kez tanımlanacak)
@@ -3197,7 +3325,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             showToast(`Bekleyen kullanıcılar yüklenirken hata oluştu: ${error.message}`, true);
         });
-}
+    }
 function approveUser(userId) {
     // Find the selected role for this user
     const roleSelect = document.querySelector(`.role-select[data-userid="${userId}"]`);
