@@ -2497,46 +2497,17 @@ def update_project_progress_step(progress_id):
 
             print(f"SQL query executed. Rows affected: {cursor.rowcount}")
 
-                # Sonraki adımların delay_days'ini yeniden hesapla ve güncelle
-                # Bu, güncel adımı takip eden tüm adımların gecikme durumunu doğru yansıtır
-                cursor.execute("""
-                    SELECT progress_id, start_date, end_date, custom_delay_days, real_end_date
-                    FROM project_progress
-                    WHERE project_id = %s AND progress_id > %s
-                    ORDER BY start_date ASC, created_at ASC
-                """, (current_project_id, progress_id))
-                subsequent_steps = cursor.fetchall()
+            # Sonraki adımların delay_days'ini yeniden hesapla ve güncelle
+            # Bu, güncel adımı takip eden tüm adımların gecikme durumunu doğru yansıtır
+            cursor.execute("""
+                SELECT progress_id, start_date, end_date, custom_delay_days, real_end_date
+                FROM project_progress
+                WHERE project_id = %s AND progress_id > %s
+                ORDER BY start_date ASC, created_at ASC
+            """, (current_project_id, progress_id))
+            subsequent_steps = cursor.fetchall()
 
-                # Gecikme eklendiyse, bir sonraki adımın başlangıç tarihini bir gün sonrasına ayarla
-                if newly_added_custom_delay > 0 and subsequent_steps:
-                    next_step = subsequent_steps[0]
-                    next_step_id = next_step['progress_id']
-                    new_start_date = (datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date() + datetime.timedelta(days=1)).isoformat()
-                    
-                    # Sonraki adımın başlangıç tarihini güncelle
-                    cursor.execute("""
-                        UPDATE project_progress
-                        SET start_date = %s
-                        WHERE progress_id = %s
-                    """, (new_start_date, next_step_id))
-                    connection.commit()
-                    
-                    # Sonraki adımın bitiş tarihini de güncelle (süre aynı kalsın)
-                    if next_step['end_date']:
-                        duration = (next_step['end_date'] - next_step['start_date']).days
-                        new_end_date = (datetime.datetime.strptime(new_start_date, '%Y-%m-%d').date() + datetime.timedelta(days=duration)).isoformat()
-                        
-                        cursor.execute("""
-                            UPDATE project_progress
-                            SET end_date = %s
-                            WHERE progress_id = %s
-                        """, (new_end_date, next_step_id))
-                        connection.commit()
-                        last_end_date_for_recalc = datetime.datetime.strptime(new_end_date, '%Y-%m-%d').date()
-                    else:
-                        last_end_date_for_recalc = datetime.datetime.strptime(new_start_date, '%Y-%m-%d').date()
-                else:
-                    last_end_date_for_recalc = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            last_end_date_for_recalc = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date() # Güncel adımın yeni bitiş tarihini kullan
 
             for sub_step in subsequent_steps:
                 sub_progress_id = sub_step['progress_id']
