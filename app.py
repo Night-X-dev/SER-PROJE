@@ -1820,6 +1820,7 @@ def delete_project_api(project_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # 1. Proje bilgilerini al ve varlığını kontrol et
             cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (project_id,))
             project_info = cursor.fetchone()
             if not project_info:
@@ -1827,9 +1828,17 @@ def delete_project_api(project_id):
             project_name = project_info['project_name']
             project_manager_id = project_info['project_manager_id']
 
+            # 2. PROJEYE BAĞLI TÜM VERİLERİ SİL
+            # Önce en derindeki bağımlılıkları silin.
             cursor.execute("DELETE FROM project_progress WHERE project_id = %s", (project_id,))
+            
+            # revision_requests tablosundaki bağlı verileri silin.
+            cursor.execute("DELETE FROM revision_requests WHERE project_id = %s", (project_id,))
+
+            # 3. Tüm bağlı veriler silindikten sonra ana projeyi silin
             cursor.execute("DELETE FROM projects WHERE project_id = %s", (project_id,))
 
+            # 4. Yöneticilere bildirim gönder
             if project_manager_id:
                 send_notification(cursor, project_manager_id, "Proje Silindi", f"Yönettiğiniz '{project_name}' projesi silindi.")
             
@@ -1838,6 +1847,7 @@ def delete_project_api(project_id):
     except pymysql.Error as e:
         print(f"Proje silinirken veritabanı hatası: {e}")
         if connection: connection.rollback()
+        # 1451 hatasını yakalamaya devam edin, çünkü henüz fark edilmemiş başka bağlı veriler olabilir
         if e.args and e.args[0] == 1451:
             return jsonify({'message': 'Bu projeye bağlı veriler (ilerleme durumu vb.) olduğu için silinemiyor.'}), 409
         return jsonify({'message': f'Veritabanı hatası: {e.args[1] if len(e.args) > 1 else e}'}), 500
