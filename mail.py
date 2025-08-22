@@ -417,7 +417,6 @@ def main():
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
                 WHERE pp.is_completed = 1
-                AND pp.completion_notified = 0
             """
             cursor.execute(sql_completed)
             steps_to_notify_completed = cursor.fetchall()
@@ -439,7 +438,6 @@ def main():
                 JOIN projects p ON pp.project_id = p.project_id
                 WHERE pp.end_date <= CURDATE()
                 AND pp.is_completed = 0
-                AND pp.overdue_notified = 0
             """
             cursor.execute(sql_overdue)
             steps_to_notify_overdue = cursor.fetchall()
