@@ -2587,7 +2587,7 @@ def update_project_progress_step(progress_id):
 
 @app.route('/api/progress/<int:progress_id>', methods=['DELETE'])
 def delete_project_progress_step(progress_id):
-    """Deletes a project progress step."""
+    """Deletes a project progress step and its associated data."""
     connection = None
     try:
         connection = get_db_connection()
@@ -2602,7 +2602,11 @@ def delete_project_progress_step(progress_id):
             project_id = step_info['project_id']
             step_title = step_info['title']
 
-            # İş adımını sil
+            # BAĞLI VERİLERİ SİL
+            # revision_requests tablosundaki bağlı verileri silin.
+            cursor.execute("DELETE FROM revision_requests WHERE progress_id = %s", (progress_id,))
+
+            # Ana iş adımını sil
             sql_delete = "DELETE FROM project_progress WHERE progress_id = %s"
             cursor.execute(sql_delete, (progress_id,))
 
