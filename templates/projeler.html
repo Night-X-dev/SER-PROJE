@@ -3866,6 +3866,13 @@ endDateInput.addEventListener('input', () => {
 async function editProgressStep(progressId, projectId, updatedStepData) {
    
     try {
+         const startDate = new Date(updatedStepData.start_date);
+        const endDate = new Date(updatedStepData.end_date);
+
+        if (endDate < startDate) {
+            showToast("Bitiş tarihi, başlangıç tarihinden önce olamaz!", "error");
+            return; // İşlemi durdur
+        }
         const payload = {
             ...updatedStepData,
             newly_added_custom_delay: updatedStepData.newly_added_custom_delay || 0
