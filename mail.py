@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Bu betik, Cron job ile belirli aralıklarla çalışacak şekilde tasarlanmıştır.
-# Tamamlanmış veya gecikmiş iş adımlarını bulur ve her çalıştığında mail gönderir.
-# Bu versiyonda, daha önce bildirim gönderilip gönderilmediğini kontrol eden bayraklar (completion_notified, overdue_notified) kullanılmamıştır.
+# Tamamlanmış veya gecikmiş iş adımlarını bulur ve mail gönderir.
 
 import os
 import sys
@@ -413,20 +412,23 @@ def main():
             admin_emails = get_admin_emails(cursor)
 
             # --- Tamamlanmış İş Adımları Kontrolü ---
-            # `is_completed` değeri 1 olan adımları bul.
+            # `is_completed` değeri 1 VE `completion_notified` değeri 0 olan adımları bul.
             sql_completed = """
                 SELECT pp.progress_id, pp.end_date, pp.project_id, pp.title, p.project_name
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
-                WHERE pp.is_completed = 1
+                WHERE pp.is_completed = 1 AND pp.completion_notified = 0
             """
             cursor.execute(sql_completed)
             steps_to_notify_completed = cursor.fetchall()
             
             notified_completed_count = 0
             for step in steps_to_notify_completed:
+                # E-posta başarıyla gönderilirse, veritabanını güncelle
                 if notify_completed_step(cursor, step, admin_emails):
                     notified_completed_count += 1
+                    # Bildirim gönderildikten sonra `completion_notified` flag'ini güncelle
+                    cursor.execute("UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s", (step['progress_id'],))
             
             print(f"[{datetime.datetime.now()}] {notified_completed_count} adet tamamlanmış iş adımı için bildirim gönderildi.")
             
