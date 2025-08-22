@@ -21,11 +21,12 @@ import json
 load_dotenv()
 
 # Veritabanı ve E-posta ayarlarını .env dosyasından çek
-DB_HOST = os.getenv("DB_HOST")
-DB_USER = os.getenv("DB_USER")
-DB_PASS = os.getenv("DB_PASS")
-DB_NAME = os.getenv("DB_NAME")
-DB_PORT = int(os.getenv("DB_PORT", 3306))
+# .env dosyanızdaki isimlere göre değişkenler güncellendi
+DB_HOST = os.getenv("MYSQL_HOST")
+DB_USER = os.getenv("MYSQL_USER")
+DB_PASS = os.getenv("MYSQL_PASSWORD")
+DB_NAME = os.getenv("MYSQL_DATABASE")
+DB_PORT = int(os.getenv("MYSQL_PORT", 3306))
 
 EMAIL_SENDER_ADDRESS = os.getenv("EMAIL_SENDER")
 # Şifredeki boşlukları kaldır
