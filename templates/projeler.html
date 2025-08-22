@@ -3788,20 +3788,20 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
 const startDateInput = document.getElementById('newStepStartDate');
 const endDateInput = document.getElementById('newStepEndDate');
 
-// Tarih değişimlerini hemen dinle
 startDateInput.addEventListener('input', () => {
     if (endDateInput.value && startDateInput.value > endDateInput.value) {
-        endDateInput.value = startDateInput.value; // düzelt
-        showToast("Bitiş tarihi başlangıç tarihinden önce olamaz.", true); // kırmızı/uyarı
+        startDateInput.value = ''; // hatalı inputu sıfırla
+        showToast("Başlangıç tarihi bitiş tarihinden büyük olamaz.", true);
     }
 });
 
 endDateInput.addEventListener('input', () => {
     if (startDateInput.value && endDateInput.value < startDateInput.value) {
-        startDateInput.value = endDateInput.value; // düzelt
-        showToast("Başlangıç tarihi bitiş tarihinden sonra olamaz.", true); // kırmızı/uyarı
+        endDateInput.value = ''; // hatalı inputu sıfırla
+        showToast("Bitiş tarihi başlangıç tarihinden önce olamaz.", true);
     }
 });
+
 
   document.getElementById('saveNewProgressBtn').addEventListener('click', async () => {
     const headerId = document.getElementById('newStepHeader').value;
