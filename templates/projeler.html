@@ -3930,24 +3930,7 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
     }
 
 
-/**
- * @description Proje verilerini alarak bir PDF raporu oluşturur ve yeni bir pencerede açar.
- * İçerik, proje bilgileri, genel ilerleme çubuğu ve her bir adımın detaylarını içerir.
- * Fonksiyon, API'den gelen verileri işler ve okunabilir bir HTML formatına dönüştürür.
- * @param {object} project - Proje ana verilerini içeren nesne.
- */
-/**
- * @description Proje verilerini alarak bir PDF raporu oluşturur ve yeni bir pencerede açar.
- * İçerik, proje bilgileri, genel ilerleme çubuğu ve her bir adımın detaylarını içerir.
- * Fonksiyon, API'den gelen verileri işler ve okunabilir bir HTML formatına dönüştürür.
- * @param {object} project - Proje ana verilerini içeren nesne.
- */
-/**
- * @description Proje verilerini alarak bir PDF raporu oluşturur ve yeni bir pencerede açar.
- * İçerik, proje bilgileri, genel ilerleme çubuğu ve her bir adımın detaylarını içerir.
- * Fonksiyon, API'den gelen verileri işler ve okunabilir bir HTML formatına dönüştürür.
- * @param {object} project - Proje ana verilerini içeren nesne.
- */
+
 async function generateProjectPdf(project) {
     // API'den çekilecek veriler için boş diziler ve nesneler tanımla.
     let progressSteps = [];
@@ -4046,7 +4029,7 @@ async function generateProjectPdf(project) {
         
         // Düzeltme: Gecikme durumu, adım tamamlanmamışsa ve planlanan bitiş tarihi geçmişse kontrol edilir.
         if (today > plannedEndDate && !step.is_completed) {
-             return `Gecikmeli <i class="fas fa-exclamation-triangle" style="color: red;"></i>`;
+            return `Gecikmeli <i class="fas fa-exclamation-triangle" style="color: red;"></i>`;
         }
 
         return `Devam Ediyor <i class="fas fa-spinner fa-spin" style="color: orange;"></i>`;
@@ -4096,7 +4079,7 @@ async function generateProjectPdf(project) {
      * @param {Array<object>} steps - Proje adımlarının listesi.
      * @returns {number} Toplam gerçekleşen gün sayısı.
      */
-     const calculateTotalActualDuration = (steps) => {
+    const calculateTotalActualDuration = (steps) => {
         if (!steps || steps.length === 0) return 0;
 
         let total = 0;
@@ -4211,10 +4194,10 @@ async function generateProjectPdf(project) {
             const stepId = step.progress_id || step.id;
             const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
             
-            // Kullanıcı isteği: Gecikme süresini kontrol et ve renklendir.
+            // Kullanıcı isteği: Gecikme süresini ve erteleme süresini ayrı ayrı göster.
             const totalDelayDays = (step.delay_days || 0) + (step.custom_delay_days || 0);
             const delayColor = totalDelayDays > 0 ? 'red' : '#555';
-
+            
             // Üçüncü adımdan (index 2) önce sayfa sonu eklemek için sınıf
             const pageBreakClass = index === 2 ? 'page-break-after-first-two' : '';
 
@@ -4232,7 +4215,8 @@ async function generateProjectPdf(project) {
                         </div>
                         <div style="width:50%; text-align:right;">
                             <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.real_end_date)} gün</p>
-                            <p><strong>Gecikme Toplam Süre:</strong> <span style="color: ${delayColor};">${totalDelayDays} gün</span></p>
+                            <p><strong>Gecikme Süresi:</strong> <span style="color: ${delayColor};">${step.delay_days || 0} gün</span></p>
+                            <p><strong>Erteleme Gün Sayısı:</strong> <span style="color: ${delayColor};">${step.custom_delay_days || 0} gün</span></p>
                             <p><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.end_date)} gün</p>
                         </div>
                     </div>
