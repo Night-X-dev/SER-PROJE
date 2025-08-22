@@ -3818,9 +3818,9 @@ endDateInput.addEventListener('input', () => {
       showToast("Uyarı", "Lütfen tüm zorunlu alanları doldurun.");
       return;
     }
-     if (startDate > endDate) {
-        showToast("Hata", "Başlangıç tarihi bitiş tarihinden büyük olamaz.", "error");
-        return;
+     if (startDate > endDate ) {
+        showToast("Başlangıç tarihi bitiş tarihinden büyük olamaz.", true);
+        return; // kaydetmeye izin verme
     }
 
     try {
@@ -3862,17 +3862,10 @@ endDateInput.addEventListener('input', () => {
 
 
 
+
 async function editProgressStep(progressId, projectId, updatedStepData) {
+   
     try {
-        // 📌 Tarih kontrolü burada yapılacak
-        const { start_date, end_date } = updatedStepData;
-
-        if (start_date && end_date && start_date > end_date) {
-            showToast("Hata", "Başlangıç tarihi bitiş tarihinden büyük olamaz.", "error");
-            return;
-        }
-
-        // Varsayılan delay ekle
         const payload = {
             ...updatedStepData,
             newly_added_custom_delay: updatedStepData.newly_added_custom_delay || 0
@@ -3890,7 +3883,6 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
             showToast("İş adımı başarıyla güncellendi.");
 
             await updateProjectDatesFromSteps(projectId);
-
             fetchProjects();
             fetchProgressSteps(projectId, true);
 
@@ -3902,11 +3894,11 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
                 "progress_update"
             );
         } else {
-            showToast(`Hata: ${data.message}`, true);
+            showToast(`Hata: ${data.message}`, "error");
         }
     } catch (error) {
         console.error("İş adımı güncelleme hatası:", error);
-        showToast("Hata", "İş adımı güncellenirken bir sorun oluştu.");
+        showToast("Hata", "İş adımı güncellenirken bir sorun oluştu.", "error");
     }
 }
 
