@@ -1893,13 +1893,14 @@
       </div>
     </div>
 
-        <!-- Toast bildirimi HTML'i -->
-        <div id="toast">
-    <span id="toastIcon"></span>
-    <strong id="toastTitle"></strong>
-    <span id="toastMessage"></span>
+    <!-- Toast bildirimi HTML'i -->
+    <div class="toast" id="toast">
+      <i class="fas fa-check-circle"></i>
+      <div class="toast-content">
+        <div id="toastTitle" class="toast-title">Başarılı</div>
+        <span id="toastMessage">İşlem başarıyla tamamlandı</span>
+      </div>
     </div>
-
     <script src="{{ url_for('static', filename='config.js') }}"></script>
 <script>
     
@@ -1926,11 +1927,11 @@
 
 
     // Genel Toast bildirim fonksiyonu
-  function showToast(title, message, type = 'success') {
+function showToast(title, message, type = 'success') {
     const toast = document.getElementById('toast');
     const toastTitle = document.getElementById('toastTitle');
     const toastMessage = document.getElementById('toastMessage');
-    const toastIcon = document.getElementById('toastIcon'); // ikon elementi
+    const toastIcon = document.getElementById('toastIcon');
 
     if (!toast || !toastTitle || !toastMessage || !toastIcon) {
         console.error("Toast elementleri bulunamadı!");
@@ -1942,7 +1943,7 @@
 
     // Sınıfları temizle
     toast.classList.remove('success', 'error', 'info', 'warning');
-    toastIcon.className = ''; // önce ikon sınıfını temizle
+    toastIcon.textContent = ''; // önce ikon temizle
 
     // Type'a göre sınıf ve ikon ekle
     const typeConfig = {
@@ -1963,6 +1964,7 @@
         toast.classList.remove('show');
     }, 3000);
 }
+
 
 
     // Custom Confirm Modal (alert yerine kullanılacak)
