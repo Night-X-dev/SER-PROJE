@@ -1456,11 +1456,26 @@
                     dateFormat: "Y-m-d",
                     locale: "tr",
                     allowInput: true,
-                    onChange: function() {
+                    onChange: function(selectedDates, dateStr, instance) {
+                        const startInput = newItem.querySelector(`#${currentId}-start`);
+                        const endInput   = newItem.querySelector(`#${currentId}-end`);
+
+                        if (startInput.value && endInput.value) {
+                            if (startInput.value > endInput.value) {
+                                showToast("Hata", "Başlangıç tarihi bitiş tarihinden büyük olamaz.", "error");
+                                // Hatalı olan alanı temizleyelim
+                                if (instance.input.id.includes("start")) {
+                                    startInput.value = "";
+                                } else {
+                                    endInput.value = "";
+                                }
+                                return;
+                            }
+                        }
+
                         updateProjectDates();
                     }
                 });
-
                 // Silme butonu için olay dinleyicisi
                 newItem.querySelector('.delete-progress-btn').addEventListener('click', () => {
                     newItem.remove();
