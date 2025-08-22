@@ -3793,7 +3793,24 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
     const description = document.getElementById('newStepDescription').value;
     const headerSelect = document.getElementById('newStepHeader');
     const stepName = headerSelect.options[headerSelect.selectedIndex].text;
+const startDateInput = document.getElementById('newStepStartDate');
+const endDateInput = document.getElementById('newStepEndDate');
 
+// Başlangıç tarihi değişince bitiş tarihini kontrol et
+startDateInput.addEventListener('input', () => {
+    if (endDateInput.value && startDateInput.value > endDateInput.value) {
+        endDateInput.value = startDateInput.value; // otomatik düzelt
+        showToast("Uyarı", "Bitiş tarihi başlangıç tarihinden önce olamaz.", true);
+    }
+});
+
+// Bitiş tarihi değişince başlangıç tarihini kontrol et
+endDateInput.addEventListener('input', () => {
+    if (startDateInput.value && endDateInput.value < startDateInput.value) {
+        startDateInput.value = endDateInput.value; // otomatik düzelt
+        showToast("Uyarı", "Başlangıç tarihi bitiş tarihinden sonra olamaz.", true);
+    }
+});
 
     if (!headerId || !startDate || !endDate) {
       showToast("Uyarı", "Lütfen tüm zorunlu alanları doldurun.");
