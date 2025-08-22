@@ -1928,36 +1928,46 @@
 
     // Genel Toast bildirim fonksiyonu
     function showToast(title, message, type = 'success') {
-    const toast = document.getElementById('toast');
-    const toastTitle = document.getElementById('toastTitle');
-    const toastMessage = document.getElementById('toastMessage');
+        const toast = document.getElementById('toast');
+        const toastTitle = document.getElementById('toastTitle');
+        const toastMessage = document.getElementById('toastMessage');
 
-    if (!toast || !toastTitle || !toastMessage) {
-        console.error("Toast elementleri bulunamadı!");
-        return;
+        if (!toast || !toastTitle || !toastMessage) {
+            console.error("Toast elementleri bulunamadı!");
+            return;
+        }
+
+        // Eğer sadece bir parametre verilmişse, bunu mesaj olarak kabul et
+        if (arguments.length === 1) {
+            message = title;
+            title = type === 'error' ? 'Hata' : 'Başarılı';
+        } else if (arguments.length === 2 && typeof message === 'boolean') {
+            // Eski kullanım için geriye dönük uyumluluk
+            type = message ? 'error' : 'success';
+            message = title;
+            title = type === 'error' ? 'Hata' : 'Başarılı';
+        }
+
+        toastTitle.textContent = title || (type === 'error' ? 'Hata' : 'Başarılı');
+        toastMessage.textContent = message;
+        
+        // Mevcut tüm durum sınıflarını kaldır
+        toast.classList.remove('success', 'error', 'info', 'warning');
+        
+        // Yeni durum sınıfını ekle
+        const typeClass = type === 'error' ? 'error' : 
+                         type === 'info' ? 'info' :
+                         type === 'warning' ? 'warning' : 'success';
+        toast.classList.add(typeClass);
+
+        // Göster
+        toast.classList.add('show');
+
+        // 3 saniye sonra gizle
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
     }
-
-    // Title ve message zorunlu
-    toastTitle.textContent = title || '';
-    toastMessage.textContent = message || '';
-
-    // Tüm sınıfları temizle
-    toast.classList.remove('success', 'error', 'info', 'warning');
-
-    // Type'a göre sınıf ekle
-    const validTypes = ['success', 'error', 'info', 'warning'];
-    if (!validTypes.includes(type)) type = 'success';
-    toast.classList.add(type);
-
-    // Göster
-    toast.classList.add('show');
-
-    // 3 saniye sonra gizle
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 3000);
-}
-    
 
     // Custom Confirm Modal (alert yerine kullanılacak)
     function showConfirmationModal(title, message, onConfirm) {
@@ -5203,31 +5213,7 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
             checkbox.checked = !isChecked;
         }
     }
-    function showToast(title, message, type) {
-        const toastContainer = document.getElementById('toast-container');
-        if (!toastContainer) {
-            // Eğer toast-container yoksa, bir tane oluştur
-            const newToastContainer = document.createElement('div');
-            newToastContainer.id = 'toast-container';
-            document.body.appendChild(newToastContainer);
-        }
-        
-        // Bootstrap'in kendi Toast bileşenini kullandığını varsayarak...
-        const toast = document.createElement('div');
-        toast.className = `toast align-items-center text-white bg-${type} border-0`;
-        toast.setAttribute('role', 'alert');
-        toast.setAttribute('aria-live', 'assertive');
-        toast.setAttribute('aria-atomic', 'true');
-        toast.innerHTML = `
-            <div class="d-flex">
-                <div class="toast-body">${message}</div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-        `;
-        document.getElementById('toast-container').appendChild(toast);
-        const bsToast = new bootstrap.Toast(toast, { delay: 5000 });
-        bsToast.show();
-    }
+   
 </script>
     <!-- Revizyon İsteği Modal -->
     <style>
