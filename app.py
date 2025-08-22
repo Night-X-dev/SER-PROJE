@@ -378,7 +378,6 @@ def get_project_report_data(project_id):
                 total_project_delay_days += step_total_delay
 
                 # Tarihleri ISO formatına çevir (Frontend tarafı için)
-                original_real_end_date = step['real_end_date']
                 for key in ['start_date', 'end_date', 'real_end_date']:
                     if key in step and isinstance(step[key], datetime.date):
                         step[key] = step[key].isoformat()
@@ -387,9 +386,9 @@ def get_project_report_data(project_id):
 
                 # Durum belirleme mantığı güncellendi
                 step_end_date_obj = datetime.date.fromisoformat(str(step['end_date'])) if step['end_date'] else None
-                step_real_end_date_obj = original_real_end_date
+                step_real_end_date_obj = datetime.date.fromisoformat(str(step['real_end_date'])) if step['real_end_date'] else None
 
-                if step.get('is_completed') == 1:
+                if step.get('is_completed'):
                     step['status'] = 'Tamamlandı'
                 elif step_real_end_date_obj:
                     # Adım tamamlandıysa
@@ -409,13 +408,13 @@ def get_project_report_data(project_id):
                 elif step_end_date_obj and today > step_end_date_obj and step_delay_days > 0:
                     step['status'] = 'Gecikmeli'
                 else:
-                    step['status'] = 'Devam Ediyor'
+                    step['status'] = 'Aktif'
                 
                 if step['status'] in ['Tamamlandı', 'Gecikmeli Bitti', 'Ertelenmiş Bitti']:
                     completed_steps_count += 1
                 
                 # Sonraki döngü için bitiş tarihini güncelle
-                last_end_date = original_real_end_date if original_real_end_date else (datetime.date.fromisoformat(str(step['end_date'])) if step['end_date'] else None)
+                last_end_date = datetime.date.fromisoformat(str(step['end_date'])) if step['end_date'] else None
 
             # 3. Genel Tamamlanma Yüzdesini Hesapla
             total_steps = len(progress_steps)
