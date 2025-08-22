@@ -1927,36 +1927,44 @@
 
 
     // Genel Toast bildirim fonksiyonu
-   function showToast(title, message, type = 'success') {
+  function showToast(title, message, type = 'success') {
     const toast = document.getElementById('toast');
     const toastTitle = document.getElementById('toastTitle');
     const toastMessage = document.getElementById('toastMessage');
+    const toastIcon = document.getElementById('toastIcon'); // ikon elementi
 
-    if (!toast || !toastTitle || !toastMessage) {
+    if (!toast || !toastTitle || !toastMessage || !toastIcon) {
         console.error("Toast elementleri bulunamadı!");
         return;
     }
 
-    // Title ve message zorunlu
     toastTitle.textContent = title || '';
     toastMessage.textContent = message || '';
 
-    // Tüm sınıfları temizle
+    // Sınıfları temizle
     toast.classList.remove('success', 'error', 'info', 'warning');
+    toastIcon.className = ''; // önce ikon sınıfını temizle
 
-    // Type'a göre sınıf ekle
-    const validTypes = ['success', 'error', 'info', 'warning'];
-    if (!validTypes.includes(type)) type = 'success';
-    toast.classList.add(type);
+    // Type'a göre sınıf ve ikon ekle
+    const typeConfig = {
+        success: {class: 'success', icon: '✔️'}, // yeşil onay
+        error: {class: 'error', icon: '❌'},     // kırmızı X
+        info: {class: 'info', icon: 'ℹ️'},
+        warning: {class: 'warning', icon: '⚠️'}
+    };
+
+    if (!typeConfig[type]) type = 'success';
+    toast.classList.add(typeConfig[type].class);
+    toastIcon.textContent = typeConfig[type].icon;
 
     // Göster
     toast.classList.add('show');
 
-    // 3 saniye sonra gizle
     setTimeout(() => {
         toast.classList.remove('show');
     }, 3000);
 }
+
 
     // Custom Confirm Modal (alert yerine kullanılacak)
     function showConfirmationModal(title, message, onConfirm) {
