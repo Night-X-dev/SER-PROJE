@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # Bu betik, Cron job ile belirli aralıklarla çalışacak şekilde tasarlanmıştır.
-# Tamamlanmış veya gecikmiş iş adımlarını bulur ve mail gönderir.
+# Tamamlanmış veya gecikmiş iş adımlarını bulur ve her çalıştığında mail gönderir.
+# Bu versiyonda, daha önce bildirim gönderilip gönderilmediğini kontrol eden bayraklar (completion_notified, overdue_notified) kullanılmamıştır.
 
 import os
 import sys
@@ -411,7 +412,7 @@ def main():
             admin_emails = get_admin_emails(cursor)
 
             # --- Tamamlanmış İş Adımları Kontrolü ---
-            # `is_complete` değeri 1 olan ve daha önce bildirim gönderilmemiş adımları bul.
+            # `is_completed` değeri 1 olan adımları bul.
             sql_completed = """
                 SELECT pp.progress_id, pp.end_date, pp.project_id, pp.title, p.project_name
                 FROM project_progress pp
@@ -425,13 +426,11 @@ def main():
             for step in steps_to_notify_completed:
                 if notify_completed_step(cursor, step, admin_emails):
                     notified_completed_count += 1
-                    # Bildirim gönderildikten sonra `completion_notified` flag'ini güncelle
-                    cursor.execute("UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s", (step['progress_id'],))
             
             print(f"[{datetime.datetime.now()}] {notified_completed_count} adet tamamlanmış iş adımı için bildirim gönderildi.")
             
             # --- Gecikmiş İş Adımları Kontrolü ---
-            # Bitiş tarihi bugüne veya geçmişe ait olan, tamamlanmamış ve bildirim gönderilmemiş adımları bul.
+            # Bitiş tarihi bugüne veya geçmişe ait olan ve tamamlanmamış adımları bul.
             sql_overdue = """
                 SELECT pp.progress_id, pp.end_date, pp.project_id, pp.title, p.project_name
                 FROM project_progress pp
@@ -446,8 +445,6 @@ def main():
             for step in steps_to_notify_overdue:
                 if notify_overdue_step(cursor, step, admin_emails):
                     notified_overdue_count += 1
-                    # Bildirim gönderildikten sonra `overdue_notified` flag'ini güncelle
-                    cursor.execute("UPDATE project_progress SET overdue_notified = 1 WHERE progress_id = %s", (step['progress_id'],))
             
             print(f"[{datetime.datetime.now()}] {notified_overdue_count} adet gecikmiş iş adımı için bildirim gönderildi.")
             
