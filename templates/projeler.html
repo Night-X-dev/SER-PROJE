@@ -3863,28 +3863,16 @@ endDateInput.addEventListener('input', () => {
 
 
 async function editProgressStep(progressId, projectId, updatedStepData) {
-    const startDateInput = document.getElementById('editStepStartDate');
-    const endDateInput = document.getElementById('editStepEndDate');
-
-    if (!startDateInput || !endDateInput) {
-        showToast("Hata", "Tarih alanları bulunamadı.", "error");
-        return;
-    }
-
-    const startDate = startDateInput.value;
-    const endDate = endDateInput.value;
-
-    if (!startDate || !endDate) {
-        showToast("Hata", "Lütfen tüm zorunlu tarihleri doldurun.", "error");
-        return;
-    }
-
-    if (startDate > endDate) {
-        showToast("Hata", "Başlangıç tarihi bitiş tarihinden büyük olamaz.", "error");
-        return; 
-    }
-
     try {
+        // 📌 Tarih kontrolü burada yapılacak
+        const { start_date, end_date } = updatedStepData;
+
+        if (start_date && end_date && start_date > end_date) {
+            showToast("Hata", "Başlangıç tarihi bitiş tarihinden büyük olamaz.", "error");
+            return;
+        }
+
+        // Varsayılan delay ekle
         const payload = {
             ...updatedStepData,
             newly_added_custom_delay: updatedStepData.newly_added_custom_delay || 0
@@ -3902,6 +3890,7 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
             showToast("İş adımı başarıyla güncellendi.");
 
             await updateProjectDatesFromSteps(projectId);
+
             fetchProjects();
             fetchProgressSteps(projectId, true);
 
@@ -3913,11 +3902,11 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
                 "progress_update"
             );
         } else {
-            showToast(`Hata: ${data.message}`, "error");
+            showToast(`Hata: ${data.message}`, true);
         }
     } catch (error) {
         console.error("İş adımı güncelleme hatası:", error);
-        showToast("Hata", "İş adımı güncellenirken bir sorun oluştu.", "error");
+        showToast("Hata", "İş adımı güncellenirken bir sorun oluştu.");
     }
 }
 
