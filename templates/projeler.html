@@ -3864,6 +3864,13 @@ endDateInput.addEventListener('input', () => {
 
   async function editProgressStep(progressId, projectId, updatedStepData) {
         try {
+           const startDate = document.getElementById('editStepStartDate').value;
+           const endDate = document.getElementById('editStepEndDate').value;
+
+             if (startDate > endDate || endDate < startDate) {
+           showToast("Hata", "Başlangıç tarihi bitiş tarihinden büyük olamaz.", "error");
+           return; 
+            }
             // newly_added_custom_delay'i varsayılan olarak 0 ayarla eğer gelmiyorsa
             const payload = {
                 ...updatedStepData,
