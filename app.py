@@ -342,6 +342,7 @@ def get_project_report_data(project_id):
                 delay_days,
                 custom_delay_days,
                 real_end_date,
+                is_completed,
                 completion_notified
             FROM project_progress
             WHERE project_id = %s
@@ -387,7 +388,9 @@ def get_project_report_data(project_id):
                 step_end_date_obj = datetime.date.fromisoformat(str(step['end_date'])) if step['end_date'] else None
                 step_real_end_date_obj = datetime.date.fromisoformat(str(step['real_end_date'])) if step['real_end_date'] else None
 
-                if step_real_end_date_obj:
+                if step.get('is_completed'):
+                    step['status'] = 'Tamamlandı'
+                elif step_real_end_date_obj:
                     # Adım tamamlandıysa
                     if step_real_end_date_obj <= step_end_date_obj:
                         step['status'] = 'Tamamlandı'
