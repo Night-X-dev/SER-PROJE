@@ -3937,7 +3937,6 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
     }
 
 
-
 async function generateProjectPdf(project) {
     // API'den çekilecek veriler için boş diziler ve nesneler tanımla.
     let progressSteps = [];
@@ -4112,6 +4111,7 @@ async function generateProjectPdf(project) {
 
     /**
      * @description İlerleme çubuğu verilerini kullanıcı talebine göre doğru şekilde hesaplar.
+     * Artık erteleme ve gecikme süreleri ayrı olarak hesaplanmaktadır.
      * @param {Array<object>} progressSteps - Proje adımlarının listesi.
      * @param {object} project - Proje ana bilgileri.
      * @returns {object} Yüzde ve gün değerlerini içeren bir nesne.
@@ -4128,36 +4128,33 @@ async function generateProjectPdf(project) {
         }
         completedDays = Math.max(0, completedDays);
 
-        // 2. Kalan Süre: Bugünün tarihi ile projenin gerçek bitiş tarihi arasındaki fark.
+        // 2. Erteleme Süresi ve Gecikme Süresi: İş adımlarındaki süreler ayrı ayrı toplanır.
+        const postponementDays = progressSteps.reduce((sum, step) => sum + (step.delay_days || 0), 0);
+        const delayedDays = progressSteps.reduce((sum, step) => sum + (step.custom_delay_days || 0), 0);
+        
+        // 3. Kalan Süre: Bugünün tarihi ile projenin gerçek bitiş tarihi arasındaki fark.
         // Eğer gerçek bitiş tarihi yoksa veya geçmişteyse, kalan süre 0 olarak kabul edilir.
         let remainingDays = 0;
         if (actualProjectEndDate) {
             const actualEndDate = new Date(actualProjectEndDate);
             if (actualEndDate > today) {
                 const diffTime = actualEndDate.getTime() - today.getTime();
-                // Zaman farkı nedeniyle oluşan kaymayı düzeltmek için 1 eklenir.
                 remainingDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
             }
         }
         remainingDays = Math.max(0, remainingDays);
-
-        // 3. Gecikme Süresi: İş adımlarındaki toplam gecikme süresi.
-        const totalDelayedDays = progressSteps.reduce((sum, step) => {
-            return sum + ((step.delay_days || 0) + (step.custom_delay_days || 0));
-        }, 0);
-        const delayedDays = Math.max(0, totalDelayedDays);
-
-
+        
         // Toplam süre, yüzdeleri hesaplamak için kullanılır.
-        // Toplam süre, tamamlanan, gecikmeli ve kalan günlerin toplamıdır.
-        const totalDuration = completedDays + delayedDays + remainingDays;
+        const totalDuration = completedDays + postponementDays + delayedDays + remainingDays;
 
         if (totalDuration === 0) {
             return {
                 completedDays: 0,
+                postponementDays: 0,
                 delayedDays: 0,
                 remainingDays: 0,
                 completedPercentage: 0,
+                postponementPercentage: 0,
                 delayPercentage: 0,
                 remainingPercentage: 0
             };
@@ -4165,11 +4162,12 @@ async function generateProjectPdf(project) {
 
         // Yüzde hesaplamaları.
         let completedPercentage = (completedDays / totalDuration) * 100;
+        let postponementPercentage = (postponementDays / totalDuration) * 100;
         let delayPercentage = (delayedDays / totalDuration) * 100;
         let remainingPercentage = (remainingDays / totalDuration) * 100;
 
         // Yüzdelerin toplamını 100'e yuvarlamak için ayar yap.
-        const totalPercentage = completedPercentage + delayPercentage + remainingPercentage;
+        const totalPercentage = completedPercentage + postponementPercentage + delayPercentage + remainingPercentage;
         if (Math.round(totalPercentage) !== 100) {
             const adjustment = 100 - totalPercentage;
             remainingPercentage += adjustment;
@@ -4177,9 +4175,11 @@ async function generateProjectPdf(project) {
 
         return {
             completedDays: completedDays,
+            postponementDays: postponementDays,
             delayedDays: delayedDays,
             remainingDays: remainingDays,
             completedPercentage: completedPercentage,
+            postponementPercentage: postponementPercentage,
             delayPercentage: delayPercentage,
             remainingPercentage: remainingPercentage
         };
@@ -4444,12 +4444,14 @@ async function generateProjectPdf(project) {
                         <div style="height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px;">
                             <div style="height: 100%; display: flex;">
                                 <div style="background-color: #4CAF50; width: ${progressBarData.completedPercentage}%;"></div>
+                                <div style="background-color: #FFC107; width: ${progressBarData.postponementPercentage}%;"></div>
                                 <div style="background-color: #f44336; width: ${progressBarData.delayPercentage}%;"></div>
                                 <div style="background-color: #ccc; width: ${progressBarData.remainingPercentage}%;"></div>
                             </div>
                         </div>
                         <div style="font-size: 12px; margin-top: 5px; display: flex; justify-content: space-between;">
                             <div style="text-align: left;"><span style="color: #4CAF50;">■</span> Tamamlanan Süre: ${progressBarData.completedDays} gün</div>
+                            <div style="text-align: center;"><span style="color: #FFC107;">■</span> Erteleme Süresi: ${progressBarData.postponementDays} gün</div>
                             <div style="text-align: center;"><span style="color: #f44336;">■</span> Gecikme Süresi: ${progressBarData.delayedDays} gün</div>
                             <div style="text-align: right;"><span style="color: #ccc;">■</span> Kalan Süre: ${progressBarData.remainingDays} gün</div>
                         </div>
