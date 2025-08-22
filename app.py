@@ -1828,12 +1828,9 @@ def delete_project_api(project_id):
             project_name = project_info['project_name']
             project_manager_id = project_info['project_manager_id']
 
-            # 2. PROJEYE BAĞLI TÜM VERİLERİ SİL
+            cursor.execute("DELETE FROM revision_requests WHERE project_id = %s", (project_id,))
             # Önce en derindeki bağımlılıkları silin.
             cursor.execute("DELETE FROM project_progress WHERE project_id = %s", (project_id,))
-            
-            # revision_requests tablosundaki bağlı verileri silin.
-            cursor.execute("DELETE FROM revision_requests WHERE project_id = %s", (project_id,))
 
             # 3. Tüm bağlı veriler silindikten sonra ana projeyi silin
             cursor.execute("DELETE FROM projects WHERE project_id = %s", (project_id,))
