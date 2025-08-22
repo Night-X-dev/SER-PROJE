@@ -4082,9 +4082,6 @@ def reject_revision_request(request_id):
     )
 
 def update_revision_status(request_id, new_status, success_message, error_message, update_progress=False):
-    """
-    Updates the status of a revision request and optionally the related project progress.
-    """
     app.logger.info(f"Updating revision status - ID: {request_id}, New Status: {new_status}, Update Progress: {update_progress}")
     
     if 'user_id' not in session:
