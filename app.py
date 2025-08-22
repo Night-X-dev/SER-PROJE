@@ -1804,6 +1804,28 @@ def update_project(project_id):
             connection.close()
 # Proje silme api (DELETE)
 # API to list project managers
+import pymysql
+import traceback
+from flask import jsonify, request
+
+# Örnek fonksiyonlar, projenizde tanımlanmış olmalı
+def get_db_connection():
+    # Veritabanı bağlantı kodunuz buraya
+    return None
+
+def send_notification(cursor, user_id, title, message):
+    # Bildirim gönderme kodunuz buraya
+    pass
+
+def log_activity(user_id, activity_type, details, icon):
+    # Loglama kodunuz buraya
+    pass
+
+def send_email_notification(email, subject, body):
+    # E-posta gönderme kodunuz buraya
+    pass
+
+
 @app.route('/api/projects/<int:project_id>', methods=['DELETE'])
 def delete_project_api(project_id):
     """Deletes a project and all its associated data from the database."""
@@ -1829,15 +1851,11 @@ def delete_project_api(project_id):
             project_manager_id = project_info['project_manager_id']
 
             # 2. PROJEYE BAĞLI TÜM VERİLERİ SİL
-            # Bu kısım, sizin veritabanı şemanıza göre özelleştirilmelidir.
-            # Örneğin, eğer tasks ve project_members gibi tablolarınız varsa...
-            
-            # Önce en derindeki bağımlılıkları silin (ör: progress)
+            # Önce en derindeki bağımlılıkları silin.
             cursor.execute("DELETE FROM project_progress WHERE project_id = %s", (project_id,))
             
-            # Sonra diğer bağlı verileri silin (ör: tasks, team members)
-            # cursor.execute("DELETE FROM tasks WHERE project_id = %s", (project_id,))
-            # cursor.execute("DELETE FROM project_members WHERE project_id = %s", (project_id,))
+            # revision_requests tablosundaki bağlı verileri silin.
+            cursor.execute("DELETE FROM revision_requests WHERE project_id = %s", (project_id,))
 
             # 3. Tüm bağlı veriler silindikten sonra ana projeyi silin
             cursor.execute("DELETE FROM projects WHERE project_id = %s", (project_id,))
@@ -1892,6 +1910,7 @@ def delete_project_api(project_id):
         traceback.print_exc()
 
     return jsonify({'message': f'Proje başarıyla silindi, {notification_status}'}), 200
+
 @app.route('/api/project_managers', methods=['GET'])
 def get_project_managers():
     """Retrieves a list of users who can be assigned as project managers."""
