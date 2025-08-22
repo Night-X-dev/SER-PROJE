@@ -2278,7 +2278,7 @@ def add_project_progress_step_from_modal(project_id):
             if previous_end_date:
                 new_step_start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
                 time_diff = (new_step_start_date - previous_end_date).days
-                if time_diff > 1:
+                if time_diff >= 0:
                     delay_days = time_diff - 1
 
             cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'custom_delay_days'")
@@ -2481,7 +2481,7 @@ def update_project_progress_step(progress_id):
                     project_start_date = project_start_info['start_date']
                     current_start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
                     time_diff = (current_start_date - project_start_date).days
-                    if time_diff > 1:
+                    if time_diff >= 0:
                         calculated_delay_days = time_diff - 1
 
             sql_update = """
