@@ -4214,9 +4214,12 @@ async function generateProjectPdf(project) {
             const stepId = step.progress_id || step.id;
             const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
             
-            // Kullanıcı isteği: Gecikme süresini ve erteleme süresini ayrı ayrı göster.
-            const totalDelayDays = (step.delay_days || 0) + (step.custom_delay_days || 0);
-            const delayColor = totalDelayDays > 0 ? 'red' : '#555';
+            // Kullanıcı isteği: Gecikme süresini ve erteleme süresini ayrı ayrı göster ve sadece 1'den büyükse kırmızı yap.
+            const postponementDays = step.delay_days || 0;
+            const customDelayDays = step.custom_delay_days || 0;
+            
+            const postponementColor = postponementDays > 0 ? 'red' : '#555';
+            const customDelayColor = customDelayDays > 0 ? 'red' : '#555';
             
             // Üçüncü adımdan (index 2) önce sayfa sonu eklemek için sınıf
             const pageBreakClass = index === 2 ? 'page-break-after-first-two' : '';
@@ -4235,8 +4238,8 @@ async function generateProjectPdf(project) {
                         </div>
                         <div style="width:50%; text-align:right;">
                             <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.real_end_date)} gün</p>
-                            <p><strong>Erteleme Gün Sayısı</strong> <span style="color: ${delayColor};">${step.delay_days || 0} gün</span></p>
-                            <p><strong>Gecikme Süresi:</strong> <span style="color: ${delayColor};">${step.custom_delay_days || 0} gün</span></p>
+                            <p><strong>Erteleme Gün Sayısı</strong> <span style="color: ${postponementColor};">${postponementDays} gün</span></p>
+                            <p><strong>Gecikme Süresi:</strong> <span style="color: ${customDelayColor};">${customDelayDays} gün</span></p>
                             <p><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.end_date)} gün</p>
                         </div>
                     </div>
