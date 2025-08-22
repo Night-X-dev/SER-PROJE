@@ -1927,47 +1927,36 @@
 
 
     // Genel Toast bildirim fonksiyonu
-    function showToast(title, message, type = 'success') {
-        const toast = document.getElementById('toast');
-        const toastTitle = document.getElementById('toastTitle');
-        const toastMessage = document.getElementById('toastMessage');
+   function showToast(title, message, type = 'success') {
+    const toast = document.getElementById('toast');
+    const toastTitle = document.getElementById('toastTitle');
+    const toastMessage = document.getElementById('toastMessage');
 
-        if (!toast || !toastTitle || !toastMessage) {
-            console.error("Toast elementleri bulunamadı!");
-            return;
-        }
-
-        // Eğer sadece bir parametre verilmişse, bunu mesaj olarak kabul et
-        if (arguments.length === 1) {
-            message = title;
-            title = type === 'error' ? 'Hata' : 'Başarılı';
-        } else if (arguments.length === 2 && typeof message === 'boolean') {
-            // Eski kullanım için geriye dönük uyumluluk
-            type = message ? 'error' : 'success';
-            message = title;
-            title = type === 'error' ? 'Hata' : 'Başarılı';
-        }
-
-        toastTitle.textContent = title || (type === 'error' ? 'Hata' : 'Başarılı');
-        toastMessage.textContent = message;
-        
-        // Mevcut tüm durum sınıflarını kaldır
-        toast.classList.remove('success', 'error', 'info', 'warning');
-        
-        // Yeni durum sınıfını ekle
-        const typeClass = type === 'error' ? 'error' : 
-                         type === 'info' ? 'info' :
-                         type === 'warning' ? 'warning' : 'success';
-        toast.classList.add(typeClass);
-
-        // Göster
-        toast.classList.add('show');
-
-        // 3 saniye sonra gizle
-        setTimeout(() => {
-            toast.classList.remove('show');
-        }, 3000);
+    if (!toast || !toastTitle || !toastMessage) {
+        console.error("Toast elementleri bulunamadı!");
+        return;
     }
+
+    // Title ve message zorunlu
+    toastTitle.textContent = title || '';
+    toastMessage.textContent = message || '';
+
+    // Tüm sınıfları temizle
+    toast.classList.remove('success', 'error', 'info', 'warning');
+
+    // Type'a göre sınıf ekle
+    const validTypes = ['success', 'error', 'info', 'warning'];
+    if (!validTypes.includes(type)) type = 'success';
+    toast.classList.add(type);
+
+    // Göster
+    toast.classList.add('show');
+
+    // 3 saniye sonra gizle
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
 
     // Custom Confirm Modal (alert yerine kullanılacak)
     function showConfirmationModal(title, message, onConfirm) {
