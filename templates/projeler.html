@@ -3862,69 +3862,75 @@ endDateInput.addEventListener('input', () => {
 
 
 
-  async function editProgressStep(progressId, projectId, updatedStepData) {
-    // edit form açılırken tarih inputlarını al
-const startDateInput = document.getElementById('editStepStartDate');
-const endDateInput = document.getElementById('editStepEndDate');
+// Form açılırken çağrılacak
+function openEditProgressForm(stepData) {
+    document.getElementById('editStepStartDate').value = stepData.start_date;
+    document.getElementById('editStepEndDate').value = stepData.end_date;
+    document.getElementById('editStepDescription').value = stepData.description;
 
-if (startDateInput && endDateInput) {
-    // Başlangıç tarihi değişirse
+    attachEditDateValidation();
+}
+
+// Tarih değişimlerini dinle
+function attachEditDateValidation() {
+    const startDateInput = document.getElementById('editStepStartDate');
+    const endDateInput = document.getElementById('editStepEndDate');
+    if (!startDateInput || !endDateInput) return;
+
     startDateInput.addEventListener('input', () => {
         if (endDateInput.value && startDateInput.value > endDateInput.value) {
-            endDateInput.value = ""; // hatalı bitiş tarihini sıfırla
+            endDateInput.value = "";
             showToast("Hata", "Bitiş tarihi başlangıç tarihinden önce olamaz.", "error");
         }
     });
 
-    // Bitiş tarihi değişirse
     endDateInput.addEventListener('input', () => {
         if (startDateInput.value && endDateInput.value < startDateInput.value) {
-            startDateInput.value = ""; // hatalı başlangıç tarihini sıfırla
+            startDateInput.value = "";
             showToast("Hata", "Başlangıç tarihi bitiş tarihinden sonra olamaz.", "error");
         }
     });
 }
 
-        try {
-            // newly_added_custom_delay'i varsayılan olarak 0 ayarla eğer gelmiyorsa
-            const payload = {
-                ...updatedStepData,
-                newly_added_custom_delay: updatedStepData.newly_added_custom_delay || 0
-            };
+// Kaydetme işlemi
+async function editProgressStep(progressId, projectId, updatedStepData) {
+    const startDate = document.getElementById('editStepStartDate').value;
+    const endDate = document.getElementById('editStepEndDate').value;
 
-            const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                showToast("İş adımı başarıyla güncellendi.");
-
-                // İş adımı güncellemesi başarılı olduktan sonra proje tarihlerini güncelle
-                await updateProjectDatesFromSteps(projectId);
-
-                // Listeyi güncelle
-                fetchProjects();
-                fetchProgressSteps(projectId, true);
-
-                addActivity(
-                    "İş Adımı Güncellendi",
-                    `Proje ID: ${projectId} için "${updatedStepData.step_name}" iş adımı güncellendi.`,
-                    projectId,
-                    "fas fa-pen",
-                    "progress_update"
-                );
-            } else {
-                showToast(`Hata: ${data.message}`, true);
-            }
-        } catch (error) {
-            console.error("İş adımı güncelleme hatası:", error);
-            showToast("Hata", "İş adımı güncellenirken bir sorun oluştu.");
-        }
+    if (!startDate || !endDate) {
+        showToast("Hata", "Lütfen tarihleri doldurun.", "error");
+        return;
     }
+
+    if (startDate > endDate) {
+        showToast("Hata", "Başlangıç tarihi bitiş tarihinden büyük olamaz.", "error");
+        return;
+    }
+
+    try {
+        const payload = { ...updatedStepData, newly_added_custom_delay: updatedStepData.newly_added_custom_delay || 0 };
+        const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showToast("İş adımı başarıyla güncellendi.");
+            await updateProjectDatesFromSteps(projectId);
+            fetchProjects();
+            fetchProgressSteps(projectId, true);
+            addActivity("İş Adımı Güncellendi", `Proje ID: ${projectId} için "${updatedStepData.step_name}" iş adımı güncellendi.`, projectId, "fas fa-pen", "progress_update");
+        } else {
+            showToast(`Hata: ${data.message}`, "error");
+        }
+    } catch (error) {
+        console.error("İş adımı güncelleme hatası:", error);
+        showToast("Hata", "İş adımı güncellenirken bir sorun oluştu.", "error");
+    }
+}
 
     // progress_id kullanıldı
     async function deleteProgressStep(progressId, projectId) {
