@@ -3863,6 +3863,28 @@ endDateInput.addEventListener('input', () => {
 
 
   async function editProgressStep(progressId, projectId, updatedStepData) {
+    // edit form açılırken tarih inputlarını al
+const startDateInput = document.getElementById('editStepStartDate');
+const endDateInput = document.getElementById('editStepEndDate');
+
+if (startDateInput && endDateInput) {
+    // Başlangıç tarihi değişirse
+    startDateInput.addEventListener('input', () => {
+        if (endDateInput.value && startDateInput.value > endDateInput.value) {
+            endDateInput.value = ""; // hatalı bitiş tarihini sıfırla
+            showToast("Hata", "Bitiş tarihi başlangıç tarihinden önce olamaz.", "error");
+        }
+    });
+
+    // Bitiş tarihi değişirse
+    endDateInput.addEventListener('input', () => {
+        if (startDateInput.value && endDateInput.value < startDateInput.value) {
+            startDateInput.value = ""; // hatalı başlangıç tarihini sıfırla
+            showToast("Hata", "Başlangıç tarihi bitiş tarihinden sonra olamaz.", "error");
+        }
+    });
+}
+
         try {
             // newly_added_custom_delay'i varsayılan olarak 0 ayarla eğer gelmiyorsa
             const payload = {
