@@ -2534,7 +2534,7 @@ def update_project_progress_step(progress_id):
                 current_delay_days_from_db = cursor.fetchone()['delay_days'] or 0
 
                 # 4) Yeni değeri ekle (birikmeli mantık)
-                new_delay_days = current_delay_days_from_db + recalculated_sub_delay_days
+                new_delay_days = recalculated_sub_delay_days
 
                 # 5) real_end_date'i koru (yoksa end_date kullan)
                 if sub_real_end_date_from_db:
