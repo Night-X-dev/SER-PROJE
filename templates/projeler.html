@@ -3862,54 +3862,64 @@ endDateInput.addEventListener('input', () => {
 
 
 
-  async function editProgressStep(progressId, projectId, updatedStepData) {
-        try {
-           const startDate = document.getElementById('editStepStartDate').value;
-           const endDate = document.getElementById('editStepEndDate').value;
+async function editProgressStep(progressId, projectId, updatedStepData) {
+    const startDateInput = document.getElementById('editStepStartDate');
+    const endDateInput = document.getElementById('editStepEndDate');
 
-             if (startDate > endDate || endDate < startDate) {
-           showToast("Hata", "Başlangıç tarihi bitiş tarihinden büyük olamaz.", "error");
-           return; 
-            }
-            // newly_added_custom_delay'i varsayılan olarak 0 ayarla eğer gelmiyorsa
-            const payload = {
-                ...updatedStepData,
-                newly_added_custom_delay: updatedStepData.newly_added_custom_delay || 0
-            };
-
-            const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                showToast("İş adımı başarıyla güncellendi.");
-
-                // İş adımı güncellemesi başarılı olduktan sonra proje tarihlerini güncelle
-                await updateProjectDatesFromSteps(projectId);
-
-                // Listeyi güncelle
-                fetchProjects();
-                fetchProgressSteps(projectId, true);
-
-                addActivity(
-                    "İş Adımı Güncellendi",
-                    `Proje ID: ${projectId} için "${updatedStepData.step_name}" iş adımı güncellendi.`,
-                    projectId,
-                    "fas fa-pen",
-                    "progress_update"
-                );
-            } else {
-                showToast(`Hata: ${data.message}`, true);
-            }
-        } catch (error) {
-            console.error("İş adımı güncelleme hatası:", error);
-            showToast("Hata", "İş adımı güncellenirken bir sorun oluştu.");
-        }
+    if (!startDateInput || !endDateInput) {
+        showToast("Hata", "Tarih alanları bulunamadı.", "error");
+        return;
     }
+
+    const startDate = startDateInput.value;
+    const endDate = endDateInput.value;
+
+    if (!startDate || !endDate) {
+        showToast("Hata", "Lütfen tüm zorunlu tarihleri doldurun.", "error");
+        return;
+    }
+
+    if (startDate > endDate) {
+        showToast("Hata", "Başlangıç tarihi bitiş tarihinden büyük olamaz.", "error");
+        return; 
+    }
+
+    try {
+        const payload = {
+            ...updatedStepData,
+            newly_added_custom_delay: updatedStepData.newly_added_custom_delay || 0
+        };
+
+        const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showToast("İş adımı başarıyla güncellendi.");
+
+            await updateProjectDatesFromSteps(projectId);
+            fetchProjects();
+            fetchProgressSteps(projectId, true);
+
+            addActivity(
+                "İş Adımı Güncellendi",
+                `Proje ID: ${projectId} için "${updatedStepData.step_name}" iş adımı güncellendi.`,
+                projectId,
+                "fas fa-pen",
+                "progress_update"
+            );
+        } else {
+            showToast(`Hata: ${data.message}`, "error");
+        }
+    } catch (error) {
+        console.error("İş adımı güncelleme hatası:", error);
+        showToast("Hata", "İş adımı güncellenirken bir sorun oluştu.", "error");
+    }
+}
 
     // progress_id kullanıldı
     async function deleteProgressStep(progressId, projectId) {
