@@ -4313,27 +4313,28 @@ def get_reports():
             cursor.execute("SELECT COUNT(*) as total FROM projects")
             total_projects = cursor.fetchone()['total']
             
-            # Revize edilen adım sayısı
+            # Revize isteği sayısı (revision_requests tablosundan)
             cursor.execute("""
-                SELECT COUNT(DISTINCT id) as count 
-                FROM project_progress 
-                WHERE revision_reason IS NOT NULL
+                SELECT COUNT(DISTINCT progress_id) as count 
+                FROM revision_requests 
+                WHERE status = 'approved'
             """)
             revised_steps = cursor.fetchone()['count']
             
-            # Geciken adım sayısı
+            # Geciken adım sayısı (bitiş tarihi geçmiş ve tamamlanmamış)
             cursor.execute("""
                 SELECT COUNT(*) as count 
                 FROM project_progress 
-                WHERE delay_days > 0 AND real_end_date IS NULL
+                WHERE end_date < CURDATE() 
+                AND (real_end_date IS NULL OR real_end_date > end_date)
             """)
             delayed_steps = cursor.fetchone()['count']
             
-            # Ertelenen adım sayısı
+            # Ertelenen adım sayısı (revizyon isteği onaylanmış)
             cursor.execute("""
-                SELECT COUNT(*) as count 
-                FROM project_progress 
-                WHERE new_end_date IS NOT NULL
+                SELECT COUNT(DISTINCT progress_id) as count 
+                FROM revision_requests 
+                WHERE status = 'approved'
             """)
             postponed_steps = cursor.fetchone()['count']
             
@@ -4342,8 +4343,8 @@ def get_reports():
                 SELECT AVG(revision_count) as avg_revisions
                 FROM (
                     SELECT project_id, COUNT(*) as revision_count
-                    FROM project_progress 
-                    WHERE revision_reason IS NOT NULL
+                    FROM revision_requests 
+                    WHERE status = 'approved'
                     GROUP BY project_id
                 ) as revisions
             """)
@@ -4351,50 +4352,52 @@ def get_reports():
             
             # En çok revize alan proje
             cursor.execute("""
-                SELECT p.project_name as projectName, COUNT(pp.id) as revisionCount
-                FROM project_progress pp
-                JOIN projects p ON pp.project_id = p.id
-                WHERE pp.revision_reason IS NOT NULL
+                SELECT p.project_name as projectName, COUNT(rr.id) as revisionCount
+                FROM revision_requests rr
+                JOIN projects p ON rr.project_id = p.project_id
+                WHERE rr.status = 'approved'
                 GROUP BY p.project_name
                 ORDER BY revisionCount DESC
                 LIMIT 1
             """)
             most_revised_project = cursor.fetchone() or {}
             
-            # Revize edilen iş adımları
+            # Son 10 revize edilen iş adımı
             cursor.execute("""
                 SELECT 
                     p.project_name as projectName,
                     pp.title as taskName,
-                    pp.revision_date as revisionDate,
-                    pp.revision_reason as revisionReason,
+                    rr.created_at as revisionDate,
+                    rr.message as revisionReason,
                     CASE 
                         WHEN pp.real_end_date IS NOT NULL THEN 'completed'
                         ELSE 'pending'
                     END as revisionStatus,
                     u.full_name as requestedBy
-                FROM project_progress pp
-                JOIN projects p ON pp.project_id = p.id
-                LEFT JOIN users u ON pp.revised_by = u.id
-                WHERE pp.revision_reason IS NOT NULL
-                ORDER BY pp.revision_date DESC
+                FROM revision_requests rr
+                JOIN project_progress pp ON rr.progress_id = pp.progress_id
+                JOIN projects p ON rr.project_id = p.project_id
+                LEFT JOIN users u ON rr.requested_by = u.id
+                WHERE rr.status = 'approved'
+                ORDER BY rr.created_at DESC
                 LIMIT 10
             """)
             revised_tasks = cursor.fetchall()
             
-            # Ertelenen iş adımları
+            # Son 10 ertelenen iş adımı
             cursor.execute("""
                 SELECT 
                     p.project_name as projectName,
                     pp.title as taskName,
-                    pp.start_date as originalDate,
-                    pp.new_end_date as newDate,
-                    pp.delay_reason as delayReason,
-                    pp.delay_days as delayDays
+                    pp.end_date as originalDate,
+                    DATE_ADD(pp.end_date, INTERVAL IFNULL(pp.delay_days, 0) DAY) as newDate,
+                    rr.message as delayReason,
+                    IFNULL(pp.delay_days, 0) as delayDays
                 FROM project_progress pp
-                JOIN projects p ON pp.project_id = p.id
-                WHERE pp.new_end_date IS NOT NULL
-                ORDER BY pp.new_end_date DESC
+                JOIN projects p ON pp.project_id = p.project_id
+                LEFT JOIN revision_requests rr ON pp.progress_id = rr.progress_id AND rr.status = 'approved'
+                WHERE pp.delay_days > 0 OR rr.id IS NOT NULL
+                ORDER BY pp.end_date DESC
                 LIMIT 10
             """)
             postponed_tasks = cursor.fetchall()
