@@ -1167,7 +1167,7 @@
                     <div class="table-header">
                         <div class="table-title">Revize Edilen İş Adımları</div>
                         <div class="table-actions">
-                            <span class="avg-revisions" id="avgRevisions">0</span>
+                          <span class="avg-revisions" id="avgRevisions">0</span>
                         </div>
                     </div>
                     
@@ -1277,87 +1277,91 @@
     <script src="{{ url_for('static', filename='config.js') }}"></script>
     <script src="{{ url_for('static', filename='user-avatar.js') }}"></script>
     <script>
- async function loadReports() {
-            try {
-                const response = await fetch('/api/reports');
-                const data = await response.json();
+    async function loadReports() {
+        try {
+            const response = await fetch('/api/reports');
+            const data = await response.json();
 
-                if (response.ok) {
-                    // İstatistikleri güncelle
-                    const stats = data.stats;
-                    
-                    // Sizin HTML'inizdeki ID'lere göre güncelleme
-                    document.getElementById('totalProjects').textContent = stats.totalProjectsCount;
-                    document.getElementById('revisedSteps').textContent = stats.revisedStepsCount;
-                    document.getElementById('delayedSteps').textContent = stats.delayedStepsCount;
-                    document.getElementById('postponedSteps').textContent = stats.postponedStepsCount;
-                    document.getElementById('avgRevisions').textContent = stats.avgRevisions;
+            if (response.ok) {
+                // İstatistikleri güncelle
+                const stats = data.stats;
+                
+                // İstatistik kartlarını güncelle
+                document.getElementById('totalProjects').textContent = stats.totalProjectsCount;
+                document.getElementById('revisedSteps').textContent = stats.revisedStepsCount;
+                document.getElementById('delayedSteps').textContent = stats.delayedStepsCount;
+                document.getElementById('postponedSteps').textContent = stats.postponedStepsCount;
+                document.getElementById('avgRevisions').textContent = stats.avgRevisions;
 
-                    // En çok revize alan projeyi güncelle
-                    const mostRevisedProject = data.mostRevisedProject;
-                    if (mostRevisedProject && mostRevisedProject.projectName) {
-                         document.getElementById('mostRevisedProject').textContent = `${mostRevisedProject.projectName} (${mostRevisedProject.revisionCount} Revizyon)`;
-                    } else {
-                        document.getElementById('mostRevisedProject').textContent = "Veri Yok";
-                    }
-                    
-                    // Gecikmiş iş adımlarını listele
-                    const delayedTasksTableBody = document.getElementById('delayedTasksTableBody');
+                // En çok revize alan projeyi güncelle
+                const mostRevisedProject = data.mostRevisedProject;
+                if (mostRevisedProject && mostRevisedProject.projectName) {
+                    document.getElementById('mostRevisedProject').textContent = `${mostRevisedProject.projectName} (${mostRevisedProject.revisionCount} Revizyon)`;
+                } else {
+                    document.getElementById('mostRevisedProject').textContent = "Veri Yok";
+                }
+                
+                // Gecikmiş iş adımlarını listele
+                const delayedTasksTableBody = document.querySelector('.report-section:nth-of-type(2) tbody');
+                if (delayedTasksTableBody) {
                     delayedTasksTableBody.innerHTML = ''; // Eski verileri temizle
 
                     if (data.delayedTasks && data.delayedTasks.length > 0) {
                         data.delayedTasks.forEach(task => {
                             const row = document.createElement('tr');
                             row.innerHTML = `
-                                <td>${task.taskName}</td>
-                                <td>${task.projectName}</td>
-                                <td>${task.delayDays}</td>
-                                <td>${task.responsible || 'Belirlenmemiş'}</td>
+                                <td>${task.projectName || ''}</td>
+                                <td>${task.taskName || ''}</td>
+                                <td>${task.plannedDate || ''}</td>
+                                <td>${task.delayDays || '0'}</td>
                             `;
                             delayedTasksTableBody.appendChild(row);
                         });
                     } else {
                         const row = document.createElement('tr');
-                        row.innerHTML = `<td colspan="4" class="text-center">Gecikmiş iş adımı bulunmamaktadır.</td>`;
+                        row.innerHTML = '<td colspan="4" class="text-center">Gecikmiş iş adımı bulunmamaktadır.</td>';
                         delayedTasksTableBody.appendChild(row);
                     }
-                } else {
-                    // API'den hata döndüğünde
-                    console.error("API hatası:", data);
                 }
-            } catch (error) {
-                // Fetch işlemi sırasında bir hata oluştuğunda
-                console.error("Rapor verisi yüklenemedi:", error);
+            } else {
+                console.error("API'den hata alındı:", data);
             }
+        } catch (error) {
+            console.error("Raporlar yüklenirken hata oluştu:", error);
+        }
+    }
+
+    // Sayfa yüklendiğinde raporları yükle
+    document.addEventListener('DOMContentLoaded', function() {
+        // Raporları yükle
+        loadReports();
+
+        // Tema Değiştirme
+        const themeToggle = document.getElementById('theme-toggle');
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.body.setAttribute('data-theme', savedTheme);
+            themeToggle.innerHTML = savedTheme === 'dark' ?
+                '<i class="fas fa-sun"></i>' :
+                '<i class="fas fa-moon"></i>';
         }
         
-        // Sayfa yüklendiğinde raporları yükle
-        window.addEventListener('load', loadReports);
-        document.addEventListener('DOMContentLoaded', function() {
-            // Tema Değiştirme
-            const themeToggle = document.getElementById('theme-toggle');
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme) {
-                document.body.setAttribute('data-theme', savedTheme);
-                themeToggle.innerHTML = savedTheme === 'dark' ?
-                    '<i class="fas fa-sun"></i>' :
-                    '<i class="fas fa-moon"></i>';
-            }
-            themeToggle.addEventListener('click', () => {
-                const currentTheme = document.body.getAttribute('data-theme');
-                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                document.body.setAttribute('data-theme', newTheme);
-                themeToggle.innerHTML = newTheme === 'dark' ?
-                    '<i class="fas fa-sun"></i>' :
-                    '<i class="fas fa-moon"></i>';
-                localStorage.setItem('theme', newTheme);
-            });
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', newTheme);
+            themeToggle.innerHTML = newTheme === 'dark' ?
+                '<i class="fas fa-sun"></i>' :
+                '<i class="fas fa-moon"></i>';
+            localStorage.setItem('theme', newTheme);
+        });
 
-            // Hamburger menü işlevselliği
-            const hamburgerMenu = document.getElementById('hamburgerMenu');
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('mainContent');
-            
+        // Hamburger menü işlevselliği
+        const hamburgerMenu = document.getElementById('hamburgerMenu');
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+        
+        if (hamburgerMenu && sidebar && mainContent) {
             hamburgerMenu.addEventListener('click', () => {
                 sidebar.classList.toggle('show');
                 mainContent.classList.toggle('expanded');
@@ -1372,39 +1376,48 @@
                     mainContent.classList.remove('expanded');
                 }
             });
+        }
 
-            // Pencere boyutu değiştiğinde sidebar durumunu sıfırla
-            window.addEventListener('resize', () => {
-                if (window.innerWidth > 992) {
-                    sidebar.classList.remove('show');
-                    mainContent.classList.remove('expanded');
-                }
-            });
-
-            // Sayfa yüklendiğinde kullanıcı bilgilerini yükle
-            const storedUser = localStorage.getItem('currentUser');
-            if (storedUser) {
-                try {
-                    const user = JSON.parse(storedUser);
-                    document.getElementById('userName').textContent = user.fullname || user.username || 'Kullanıcı';
-                    document.getElementById('userRole').textContent = user.role || 'Rol Yok';
-                    updateUserAvatar(user);
-                } catch (e) {
-                    console.error("Kullanıcı bilgileri yüklenirken hata:", e);
-                }
+        // Pencere boyutu değiştiğinde sidebar durumunu sıfırla
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 992) {
+                if (sidebar) sidebar.classList.remove('show');
+                if (mainContent) mainContent.classList.remove('expanded');
             }
+        });
 
-            // Çıkış butonu işlevselliği
-            document.getElementById('logoutButton').addEventListener('click', function() {
+        // Kullanıcı bilgilerini yükle
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+            try {
+                const user = JSON.parse(storedUser);
+                const userNameElement = document.getElementById('userName');
+                const userRoleElement = document.getElementById('userRole');
+                
+                if (userNameElement) {
+                    userNameElement.textContent = user.fullname || user.username || 'Kullanıcı';
+                }
+                if (userRoleElement) {
+                    userRoleElement.textContent = user.role || 'Rol Yok';
+                }
+                if (typeof updateUserAvatar === 'function') {
+                    updateUserAvatar(user);
+                }
+            } catch (e) {
+                console.error("Kullanıcı bilgileri yüklenirken hata:", e);
+            }
+        }
+
+        // Çıkış butonu işlevselliği
+        const logoutButton = document.getElementById('logoutButton');
+        if (logoutButton) {
+            logoutButton.addEventListener('click', function() {
                 localStorage.removeItem('currentUser');
                 window.location.href = '/';
             });
-
-            // Bildirim panelini yükle
-        });
-       
+        }
+    });
     </script>
-    <script src="static/bildirim.js"></script>
-
+    <script src="{{ url_for('static', filename='bildirim.js') }}"></script>
 </body>
 </html>
