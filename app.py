@@ -2141,7 +2141,6 @@ def add_project():
     finally:
         if connection:
             connection.close()
-
 # API to log PDF Report Creation Activity (to be called from frontend)
 @app.route('/api/log_pdf_report', methods=['POST'])
 def log_pdf_report_api():
