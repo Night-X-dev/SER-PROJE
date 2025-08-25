@@ -4342,7 +4342,7 @@ def get_reports():
             sql_most_revised_project = """
                 SELECT 
                     p.project_name AS projectName,
-                    c.customer_name AS customerName,  -- 'c.name' yerine 'c.customer_name' kullanıldı
+                    c.customer_name AS customerName,
                     p.status,
                     COUNT(rr.id) AS revisionCount
                 FROM revision_requests rr
@@ -4370,7 +4370,6 @@ def get_reports():
                     pp.title AS taskName,
                     p.project_name AS projectName,
                     pp.delay_days AS delayDays,
-                    pp.status,
                     u.fullname AS responsible
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
