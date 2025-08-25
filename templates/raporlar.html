@@ -1276,41 +1276,89 @@
     <script src="{{ url_for('static', filename='config.js') }}"></script>
     <script src="{{ url_for('static', filename='user-avatar.js') }}"></script>
     <script>
-    async function loadReports() {
-        try {
-            const response = await fetch("/api/reports");
-            const data = await response.json();
+async function loadReports() {
+            const reportLoader = document.getElementById('reportLoader');
+            const reportError = document.getElementById('reportError');
+            const noDataMessage = document.getElementById('noDataMessage');
 
-        // --- Stat Kartları ---
-        document.getElementById("totalProjects").innerText = data.stats.totalProjectsCount;
-        document.getElementById("avgRevisions").innerText = data.stats.avgRevisions;
-        document.getElementById("delayedSteps").innerText = data.stats.delayedStepsCount;
-        document.getElementById("mostRevisedProject").innerText =
-            data.mostRevisedProject?.projectName || "-";
+            reportLoader.style.display = 'block';
+            reportError.style.display = 'none';
+            noDataMessage.style.display = 'none';
 
-        // --- Geciken İş Adımları Tablosu ---
-        const delayedTbody = document.querySelector(".report-section:nth-of-type(2) tbody");
-        delayedTbody.innerHTML = ""; // temizle
-        data.delayedTasks.forEach(task => {
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${task.projectName}</td>
-                <td>${task.taskName}</td>
-                <td>${task.status || "-"}</td>
-                <td>${task.delayDays}</td>
-            `;
-            delayedTbody.appendChild(tr);
-        });
+            try {
+                const response = await fetch('/api/reports');
+                const data = await response.json();
 
-    
+                if (response.ok) {
+                    if (data && data.stats) {
+                        // İstatistik kartlarını güncelle
+                        document.getElementById('revisedStepsCount').textContent = data.stats.revisedStepsCount || 0;
+                        document.getElementById('postponedStepsCount').textContent = data.stats.postponedStepsCount || 0;
+                        document.getElementById('delayedStepsCount').textContent = data.stats.delayedStepsCount || 0;
+                        document.getElementById('avgRevisions').textContent = data.stats.avgRevisions || 0;
+
+                        // En çok revize edilen proje tablosunu doldur
+                        const mostRevisedProjectTableBody = document.getElementById('mostRevisedProjectTableBody');
+                        mostRevisedProjectTableBody.innerHTML = '';
+                        if (data.mostRevisedProject && data.mostRevisedProject.projectName) {
+                            const project = data.mostRevisedProject;
+                            const row = `
+                                <tr>
+                                    <td>${project.projectName}</td>
+                                    <td>${project.customerName}</td>
+                                    <td>${project.revisionCount}</td>
+                                    <td><span class="status-badge status-${project.status.toLowerCase().replace(' ', '-')}">${project.status}</span></td>
+                                </tr>
+                            `;
+                            mostRevisedProjectTableBody.innerHTML = row;
+                        } else {
+                            mostRevisedProjectTableBody.innerHTML = '<tr><td colspan="4">Veri bulunamadı.</td></tr>';
+                        }
+                        
+                        // Gecikmeli görevler tablosunu doldur
+                        const delayedTasksTableBody = document.getElementById('delayedTasksTableBody');
+                        delayedTasksTableBody.innerHTML = '';
+                        if (data.delayedTasks && data.delayedTasks.length > 0) {
+                            data.delayedTasks.forEach(task => {
+                                const row = `
+                                    <tr>
+                                        <td>${task.taskName}</td>
+                                        <td>${task.projectName}</td>
+                                        <td>${task.delayDays}</td>
+                                        <td>${task.responsible || 'Atanmamış'}</td>
+                                        <td><span class="status-badge status-${task.status.toLowerCase().replace(' ', '-')}">${task.status}</span></td>
+                                    </tr>
+                                `;
+                                delayedTasksTableBody.innerHTML += row;
+                            });
+                        } else {
+                            delayedTasksTableBody.innerHTML = '<tr><td colspan="5">Veri bulunamadı.</td></tr>';
+                            noDataMessage.style.display = 'block';
+                        }
+                    } else {
+                         // API'den gelen veri boş veya yanlış yapıda ise
+                        noDataMessage.style.display = 'block';
+                    }
+                } else {
+                    // API'den bir hata kodu geldiyse (örn. 500)
+                    const errorMsg = data.error || 'Bilinmeyen bir hata oluştu.';
+                    reportError.textContent = 'Rapor verileri yüklenirken bir hata oluştu: ' + errorMsg;
+                    reportError.style.display = 'block';
+                    console.error('API hatası:', data);
+                }
+            } catch (error) {
+                // Ağ hatası veya JSON ayrıştırma hatası
+                reportError.textContent = 'Rapor verileri yüklenirken bir ağ hatası oluştu.';
+                reportError.style.display = 'block';
+                console.error('Rapor verisi yüklenemedi:', error);
+            } finally {
+                reportLoader.style.display = 'none';
+            }
+        }
         
-    } catch (error) {
-        console.error("Rapor verisi yüklenemedi:", error);
-    }
-}
-
+        // Sayfa yüklendiğinde raporları yükle
+        window.addEventListener('load', loadReports);
         document.addEventListener('DOMContentLoaded', function() {
-            window.onload = loadReports;
             // Tema Değiştirme
             const themeToggle = document.getElementById('theme-toggle');
             const savedTheme = localStorage.getItem('theme');
