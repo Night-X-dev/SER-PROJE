@@ -2036,23 +2036,40 @@ def log_activity(user_id, title, description, icon, is_read=0):
 # API to add new project (uncommented and completed from previous version)
 @app.route('/api/projects', methods=['POST'])
 def add_project():
-    data = request.json
-    project_name = data.get('projectName')
-    customer_id = data.get('customerId')
-    project_manager_id = data.get('projectManagerId')
-    reference_no = data.get('projectRef')
-    description = data.get('projectDescription')
-    contract_date = data.get('contractDate')
-    meeting_date = data.get('meetingDate')
-    start_date_str = data.get('startDate')
-    end_date_str = data.get('endDate')
-    project_location = data.get('projectLocation')
-    status = data.get('status', 'Planlama Aşamasında')
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'message': 'No data provided'}), 400
+            
+        app.logger.info(f'Received project data: {data}')
+        
+        project_name = data.get('projectName')
+        customer_id = data.get('customerId')
+        project_manager_id = data.get('projectManagerId')
+        reference_no = data.get('projectRef')
+        description = data.get('projectDescription')
+        contract_date = data.get('contractDate')
+        meeting_date = data.get('meetingDate')
+        start_date_str = data.get('startDate')
+        end_date_str = data.get('endDate')
+        project_location = data.get('projectLocation')
+        status = data.get('status', 'Planlama Aşamasında')
+        user_id = data.get('user_id')
 
-    user_id = data.get('user_id')
-
-    if not all([project_name, customer_id, project_manager_id, start_date_str, end_date_str]):
-        return jsonify({'message': 'Project name, customer, project manager, start date, and end date are required.'}), 400
+        # Validate required fields
+        required_fields = {
+            'projectName': project_name,
+            'customerId': customer_id,
+            'projectManagerId': project_manager_id,
+            'startDate': start_date_str,
+            'endDate': end_date_str
+        }
+        
+        missing_fields = [field for field, value in required_fields.items() if not value]
+        if missing_fields:
+            error_msg = f'Missing required fields: {", ".join(missing_fields)}'
+            app.logger.error(error_msg)
+            return jsonify({'message': error_msg}), 400
 
     connection = None
     try:
