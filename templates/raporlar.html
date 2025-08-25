@@ -236,7 +236,7 @@
             opacity: 1;
             transform: scale(1);
         }
-        
+
         /* Bildirim Paneli Stilleri */
         .notification-panel {
             position: absolute;
@@ -384,6 +384,14 @@
         .user-info {
             display: flex;
             flex-direction: column;
+            flex-shrink: 1;
+            min-width: 0;
+        }
+
+        .user-name, .user-role {
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
         }
 
         .user-name {
@@ -476,7 +484,7 @@
                 </div>
                 <div class="user-profile">
                     <div class="user-avatar" id="userAvatar">
-                        <!-- Avatar içeriği buraya gelecek -->
+                        <!-- Avatar içeriği user-avatar.js tarafından yönetilecek -->
                     </div>
                     <div class="user-info">
                         <span class="user-name" id="userName">Kullanıcı</span>
@@ -488,81 +496,114 @@
                     <span>Çıkış</span>
                 </button>
             </div>
+            <!-- Bildirim paneli için yer tutucu -->
+            <div id="notification-panel-placeholder"></div>
         </div>
 
-        <div id="notification-panel-placeholder"></div>
-        <div class="dashboard-content">
+        <div class="reports-content">
             <h1 class="page-title"><i class="fas fa-chart-line"></i> Raporlar</h1>
             
             <div class="stats-container">
                 <div class="stat-card">
-                    <div class="stat-card-header">
-                        <div class="stat-card-title">Revize Edilen İş Adımları</div>
-                        <div class="stat-card-icon"><i class="fas fa-sync-alt"></i></div>
-                    </div>
-                    <div class="stat-card-value" id="revisedTasksCount">0</div>
-                    <div class="stat-card-change">
-                        <i class="fas fa-long-arrow-alt-up me-1"></i>
-                        <span>15% son ay</span>
-                    </div>
+                    <div class="stat-icon blue"><i class="fas fa-sync-alt"></i></div>
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">Revize Edilen İş Adımları</div>
                 </div>
                 
                 <div class="stat-card">
-                    <div class="stat-card-header">
-                        <div class="stat-card-title">Gecikme Durumu</div>
-                        <div class="stat-card-icon" style="background-color: rgba(255, 71, 87, 0.1); color: var(--danger);"><i class="fas fa-exclamation-triangle"></i></div>
-                    </div>
-                    <div class="stat-card-value" id="delayedTasksCount">0</div>
-                    <div class="stat-card-change down">
-                        <i class="fas fa-long-arrow-alt-down me-1"></i>
-                        <span>5% son ay</span>
-                    </div>
+                    <div class="stat-icon" style="background-color: rgba(255, 71, 87, 0.1); color: var(--danger);"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">Gecikme Durumu</div>
                 </div>
 
                 <div class="stat-card">
-                    <div class="stat-card-header">
-                        <div class="stat-card-title">Toplam Proje Sayısı</div>
-                        <div class="stat-card-icon"><i class="fas fa-tasks"></i></div>
-                    </div>
-                    <div class="stat-card-value" id="totalProjectsCount">0</div>
-                    <div class="stat-card-change">
-                        <i class="fas fa-long-arrow-alt-up me-1"></i>
-                        <span>10% son çeyrek</span>
-                    </div>
+                    <div class="stat-icon blue"><i class="fas fa-tasks"></i></div>
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">Toplam Proje Sayısı</div>
                 </div>
 
                 <div class="stat-card">
-                    <div class="stat-card-header">
-                        <div class="stat-card-title">Ertelenmiş İş Adımları</div>
-                        <div class="stat-card-icon" style="background-color: rgba(255, 165, 2, 0.1); color: var(--warning);"><i class="fas fa-clock"></i></div>
-                    </div>
-                    <div class="stat-card-value" id="postponedTasksCount">0</div>
-                    <div class="stat-card-change down">
-                        <i class="fas fa-long-arrow-alt-down me-1"></i>
-                        <span>2% son hafta</span>
-                    </div>
+                    <div class="stat-icon" style="background-color: rgba(255, 165, 2, 0.1); color: var(--warning);"><i class="fas fa-clock"></i></div>
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">Ertelenmiş İş Adımları</div>
                 </div>
             </div>
 
-            <!-- Gecikmiş İş Adımları Listesi -->
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5>Gecikme Durumu Olan İş Adımları</h5>
-                    <button class="btn btn-sm btn-outline-primary" id="refreshDelayedList">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
+            <!-- Rapor Tabloları -->
+            <div class="report-section">
+                <div class="section-header">
+                    <div class="section-icon geciken"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="section-title">Gecikme Durumu Olan İş Adımları</div>
                 </div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush" id="delayed-tasks-list">
-                        <!-- JavaScript ile doldurulacak -->
-                    </ul>
+                <div class="report-table-container">
+                    <div class="table-header">
+                        <div class="table-title">Detaylı Liste</div>
+                        <div class="table-actions">
+                            <button class="btn btn-outline"><i class="fas fa-filter"></i> Filtrele</button>
+                            <button class="btn btn-primary"><i class="fas fa-download"></i> İndir</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>İş Adımı</th>
+                                    <th>Atanan Kişi</th>
+                                    <th>Proje</th>
+                                    <th>Son Tarih</th>
+                                    <th>Durum</th>
+                                    <th>Öncelik</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- JavaScript ile doldurulacak -->
+                                <tr>
+                                    <td>1</td>
+                                    <td>PLC Paneli Montajı</td>
+                                    <td>Ali Yılmaz</td>
+                                    <td>Fabrika Otomasyonu</td>
+                                    <td>2023-10-25</td>
+                                    <td><span class="status-badge status-delayed">Gecikmiş</span></td>
+                                    <td><span class="priority-high">Yüksek</span></td>
+                                </tr>
+                                <tr>
+                                    <td>2</td>
+                                    <td>Sensör Kalibrasyonu</td>
+                                    <td>Fatma Koç</td>
+                                    <td>Enerji İzleme</td>
+                                    <td>2023-11-01</td>
+                                    <td><span class="status-badge status-delayed">Gecikmiş</span></td>
+                                    <td><span class="priority-medium">Orta</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination">
+                        <div class="pagination-info">10 sonuçtan 1-2 arası gösteriliyor</div>
+                        <div class="pagination-controls">
+                            <button class="page-btn prev"><i class="fas fa-chevron-left"></i></button>
+                            <div id="pageNumbers">
+                                <button class="page-btn active">1</button>
+                                <button class="page-btn">2</button>
+                            </div>
+                            <button class="page-btn next"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
                 </div>
             </div>
+            <!-- Diğer raporlama bölümleri buraya eklenebilir -->
+        </div>
+        <div class="footer">
+            Ser Elektrik Otomasyon &copy; 2023
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" xintegrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    <script src="static/bildirim.js"></script>
+    <script src="static/user-avatar.js"></script>
     <script>
+        // Sayfa yüklendiğinde çalışacak kodlar
         document.addEventListener("DOMContentLoaded", function() {
             const hamburgerMenu = document.getElementById('hamburgerMenu');
             const sidebar = document.getElementById('sidebar');
@@ -605,53 +646,7 @@
             themeToggle.addEventListener('click', () => {
                 document.body.dataset.theme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
             });
-
-            // Bildirim paneli yükleme işlevi
-            function initializeNotifications() {
-                const notificationButton = document.getElementById('notificationButton');
-                const notificationPanel = document.getElementById('notification-panel');
-                const closeButton = document.querySelector('.notification-panel-header .close-btn');
-
-                if (notificationButton && notificationPanel && closeButton) {
-                    notificationButton.addEventListener('click', (event) => {
-                        event.stopPropagation();
-                        notificationPanel.classList.toggle('show');
-                    });
-
-                    closeButton.addEventListener('click', () => {
-                        notificationPanel.classList.remove('show');
-                    });
-
-                    document.addEventListener('click', (event) => {
-                        if (notificationPanel.classList.contains('show') && !notificationPanel.contains(event.target) && !notificationButton.contains(event.target)) {
-                            notificationPanel.classList.remove('show');
-                        }
-                    });
-                }
-            }
-
-            // Bildirim panelini yükle
-            fetch('bildirim.html')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.text();
-                })
-                .then(data => {
-                    const placeholder = document.getElementById('notification-panel-placeholder');
-                    if (placeholder) {
-                        placeholder.innerHTML = data;
-                        initializeNotifications();
-                    }
-                })
-                .catch(error => console.error('Bildirim paneli yüklenirken hata oluştu:', error));
-
         });
-
-        // Burada raporlama verilerini çekecek JavaScript kodları gelecek
-        // Fonksiyonlar ve fetch çağrıları daha sonra eklenecek.
-        // API uç noktaları için: /api/reports/summary, /api/progress/delayed vb.
     </script>
 </body>
 </html>
