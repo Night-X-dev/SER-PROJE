@@ -4373,7 +4373,7 @@ def get_reports():
                     u.fullname AS responsible
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
-                LEFT JOIN users u ON pp.assigned_user_id = u.id
+                LEFT JOIN users u ON pp.assigned_user_id = u.id  -- Sağladığınız şemaya göre 'assigned_user_id' kullanıldı
                 WHERE pp.delay_days > 0 AND pp.is_completed = FALSE
                 LIMIT 10
             """
@@ -4404,3 +4404,4 @@ def get_reports():
     finally:
         if connection:
             connection.close()
+
