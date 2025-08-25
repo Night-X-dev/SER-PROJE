@@ -234,10 +234,12 @@
 </head>
 <body data-theme="light">
     <!-- Sidebar -->
-    <div class="sidebar">
-      <div class="logo-container">
-        <div class="logo-text">Ser Elektrik Otomasyon</div>
-      </div>
+    <div class="sidebar" id="sidebar">
+      <a href="index.html" style="text-decoration: none;">
+        <div class="logo-container" style="cursor: pointer;">
+          <img src="{{ url_for('static', filename='serlogo.png') }}" alt="Ser Elektrik Otomasyon" style="width: 180px; height: auto; padding-left: 10px;">
+        </div>
+      </a>
 
       <a href="index.html" class="nav-item">
         <i class="fas fa-home"></i>
@@ -270,11 +272,19 @@
     </div>
 
     <!-- Main Content -->
-    <div class="main-content">
+    <div class="main-content" id="mainContent">
       <div class="topbar">
+        <!-- Hamburger Menü Butonu -->
+        <button class="hamburger-menu" id="hamburgerMenu">
+          <i class="fas fa-bars"></i>
+        </button>
         <div class="search-container">
           <i class="fas fa-search"></i>
-          <input type="text" placeholder="Raporlarda ara...">
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Raporlarda ara..."
+          />
         </div>
 
         <div class="topbar-actions">
@@ -282,16 +292,21 @@
             <i class="fas fa-moon"></i>
           </div>
 
-          <div class="user-profile">
-            <div class="user-avatar">A</div>
+          <div class="notification-btn" id="notificationButton" data-count="0">
+            <i class="fas fa-bell"></i>
+          </div>
+
+          <div class="user-profile" id="userProfileLink">
+            <div id="userAvatarContainer" class="avatar-container"></div>
             <div class="user-info">
-              <div class="user-name">Admin Kullanıcı</div>
-              <div class="user-role">Yönetici</div>
+              <div class="user-name" id="userName"></div>
+              <div class="user-role" id="userRole"></div>
             </div>
           </div>
 
-          <button class="logout-btn">
-            <i class="fas fa-sign-out-alt"></i> Çıkış Yap
+          <!-- Tek Çıkış Yap Butonu -->
+          <button class="btn btn-outline logout-btn" id="logoutButton">
+            <i class="fas fa-sign-out-alt"></i> <span class="logout-text">Çıkış Yap</span>
           </button>
         </div>
       </div>
@@ -303,26 +318,108 @@
       </div>
     </div>
 
+    <script src="{{ url_for('static', filename='config.js') }}"></script>
     <script>
-      // Tema değiştirme
-      document.getElementById('theme-toggle').addEventListener('click', function() {
-        const currentTheme = document.body.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        
-        document.body.setAttribute('data-theme', newTheme);
-        this.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-        
-        localStorage.setItem('theme', newTheme);
-      });
+      let currentUser = null;
 
-      // Sayfa yüklendiğinde tema kontrolü
-      document.addEventListener('DOMContentLoaded', function() {
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme) {
-          document.body.setAttribute('data-theme', savedTheme);
-          document.getElementById('theme-toggle').innerHTML = savedTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+      // Toast bildirim fonksiyonu
+      function showToast(title, message, type = 'success') {
+        const toast = document.getElementById('toast');
+        const toastTitle = document.getElementById('toastTitle');
+        const toastMessage = document.getElementById('toastMessage');
+
+        if (!toast || !toastTitle || !toastMessage) return;
+
+        toastTitle.textContent = title || (type === 'error' ? 'Hata' : 'Başarılı');
+        toastMessage.textContent = message;
+        
+        toast.classList.remove('success', 'error', 'info', 'warning');
+        toast.classList.add(type);
+        toast.classList.add('show');
+
+        setTimeout(() => {
+          toast.classList.remove('show');
+        }, 3000);
+      }
+
+      // Kullanıcı bilgilerini yükle
+      function loadUserInfo() {
+        const storedUser = localStorage.getItem('currentUser');
+        if (!storedUser) {
+          showToast("Oturum süreniz doldu. Lütfen tekrar giriş yapın.", true);
+          setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+          return;
         }
+
+        try {
+          currentUser = JSON.parse(storedUser);
+        } catch (e) {
+          console.error("Kayıtlı kullanıcı verisi bozuk:", e);
+          localStorage.removeItem('currentUser');
+          showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", true);
+          setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+          return;
+        }
+
+        const userNameElement = document.getElementById('userName');
+        const userRoleElement = document.getElementById('userRole');
+
+        if (userNameElement) {
+          userNameElement.textContent = currentUser.fullname || currentUser.username || 'Kullanıcı';
+        }
+        if (userRoleElement) {
+          userRoleElement.textContent = currentUser.role || 'Rol Yok';
+        }
+      }
+
+      // DOM yüklendiğinde çalışacak kod
+      document.addEventListener("DOMContentLoaded", function () {
+        loadUserInfo();
+
+        // Tema değiştirme
+        const themeToggle = document.getElementById("theme-toggle");
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme) {
+          document.body.setAttribute("data-theme", savedTheme);
+          themeToggle.innerHTML = savedTheme === "dark" ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        }
+        
+        themeToggle.addEventListener("click", () => {
+          const currentTheme = document.body.getAttribute("data-theme");
+          const newTheme = currentTheme === "dark" ? "light" : "dark";
+          document.body.setAttribute("data-theme", newTheme);
+          themeToggle.innerHTML = newTheme === "dark" ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+          localStorage.setItem("theme", newTheme);
+        });
+
+        // Çıkış Yap butonu
+        document.getElementById("logoutButton").addEventListener("click", () => {
+          localStorage.removeItem("currentUser");
+          window.location.href = "login.html";
+        });
+
+        // Hamburger menü işlevselliği
+        const hamburgerMenu = document.getElementById('hamburgerMenu');
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+        
+        hamburgerMenu.addEventListener('click', () => {
+          sidebar.classList.toggle('show');
+          mainContent.classList.toggle('expanded');
+        });
+
+        // Sidebar dışına tıklayınca kapatma
+        document.addEventListener('click', (event) => {
+          if (sidebar.classList.contains('show') && 
+              !sidebar.contains(event.target) && 
+              !hamburgerMenu.contains(event.target)) {
+            sidebar.classList.remove('show');
+            mainContent.classList.remove('expanded');
+          }
+        });
       });
     </script>
+    <script src="static/bildirim.js"></script>
+    <script src="static/user-avatar.js"></script>
 </body>
 </html>
