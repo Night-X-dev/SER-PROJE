@@ -4303,3 +4303,102 @@ def get_revision_counts_by_step(project_id):
     finally:
         if conn:
             conn.close()
+@app.route('/api/reports', methods=['GET'])
+def get_reports():
+    """
+    Raporlama verilerini veritabanından çeken API endpoint'i.
+    """
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # 1. Genel İstatistikleri Hesapla
+            # Revize Edilmiş Adım Sayısı
+            sql_revised_steps = "SELECT COUNT(*) FROM revision_requests"
+            cursor.execute(sql_revised_steps)
+            revised_steps_count = cursor.fetchone()['COUNT(*)']
+
+            # Ertelenen Adım Sayısı (custom_delay_days > 0)
+            sql_postponed_steps = "SELECT COUNT(*) FROM project_progress WHERE custom_delay_days > 0"
+            cursor.execute(sql_postponed_steps)
+            postponed_steps_count = cursor.fetchone()['COUNT(*)']
+
+            # Gecikmeli Adım Sayısı (delay_days > 0 ve tamamlanmamış)
+            sql_delayed_steps = "SELECT COUNT(*) FROM project_progress WHERE delay_days > 0 AND is_completed = FALSE"
+            cursor.execute(sql_delayed_steps)
+            delayed_steps_count = cursor.fetchone()['COUNT(*)']
+
+            # Toplam Proje Sayısı
+            sql_total_projects = "SELECT COUNT(*) FROM projects"
+            cursor.execute(sql_total_projects)
+            total_projects_count = cursor.fetchone()['COUNT(*)']
+            
+            # Ortalama revize sayısını hesapla
+            avg_revisions = revised_steps_count / total_projects_count if total_projects_count > 0 else 0
+            
+            # 2. En Çok Revize Alan Projeyi Bul
+            sql_most_revised_project = """
+                SELECT 
+                    rr.project_id, 
+                    p.title AS project_name, 
+                    c.name AS customer_name,
+                    p.status,
+                    COUNT(rr.id) AS revision_count
+                FROM revision_requests rr
+                JOIN projects p ON rr.project_id = p.project_id
+                JOIN customers c ON p.customer_id = c.customer_id
+                GROUP BY rr.project_id
+                ORDER BY revision_count DESC
+                LIMIT 1
+            """
+            cursor.execute(sql_most_revised_project)
+            most_revised_project = cursor.fetchone()
+            
+            most_revised_project_details = {}
+            if most_revised_project:
+                most_revised_project_details = {
+                    "projectName": most_revised_project['project_name'],
+                    "revisionCount": most_revised_project['revision_count'],
+                    "customerName": most_revised_project['customer_name'],
+                    "status": most_revised_project['status']
+                }
+            
+            # 3. Gecikme Durumu Olan İş Adımlarını Listele
+            sql_delayed_tasks = """
+                SELECT 
+                    pp.title AS taskName,
+                    p.title AS projectName,
+                    pp.delay_days AS delayDays,
+                    pp.status,
+                    u.fullname AS responsible
+                FROM project_progress pp
+                JOIN projects p ON pp.project_id = p.project_id
+                LEFT JOIN users u ON pp.assigned_user_id = u.id
+                WHERE pp.delay_days > 0 AND pp.is_completed = FALSE
+                LIMIT 10
+            """
+            cursor.execute(sql_delayed_tasks)
+            delayed_tasks_list = cursor.fetchall()
+            
+            # Tüm verileri tek bir sözlükte topla
+            report_data = {
+                "stats": {
+                    "revisedStepsCount": revised_steps_count,
+                    "postponedStepsCount": postponed_steps_count,
+                    "delayedStepsCount": delayed_steps_count,
+                    "totalProjectsCount": total_projects_count,
+                    "avgRevisions": round(avg_revisions, 2)
+                },
+                "mostRevisedProject": most_revised_project_details,
+                "delayedTasks": delayed_tasks_list
+            }
+            
+            return jsonify(report_data)
+
+    except Exception as e:
+        app.logger.error(f"Rapor verisi çekme hatası: {e}")
+        traceback.print_exc()
+        return jsonify({"error": "Rapor verisi çekilirken bir hata oluştu."}), 500
+    finally:
+        if connection:
+            connection.close()
