@@ -1278,6 +1278,27 @@
     <script>
                 async function loadReports() {
     try {
+      try {
+        const response = await fetch("/api/reports");
+        if (!response.ok) {
+            throw new Error("API hata döndü: " + response.status);
+        }
+
+        const data = await response.json();
+        if (!data || !data.stats) {
+            throw new Error("API beklenen veriyi döndürmedi.");
+        }
+
+        document.getElementById("totalProjects").innerText = data.stats.totalProjectsCount;
+        document.getElementById("avgRevisions").innerText = data.stats.avgRevisions;
+        document.getElementById("delayedSteps").innerText = data.stats.delayedStepsCount;
+        document.getElementById("mostRevisedProject").innerText =
+            data.mostRevisedProject?.projectName || "-";
+
+        // tablo doldurma...
+    } catch (error) {
+        console.error("Rapor verisi yüklenemedi:", error);
+    }
         const response = await fetch("/api/reports");
         const data = await response.json();
 
