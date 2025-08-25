@@ -1125,7 +1125,7 @@
                     <div class="stat-icon blue">
                         <i class="fas fa-project-diagram"></i>
                     </div>
-                    <div class="stat-value">24</div>
+                    <div class="stat-value" id="totalProjects">0</div>
                     <div class="stat-label">Toplam Proje Sayısı</div>
                 </div>
                 
@@ -1133,7 +1133,7 @@
                     <div class="stat-icon green">
                         <i class="fas fa-sync-alt"></i>
                     </div>
-                    <div class="stat-value">3.2</div>
+                    <div class="stat-value" id="avgRevisions">0</div>
                     <div class="stat-label">Ort. Revize Sayısı</div>
                 </div>
                 
@@ -1141,7 +1141,7 @@
                     <div class="stat-icon orange">
                         <i class="fas fa-exclamation-circle"></i>
                     </div>
-                    <div class="stat-value">5</div>
+                    <div class="stat-value" id="delayedSteps">0</div>
                     <div class="stat-label">Geciken İş Adımları</div>
                 </div>
                 
@@ -1149,7 +1149,7 @@
                     <div class="stat-icon blue">
                         <i class="fas fa-trophy"></i>
                     </div>
-                    <div class="stat-value">Akıllı Şebeke</div>
+                     <div class="stat-value" id="mostRevisedProject">-</div>
                     <div class="stat-label">En Çok Revize Alan Proje</div>
                 </div>
             </div>
@@ -1277,6 +1277,46 @@
     <script src="{{ url_for('static', filename='user-avatar.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+          
+          async function loadReports() {
+    try {
+        const response = await fetch("/api/reports");
+        const data = await response.json();
+
+        // --- Stat Kartları ---
+        document.getElementById("totalProjects").innerText = data.stats.totalProjectsCount;
+        document.getElementById("avgRevisions").innerText = data.stats.avgRevisions;
+        document.getElementById("delayedSteps").innerText = data.stats.delayedStepsCount;
+        document.getElementById("mostRevisedProject").innerText =
+            data.mostRevisedProject?.projectName || "-";
+
+        // --- Geciken İş Adımları Tablosu ---
+        const delayedTbody = document.querySelector(".report-section:nth-of-type(2) tbody");
+        delayedTbody.innerHTML = ""; // temizle
+        data.delayedTasks.forEach(task => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${task.projectName}</td>
+                <td>${task.taskName}</td>
+                <td>${task.status || "-"}</td>
+                <td>${task.delayDays}</td>
+            `;
+            delayedTbody.appendChild(tr);
+        });
+
+        // --- Ertelenen İş Adımları Tablosu ---
+        // API’den postponedSteps listesi dönmüyor. Eğer dönecekse benzer mantıkla buraya eklenir.
+        // ör: data.postponedTasks.forEach(...) şeklinde tbody'ye basılır.
+
+        // --- Revize Edilen İş Adımları Tablosu ---
+        // API şu an revize adımların detaylarını dönmüyor sadece count dönüyor.
+        // Eğer liste ekleyeceksen API’ye SELECT ile job_step ve revision_count çekmen lazım.
+        
+    } catch (error) {
+        console.error("Rapor verisi yüklenemedi:", error);
+    }
+}
+          
             // Tema Değiştirme
             const themeToggle = document.getElementById('theme-toggle');
             const savedTheme = localStorage.getItem('theme');
@@ -1345,7 +1385,7 @@
 
             // Bildirim panelini yükle
         });
-
+window.onload = loadReports;
        
     </script>
     <script src="static/bildirim.js"></script>
