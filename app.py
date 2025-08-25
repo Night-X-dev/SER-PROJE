@@ -4307,11 +4307,13 @@ def get_revision_counts_by_step(project_id):
 def get_reports():
     """
     Raporlama verilerini veritabanından çeken API endpoint'i.
+    projects tablosundaki proje başlığı için 'project_name',
+    project_progress tablosundaki görev başlığı için 'title' sütununu kullanır.
     """
     connection = None
     try:
         connection = get_db_connection()
-        with connection.cursor() as cursor:
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
             # 1. Genel İstatistikleri Hesapla
             # Revize Edilmiş Adım Sayısı
             sql_revised_steps = "SELECT COUNT(*) AS count FROM revision_requests"
@@ -4339,7 +4341,7 @@ def get_reports():
             # 2. En Çok Revize Alan Projeyi Bul
             sql_most_revised_project = """
                 SELECT 
-                    p.title AS projectName, 
+                    p.project_name AS projectName,  -- 'title' yerine 'project_name' kullanıldı
                     c.name AS customerName,
                     p.status,
                     COUNT(rr.id) AS revisionCount
@@ -4365,8 +4367,8 @@ def get_reports():
             # 3. Gecikme Durumu Olan İş Adımlarını Listele
             sql_delayed_tasks = """
                 SELECT 
-                    pp.title AS taskName,
-                    p.title AS projectName,
+                    pp.title AS taskName,             -- 'project_progress' tablosundaki 'title' doğru
+                    p.project_name AS projectName,    -- 'projects' tablosundaki 'project_name' kullanıldı
                     pp.delay_days AS delayDays,
                     pp.status,
                     u.fullname AS responsible
