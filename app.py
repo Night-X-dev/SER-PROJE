@@ -262,8 +262,9 @@ def update_user_profile():
         with get_db_connection() as conn:
             with conn.cursor() as cursor:
                 # Check if user exists
-                cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
-                if not cursor.fetchone():
+                cursor.execute("SELECT id, password FROM users WHERE id = %s", (user_id,))
+                user = cursor.fetchone()
+                if not user:
                     return jsonify({"error": "Kullanıcı bulunamadı"}), 404
                 
                 # Build update query based on provided fields
@@ -284,12 +285,10 @@ def update_user_profile():
                 
                 # Handle password change if provided
                 if 'currentPassword' in data and 'newPassword' in data:
-                    cursor.execute("SELECT password FROM users WHERE id = %s", (user_id,))
-                    user = cursor.fetchone()
-                    if not user or not check_password_hash(user['password'], data['currentPassword']):
+                    if not bcrypt.checkpw(data['currentPassword'].encode('utf-8'), user['password'].encode('utf-8')):
                         return jsonify({"error": "Mevcut şifre yanlış"}), 400
                     
-                    hashed_password = generate_password_hash(data['newPassword'])
+                    hashed_password = bcrypt.hashpw(data['newPassword'].encode('utf-8'), bcrypt.gensalt())
                     update_fields.append("password = %s")
                     update_values.append(hashed_password)
                 
@@ -1744,7 +1743,6 @@ def update_project(project_id):
         'project_location', 'status', 'project_manager_id', 'contract_date',
         'meeting_date', 'start_date', 'end_date'
     ]
-
     # Hangi sütunların güncellendiğini takip et
     updates = []
     params = []
@@ -1785,8 +1783,6 @@ def update_project(project_id):
             # Sorguyu çalıştır
             cursor.execute(sql, params)
             connection.commit() # update_project tarafından yapılan değişiklikleri commit et
-
-            # Projenin genel durumunu belirle ve güncelle
             determine_and_update_project_status(cursor, project_id)
             connection.commit() # determine_and_update_project_status tarafından yapılan değişiklikleri commit et
 
