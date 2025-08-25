@@ -4352,7 +4352,7 @@ def get_reports():
             
             # En çok revize alan proje
             cursor.execute("""
-                SELECT p.project_name as projectName, COUNT(rr.id) as revisionCount
+                SELECT p.project_name as projectName, COUNT(rr.request_id) as revisionCount
                 FROM revision_requests rr
                 JOIN projects p ON rr.project_id = p.project_id
                 WHERE rr.status = 'approved'
