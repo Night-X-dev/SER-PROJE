@@ -1275,80 +1275,212 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='config.js') }}"></script>
     <script src="{{ url_for('static', filename='user-avatar.js') }}"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Tema Değiştirme
-            const themeToggle = document.getElementById('theme-toggle');
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme) {
-                document.body.setAttribute('data-theme', savedTheme);
-                themeToggle.innerHTML = savedTheme === 'dark' ?
-                    '<i class="fas fa-sun"></i>' :
-                    '<i class="fas fa-moon"></i>';
-            }
-            themeToggle.addEventListener('click', () => {
-                const currentTheme = document.body.getAttribute('data-theme');
-                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                document.body.setAttribute('data-theme', newTheme);
-                themeToggle.innerHTML = newTheme === 'dark' ?
-                    '<i class="fas fa-sun"></i>' :
-                    '<i class="fas fa-moon"></i>';
-                localStorage.setItem('theme', newTheme);
-            });
+<script>
+    // Diğer mevcut JavaScript kodlarınız...
 
-            // Hamburger menü işlevselliği
-            const hamburgerMenu = document.getElementById('hamburgerMenu');
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('mainContent');
+    // Sayfa yüklendiğinde rapor verilerini API'den çekme
+    window.addEventListener('load', async function() {
+        const statsContainer = document.getElementById('stats-container');
+        const mostRevisedProjectCard = document.getElementById('most-revised-project');
+        const delayedTasksTableBody = document.getElementById('delayed-tasks-table-body');
+        const delayedTasksPagination = document.getElementById('delayed-tasks-pagination');
+        const tasksPerPage = 10; // Her sayfada gösterilecek satır sayısı
+        let currentDelayedTasks = [];
+
+        // API'den veri çeken ana fonksiyon
+        async function fetchReportData() {
+            try {
+                const response = await fetch('/api/reports');
+                if (!response.ok) {
+                    throw new Error(`HTTP Hata! Durum: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                // Verileri işleme ve arayüze yerleştirme
+                updateStats(data.stats);
+                updateMostRevisedProject(data.mostRevisedProject);
+                
+                // Gecikmeli görevler için sayfalandırma ayarları
+                currentDelayedTasks = data.delayedTasks;
+                renderDelayedTasks(1); // İlk sayfayı render et
+                renderPaginationControls(); // Sayfalandırma kontrollerini render et
+                
+            } catch (error) {
+                console.error('Rapor verileri çekilirken hata oluştu:', error);
+                // Kullanıcıya hata mesajı gösterme
+                statsContainer.innerHTML = `<div class="alert alert-danger" role="alert">
+                                                Rapor verileri yüklenirken bir sorun oluştu. Lütfen tekrar deneyin.
+                                            </div>`;
+            }
+        }
+
+        // İstatistik kartlarını güncelleyen fonksiyon
+        function updateStats(stats) {
+            document.getElementById('revised-steps-count').textContent = stats.revisedStepsCount;
+            document.getElementById('postponed-steps-count').textContent = stats.postponedStepsCount;
+            document.getElementById('delayed-steps-count').textContent = stats.delayedStepsCount;
+        }
+
+        // En çok revize alan projeyi güncelleyen fonksiyon
+        function updateMostRevisedProject(project) {
+            if (Object.keys(project).length === 0) {
+                mostRevisedProjectCard.innerHTML = `<p class="card-text text-muted">Revize edilmiş proje bulunamadı.</p>`;
+                return;
+            }
+            mostRevisedProjectCard.innerHTML = `
+                <h5 class="card-title">${project.projectName}</h5>
+                <p class="card-text mb-1">Revize Sayısı: <strong>${project.revisionCount}</strong></p>
+                <p class="card-text mb-1">Müşteri: ${project.customerName}</p>
+                <p class="card-text">Durum: <span class="status-badge ${project.status === 'Tamamlandı' ? 'status-active' : 'status-delayed'}">${project.status}</span></p>
+            `;
+        }
+        
+        // Gecikmeli görevler tablosunu render eden fonksiyon
+        function renderDelayedTasks(page) {
+            delayedTasksTableBody.innerHTML = ''; // Tablo içeriğini temizle
+            const start = (page - 1) * tasksPerPage;
+            const end = start + tasksPerPage;
+            const tasksToRender = currentDelayedTasks.slice(start, end);
             
-            hamburgerMenu.addEventListener('click', () => {
-                sidebar.classList.toggle('show');
-                mainContent.classList.toggle('expanded');
-            });
-
-            // Sidebar dışına tıklayınca kapatma
-            document.addEventListener('click', (event) => {
-                if (sidebar.classList.contains('show') && 
-                    !sidebar.contains(event.target) && 
-                    !hamburgerMenu.contains(event.target)) {
-                    sidebar.classList.remove('show');
-                    mainContent.classList.remove('expanded');
-                }
-            });
-
-            // Pencere boyutu değiştiğinde sidebar durumunu sıfırla
-            window.addEventListener('resize', () => {
-                if (window.innerWidth > 992) {
-                    sidebar.classList.remove('show');
-                    mainContent.classList.remove('expanded');
-                }
-            });
-
-            // Sayfa yüklendiğinde kullanıcı bilgilerini yükle
-            const storedUser = localStorage.getItem('currentUser');
-            if (storedUser) {
-                try {
-                    const user = JSON.parse(storedUser);
-                    document.getElementById('userName').textContent = user.fullname || user.username || 'Kullanıcı';
-                    document.getElementById('userRole').textContent = user.role || 'Rol Yok';
-                    updateUserAvatar(user);
-                } catch (e) {
-                    console.error("Kullanıcı bilgileri yüklenirken hata:", e);
-                }
+            if (tasksToRender.length === 0) {
+                delayedTasksTableBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Gecikmeli iş adımı bulunamadı.</td></tr>`;
+                return;
             }
 
-            // Çıkış butonu işlevselliği
-            document.getElementById('logoutButton').addEventListener('click', function() {
-                localStorage.removeItem('currentUser');
-                window.location.href = '/';
+            tasksToRender.forEach(task => {
+                const row = `
+                    <tr>
+                        <td>${task.taskName}</td>
+                        <td>${task.projectName}</td>
+                        <td>${task.delayDays} Gün</td>
+                        <td>${task.responsible}</td>
+                    </tr>
+                `;
+                delayedTasksTableBody.innerHTML += row;
             });
+        }
+        
+        // Sayfalandırma kontrollerini oluşturan fonksiyon
+        function renderPaginationControls() {
+            delayedTasksPagination.innerHTML = '';
+            if (currentDelayedTasks.length <= tasksPerPage) {
+                // Eğer 10'dan az görev varsa, sayfalandırmayı gösterme
+                return;
+            }
+            
+            const totalPages = Math.ceil(currentDelayedTasks.length / tasksPerPage);
 
-            // Bildirim panelini yükle
-        });
+            const prevBtn = document.createElement('button');
+            prevBtn.className = 'page-btn';
+            prevBtn.innerHTML = '<i class="fas fa-angle-left"></i>';
+            prevBtn.onclick = () => {
+                const currentPage = parseInt(document.querySelector('.page-btn.active')?.dataset.page || '1');
+                if (currentPage > 1) {
+                    renderDelayedTasks(currentPage - 1);
+                    updateActivePage(currentPage - 1);
+                }
+            };
+            delayedTasksPagination.appendChild(prevBtn);
 
-       
-    </script>
-    <script src="static/bildirim.js"></script>
+            const pageNumbersContainer = document.createElement('div');
+            pageNumbersContainer.id = 'pageNumbers';
+            for (let i = 1; i <= totalPages; i++) {
+                const pageBtn = document.createElement('button');
+                pageBtn.className = 'page-btn';
+                pageBtn.dataset.page = i;
+                pageBtn.textContent = i;
+                if (i === 1) {
+                    pageBtn.classList.add('active');
+                }
+                pageBtn.onclick = (e) => {
+                    const page = parseInt(e.target.dataset.page);
+                    renderDelayedTasks(page);
+                    updateActivePage(page);
+                };
+                pageNumbersContainer.appendChild(pageBtn);
+            }
+            delayedTasksPagination.appendChild(pageNumbersContainer);
+
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'page-btn';
+            nextBtn.innerHTML = '<i class="fas fa-angle-right"></i>';
+            nextBtn.onclick = () => {
+                const currentPage = parseInt(document.querySelector('.page-btn.active')?.dataset.page || '1');
+                if (currentPage < totalPages) {
+                    renderDelayedTasks(currentPage + 1);
+                    updateActivePage(currentPage + 1);
+                }
+            };
+            delayedTasksPagination.appendChild(nextBtn);
+        }
+
+        // Aktif sayfa butonunu güncelleyen fonksiyon
+        function updateActivePage(page) {
+            document.querySelectorAll('#pageNumbers .page-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`.page-btn[data-page="${page}"]`).classList.add('active');
+        }
+
+        // Sayfa yüklendiğinde API'den veriyi çek
+        fetchReportData();
+    });
+
+    // Sayfa yüklendiğinde kullanıcı bilgilerini yükle
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+        try {
+            const user = JSON.parse(storedUser);
+            document.getElementById('userName').textContent = user.fullname || user.username || 'Kullanıcı';
+            document.getElementById('userRole').textContent = user.role || 'Rol Yok';
+            updateUserAvatar(user);
+        } catch (e) {
+            console.error("Kullanıcı bilgileri yüklenirken hata:", e);
+        }
+    }
+
+    // Çıkış butonu işlevselliği
+    document.getElementById('logoutButton').addEventListener('click', function() {
+        localStorage.removeItem('currentUser');
+        window.location.href = '/';
+    });
+
+    // Bildirim panelini yükle
+    fetch('bildirim.html')
+        .then(response => response.text())
+        .then(data => {
+            document.getElementById('notification-panel-placeholder').innerHTML = data;
+            // Bildirim paneli yüklendikten sonra bildirimleri ve olayları ayarla
+            initializeNotifications();
+        })
+        .catch(error => console.error('Bildirim paneli yüklenirken hata oluştu:', error));
+
+    // Hamburger menü işlevselliği
+    document.getElementById('hamburger-btn').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('show');
+        document.getElementById('main-content').classList.toggle('expanded');
+    });
+
+    // Menü dışında bir yere tıklandığında menüyü kapat
+    document.addEventListener('click', (event) => {
+        const sidebar = document.getElementById('sidebar');
+        const hamburgerBtn = document.getElementById('hamburger-btn');
+        if (!sidebar.contains(event.target) && !hamburgerBtn.contains(event.target)) {
+            sidebar.classList.remove('show');
+            document.getElementById('main-content').classList.remove('expanded');
+        }
+    });
+
+    // Pencere boyutu değiştiğinde sidebar durumunu sıfırla
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 992) {
+            document.getElementById('sidebar').classList.remove('show');
+            document.getElementById('main-content').classList.remove('expanded');
+        }
+    });
+
+</script>
+<script src="static/bildirim.js"></script>
 
 </body>
 </html>
