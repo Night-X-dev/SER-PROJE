@@ -2034,6 +2034,7 @@ def log_activity(user_id, title, description, icon, is_read=0):
             connection.close()
 
 # Güvenli tarih parse fonksiyonu
+# Güvenli tarih parse fonksiyonu
 def parse_date_safe(date_str):
     if not date_str:
         return None
@@ -2046,26 +2047,31 @@ def parse_date_safe(date_str):
 @app.route('/api/projects', methods=['POST'])
 def add_project():
     data = request.json
+    required_fields = ['projectName', 'customerId', 'projectManagerId', 'startDate', 'endDate']
+
+    # Eksik alan kontrolü
+    for field in required_fields:
+        if not data.get(field):
+            return jsonify({'message': f'{field} alanı zorunludur.'}), 400
+
+    # Alanları al
     project_name = data.get('projectName')
     customer_id = data.get('customerId')
     project_manager_id = data.get('projectManagerId')
     reference_no = data.get('projectRef')
     description = data.get('projectDescription')
-    contract_date_str = data.get('contractDate')
-    meeting_date_str = data.get('meetingDate')
-    start_date_str = data.get('startDate')
-    end_date_str = data.get('endDate')
+    contract_date = parse_date_safe(data.get('contractDate'))
+    meeting_date = parse_date_safe(data.get('meetingDate'))
+    start_date = parse_date_safe(data.get('startDate'))
+    end_date = parse_date_safe(data.get('endDate'))
     project_location = data.get('projectLocation')
     status = data.get('status', 'Planlama Aşamasında')
-
-    if not all([project_name, customer_id, project_manager_id, start_date_str, end_date_str]):
-        return jsonify({'message': 'Project name, customer, project manager, start date, and end date are required.'}), 400
 
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Project insert
+            # Proje insert
             sql = """
             INSERT INTO projects (project_name, customer_id, project_manager_id, reference_no, description,
                                   contract_date, meeting_date, start_date, end_date, project_location, status)
@@ -2073,83 +2079,58 @@ def add_project():
             """
             cursor.execute(sql, (
                 project_name, customer_id, project_manager_id, reference_no, description,
-                parse_date_safe(contract_date_str),
-                parse_date_safe(meeting_date_str),
-                parse_date_safe(start_date_str),
-                parse_date_safe(end_date_str),
-                project_location, status
+                contract_date, meeting_date, start_date, end_date, project_location, status
             ))
 
             new_project_id = cursor.lastrowid
 
-            # Progress steps insert
+            # Progress steps ekleme
             progress_steps = data.get('progressSteps', [])
-            last_step_end_date = parse_date_safe(start_date_str)
+            last_step_end_date = start_date
 
             for step in progress_steps:
                 step_title = step.get('title')
-                step_description = step.get('description')
-                step_start_date_str = step.get('startDate')
-                step_end_date_str = step.get('endDate')
+                step_desc = step.get('description')
+                step_start = parse_date_safe(step.get('startDate'))
+                step_end = parse_date_safe(step.get('endDate'))
 
-                if not all([step_title, step_start_date_str, step_end_date_str]):
-                    print(f"WARNING: Missing data in a progress step for project {new_project_id}. Skipping step.")
-                    continue
-
-                new_step_start_date = parse_date_safe(step_start_date_str)
-                step_end_date = parse_date_safe(step_end_date_str)
-
-                if not new_step_start_date or not step_end_date:
-                    print(f"WARNING: Invalid date in progress step for project {new_project_id}. Skipping step.")
+                if not step_title or not step_start or not step_end:
+                    print(f"WARNING: Eksik veya hatalı progress step, project_id={new_project_id}. Atlandı.")
                     continue
 
                 delay_days = 0
                 if last_step_end_date:
-                    time_diff = (new_step_start_date - last_step_end_date).days
-                    if time_diff > 1:
-                        delay_days = time_diff - 1
+                    diff = (step_start - last_step_end_date).days
+                    if diff > 1:
+                        delay_days = diff - 1
 
-                sql_insert_progress = """
-                INSERT INTO project_progress (project_id, title, description, start_date, end_date, delay_days, real_end_date)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """
-                cursor.execute(sql_insert_progress, (
-                    new_project_id, step_title, step_description,
-                    new_step_start_date, step_end_date, delay_days, step_end_date
-                ))
+                cursor.execute("""
+                    INSERT INTO project_progress (project_id, title, description, start_date, end_date, delay_days, real_end_date)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (new_project_id, step_title, step_desc, step_start, step_end, delay_days, step_end))
 
-                last_step_end_date = step_end_date
+                last_step_end_date = step_end
 
             connection.commit()
 
-            # Proje yöneticisine bildirim ve e-posta (orijinal kod gibi)
+            # Bildirim ve e-posta
             if project_manager_id:
                 send_notification(cursor, project_manager_id,
                                   "Yeni Bir Proje Atandı",
                                   f"Size yeni bir proje atandı: '{project_name}'.")
-
-                cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
+                cursor.execute("SELECT email FROM users WHERE id=%s", (project_manager_id,))
                 manager_email = cursor.fetchone()
                 if manager_email and manager_email['email']:
-                    send_email_notification(
-                        manager_email['email'],
-                        "Yeni Bir Proje Atandı",
-                        f"Size yeni bir proje atandı: '{project_name}'. Proje detaylarını sistemden kontrol edebilirsiniz."
-                    )
+                    send_email_notification(manager_email['email'],
+                                            "Yeni Bir Proje Atandı",
+                                            f"Size yeni bir proje atandı: '{project_name}'.")
                 else:
-                    print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta adresi bulunamadı.")
+                    print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta bulunamadı.")
 
         return jsonify({"message": "Proje başarıyla eklendi!", "projectId": new_project_id}), 201
 
-    except pymysql.Error as e:
-        print(f"Database error while adding project: {e}")
-        traceback.print_exc()
-        if connection:
-            connection.rollback()
-        return jsonify({'message': f'Database error : {e.args[1]}'}), 500
-
     except Exception as e:
-        print(f"General error while adding project: {e}")
+        print("Hata backend:", e)
         traceback.print_exc()
         if connection:
             connection.rollback()
