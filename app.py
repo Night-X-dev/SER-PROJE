@@ -2033,7 +2033,16 @@ def log_activity(user_id, title, description, icon, is_read=0):
         if connection:
             connection.close()
 
-# API to add new project (uncommented and completed from previous version)
+# Güvenli tarih parse fonksiyonu
+def parse_date_safe(date_str):
+    if not date_str:
+        return None
+    try:
+        return datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        print(f"HATALI TARİH FORMAT: {date_str}")
+        return None
+
 @app.route('/api/projects', methods=['POST'])
 def add_project():
     data = request.json
@@ -2042,14 +2051,12 @@ def add_project():
     project_manager_id = data.get('projectManagerId')
     reference_no = data.get('projectRef')
     description = data.get('projectDescription')
-    contract_date = data.get('contractDate')
-    meeting_date = data.get('meetingDate')
+    contract_date_str = data.get('contractDate')
+    meeting_date_str = data.get('meetingDate')
     start_date_str = data.get('startDate')
     end_date_str = data.get('endDate')
     project_location = data.get('projectLocation')
     status = data.get('status', 'Planlama Aşamasında')
-
-    user_id = data.get('user_id')
 
     if not all([project_name, customer_id, project_manager_id, start_date_str, end_date_str]):
         return jsonify({'message': 'Project name, customer, project manager, start date, and end date are required.'}), 400
@@ -2058,6 +2065,7 @@ def add_project():
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # Project insert
             sql = """
             INSERT INTO projects (project_name, customer_id, project_manager_id, reference_no, description,
                                   contract_date, meeting_date, start_date, end_date, project_location, status)
@@ -2065,14 +2073,18 @@ def add_project():
             """
             cursor.execute(sql, (
                 project_name, customer_id, project_manager_id, reference_no, description,
-                contract_date, meeting_date, start_date_str, end_date_str, project_location, status
+                parse_date_safe(contract_date_str),
+                parse_date_safe(meeting_date_str),
+                parse_date_safe(start_date_str),
+                parse_date_safe(end_date_str),
+                project_location, status
             ))
-            # No commit here, commit after all progress steps are added
 
             new_project_id = cursor.lastrowid
 
+            # Progress steps insert
             progress_steps = data.get('progressSteps', [])
-            last_step_end_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            last_step_end_date = parse_date_safe(start_date_str)
 
             for step in progress_steps:
                 step_title = step.get('title')
@@ -2084,8 +2096,12 @@ def add_project():
                     print(f"WARNING: Missing data in a progress step for project {new_project_id}. Skipping step.")
                     continue
 
-                new_step_start_date = datetime.datetime.strptime(step_start_date_str, '%Y-%m-%d').date()
-                step_end_date = datetime.datetime.strptime(step_end_date_str, '%Y-%m-%d').date()
+                new_step_start_date = parse_date_safe(step_start_date_str)
+                step_end_date = parse_date_safe(step_end_date_str)
+
+                if not new_step_start_date or not step_end_date:
+                    print(f"WARNING: Invalid date in progress step for project {new_project_id}. Skipping step.")
+                    continue
 
                 delay_days = 0
                 if last_step_end_date:
@@ -2097,22 +2113,21 @@ def add_project():
                 INSERT INTO project_progress (project_id, title, description, start_date, end_date, delay_days, real_end_date)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """
-                cursor.execute(sql_insert_progress, (new_project_id, step_title, step_description, step_start_date_str, step_end_date_str, delay_days, step_end_date_str))
-                # Removed commit inside the loop
+                cursor.execute(sql_insert_progress, (
+                    new_project_id, step_title, step_description,
+                    new_step_start_date, step_end_date, delay_days, step_end_date
+                ))
 
                 last_step_end_date = step_end_date
 
-            # Commit all changes (project and its progress steps) at once
             connection.commit()
 
+            # Proje yöneticisine bildirim ve e-posta (orijinal kod gibi)
             if project_manager_id:
-                send_notification(
-                    cursor, # Pass the cursor here
-                    project_manager_id,
-                    "Yeni Bir Proje Atandı",
-                    f"Size yeni bir proje atandı: '{project_name}'."
-                )
-                # Proje yöneticisinin e-postasını al ve e-posta gönder
+                send_notification(cursor, project_manager_id,
+                                  "Yeni Bir Proje Atandı",
+                                  f"Size yeni bir proje atandı: '{project_name}'.")
+
                 cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
                 manager_email = cursor.fetchone()
                 if manager_email and manager_email['email']:
@@ -2124,23 +2139,26 @@ def add_project():
                 else:
                     print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta adresi bulunamadı.")
 
-
         return jsonify({"message": "Proje başarıyla eklendi!", "projectId": new_project_id}), 201
+
     except pymysql.Error as e:
         print(f"Database error while adding project: {e}")
-        traceback.print_exc() # Print full traceback for database errors
+        traceback.print_exc()
         if connection:
-            connection.rollback() # Rollback on database error
+            connection.rollback()
         return jsonify({'message': f'Database error : {e.args[1]}'}), 500
+
     except Exception as e:
         print(f"General error while adding project: {e}")
-        traceback.print_exc() # Print full traceback for general errors
+        traceback.print_exc()
         if connection:
-            connection.rollback() # Rollback on general error
+            connection.rollback()
         return jsonify({'message': 'Server error, Lütfen daha sonra tekrar deneyin.'}), 500
+
     finally:
         if connection:
             connection.close()
+
 # API to log PDF Report Creation Activity (to be called from frontend)
 @app.route('/api/log_pdf_report', methods=['POST'])
 def log_pdf_report_api():
