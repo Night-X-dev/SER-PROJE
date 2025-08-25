@@ -4396,7 +4396,7 @@ def get_reports():
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
                 LEFT JOIN revision_requests rr ON pp.progress_id = rr.progress_id AND rr.status = 'approved'
-                WHERE pp.delay_days > 0 OR rr.id IS NOT NULL
+                WHERE (pp.delay_days > 1 OR (rr.id IS NOT NULL AND rr.status = 'approved'))
                 ORDER BY pp.end_date DESC
                 LIMIT 10
             """)
