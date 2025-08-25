@@ -3453,6 +3453,7 @@ def update_task(task_id):
 def delete_task(task_id):
     """Deletes a task from the database."""
     # Get user_id from session, as DELETE requests might not have a body.
+    # session'ın tanımlı olduğunu varsayalım
     user_id = session.get('user_id')
 
     if not user_id:
@@ -3478,13 +3479,14 @@ def delete_task(task_id):
             # Görevi silen kişinin adını al
             deleted_by_fullname = get_user_fullname_by_id(cursor, user_id)
 
+            # 1. Görevi silme işlemi
             cursor.execute("DELETE FROM tasks WHERE id = %s", (task_id,))
-            connection.commit()
-
+            
+            # 2. Bildirim ve e-posta gönderme işlemleri
             # Send notification to the assigned user (if different from deleter)
             if user_id != task_info['assigned_user_id']:
                 send_notification(
-                    cursor, # Pass the cursor here
+                    cursor,
                     task_info['assigned_user_id'],
                     "Görev Silindi",
                     f"'{task_info['title']}' adlı görev size atanmıştı ve silindi."
@@ -3510,40 +3512,44 @@ def delete_task(task_id):
 
             # If the creator is different from assigned user and deleter, notify creator too
             if user_id != task_info['created_by'] and task_info['created_by'] != task_info['assigned_user_id']:
-                 send_notification(
-                    cursor, # Pass the cursor here
+                send_notification(
+                    cursor,
                     task_info['created_by'],
                     "Görev Silindi",
                     f"Yönettiğiniz '{task_info['title']}' adlı görev silindi."
                 )
-                 # Oluşturan kullanıcının e-postasını al ve e-posta gönder
-                 cursor.execute("SELECT email FROM users WHERE id = %s", (task_info['created_by'],))
-                 creator_user_email_info = cursor.fetchone()
-                 if creator_user_email_info and creator_user_email_info['email']:
-                     creator_email_body = (
-                         f"<p>Yönettiğiniz '{task_info['title']}' başlıklı görev silindi.</p>"
-                         f"<table>"
-                         f"<tr><th>Görevi Silen</th><td>{deleted_by_fullname}</td></tr>"
-                         f"</table>"
-                         f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SER Proje Takip</a> Uygulamasını kontrol edin.</p>"
-                     )
-                     send_email_notification(
-                         creator_user_email_info['email'],
-                         "Görev Silindi - SERProjeTakip",
-                         creator_email_body
-                     )
-                 else:
-                     print(f"UYARI: Oluşturan kullanıcı {task_info['created_by']} için e-posta adresi bulunamadı.")
-
+                # Oluşturan kullanıcının e-postasını al ve e-posta gönder
+                cursor.execute("SELECT email FROM users WHERE id = %s", (task_info['created_by'],))
+                creator_user_email_info = cursor.fetchone()
+                if creator_user_email_info and creator_user_email_info['email']:
+                    creator_email_body = (
+                        f"<p>Yönettiğiniz '{task_info['title']}' başlıklı görev silindi.</p>"
+                        f"<table>"
+                        f"<tr><th>Görevi Silen</th><td>{deleted_by_fullname}</td></tr>"
+                        f"</table>"
+                        f"<p>Detaylar için lütfen <a href='https://www.serotomasyon.tr'>SER Proje Takip</a> Uygulamasını kontrol edin.</p>"
+                    )
+                    send_email_notification(
+                        creator_user_email_info['email'],
+                        "Görev Silindi - SERProjeTakip",
+                        creator_email_body
+                    )
+                else:
+                    print(f"UYARI: Oluşturan kullanıcı {task_info['created_by']} için e-posta adresi bulunamadı.")
+            
+            # ÖNEMLİ: Tüm işlemler (hem silme hem de bildirimler) başarılı olduktan sonra commit işlemini burada yapın.
+            connection.commit()
 
         return jsonify({'message': 'Task successfully deleted!'}), 200
     except Exception as e:
         print(f"Error deleting task: {e}")
+        # Hata durumunda rollback de yapabilirsiniz
+        if connection:
+            connection.rollback()
         return jsonify({'message': 'Error deleting task.'}), 500
     finally:
         if connection: # Hata düzeltmesi: connection'ın varlığını kontrol et
             connection.close()
-
 @app.route('/api/manager-stats')
 def manager_stats():
     """Retrieves statistics related to project managers' performance."""
