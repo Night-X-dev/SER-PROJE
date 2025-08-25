@@ -1423,6 +1423,26 @@
                 })
                 .catch(error => console.error('Bildirim paneli yüklenirken hata oluştu:', error));
         });
+
+        function initializeNotifications() {
+            const notificationButton = document.getElementById('notificationButton');
+            const notificationPanel = document.getElementById('notification-panel');
+            const closeButton = document.querySelector('.notification-panel-header .close-btn');
+
+            notificationButton.addEventListener('click', () => {
+                notificationPanel.classList.toggle('show');
+            });
+
+            closeButton.addEventListener('click', () => {
+                notificationPanel.classList.remove('show');
+            });
+
+            document.addEventListener('click', (event) => {
+                if (!notificationPanel.contains(event.target) && !notificationButton.contains(event.target)) {
+                    notificationPanel.classList.remove('show');
+                }
+            });
+        }
     </script>
 </body>
 </html>
