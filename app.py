@@ -3285,14 +3285,8 @@ def add_task():
             created_by_fullname = get_user_fullname_by_id(cursor, created_by)
             # Öncelik çevirisini al
             translated_priority = PRIORITY_TRANSLATIONS.get(priority.lower(), priority.capitalize())
-
+            send_notification(cursor, assigned_user_id, "Yeni Görev Atandı", f"Size yeni bir görev atandı: '{title}'")
             # Send notification to the newly assigned user
-            send_notification(
-                cursor, # Pass the cursor here
-                assigned_user_id,
-                "Yeni Görev Atandı",
-                f"Size yeni bir görev atandı: '{title}'."
-            )
 
             # Atanan kullanıcının e-posta adresini al ve e-posta gönder
             cursor.execute("SELECT email FROM users WHERE id = %s", (assigned_user_id,))
