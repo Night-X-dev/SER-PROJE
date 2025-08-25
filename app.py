@@ -4371,15 +4371,58 @@ def get_reports():
                     pp.title AS taskName,
                     p.project_name AS projectName,
                     pp.delay_days AS delayDays,
-                    u.fullname AS responsible
+                    u.fullname AS responsible,
+                    pp.planned_date AS plannedDate
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
-                LEFT JOIN users u ON p.project_manager_id = u.id  -- projects tablosundan user'a bağlandı
+                LEFT JOIN users u ON p.project_manager_id = u.id
                 WHERE pp.delay_days > 0 AND pp.is_completed = FALSE
+                ORDER BY pp.delay_days DESC
                 LIMIT 10
             """
             cursor.execute(sql_delayed_tasks)
             delayed_tasks_list = cursor.fetchall()
+            
+            # 4. Revize Edilen İş Adımlarını Listele
+            sql_revised_tasks = """
+                SELECT 
+                    rr.id AS revisionId,
+                    p.project_name AS projectName,
+                    pp.title AS taskName,
+                    rr.reason AS revisionReason,
+                    rr.request_date AS revisionDate,
+                    u.fullname AS requestedBy,
+                    rr.status AS revisionStatus
+                FROM revision_requests rr
+                JOIN projects p ON rr.project_id = p.project_id
+                LEFT JOIN project_progress pp ON rr.progress_id = pp.id
+                LEFT JOIN users u ON rr.requested_by = u.id
+                ORDER BY rr.request_date DESC
+                LIMIT 10
+            """
+            cursor.execute(sql_revised_tasks)
+            revised_tasks_list = cursor.fetchall()
+            
+            # 5. Ertelenen İş Adımlarını Listele
+            sql_postponed_tasks = """
+                SELECT 
+                    pp.title AS taskName,
+                    p.project_name AS projectName,
+                    pp.custom_delay_days AS delayDays,
+                    pp.custom_delay_reason AS delayReason,
+                    pp.updated_at AS postponedDate,
+                    u.fullname AS postponedBy,
+                    pp.planned_date AS originalDate,
+                    DATE_ADD(pp.planned_date, INTERVAL pp.custom_delay_days DAY) AS newDate
+                FROM project_progress pp
+                JOIN projects p ON pp.project_id = p.project_id
+                LEFT JOIN users u ON pp.updated_by = u.id
+                WHERE pp.custom_delay_days > 0
+                ORDER BY pp.updated_at DESC
+                LIMIT 10
+            """
+            cursor.execute(sql_postponed_tasks)
+            postponed_tasks_list = cursor.fetchall()
             
             # Tüm verileri tek bir sözlükte topla
             report_data = {
@@ -4391,7 +4434,9 @@ def get_reports():
                     "avgRevisions": round(avg_revisions, 2)
                 },
                 "mostRevisedProject": most_revised_project_details,
-                "delayedTasks": delayed_tasks_list
+                "delayedTasks": delayed_tasks_list,
+                "revisedTasks": revised_tasks_list,
+                "postponedTasks": postponed_tasks_list
             }
             
             return jsonify(report_data)

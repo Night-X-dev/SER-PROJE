@@ -1191,7 +1191,6 @@
                         <div class="pagination-info"></div>
                         <div class="pagination-controls">
                             
-                        </div>
                     </div>
                 </div>
             </div>
@@ -1208,9 +1207,6 @@
                 <div class="report-table-container">
                     <div class="table-header">
                         <div class="table-title">Gecikme Durumu Olan İş Adımları</div>
-                        <div class="table-actions">
-                            
-                        </div>
                     </div>
                     
                     <div class="table-container">
@@ -1223,7 +1219,10 @@
                                     <th>Gecikme (gün)</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="delayedTasksTableBody">
+                                <tr>
+                                    <td colspan="4" class="text-center">Yükleniyor...</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -1301,8 +1300,35 @@
                     document.getElementById('mostRevisedProject').textContent = "Veri Yok";
                 }
                 
+                // Revize edilen iş adımlarını listele
+                const revisedTasksTableBody = document.getElementById('revisedTasksTableBody');
+                if (revisedTasksTableBody) {
+                    revisedTasksTableBody.innerHTML = ''; // Eski verileri temizle
+
+                    if (data.revisedTasks && data.revisedTasks.length > 0) {
+                        data.revisedTasks.forEach(task => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${task.projectName || ''}</td>
+                                <td>${task.taskName || 'Genel Revizyon'}</td>
+                                <td>${task.revisionDate ? new Date(task.revisionDate).toLocaleDateString('tr-TR') : ''}</td>
+                                <td>${task.revisionReason || 'Belirtilmemiş'}</td>
+                                <td><span class="status-badge ${task.revisionStatus === 'completed' ? 'completed' : 'pending'}">
+                                    ${task.revisionStatus === 'completed' ? 'Tamamlandı' : 'Beklemede'}
+                                </span></td>
+                                <td>${task.requestedBy || 'Bilinmiyor'}</td>
+                            `;
+                            revisedTasksTableBody.appendChild(row);
+                        });
+                    } else {
+                        const row = document.createElement('tr');
+                        row.innerHTML = '<td colspan="6" class="text-center">Revize edilmiş iş adımı bulunmamaktadır.</td>';
+                        revisedTasksTableBody.appendChild(row);
+                    }
+                }
+                
                 // Gecikmiş iş adımlarını listele
-                const delayedTasksTableBody = document.querySelector('.report-section:nth-of-type(2) tbody');
+                const delayedTasksTableBody = document.getElementById('delayedTasksTableBody');
                 if (delayedTasksTableBody) {
                     delayedTasksTableBody.innerHTML = ''; // Eski verileri temizle
 
@@ -1312,8 +1338,8 @@
                             row.innerHTML = `
                                 <td>${task.projectName || ''}</td>
                                 <td>${task.taskName || ''}</td>
-                                <td>${task.plannedDate || ''}</td>
-                                <td>${task.delayDays || '0'}</td>
+                                <td>${task.plannedDate ? new Date(task.plannedDate).toLocaleDateString('tr-TR') : ''}</td>
+                                <td><span class="status-badge delayed">${task.delayDays || '0'} gün</span></td>
                             `;
                             delayedTasksTableBody.appendChild(row);
                         });
@@ -1321,6 +1347,31 @@
                         const row = document.createElement('tr');
                         row.innerHTML = '<td colspan="4" class="text-center">Gecikmiş iş adımı bulunmamaktadır.</td>';
                         delayedTasksTableBody.appendChild(row);
+                    }
+                }
+                
+                // Ertelenen iş adımlarını listele
+                const postponedTasksTableBody = document.getElementById('postponedTasksTableBody');
+                if (postponedTasksTableBody) {
+                    postponedTasksTableBody.innerHTML = ''; // Eski verileri temizle
+
+                    if (data.postponedTasks && data.postponedTasks.length > 0) {
+                        data.postponedTasks.forEach(task => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${task.projectName || ''}</td>
+                                <td>${task.taskName || ''}</td>
+                                <td>${task.originalDate ? new Date(task.originalDate).toLocaleDateString('tr-TR') : ''}</td>
+                                <td>${task.newDate ? new Date(task.newDate).toLocaleDateString('tr-TR') : ''}</td>
+                                <td>${task.delayReason || 'Belirtilmemiş'}</td>
+                                <td><span class="status-badge postponed">+${task.delayDays || '0'} gün</span></td>
+                            `;
+                            postponedTasksTableBody.appendChild(row);
+                        });
+                    } else {
+                        const row = document.createElement('tr');
+                        row.innerHTML = '<td colspan="6" class="text-center">Ertelenmiş iş adımı bulunmamaktadır.</td>';
+                        postponedTasksTableBody.appendChild(row);
                     }
                 }
             } else {
