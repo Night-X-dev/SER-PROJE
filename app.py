@@ -3346,6 +3346,7 @@ def update_task(task_id):
 
     # Görevi güncelleyen kişinin ID'si (session'dan veya request body'den alınabilir)
     # Varsayılan olarak session'daki kullanıcıyı alalım veya isteğe bağlı olarak data'dan
+    # session'ın tanımlı olduğunu varsayalım
     updated_by_user_id = session.get('user_id')
     if not updated_by_user_id and 'user_id' in data:
         updated_by_user_id = data.get('user_id')
@@ -3362,14 +3363,15 @@ def update_task(task_id):
             existing_task = cursor.fetchone()
             old_assigned_user_id = existing_task['assigned_user_id'] if existing_task else None
 
+            # 1. Görev Güncelleme İşlemi
             sql = """
                 UPDATE tasks
                 SET title=%s, description=%s, start=%s, end=%s, priority=%s, assigned_user_id=%s, created_by=%s
                 WHERE id=%s
             """
             cursor.execute(sql, (title, description, start, end, priority, new_assigned_user_id, created_by, task_id))
-            connection.commit()
-
+            
+            # 2. Bildirim ve E-posta gönderme işlemleri
             # Görevi güncelleyen kişinin adını al
             updated_by_fullname = get_user_fullname_by_id(cursor, updated_by_user_id)
             # Öncelik çevirisini al
@@ -3377,8 +3379,9 @@ def update_task(task_id):
 
             # If the assigned user changed, send notifications to old and new users
             if old_assigned_user_id and old_assigned_user_id != new_assigned_user_id:
+                # Eski atanan kullanıcıya bildirim gönder
                 send_notification(
-                    cursor, # Pass the cursor here
+                    cursor,
                     old_assigned_user_id,
                     "Görev Atama Değişti",
                     f"'{title}' adlı görev artık size atanmadı."
@@ -3401,13 +3404,13 @@ def update_task(task_id):
                     )
                 else:
                     print(f"UYARI: Eski atanan kullanıcı {old_assigned_user_id} için e-posta adresi bulunamadı.")
-
+            
             # Yeni atanan kullanıcıya bildirim gönder
             send_notification(
-                cursor, # Pass the cursor here
+                cursor,
                 new_assigned_user_id,
                 "Görev Güncellendi",
-                f"Size atanmış görev güncellendi: '{title}'." # Mesaj güncellendi
+                f"Size atanmış görev güncellendi: '{title}'."
             )
             # Yeni atanan kullanıcının e-posta adresini al ve e-posta gönder
             cursor.execute("SELECT email FROM users WHERE id = %s", (new_assigned_user_id,))
@@ -3432,10 +3435,15 @@ def update_task(task_id):
             else:
                 print(f"UYARI: Yeni atanan kullanıcı {new_assigned_user_id} için e-posta adresi bulunamadı.")
 
+            # ÖNEMLİ: Tüm işlemler (hem güncelleme hem de bildirim) başarılı olduktan sonra commit işlemini burada yapın.
+            connection.commit()
 
         return jsonify({'message': 'Görev başarıyla güncellendi!'}), 200
     except Exception as e:
         print(f"Error updating task: {e}")
+        # Hata durumunda rollback de yapabilirsiniz
+        if connection:
+            connection.rollback()
         return jsonify({'message': 'Error updating task.'}), 500
     finally:
         if connection:
