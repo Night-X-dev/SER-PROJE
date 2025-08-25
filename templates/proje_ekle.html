@@ -1596,46 +1596,31 @@
   console.log(JSON.stringify(progressSteps, null, 2));
 
 
-                console.log('Sending project data:', JSON.stringify(projectData, null, 2));
                 try {
                     const projectResponse = await fetch(`${API_BASE_URL}/api/projects`, {
                         method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(projectData)
                     });
 
-                    let projectResult;
-                    try {
-                        // First try to parse as JSON
-                        projectResult = await projectResponse.json();
-                    } catch (jsonError) {
-                        // If JSON parsing fails, get the response as text
-                        const errorText = await projectResponse.text();
-                        console.error('Failed to parse JSON response:', errorText);
-                        throw new Error(`Invalid response from server: ${errorText.substring(0, 200)}`);
+                    const projectResult = await projectResponse.json();
+                    if (projectResponse.ok) {
+                        showToast(projectResult.message || 'Proje başarıyla eklendi!', false);
+                        // Proje başarıyla eklendikten sonra:
+                        addActivity(
+                          "Proje Eklendi",
+                          `${projectName} adlı proje başarıyla eklendi.`,
+                          projectResult.projectId,
+                          "fas fa-plus",
+                          "project_create"
+                        );
+                        // No immediate redirect, let the user see the notification, then maybe redirect after a short delay
+                        setTimeout(() => {
+                            window.location.href = 'index.html'; 
+                        }, 3000); // Redirect after notification disappears
+                    } else {
+                        throw new Error(projectResult.message || 'Proje kaydedilirken bilinmeyen bir hata oluştu.');
                     }
-
-                    if (!projectResponse.ok) {
-                        console.error('Server error response:', projectResponse.status, projectResult);
-                        throw new Error(projectResult.message || `Server error: ${projectResponse.statusText}`);
-                    }
-
-                    showToast(projectResult.message || 'Proje başarıyla eklendi!', false);
-                    // Proje başarıyla eklendikten sonra:
-                    addActivity(
-                        "Proje Eklendi",
-                        `${projectName} adlı proje başarıyla eklendi.`,
-                        projectResult.projectId,
-                        "fas fa-plus",
-                        "project_create"
-                    );
-                    // No immediate redirect, let the user see the notification, then maybe redirect after a short delay
-                    setTimeout(() => {
-                        window.location.href = 'index.html'; 
-                    }, 3000); // Redirect after notification disappears
                 } catch (error) {
                     console.error('Proje kaydetme hatası:', error);
                     showToast('Proje kaydedilirken hata oluştu: ' + error.message, true);
