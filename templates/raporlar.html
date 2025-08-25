@@ -1,2155 +1,1761 @@
 <!DOCTYPE html>
 <html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ser Elektrik Otomasyon - Raporlar</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- jsPDF-AutoTable plugin'i eklendi -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.0/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bildirim ve Kullanıcı Avatarı Scriptleri (index.html'den alındı) -->
-    <script src="static/config.js"></script>
-    <script src="static/bildirim.js"></script>
-    <script src="static/user-avatar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        /* --- index.html'den alınan tüm CSS --- */
-        :root {
-            --primary: #005c9d;
-            --primary-light: #0980d3;
-            --white: #ffffff;
-            --light-gray: #97a1aa;
-            --dark-gray: #5e6870;
-            --bg-color: #f8f9fa;
-            --card-bg: #ffffff;
-            --text-color: #333333;
-            --input-bg: #f0f4f8;
-            --border-color: #e1e5e9;
-            --sidebar-bg: #ffffff;
-            --topbar-bg: #ffffff;
-            --success: #2ed573;
-            --danger: #ff4757;
-            --warning: #ffc107;
-            --info: #0980d3;
-            --primary-light-bg: rgba(9, 128, 211, 0.1);
+      :root {
+        --primary: #005c9d;
+        --primary-light: #0980d3;
+        --white: #ffffff;
+        --light-gray: #97a1aa;
+        --dark-gray: #5e6870;
+        --bg-color: #f8f9fa;
+        --card-bg: #ffffff;
+        --text-color: #333333;
+        --input-bg: #f0f4f8;
+        --border-color: #e1e5e9;
+        --sidebar-bg: #ffffff;
+        --topbar-bg: #ffffff;
+        --success: #2ed573;
+        --danger: #ff4757;
+        --warning: #ffc107;
+        --info: #0980d3;
+      }
+
+      [data-theme="dark"] {
+        --bg-color: #121212;
+        --card-bg: #1e1e1e;
+        --text-color: #e0e0e0;
+        --input-bg: #2d2d2d;
+        --border-color: #3a3a3a;
+        --sidebar-bg: #1a1a1a;
+        --topbar-bg: #1a1a1a;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        transition: background-color 0.3s, color 0.3s;
+      }
+
+      body {
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        display: flex;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      /* Checkbox Stilleri */
+      .checkbox-wrapper-46 {
+        margin-right: 15px;
+        display: flex;
+        align-items: center;
+      }
+
+      .checkbox-wrapper-46 input[type="checkbox"] {
+        display: none;
+        visibility: hidden;
+      }
+
+      .checkbox-wrapper-46 .cbx {
+        -webkit-user-select: none;
+        user-select: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        margin: 0;
+      }
+
+      .checkbox-wrapper-46 .cbx span:first-child {
+        position: relative;
+        width: 18px;
+        height: 18px;
+        border-radius: 3px;
+        transform: scale(1);
+        vertical-align: middle;
+        border: 1px solid #9098a9;
+        transition: all 0.2s ease;
+        margin-right: 8px;
+      }
+
+      .checkbox-wrapper-46 .cbx span:first-child svg {
+        position: absolute;
+        top: 3px;
+        left: 2px;
+        fill: none;
+        stroke: #ffffff;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-dasharray: 16px;
+        stroke-dashoffset: 16px;
+        transition: all 0.3s ease;
+        transition-delay: 0.1s;
+        transform: translate3d(0, 0, 0);
+      }
+
+      .checkbox-wrapper-46 .cbx:hover span:first-child {
+        border-color: #0980d3;
+      }
+
+      .checkbox-wrapper-46 .inp-cbx:checked + .cbx span:first-child {
+        background: #0980d3;
+        border-color: #0980d3;
+        animation: wave-46 0.4s ease;
+      }
+
+      .checkbox-wrapper-46 .inp-cbx:checked + .cbx span:first-child svg {
+        stroke-dashoffset: 0;
+      }
+
+      .checkbox-wrapper-46 .inp-cbx:checked + .cbx span:first-child:before {
+        transform: scale(3.5);
+        opacity: 0;
+        transition: all 0.6s ease;
+      }
+
+      @keyframes wave-46 {
+        50% {
+          transform: scale(0.9);
         }
+      }
 
-        [data-theme="dark"] {
-            --bg-color: #121212;
-            --card-bg: #1e1e1e;
-            --text-color: #e0e0e0;
-            --input-bg: #2d2d2d;
-            --border-color: #3a3a3a;
-            --sidebar-bg: #1a1a1a;
-            --topbar-bg: #1a1a1a;
-            --primary-light-bg: rgba(9, 128, 211, 0.2);
+      /* Hamburger menü butonu */
+      .hamburger-menu {
+        display: none;
+        background-color: var(--primary);
+        color: var(--white);
+        border: none;
+        border-radius: 8px;
+        padding: 10px 12px;
+        cursor: pointer;
+        font-size: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        margin-right: 15px;
+        flex-shrink: 0;
+      }
 
-            /* Stepper Dark Theme */
-            .stepper-box {
-                background-color: var(--card-bg);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            }
-            .stepper-line {
-                background-color: #4a4a4a; /* Darker line for dark theme */
-            }
-            .stepper-completed .stepper-circle {
-                background-color: var(--primary-light); /* Use primary color for completed in dark */
-                color: var(--white);
-            }
-            .stepper-active .stepper-circle {
-                border-color: var(--primary-light);
-                color: var(--primary-light);
-            }
-            .stepper-pending .stepper-circle {
-                border-color: #4a4a4a;
-                color: var(--light-gray);
-            }
-            .stepper-completed .stepper-title,
-            .stepper-active .stepper-title {
-                color: var(--text-color);
-            }
-            .stepper-pending .stepper-title {
-                color: var(--light-gray);
-            }
-            .stepper-completed .stepper-status {
-                background-color: rgba(46, 213, 115, 0.2); /* Darker green background */
-                color: #2ed573; /* Original green text */
-            }
-            .stepper-active .stepper-status {
-                background-color: rgba(9, 128, 211, 0.2); /* Darker blue background */
-                color: var(--primary-light); /* Original blue text */
-            }
-            .stepper-pending .stepper-status {
-                background-color: rgba(148, 163, 184, 0.2); /* Darker gray background */
-                color: #94a3b8; /* Original gray text */
-            }
-            .stepper-time {
-                color: #b0b0b0; /* Lighter gray for time */
-            }
-            .stepper-button {
-                border-color: #4a4a4a;
-                background-color: var(--input-bg);
-                color: var(--text-color);
-            }
-            .stepper-button-primary {
-                background-color: var(--primary-light);
-                color: var(--white);
-                border-color: var(--primary-light);
-            }
+      .sidebar {
+        width: 260px;
+        background-color: var(--sidebar-bg);
+        border-right: 1px solid var(--border-color);
+        height: 100vh;
+        position: fixed;
+        overflow-y: auto;
+        padding: 20px 0;
+        z-index: 1000;
+        transform: translateX(0);
+        transition: transform 0.3s ease-in-out;
+      }
+
+      .sidebar.show {
+        transform: translateX(0);
+      }
+      
+      .sidebar.hidden {
+        transform: translateX(-100%);
+      }
+
+      .logo-container {
+        display: flex;
+        align-items: center;
+        padding: 0 20px 25px 20px;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 25px;
+      }
+
+      .logo-icon {
+        background: linear-gradient(135deg, var(--primary), var(--primary-light));
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--white);
+        font-size: 20px;
+        margin-right: 12px;
+      }
+
+      .logo-text {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--primary);
+      }
+
+      .nav-item {
+        padding: 12px 25px;
+        display: flex;
+        align-items: center;
+        color: var(--text-color);
+        text-decoration: none;
+        border-left: 3px solid transparent;
+        margin-bottom: 5px;
+        transition: all 0.2s;
+      }
+
+      .nav-item:hover,
+      .nav-item.active {
+        background-color: rgba(9, 128, 211, 0.1);
+        border-left-color: var(--primary-light);
+        color: var(--primary-light);
+      }
+
+      .nav-item i {
+        font-size: 18px;
+        margin-right: 15px;
+        width: 24px;
+        text-align: center;
+      }
+
+      .main-content {
+        flex: 1;
+        margin-left: 260px;
+        transition: margin-left 0.3s ease-in-out;
+        width: calc(100% - 260px);
+      }
+      
+      .main-content.expanded {
+        margin-left: 0;
+        width: 100%;
+      }
+
+      .topbar {
+        background-color: var(--topbar-bg);
+        border-bottom: 1px solid var(--border-color);
+        padding: 15px 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        flex-wrap: nowrap;
+        gap: 15px;
+      }
+
+      .search-container {
+        position: relative;
+        width: 300px;
+        flex-grow: 1;
+        margin-right: 15px;
+      }
+
+      .search-container input {
+        width: 100%;
+        padding: 10px 15px 10px 40px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background-color: var(--input-bg);
+        color: var(--text-color);
+        font-size: 14px;
+      }
+
+      .search-container i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--light-gray);
+        font-size: 16px;
+      }
+
+      .topbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        margin-left: auto;
+        flex-shrink: 0;
+      }
+
+      .notification-btn,
+      .theme-toggle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--input-bg);
+        color: var(--text-color);
+        cursor: pointer;
+        position: relative;
+        flex-shrink: 0;
+        font-size: 18px;
+      }
+
+      .notification-btn::after {
+        content: attr(data-count);
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background-color: #ff4757;
+        color: white;
+        font-size: 10px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transform: scale(0);
+        transition: all 0.2s ease-out;
+      }
+      
+      .notification-btn.has-notifications::after {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      .user-profile {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), var(--primary-light));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--white);
+        font-weight: 600;
+        font-size: 16px;
+      }
+
+      .user-info {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .user-name {
+        font-weight: 600;
+        font-size: 15px;
+      }
+
+      .user-role {
+        font-size: 13px;
+        color: var(--light-gray);
+      }
+
+      /* Tek Çıkış Butonu Stilleri */
+      .logout-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 600;
+        gap: 8px;
+        transition: all 0.3s ease;
+        background: transparent;
+        border: 1px solid var(--primary-light);
+        color: var(--primary-light);
+        margin-left: 10px;
+      }
+
+      .logout-btn:hover {
+        background-color: var(--primary);
+        color: var(--white);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+      }
+
+      .reports-content {
+        padding: 30px;
+      }
+
+      .page-title {
+        font-size: 28px;
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .page-title i {
+        color: var(--primary-light);
+      }
+
+      /* Rapor Filtreleri */
+      .filters-container {
+        background-color: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        padding: 20px;
+        margin-bottom: 30px;
+      }
+
+      .filters-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+
+      .filter-title {
+        font-weight: 600;
+        font-size: 18px;
+      }
+
+      .filter-reset {
+        color: var(--primary-light);
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      .filter-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 15px;
+      }
+
+      .filter-group {
+        margin-bottom: 15px;
+      }
+
+      .filter-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: var(--text-color);
+      }
+
+      .filter-input {
+        width: 100%;
+        padding: 10px 15px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background-color: var(--input-bg);
+        color: var(--text-color);
+      }
+
+      .filter-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      /* Rapor Kartları */
+      .reports-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .report-card {
+        background-color: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      }
+
+      .report-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+      }
+
+      .report-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+
+      .report-card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        color: white;
+      }
+
+      .report-card-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-color);
+      }
+
+      .report-card-value {
+        font-size: 28px;
+        font-weight: 700;
+        margin: 10px 0;
+        color: var(--primary);
+      }
+
+      .report-card-description {
+        font-size: 14px;
+        color: var(--light-gray);
+        margin-bottom: 15px;
+      }
+
+      .report-card-footer {
+        margin-top: auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .report-card-trend {
+        display: flex;
+        align-items: center;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .trend-up {
+        color: var(--success);
+      }
+
+      .trend-down {
+        color: var(--danger);
+      }
+
+      /* Rapor Tabloları */
+      .reports-container {
+        background-color: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+        margin-bottom: 30px;
+      }
+
+      .reports-header {
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border-color);
+        flex-wrap: wrap;
+        gap: 15px;
+      }
+
+      .reports-actions {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .btn {
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border: none;
+      }
+
+      .btn-primary {
+        background: linear-gradient(to right, var(--primary), var(--primary-light));
+        color: var(--white);
+      }
+
+      .btn-outline {
+        background: transparent;
+        border: 1px solid var(--primary-light);
+        color: var(--primary-light);
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(9, 128, 211, 0.3);
+      }
+
+      .table-container {
+        overflow-x: auto;
+      }
+
+      .reports-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .reports-table th {
+        text-align: left;
+        padding: 15px 20px;
+        background-color: rgba(9, 128, 211, 0.05);
+        color: var(--light-gray);
+        font-weight: 500;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .reports-table td {
+        padding: 15px 20px;
+        border-bottom: 1px solid var(--border-color);
+        vertical-align: middle;
+        color: var(--text-color);
+      }
+
+      .reports-table tr {
+        transition: background-color 0.2s;
+      }
+
+      .reports-table tr:hover {
+        background-color: rgba(9, 128, 211, 0.05);
+      }
+
+      .status-badge {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        display: inline-block;
+      }
+
+      .status-badge.gecikmeli {
+        background-color: rgba(255, 71, 87, 0.1);
+        color: #ff4757;
+        border: 1px dashed #ff4757;
+      }
+
+      .status-badge.normal {
+        background-color: rgba(46, 213, 115, 0.1);
+        color: #2ed573;
+      }
+
+      .status-badge.tamamlandı {
+        background-color: rgba(9, 128, 211, 0.1);
+        color: var(--primary-light);
+      }
+
+      /* Grafikler */
+      .chart-container {
+        background-color: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        padding: 20px;
+        margin-bottom: 30px;
+        height: 400px;
+      }
+
+      .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .chart-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-color);
+      }
+
+      /* Pagination */
+      .pagination {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 20px;
+        border-top: 1px solid var(--border-color);
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .pagination-info {
+        font-size: 14px;
+        color: var(--light-gray);
+      }
+
+      .pagination-controls {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      #pageNumbers {
+        display: flex;
+        gap: 5px;
+      }
+
+      .page-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--input-bg);
+        color: var(--text-color);
+        cursor: pointer;
+        border: none;
+        flex-shrink: 0;
+      }
+
+      .page-btn.active {
+        background: linear-gradient(to right, var(--primary), var(--primary-light));
+        color: var(--white);
+      }
+
+      .page-btn:hover:not(.active) {
+        background-color: rgba(9, 128, 211, 0.1);
+        color: var(--primary-light);
+      }
+
+      /* Footer */
+      .footer {
+        text-align: center;
+        padding: 20px;
+        color: var(--light-gray);
+        font-size: 14px;
+        border-top: 1px solid var(--border-color);
+        margin-top: 30px;
+      }
+
+      /* Toast Mesajları */
+      .toast {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: #2ed573;
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        z-index: 10000;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.3s ease;
+        max-width: 350px;
+      }
+
+      .toast-content {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .toast .toast-title {
+        font-weight: 600;
+        font-size: 15px;
+        line-height: 1.2;
+      }
+
+      .toast .toast-message {
+        font-size: 14px;
+        opacity: 0.9;
+        line-height: 1.4;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+
+      .toast.error {
+        background-color: #ff4757;
+      }
+
+      .toast.warning {
+        background-color: #ffa502;
+      }
+
+      .toast.info {
+        background-color: #1e90ff;
+      }
+
+      .toast i {
+        font-size: 20px;
+        margin-top: 2px;
+      }
+
+      /* Responsive Tasarım */
+      @media (max-width: 992px) {
+        .sidebar {
+          width: 260px;
+          position: fixed;
+          transform: translateX(-100%);
+          box-shadow: 0 0 20px rgba(0,0,0,0.3);
         }
-
-        /* Chart.js renkleri için doğrudan HEX değerleri */
-        .chart-color-info { background-color: #0980d3; }
-        .chart-color-success { background-color: #2ed573; }
-        .chart-color-danger { background-color: #ff4757; }
-        .chart-color-warning { background-color: #ffc107; }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            transition: background-color 0.3s, color 0.3s;
+        
+        .sidebar.show {
+          transform: translateX(0);
         }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            display: flex;
-            min-height: 100vh;
-            overflow-x: hidden;
+        
+        .main-content {
+          margin-left: 0;
+          width: 100%;
         }
 
         .hamburger-menu {
-            display: none;
-            background-color: var(--primary);
-            color: var(--white);
-            border: none;
-            border-radius: 8px;
-            padding: 10px 12px;
-            cursor: pointer;
-            font-size: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            margin-right: 15px;
-            flex-shrink: 0;
-        }
-
-        .sidebar {
-            width: 260px;
-            background-color: var(--sidebar-bg);
-            border-right: 1px solid var(--border-color);
-            height: 100vh;
-            position: fixed;
-            overflow-y: auto;
-            padding: 20px 0;
-            z-index: 1000;
-            transform: translateX(0);
-            transition: transform 0.3s ease-in-out;
-        }
-
-        .sidebar.show { transform: translateX(0); }
-        .sidebar.hidden { transform: translateX(-100%); }
-
-        .logo-container {
-            display: flex;
-            align-items: center;
-            padding: 0 20px 25px 20px;
-            border-bottom: 1px solid var(--border-color);
-            margin-bottom: 25px;
-        }
-
-        .logo-icon {
-            background: linear-gradient(135deg, var(--primary), var(--primary-light));
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--white);
-            font-size: 20px;
-            margin-right: 12px;
-        }
-
-        .logo-text {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .nav-item {
-            padding: 12px 25px;
-            display: flex;
-            align-items: center;
-            color: var(--text-color);
-            text-decoration: none;
-            border-left: 3px solid transparent;
-            margin-bottom: 5px;
-            transition: all 0.2s;
-        }
-
-        .nav-item:hover, .nav-item.active {
-            background-color: rgba(9, 128, 211, 0.1);
-            border-left-color: var(--primary-light);
-            color: var(--primary-light);
-        }
-
-        .nav-item i {
-            font-size: 18px;
-            margin-right: 15px;
-            width: 24px;
-            text-align: center;
-        }
-
-        .main-content {
-            flex: 1;
-            margin-left: 260px;
-            transition: margin-left 0.3s ease-in-out;
-            width: calc(100% - 260px);
-        }
-
-        .main-content.expanded {
-            margin-left: 0;
-            width: 100%;
+          display: block;
+          order: 1;
         }
 
         .topbar {
-            background-color: var(--topbar-bg);
-            border-bottom: 1px solid var(--border-color);
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            flex-wrap: nowrap;
-            gap: 15px;
+          flex-direction: row;
+          justify-content: flex-start;
+          flex-wrap: wrap;
+          padding: 10px 15px;
+          align-items: center;
+          gap: 10px;
         }
 
         .search-container {
-            position: relative;
-            width: 300px;
-            flex-grow: 1;
-        }
-
-        .search-container input {
-            width: 100%;
-            padding: 10px 15px 10px 40px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            background-color: var(--input-bg);
-            color: var(--text-color);
-        }
-
-        .search-container i {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--light-gray);
+          width: auto;
+          flex-grow: 1;
+          order: 2;
+          margin-left: 0;
+          margin-right: 0;
         }
 
         .topbar-actions {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            margin-left: auto;
-            flex-shrink: 0;
-        }
-
-        .notification-btn::after {
-            content: attr(data-count);
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background-color: #ff4757;
-            color: white;
-            font-size: 10px;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0; 
-            transform: scale(0);
-            transition: all 0.2s ease-out;
-        }
-        .notification-btn.has-notifications::after {
-            opacity: 1;
-            transform: scale(1);
-        }
-
-        .user-profile {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-
-        .user-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .user-info {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .user-name {
-            font-weight: 600;
-            font-size: 15px;
-        }
-
-        .user-role {
-            font-size: 13px;
-            color: var(--light-gray);
+          width: auto;
+          justify-content: flex-end;
+          order: 3;
+          margin-left: auto;
+          flex-wrap: nowrap;
+          gap: 10px;
+          margin-top: 0;
         }
 
         .logout-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-size: 15px;
-            font-weight: 600;
-            gap: 8px;
-            transition: all 0.3s ease;
-            background: transparent;
-            border: 1px solid var(--primary-light);
-            color: var(--primary-light);
-            margin-left: 10px;
+          padding: 10px 12px;
+          width: auto;
+          min-width: 40px;
+          height: 40px;
+          margin-left: 0 !important;
+        }
+        
+        .logout-btn .logout-text {
+          display: none;
+        }
+        
+        .logout-btn i {
+          margin-right: 0;
         }
 
-        .logout-btn:hover {
-            background-color: var(--primary);
-            color: var(--white);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        .reports-grid {
+          grid-template-columns: 1fr;
         }
+      }
 
-        .dashboard-content {
-            padding: 30px;
-        }
-
+      @media (max-width: 576px) {
         .page-title {
-            font-size: 28px;
-            margin-bottom: 25px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .page-title i {
-            color: var(--primary-light);
-        }
-
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .stat-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .stat-card-title {
-            color: var(--light-gray);
-            font-size: 15px;
-        }
-
-        .stat-card-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: rgba(9, 128, 211, 0.1);
-            color: var(--primary-light);
-        }
-
-        .stat-card-value {
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-
-        .stat-card-change {
-            font-size: 13px;
-            color: #2ed573;
-            display: flex;
-            align-items: center;
-        }
-
-        .stat-card-change.down {
-            color: #ff4757;
-        }
-
-        .charts-activity-container {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 25px;
-            margin-bottom: 30px;
-        }
-
-        .card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            overflow: hidden;
-            height: 100%;
-        }
-
-        .card-header {
-            padding: 18px 20px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .card-title {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .card-link {
-            color: var(--primary-light);
-            font-size: 14px;
-            text-decoration: none;
-        }
-
-        .card-body {
-            padding: 20px;
-        }
-
-        .chart-container {
-            height: 300px;
-            position: relative;
-        }
-
-        .activity-item {
-            display: flex;
-            padding: 15px 0;
-            border-bottom: 1px solid var(--border-color);
-            cursor: default; 
-            pointer-events: none;
-        }
-
-        .activity-item:last-child {
-            border-bottom: none;
-        }
-
-        .activity-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: rgba(9, 128, 211, 0.1);
-            color: var(--primary-light);
-            font-size: 18px;
-            margin-right: 15px;
-            flex-shrink: 0;
-        }
-
-        .activity-content {
-            flex: 1;
-        }
-
-        .activity-title {
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-
-        .activity-desc {
-            color: var(--light-gray);
-            font-size: 14px;
-            margin-bottom: 5px;
-        }
-
-        .activity-time {
-            font-size: 12px;
-            color: var(--light-gray);
-        }
-
-        .projects-container {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            overflow: hidden;
-            margin-bottom: 30px;
-        }
-
-        .projects-header {
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border-color);
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .projects-actions {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-        .btn {
-            padding: 8px 15px;
-            border-radius: 8px;
-            border: none;
-            background: linear-gradient(to right, var(--primary), var(--primary-light));
-            color: var(--white);
-            font-weight: 500;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-        }
-
-        .btn-outline {
-            background: transparent;
-            border: 1px solid var(--primary-light);
-            color: var(--primary-light);
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(9, 128, 211, 0.3);
-        }
-
-        .btn i {
-            font-size: 14px;
-        }
-
-        .table-container {
-            overflow-x: auto;
-        }
-        .projects-table td {
-            padding: 15px 20px;
-            border-bottom: 1px solid var(--border-color);
-            color: var(--text-color); 
-        }
-        .projects-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .projects-table th {
-            text-align: left;
-            padding: 15px 20px;
-            background-color: rgba(9, 128, 211, 0.05);
-            color: var(--light-gray);
-            font-weight: 500;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .projects-table td {
-            padding: 15px 20px;
-            border-bottom: 1px solid var(--border-color);
-            color: var(--text-color); 
-        }
-
-        .status-badge {
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 500;
-            display: inline-block;
-        }
-
-        .status-badge.gecikmeli {
-            background-color: rgba(255, 71, 87, 0.1);
-            color: #ff4757;
-            border: 1px dashed #ff4757;
-        }
-
-        .status-badge.normal { /* Tamamlandı */
-            background-color: rgba(46, 213, 115, 0.1);
-            color: #2ed573;
-        }
-
-        .status-badge.pending { /* Bekliyor */
-            background-color: rgba(9, 128, 211, 0.1); 
-            color: var(--primary-light); 
-            border: 1px solid var(--primary-light);
-        }
-
-        /* Yeni eklenen durumlar için stiller */
-        .status-badge.completed-delayed { /* Tamamlandı (Gecikmeli) */
-            background-color: rgba(255, 193, 7, 0.1); /* Sarımsı */
-            color: #ffc107;
-            border: 1px solid #ffc107;
-        }
-        .status-badge.completed-rescheduled { /* Tamamlandı (Ertelemeli) */
-            background-color: rgba(135, 206, 235, 0.1); /* Açık mavi */
-            color: #87CEEB;
-            border: 1px solid #87CEEB;
-        }
-
-
-        .filters-container {
-            display: none;
-            grid-template-columns: 1fr;
-            gap: 15px;
-            margin-bottom: 25px;
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-        }
-
-        .filters-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .filter-title {
-            font-weight: 600;
-            font-size: 16px;
-        }
-
-        .filter-reset {
-            color: var(--primary-light);
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .filter-row {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-        }
-
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .filter-label {
-            font-size: 13px;
-            margin-bottom: 5px;
-            color: var(--light-gray);
-        }
-
-        .filter-input {
-            padding: 10px 12px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            background-color: var(--input-bg);
-            color: var(--text-color);
-            font-size: 14px;
-            width: 100%;
-        }
-
-        /* Raporlar sayfasına özel stiller */
-        .project-summary {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            margin-bottom: 30px;
+          font-size: 22px;
+          justify-content: center;
         }
         
-        .project-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 5px;
+        .user-info {
+          display: none;
+        }
+
+        .reports-table, .reports-table thead, .reports-table tbody, .reports-table th, .reports-table td, .reports-table tr {
+          display: block;
         }
         
-        .project-ref {
-            color: var(--light-gray);
-            margin-bottom: 20px;
-            display: block;
+        .reports-table thead {
+          display: none;
         }
         
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-bottom: 25px;
+        .reports-table tr {
+          margin-bottom: 15px;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+          background: var(--card-bg);
+          border: 1px solid var(--border-color);
         }
         
-        .summary-item {
-            padding: 15px;
-            border-radius: 8px;
-            background-color: var(--primary-light-bg);
+        .reports-table td:first-child {
+          padding-top: 15px;
         }
         
-        .summary-label {
-            font-size: 14px;
-            color: var(--light-gray);
-            margin-bottom: 5px;
+        .reports-table td:last-child {
+          padding-bottom: 15px;
         }
         
-        .summary-value {
-            font-size: 18px;
-            font-weight: 600;
+        .reports-table td {
+          padding: 10px 15px;
+          border: none;
+          position: relative;
+          text-align: left;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 14px;
         }
         
-        .status-indicator {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-weight: 600;
-            margin-top: 10px;
+        .reports-table td:before {
+          content: attr(data-label);
+          font-weight: bold;
+          color: var(--primary);
+          display: block;
+          margin-right: 15px;
+          min-width: 100px;
+          font-size: 13px;
+          flex-shrink: 0;
         }
         
-        .status-active {
-            background-color: rgba(46, 213, 115, 0.1);
-            color: #2ed573;
-            border: 1px solid #2ed573;
-        }
-        
-        .status-delayed {
-            background-color: rgba(255, 71, 87, 0.1);
-            color: #ff4757;
-            border: 1px dashed #ff4757;
-        }
-        
-        .delay-warning {
-            background-color: rgba(255, 71, 87, 0.1);
-            border-left: 4px solid #ff4757;
-            padding: 15px;
-            border-radius: 0 8px 8px 0;
-            margin-top: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        /* Stepper Container Wrapper */
-        .stepper-container {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            margin-bottom: 30px;
+        .pagination {
+          flex-direction: column;
+          align-items: center;
         }
 
-        /* Stepper Styles (Horizontal) */
-        .stepper-box {
-            display: flex; /* Yatay hizalama */
-            flex-wrap: wrap; /* Taşma durumunda alt satıra geç */
-            justify-content: flex-start; /* Başlangıca hizala */
-            gap: 20px; /* Adımlar arası boşluk */
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px; /* İç boşluk */
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            overflow-x: auto; /* Yatay kaydırma çubuğu */
-            -webkit-overflow-scrolling: touch; /* iOS için yumuşak kaydırma */
+        .pagination-controls {
+          margin-top: 10px;
         }
-
-        .stepper-step {
-            display: flex;
-            flex-direction: column; /* Dikey içerik */
-            align-items: center; /* Ortala */
-            position: relative;
-            flex-shrink: 0; /* Küçülmesini engelle */
-            width: 150px; /* Her adım için sabit genişlik */
-            text-align: center;
-            margin-bottom: 0; /* Dikey boşluk kaldırıldı */
-        }
-
-        .stepper-line {
-            position: absolute;
-            top: 20px; /* Circle'ın ortasına hizala */
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100%; /* Çizginin uzunluğu */
-            height: 2px; /* Yatay çizgi kalınlığı */
-            background-color: var(--border-color);
-            z-index: 1;
-        }
-
-        .stepper-step:not(:last-child) .stepper-line {
-            width: calc(100% + 20px); /* Son adım hariç çizgi uzatıldı */
-            left: 50%;
-            transform: translateX(-50%);
-        }
-
-        .stepper-step:last-child .stepper-line {
-            display: none;
-        }
-
-        .stepper-circle {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 10px; /* İçerik ile circle arası boşluk */
-            z-index: 2;
-            font-weight: bold;
-            background-color: var(--input-bg); /* Varsayılan */
-            color: var(--light-gray); /* Varsayılan */
-            border: 2px solid var(--border-color); /* Varsayılan */
-        }
-
-        .stepper-completed .stepper-circle {
-            background-color: #2ed573; /* Tamamlandı - Yeşil */
-            color: var(--white);
-            border-color: #2ed573;
-        }
-        .stepper-completed-delayed .stepper-circle,
-        .stepper-completed-rescheduled .stepper-circle {
-            background-color: #ffc107; /* Tamamlandı (Gecikmeli/Ertelemeli) - Sarı */
-            color: var(--white);
-            border-color: #ffc107;
-        }
-
-        .stepper-active .stepper-circle {
-            border: 2px solid var(--primary);
-            color: var(--primary);
-            background-color: var(--white);
-        }
-
-        .stepper-delayed .stepper-circle { /* Gecikmeli durum için yeni stil */
-            background-color: #ff4757; /* Kırmızı */
-            color: var(--white);
-            border-color: #ff4757;
-        }
-
-        .stepper-pending .stepper-circle {
-            border: 2px solid var(--border-color);
-            color: var(--light-gray);
-            background-color: var(--input-bg);
-        }
-
-        .stepper-content {
-            flex: none; /* Flex-grow'u kaldır */
-            width: 100%; /* İçeriğin tam genişlikte olmasını sağla */
-        }
-
-        .stepper-title {
-            font-weight: 600;
-            margin-bottom: 4px;
-            color: var(--text-color);
-            white-space: nowrap; /* Başlığın tek satırda kalmasını sağla */
-            overflow: hidden;
-            text-overflow: ellipsis; /* Taşma durumunda üç nokta */
-        }
-
-        .stepper-completed .stepper-title,
-        .stepper-completed-delayed .stepper-title,
-        .stepper-completed-rescheduled .stepper-title,
-        .stepper-active .stepper-title,
-        .stepper-delayed .stepper-title { /* Yeni: Gecikmeli başlık rengi */
-            color: var(--text-color);
-        }
-
-        .stepper-pending .stepper-title {
-            color: var(--light-gray);
-        }
-
-        .stepper-status {
-            font-size: 13px;
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 12px;
-            margin-top: 4px;
-        }
-
-        .stepper-completed .stepper-status {
-            background-color: rgba(46, 213, 115, 0.1); /* Light green */
-            color: #2ed573; /* Green */
-        }
-        .stepper-completed-delayed .stepper-status {
-            background-color: rgba(255, 193, 7, 0.1); /* Light yellow */
-            color: #ffc107; /* Yellow */
-        }
-        .stepper-completed-rescheduled .stepper-status {
-            background-color: rgba(135, 206, 235, 0.1); /* Light blue */
-            color: #87CEEB; /* Blue */
-        }
-
-        .stepper-active .stepper-status {
-            background-color: rgba(9, 128, 211, 0.1); /* Light blue */
-            color: var(--primary-light); /* Blue */
-        }
-
-        .stepper-delayed .stepper-status { /* Gecikmeli durum için yeni stil */
-            background-color: rgba(255, 71, 87, 0.1); /* Light red */
-            color: #ff4757; /* Red */
-        }
-
-        .stepper-pending .stepper-status {
-            background-color: rgba(148, 163, 184, 0.1); /* Light gray */
-            color: #64748b; /* Gray */
-        }
-
-        .stepper-time {
-            font-size: 12px;
-            color: var(--light-gray);
-            margin-top: 4px;
-            white-space: nowrap;
-        }
-        
-        .metrics-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 25px;
-            margin-bottom: 30px;
-        }
-        
-        .metric-card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-        }
-        
-        .progress-container {
-            height: 10px;
-            background-color: var(--input-bg);
-            border-radius: 5px;
-            margin: 15px 0;
-            overflow: hidden;
-        }
-        
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(to right, var(--primary), var(--primary-light));
-            border-radius: 5px;
-        }
-        
-        .progress-value {
-            text-align: right;
-            font-weight: 600;
-            font-size: 18px;
-            color: var(--primary);
-        }
-
-        /* Harita alanı kaldırıldığı için bu stil artık doğrudan kullanılmayacak */
-        /* Ancak harita ikonu için bir stil gerekebilir */
-        #map {
-            height: 300px; /* Haritanın yüksekliğini ayarla */
-            width: 100%;
-            border-radius: 8px;
-            margin-top: 10px;
-            background-color: var(--input-bg); /* Harita yüklenene kadar arka plan */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--light-gray);
-            font-size: 1.2em;
-            cursor: pointer; /* Tıklanabilir olduğunu belirtmek için */
-        }
-        
-        @media (max-width: 1200px) {
-            .filter-row {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .summary-grid {
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            }
-        }
-
-        @media (max-width: 992px) {
-            .charts-activity-container {
-                grid-template-columns: 1fr;
-            }
-            
-            .sidebar {
-                width: 260px;
-                position: fixed;
-                transform: translateX(-100%);
-            }
-            .sidebar.show {
-                transform: translateX(0);
-            }
-            
-            .logo-text, .nav-text {
-                display: block;
-            }
-            
-            .logo-container {
-                justify-content: flex-start;
-                padding: 0 20px 25px 20px;
-            }
-            
-            .logo-icon {
-                margin-right: 12px;
-            }
-            
-            .nav-item {
-                justify-content: flex-start;
-                padding: 12px 25px;
-            }
-            
-            .nav-item i {
-                margin-right: 15px;
-            }
-            
-            .main-content {
-                margin-left: 0;
-                width: 100%;
-            }
-
-            .hamburger-menu {
-                display: block;
-                order: 1;
-                margin-right: 10px;
-            }
-
-            .topbar {
-                padding: 15px;
-                flex-wrap: wrap;
-                justify-content: flex-start;
-                gap: 10px;
-            }
-            .search-container {
-                order: 2;
-                flex-grow: 1;
-                margin-right: 0;
-            }
-            .topbar-actions {
-                order: 3;
-                width: 100%;
-                justify-content: flex-end;
-                margin-top: 10px;
-                gap: 10px;
-            }
-            .user-profile {
-                flex-grow: 0;
-            }
-            .logout-btn {
-                padding: 8px 10px;
-                font-size: 14px;
-                margin-left: 0;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .filter-row {
-                grid-template-columns: 1fr;
-            }
-            
-            .dashboard-content {
-                padding: 15px;
-            }
-            
-            .projects-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-            }
-            
-            .projects-actions {
-                width: 100%;
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .projects-actions .btn {
-                width: 100%;
-                justify-content: center;
-            }
-            
-            .summary-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .metrics-container {
-                grid-template-columns: 1fr;
-            }
-
-            .stepper-box {
-                flex-direction: column; /* Küçük ekranlarda dikeyye dönüştür */
-                align-items: flex-start;
-                padding: 15px;
-            }
-
-            .stepper-step {
-                flex-direction: row; /* Küçük ekranlarda yatay içerik */
-                align-items: center;
-                width: 100%;
-                text-align: left;
-                margin-bottom: 20px;
-            }
-
-            .stepper-line {
-                left: 19px;
-                top: 40px;
-                bottom: -20px;
-                width: 2px; /* Dikey çizgi */
-                height: calc(100% + 20px); /* Dikey çizgi uzunluğu */
-                transform: translateX(0);
-            }
-
-            .stepper-step:not(:last-child) .stepper-line {
-                width: 2px;
-                height: calc(100% + 20px);
-                left: 19px;
-                transform: translateX(0);
-            }
-
-            .stepper-circle {
-                margin-right: 15px;
-                margin-bottom: 0;
-            }
-
-            .stepper-time {
-                white-space: normal; /* Küçük ekranlarda metin kaydırmayı etkinleştir */
-            }
-        }
-
-        @media (max-width: 576px) {
-            .stats-container {
-                grid-template-columns: 1fr;
-            }
-            
-            .filter-row {
-                grid-template-columns: 1fr;
-            }
-            
-            .page-title {
-                font-size: 22px;
-            }
-            
-            .stat-card-value {
-                font-size: 24px;
-            }
-            
-            .user-info {
-                display: none;
-            }
-            
-            .projects-table, .projects-table thead, .projects-table tbody, .projects-table th, .projects-table td, .projects-table tr {
-                display: block;
-            }
-            .projects-table thead {
-                display: none;
-            }
-            .projects-table tr {
-                margin-bottom: 15px;
-                border-radius: 8px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-                background: var(--card-bg);
-                border: 1px solid var(--border-color);
-            }
-            .projects-table td {
-                padding: 10px 15px;
-                border: none;
-                position: relative;
-                text-align: left;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                font-size: 14px;
-            }
-            .projects-table td:before {
-                content: attr(data-label);
-                font-weight: bold;
-                color: var(--primary);
-                display: block;
-                margin-right: 15px;
-                min-width: 120px;
-                font-size: 13px;
-                flex-shrink: 0;
-            }
-            
-            .status-badge {
-                padding: 4px 8px;
-                font-size: 11px;
-            }
-
-            .action-btn {
-                width: 38px;
-                height: 38px;
-                padding: 0;
-                font-size: 16px;
-            }
-            .action-btn i {
-                margin: 0;
-            }
-            .projects-table td[data-label="İşlemler"] {
-                justify-content: center;
-            }
-            .projects-table td[data-label="İşlemler"]::before {
-                display: none;
-            }
-
-            .topbar {
-                padding: 10px;
-                flex-wrap: nowrap;
-                gap: 8px;
-                flex-direction: row; 
-                justify-content: flex-start;
-                align-items: center;
-            }
-            .hamburger-menu {
-                order: 1;
-            }
-            .search-container {
-                flex-grow: 1;
-                order: 2;
-                margin-left: 0;
-                width: auto;
-            }
-            .topbar-actions {
-                width: auto;
-                order: 3;
-                justify-content: flex-end;
-                margin-left: auto;
-                flex-wrap: nowrap;
-                gap: 5px;
-            }
-            .logout-btn .logout-text {
-                display: none;
-            }
-            .logout-btn i {
-                margin-right: 0;
-            }
-        }
-
-        .footer {
-            text-align: center;
-            padding: 20px;
-            color: var(--light-gray);
-            font-size: 14px;
-            border-top: 1px solid var(--border-color);
-            margin-top: 30px;
-        }
-
-        /* Proje Seçim Alanı Stilleri */
-        .project-selection-container {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            margin-bottom: 30px;
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .project-selection-container label {
-            font-weight: 600;
-            color: var(--text-color);
-            font-size: 18px;
-        }
-
-        .project-selection-container select {
-            flex-grow: 1;
-            padding: 10px 15px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            background-color: var(--input-bg);
-            color: var(--text-color);
-            font-size: 16px;
-            max-width: 400px; /* Limit dropdown width */
-        }
+      }
     </style>
-</head>
-<body data-theme="light">
-    <!-- Bildirim Paneli Placeholder'ı (bildirim.js tarafından doldurulacak) -->
+  </head>
+  <body data-theme="light">
+    <!-- Confirmation Modal -->
     <div id="notification-panel-placeholder"></div>
-    
+
+    <div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="confirmationModalLabel">Onay Gerekli</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body" id="confirmationMessage">
+            Emin misiniz?
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+            <button type="button" class="btn btn-primary" id="confirmActionBtn">Onayla</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
-        <a href="index.html" style="text-decoration: none;">
-            <div class="logo-container" style="cursor: pointer;">
-                <img src="static/serlogo.png" alt="Ser Elektrik Otomasyon" style="width: 180px; height: auto; padding-left: 10px;">
-            </div>
-        </a>
-        
-        <a href="index.html" class="nav-item">
-            <i class="fas fa-home"></i>
-            <span class="nav-text">Dashboard</span>
-        </a>
-        <a href="projeler.html" class="nav-item">
-            <i class="fas fa-project-diagram"></i>
-            <span class="nav-text">Projeler</span>
-        </a>
-        <a href="proje_ekle.html" class="nav-item">
-            <i class="fas fa-plus-circle"></i>
-            <span class="nav-text">Yeni Proje</span>
-        </a>
-        <a href="raporlar.html" class="nav-item active">
-            <i class="fas fa-chart-line"></i>
-            <span class="nav-text">Raporlar</span>
-        </a>
-        <a href="musteriler.html" class="nav-item">
-            <i class="fas fa-users"></i>
-            <span class="nav-text">Müşteriler</span>
-        </a>
-        <a href="takvim.html" class="nav-item">
-            <i class="fas fa-calendar-alt"></i>
-            <span class="nav-text">Takvim</span>
-        </a>
-        <a href="ayarlar.html" class="nav-item">
-            <i class="fas fa-cog"></i>
-            <span class="nav-text">Ayarlar</span>
-        </a>
+      <a href="index.html" style="text-decoration: none;">
+        <div class="logo-container" style="cursor: pointer;">
+          <img src="{{ url_for('static', filename='serlogo.png') }}" alt="Ser Elektrik Otomasyon" style="width: 180px; height: auto; padding-left: 10px;">
+        </div>
+      </a>
+
+      <a href="index.html" class="nav-item">
+        <i class="fas fa-home"></i>
+        <span class="nav-text">Dashboard</span>
+      </a>
+      <a href="projeler.html" class="nav-item">
+        <i class="fas fa-project-diagram"></i>
+        <span class="nav-text">Projeler</span>
+      </a>
+      <a href="proje_ekle.html" class="nav-item">
+        <i class="fas fa-plus-circle"></i>
+        <span class="nav-text">Yeni Proje</span>
+      </a>
+      <a href="raporlar.html" class="nav-item active">
+        <i class="fas fa-chart-line"></i>
+        <span class="nav-text">Raporlar</span>
+      </a>
+      <a href="musteriler.html" class="nav-item">
+        <i class="fas fa-users"></i>
+        <span class="nav-text">Müşteriler</span>
+      </a>
+      <a href="takvim.html" class="nav-item">
+        <i class="fas fa-calendar-alt"></i>
+        <span class="nav-text">Takvim</span>
+      </a>
+      <a href="ayarlar.html" class="nav-item">
+        <i class="fas fa-cog"></i>
+        <span class="nav-text">Ayarlar</span>
+      </a>
     </div>
 
+    <!-- Main Content -->
     <div class="main-content" id="mainContent">
-        <div class="topbar">
-            <button class="hamburger-menu" id="hamburgerMenu">
-                <i class="fas fa-bars"></i>
+      <div class="topbar">
+        <!-- Hamburger Menü Butonu -->
+        <button class="hamburger-menu" id="hamburgerMenu">
+          <i class="fas fa-bars"></i>
+        </button>
+        <div class="search-container">
+          <i class="fas fa-search"></i>
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Raporlarda ara..."
+          />
+        </div>
+
+        <div class="topbar-actions">
+          <div class="theme-toggle" id="theme-toggle">
+            <i class="fas fa-moon"></i>
+          </div>
+
+          <div class="notification-btn" id="notificationButton" data-count="0">
+            <i class="fas fa-bell"></i>
+          </div>
+
+          <div class="user-profile" id="userProfileLink">
+            <div id="userAvatarContainer" class="avatar-container"></div>
+            <div class="user-info">
+              <div class="user-name" id="userName"></div>
+              <div class="user-role" id="userRole"></div>
+            </div>
+          </div>
+
+          <!-- Tek Çıkış Yap Butonu -->
+          <button class="btn btn-outline logout-btn" id="logoutButton">
+            <i class="fas fa-sign-out-alt"></i> <span class="logout-text">Çıkış Yap</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="reports-content">
+        <h1 class="page-title" id="pageTitle">
+          <i class="fas fa-chart-line"></i>
+          Raporlar ve Analizler
+        </h1>
+
+        <!-- Filtreler -->
+        <div class="filters-container" id="filtersContainer">
+          <div class="filters-header">
+            <div class="filter-title">Rapor Filtreleri</div>
+            <div class="filter-reset" id="resetFilters">Tümünü Sıfırla</div>
+          </div>
+          <div class="filter-row">
+            <div class="filter-group">
+              <label for="filterProject" class="filter-label">Proje</label>
+              <select class="filter-input" id="filterProject">
+                <option value="">Tüm Projeler</option>
+                <!-- Proje seçenekleri JavaScript ile doldurulacak -->
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="filterCustomer" class="filter-label">Müşteri</label>
+              <select class="filter-input" id="filterCustomer">
+                <option value="">Tüm Müşteriler</option>
+                <!-- Müşteri seçenekleri JavaScript ile doldurulacak -->
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="filterDateRange" class="filter-label">Tarih Aralığı</label>
+              <input type="text" class="filter-input" id="filterDateRange" placeholder="Tarih seçin">
+            </div>
+            <div class="filter-group">
+              <label for="filterStatus" class="filter-label">Durum</label>
+              <select class="filter-input" id="filterStatus">
+                <option value="">Tümü</option>
+                <option value="Aktif">Aktif</option>
+                <option value="Tamamlandı">Tamamlandı</option>
+                <option value="Gecikti">Gecikti</option>
+              </select>
+            </div>
+          </div>
+          <div class="filter-actions">
+            <button class="btn btn-outline" id="applyFilters">
+              <i class="fas fa-filter"></i> Filtrele
             </button>
-            <div class="search-container">
-                <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Rapor, müşteri veya proje ara...">
-            </div>
-            
-            <div class="topbar-actions">
-                <div class="theme-toggle" id="theme-toggle">
-                    <i class="fas fa-moon"></i>
-                </div>
-                
-                <div class="notification-btn" id="notificationButton" data-count="0">
-                    <i class="fas fa-bell"></i>
-                </div>
-                
-                <div class="user-profile" id="userProfileLink">
-                    <div id="userAvatarContainer" class="avatar-container"></div>
-                    <div class="user-info">
-                        <div class="user-name" id="userName"></div>
-                        <div class="user-role" id="userRole"></div>
-                    </div>
-                </div>
-                <button class="btn btn-outline logout-btn" id="logoutButton">
-                    <i class="fas fa-sign-out-alt"></i> <span class="logout-text">Çıkış Yap</span>
-                </button>
-            </div>
+            <button class="btn btn-primary" id="generateReport">
+              <i class="fas fa-file-pdf"></i> Rapor Oluştur
+            </button>
+          </div>
         </div>
 
-        <div class="dashboard-content">
-            <h1 class="page-title" id="pageTitle">
-                <i class="fas fa-chart-line"></i>
-                Proje Raporları
-            </h1>
+        <!-- Özet Kartları -->
+        <div class="reports-grid">
+          <div class="report-card">
+            <div class="report-card-header">
+              <div class="report-card-title">Toplam Proje</div>
+              <div class="report-card-icon" style="background-color: #0980d3;">
+                <i class="fas fa-project-diagram"></i>
+              </div>
+            </div>
+            <div class="report-card-value" id="totalProjects">0</div>
+            <div class="report-card-description">Sistemdeki toplam proje sayısı</div>
+            <div class="report-card-footer">
+              <div class="report-card-trend trend-up">
+                <i class="fas fa-arrow-up"></i> <span>5% artış</span>
+              </div>
+              <div class="report-card-more">
+                <i class="fas fa-chevron-right"></i>
+              </div>
+            </div>
+          </div>
 
-            <!-- Proje Seçim Alanı -->
-            <div class="project-selection-container">
-                <label for="projectSelect">Proje Seçin:</label>
-                <select id="projectSelect" class="form-select">
-                    <option value="">-- Proje Seçiniz --</option>
-                    <!-- Projeler buraya JavaScript ile yüklenecek -->
-                </select>
+          <div class="report-card">
+            <div class="report-card-header">
+              <div class="report-card-title">Geciken Projeler</div>
+              <div class="report-card-icon" style="background-color: #ff4757;">
+                <i class="fas fa-exclamation-triangle"></i>
+              </div>
             </div>
-            
-            <!-- Genel Proje Özeti -->
-            <div class="project-summary" id="projectReportContent" style="display: none;">
-                <h2 class="project-title" id="reportProjectName"></h2>
-                <span class="project-ref" id="reportProjectRef"></span>
-                
-                <div class="summary-grid">
-                    <div class="summary-item">
-                        <div class="summary-label">Müşteri</div>
-                        <div class="summary-value" id="reportCustomerName"></div>
-                    </div>
-                    
-                    <div class="summary-item">
-                        <div class="summary-label">Proje Yöneticisi</div>
-                        <div class="summary-value" id="reportProjectManager"></div>
-                    </div>
-                    
-                    <div class="summary-item">
-                        <div class="summary-label">Genel Durum</div>
-                        <div class="summary-value status-indicator" id="reportProjectStatus"></div>
-                    </div>
-                    
-                    <div class="summary-item">
-                        <div class="summary-label">Toplam Gecikme</div>
-                        <div class="summary-value" id="reportTotalDelay"></div>
-                    </div>
-                </div>
-                
-                <div class="summary-grid">
-                    <div class="summary-item">
-                        <div class="summary-label">Sözleşme Tarihi</div>
-                        <div class="summary-value" id="reportContractDate"></div>
-                    </div>
-                    
-                    <div class="summary-item">
-                        <div class="summary-label">Toplantı Tarihi</div>
-                        <div class="summary-value" id="reportMeetingDate"></div>
-                    </div>
-                    
-                    <div class="summary-item">
-                        <div class="summary-label">Planlanan Başlangıç</div>
-                        <div class="summary-value" id="reportStartDate"></div>
-                    </div>
-                    
-                    <div class="summary-item">
-                        <div class="summary-label">Planlanan Bitiş</div>
-                        <div class="summary-value" id="reportEndDate"></div>
-                    </div>
-                </div>
-                
-                <div class="summary-item">
-                    <div class="summary-label">Proje Konumu</div>
-                    <div class="summary-value">
-                        <span id="reportProjectLocation"></span>
-                        <a href="#" id="openMapLink" style="margin-left: 10px; color: var(--primary-light); text-decoration: none;" target="_blank">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </a>
-                    </div>
-                </div>
-                
-                <div class="summary-item">
-                    <div class="summary-label">Proje Açıklaması</div>
-                    <div class="summary-value" style="font-weight: normal; font-size: 16px; margin-top: 10px;" id="reportProjectDescription">
-                    </div>
-                </div>
-                
-                <div class="delay-warning" id="reportDelayWarning" style="display: none;">
-                    <i class="fas fa-exclamation-triangle" style="color: #ff4757; font-size: 24px;"></i>
-                    <div>
-                        <div style="font-weight: 600; color: #ff4757;">Proje gecikmektedir!</div>
-                        <div id="reportDelayMessage"></div>
-                    </div>
-                </div>
+            <div class="report-card-value" id="delayedProjects">0</div>
+            <div class="report-card-description">Zamanında tamamlanmayan projeler</div>
+            <div class="report-card-footer">
+              <div class="report-card-trend trend-down">
+                <i class="fas fa-arrow-down"></i> <span>2% azalış</span>
+              </div>
+              <div class="report-card-more">
+                <i class="fas fa-chevron-right"></i>
+              </div>
             </div>
-            
-            <!-- İş Adımları Zaman Çizelgesi (Stepper) -->
-            <div class="stepper-container" id="stepperContainerWrapper" style="display: none;">
-                <div class="card-header">
-                    <div class="card-title">İş Adımları Zaman Çizelgesi</div>
-                </div>
-                <div class="stepper-box" id="stepperBox">
-                    <!-- Stepper adımları JavaScript ile doldurulacak -->
-                </div>
+          </div>
+
+          <div class="report-card">
+            <div class="report-card-header">
+              <div class="report-card-title">Ort. Revize Sayısı</div>
+              <div class="report-card-icon" style="background-color: #ffa502;">
+                <i class="fas fa-sync-alt"></i>
+              </div>
             </div>
-            
-            <!-- Detaylı İş Adımları Listesi -->
-            <div class="projects-container" id="progressStepsContainer" style="display: none;">
-                <div class="projects-header">
-                    <div class="card-title">İş Adımları Detayları</div>
-                    <div class="projects-actions">
-                        <button class="btn btn-outline" id="filterStepsBtn">
-                            <i class="fas fa-filter"></i> Filtrele
-                        </button>
-                        <button class="btn" id="exportPdfBtn">
-                            <i class="fas fa-file-pdf"></i> PDF Oluştur
-                        </button>
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table class="projects-table">
-                        <thead>
-                            <tr>
-                                <th>Adım Adı</th>
-                                <th>Başlangıç</th>
-                                <th>Bitiş</th>
-                                <th>Gecikme</th>
-                                <th>Erteleme</th> 
-                                <th>Gerçek Bitiş</th>
-                                <th>Durum</th>
-                            </tr>
-                        </thead>
-                        <tbody id="progressStepsTableBody">
-                            <!-- İş adımları JavaScript ile doldurulacak -->
-                        </tbody>
-                    </table>
-                </div>
+            <div class="report-card-value" id="avgRevisions">0</div>
+            <div class="report-card-description">Proje başına ortalama revize sayısı</div>
+            <div class="report-card-footer">
+              <div class="report-card-trend trend-up">
+                <i class="fas fa-arrow-up"></i> <span>3% artış</span>
+              </div>
+              <div class="report-card-more">
+                <i class="fas fa-chevron-right"></i>
+              </div>
             </div>
-            
-            <!-- Performans Metrikleri -->
-            <div class="metrics-container" id="metricsContainer" style="display: none;">
-                <div class="metric-card">
-                    <div class="card-title">Gecikme Analizi</div>
-                    <div class="chart-container">
-                        <canvas id="delayChart"></canvas>
-                    </div>
-                </div>
-                
-                <div class="metric-card">
-                    <div class="card-title">Genel Tamamlanma Durumu</div>
-                    <div class="progress-value" id="completionPercentageText">%0</div>
-                    <div class="progress-container">
-                        <div class="progress-bar" id="completionProgressBar" style="width: 0%;"></div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 15px;">
-                        <div>
-                            <div style="font-size: 14px; color: var(--light-gray);">Tamamlanan</div>
-                            <div style="font-size: 18px; font-weight: 600; color: #2ed573;" id="completedStepsCount">0</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 14px; color: var(--light-gray);">Toplam Adım</div>
-                            <div style="font-size: 18px; font-weight: 600;" id="totalStepsCount">0</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="footer">
-                &copy; 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır. | Mustafa Öztürk
-            </div>
+          </div>
         </div>
-        
-        <div class="toast" id="toast">
-            <i class="fas fa-check-circle"></i>
-            <span id="toastMessage">İşlem başarıyla tamamlandı</span>
+
+        <!-- Grafikler -->
+        <div class="chart-container">
+          <div class="chart-header">
+            <div class="chart-title">Proje Durum Dağılımı</div>
+            <div class="chart-actions">
+              <button class="btn btn-outline">
+                <i class="fas fa-download"></i> İndir
+              </button>
+            </div>
+          </div>
+          <canvas id="projectStatusChart"></canvas>
         </div>
+
+        <div class="chart-container">
+          <div class="chart-header">
+            <div class="chart-title">Aylık Tamamlanan Projeler</div>
+            <div class="chart-actions">
+              <button class="btn btn-outline">
+                <i class="fas fa-download"></i> İndir
+              </button>
+            </div>
+          </div>
+          <canvas id="monthlyProjectsChart"></canvas>
+        </div>
+
+        <!-- Revize Raporu Tablosu -->
+        <div class="reports-container">
+          <div class="reports-header">
+            <div class="card-title">İş Adımı Revize Raporu</div>
+            <div class="reports-actions">
+              <button class="btn btn-outline" id="exportRevisions">
+                <i class="fas fa-file-excel"></i> Excel'e Aktar
+              </button>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="reports-table" id="revisionsTable">
+              <thead>
+                <tr>
+                  <th>Proje Adı</th>
+                  <th>İş Adımı</th>
+                  <th>Planlanan Tarih</th>
+                  <th>Gerçekleşen Tarih</th>
+                  <th>Revize Sayısı</th>
+                  <th>Gecikme (gün)</th>
+                  <th>Durum</th>
+                </tr>
+              </thead>
+              <tbody id="revisionsTableBody">
+                <tr>
+                  <td colspan="7" style="text-align: center">Veriler yükleniyor...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pagination">
+            <div class="pagination-info">Toplam <span id="totalRevisionsCount">0</span> kayıt, sayfa <span id="currentPage">1</span>/<span id="totalPages">1</span></div>
+            <div class="pagination-controls">
+              <button class="page-btn" id="prevPage"><i class="fas fa-chevron-left"></i></button>
+              <div id="pageNumbers">
+                <button class="page-btn active">1</button>
+              </div>
+              <button class="page-btn" id="nextPage"><i class="fas fa-chevron-right"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Geciken İş Adımları Tablosu -->
+        <div class="reports-container">
+          <div class="reports-header">
+            <div class="card-title">Geciken İş Adımları</div>
+            <div class="reports-actions">
+              <button class="btn btn-outline" id="exportDelayedTasks">
+                <i class="fas fa-file-excel"></i> Excel'e Aktar
+              </button>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="reports-table" id="delayedTasksTable">
+              <thead>
+                <tr>
+                  <th>Proje Adı</th>
+                  <th>İş Adımı</th>
+                  <th>Planlanan Başlangıç</th>
+                  <th>Planlanan Bitiş</th>
+                  <th>Gerçekleşen Bitiş</th>
+                  <th>Gecikme (gün)</th>
+                  <th>Durum</th>
+                </tr>
+              </thead>
+              <tbody id="delayedTasksTableBody">
+                <tr>
+                  <td colspan="7" style="text-align: center">Veriler yükleniyor...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pagination">
+            <div class="pagination-info">Toplam <span id="totalDelayedTasksCount">0</span> kayıt, sayfa <span id="currentPageDelayed">1</span>/<span id="totalPagesDelayed">1</span></div>
+            <div class="pagination-controls">
+              <button class="page-btn" id="prevPageDelayed"><i class="fas fa-chevron-left"></i></button>
+              <div id="pageNumbersDelayed">
+                <button class="page-btn active">1</button>
+              </div>
+              <button class="page-btn" id="nextPageDelayed"><i class="fas fa-chevron-right"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer">
+          &copy; 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır. | Mustafa Öztürk
+        </div>
+      </div>
     </div>
-    
+
+    <!-- Toast bildirimi -->
+    <div class="toast" id="toast">
+      <i class="fas fa-check-circle"></i>
+      <div class="toast-content">
+        <div id="toastTitle" class="toast-title">Başarılı</div>
+        <span id="toastMessage">İşlem başarıyla tamamlandı</span>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='config.js') }}"></script>
     <script>
-        // Raporlar sayfası için JavaScript kodları
-        let currentUser = null;
-        let reportData = []; // Bu değişken artık kullanılmıyor, doğrudan currentProjectData kullanılacak.
-        let stepsChartInstance = null; // Bu değişken artık kullanılmıyor, delayChartInstance kullanılacak.
-        let delayChartInstance; // Chart.js instance'ını tutmak için
-        let currentProjectData = null; // Mevcut proje verilerini tutmak için
+      let currentUser = null;
+      let revisionsData = [];
+      let delayedTasksData = [];
+      let currentPageRevisions = 1;
+      let currentPageDelayedTasks = 1;
+      let rowsPerPage = 10;
+
+      // Tarih formatlama (DD.MM.YYYY)
+      function formatDateForDisplay(dateStr) {
+        if (!dateStr) return "";
+        const parts = dateStr.split("-");
+        if (parts.length === 3) {
+          return `${parts[2]}.${parts[1]}.${parts[0]}`;
+        }
+        return dateStr;
+      }
+
+      // Durum etiketi oluşturma
+      function getStatusBadgeHtml(status) {
+        let statusClass = "normal";
+        let statusText = status;
+
+        if (status.includes("Gecikmeli")) {
+          statusClass = "gecikmeli";
+        } else if (status === "Tamamlandı") {
+          statusClass = "tamamlandı";
+        }
+
+        return `<span class="status-badge ${statusClass}">${statusText}</span>`;
+      }
+
+      // Toast bildirim fonksiyonu
+      function showToast(title, message, type = 'success') {
+        const toast = document.getElementById('toast');
+        const toastTitle = document.getElementById('toastTitle');
+        const toastMessage = document.getElementById('toastMessage');
+
+        if (!toast || !toastTitle || !toastMessage) return;
+
+        toastTitle.textContent = title || (type === 'error' ? 'Hata' : 'Başarılı');
+        toastMessage.textContent = message;
         
-        document.addEventListener('DOMContentLoaded', function() {
-            // Kullanıcı oturum kontrolü
-            const storedUser = localStorage.getItem('currentUser');
-            if (!storedUser) {
-                showToast("Oturum süreniz doldu. Lütfen tekrar giriş yapın.", true);
-                setTimeout(() => { window.location.href = '/'; }, 2000);
-            } else {
-                try {
-                    currentUser = JSON.parse(storedUser);
-                    document.getElementById('userName').textContent = currentUser.fullname;
-                    document.getElementById('userRole').textContent = currentUser.role;
-                    updateUserAvatar(currentUser); // user-avatar.js'ten gelen fonksiyon
-                    fetchUnreadNotificationCount(); // bildirim.js'ten gelen fonksiyon
-                } catch (e) {
-                    console.error("Kullanıcı verisi bozuk:", e);
-                    localStorage.removeItem('currentUser');
-                    showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", true);
-                    setTimeout(() => { window.location.href = '/'; }, 2000);
-                }
-            }
-            
-            // Tema değiştirme
-            const themeToggle = document.getElementById('theme-toggle');
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme) {
-                document.body.setAttribute('data-theme', savedTheme);
-                themeToggle.innerHTML = savedTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-            }
-            themeToggle.addEventListener('click', () => {
-                const currentTheme = document.body.getAttribute('data-theme');
-                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                document.body.setAttribute('data-theme', newTheme);
-                themeToggle.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-                localStorage.setItem('theme', newTheme);
-                
-                // Grafikleri yeniden oluştur
-                if (delayChartInstance) {
-                    // delayChartInstance'ı yeniden oluşturmak için mevcut proje verilerini kullan
-                    if (currentProjectData && currentProjectData.progress_steps) {
-                        updateDelayChart(currentProjectData.progress_steps);
-                    }
-                }
-            });
-            
-            // Hamburger menü
-            const hamburgerMenu = document.getElementById('hamburgerMenu');
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('mainContent');
-            hamburgerMenu.addEventListener('click', () => {
-                sidebar.classList.toggle('show');
-                mainContent.classList.toggle('expanded');
-            });
-            
-            // Çıkış butonu
-            document.getElementById('logoutButton').addEventListener('click', () => {
-                localStorage.removeItem('currentUser');
-                window.location.href = '/';
-            });
-            
-            // Proje seçim dropdown'ını doldur
-            populateProjectSelect();
+        toast.classList.remove('success', 'error', 'info', 'warning');
+        toast.classList.add(type);
+        toast.classList.add('show');
 
-            // Proje seçim dropdown'ı değiştiğinde raporu güncelle
-            document.getElementById('projectSelect').addEventListener('change', function() {
-                const selectedProjectId = this.value;
-                fetchAndRenderReportData(selectedProjectId);
-            });
+        setTimeout(() => {
+          toast.classList.remove('show');
+        }, 3000);
+      }
 
-            // PDF Oluştur butonu
-            document.getElementById('exportPdfBtn').addEventListener('click', async () => {
-                if (!currentProjectData) {
-                    showToast('Lütfen önce bir proje seçin ve rapor verilerinin yüklenmesini bekleyin.', true);
-                    return;
-                }
+      // Kullanıcı bilgilerini yükle
+      function loadUserInfo() {
+        const storedUser = localStorage.getItem('currentUser');
+        if (!storedUser) {
+          showToast("Oturum süreniz doldu. Lütfen tekrar giriş yapın.", true);
+          setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+          return;
+        }
 
-                if (currentUser.role !== "Admin") {
-                    showToast('PDF oluşturma yetkiniz yok!', true);
-                    return;
-                }
-                
-                showToast('PDF raporu oluşturuluyor...');
+        try {
+          currentUser = JSON.parse(storedUser);
+        } catch (e) {
+          console.error("Kayıtlı kullanıcı verisi bozuk:", e);
+          localStorage.removeItem('currentUser');
+          showToast("Kullanıcı verileriniz bozuk. Lütfen tekrar giriş yapın.", true);
+          setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+          return;
+        }
 
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF('p', 'pt', 'a4'); 
+        const userNameElement = document.getElementById('userName');
+        const userRoleElement = document.getElementById('userRole');
 
-                // Türkçe karakterler için font ekleme (örnek: Noto Sans fontları)
-                // Bu font dosyalarını projenizin 'static' klasörüne eklemeniz ve Base64 verilerini buraya yapıştırmanız gerekmektedir.
-                // Örneğin: NotoSans-Regular.ttf ve NotoSans-Bold.ttf
-                // doc.addFileToVFS("NotoSans-Regular.ttf", "BURAYA_NOTO_SANS_REGULAR_BASE64_VERİSİ_GELECEK");
-                // doc.addFont("NotoSans-Regular.ttf", "NotoSans", "normal");
-                // doc.addFileToVFS("NotoSans-Bold.ttf", "BURAYA_NOTO_SANS_BOLD_BASE64_VERİSİ_GELECEK");
-                // doc.addFont("NotoSans-Bold.ttf", "NotoSans", "bold");
-                // doc.setFont("NotoSans"); // Varsayılan fontu Noto Sans olarak ayarla
+        if (userNameElement) {
+          userNameElement.textContent = currentUser.fullname || currentUser.username || 'Kullanıcı';
+        }
+        if (userRoleElement) {
+          userRoleElement.textContent = currentUser.role || 'Rol Yok';
+        }
+      }
 
-                const margin = 40;
-                let y = margin;
-                const lineHeight = 14;
+      // Rapor verilerini yükle
+      async function loadReportsData() {
+        try {
+          // Özet verilerini yükle
+          const summaryResponse = await fetch(`${API_BASE_URL}/api/reports/summary`);
+          if (summaryResponse.ok) {
+            const summaryData = await summaryResponse.json();
+            document.getElementById('totalProjects').textContent = summaryData.totalProjects || 0;
+            document.getElementById('delayedProjects').textContent = summaryData.delayedProjects || 0;
+            document.getElementById('avgRevisions').textContent = summaryData.avgRevisions || 0;
+          }
 
-                // Header
-                doc.setFontSize(20);
-                doc.setFont('helvetica', 'bold'); // Geçici olarak helvetica kullanılıyor
-                doc.text("Proje Durum Raporu", margin, y);
-                y += lineHeight * 2;
+          // Revize raporu verilerini yükle
+          const revisionsResponse = await fetch(`${API_BASE_URL}/api/reports/revisions`);
+          if (revisionsResponse.ok) {
+            revisionsData = await revisionsResponse.json();
+            renderRevisionsTable();
+          }
 
-                doc.setFontSize(14);
-                doc.text(`Proje Adı: ${currentProjectData.project.project_name}`, margin, y);
-                y += lineHeight;
-                doc.text(`Referans No: ${currentProjectData.project.reference_no}`, margin, y);
-                y += lineHeight;
-                doc.text(`Rapor Tarihi: ${formatDate(new Date().toISOString().split('T')[0])}`, margin, y);
-                y += lineHeight * 2;
+          // Geciken iş adımları verilerini yükle
+          const delayedTasksResponse = await fetch(`${API_BASE_URL}/api/reports/delayed-tasks`);
+          if (delayedTasksResponse.ok) {
+            delayedTasksData = await delayedTasksResponse.json();
+            renderDelayedTasksTable();
+          }
 
-                // Project Summary
-                doc.setFontSize(16);
-                doc.text("Genel Proje Özeti", margin, y);
-                y += lineHeight * 1.5;
+          // Grafik verilerini yükle
+          loadChartsData();
 
-                doc.setFontSize(12);
-                doc.text(`Müşteri: ${currentProjectData.project.customer_name}`, margin, y);
-                y += lineHeight;
-                doc.text(`Proje Yöneticisi: ${currentProjectData.project.project_manager_name}`, margin, y);
-                y += lineHeight;
-                doc.text(`Genel Durum: ${document.getElementById('reportProjectStatus').textContent}`, margin, y); // Güncel metni al
-                y += lineHeight;
-                doc.text(`Toplam Gecikme: ${document.getElementById('reportTotalDelay').textContent}`, margin, y); 
-                y += lineHeight;
-                doc.text(`Planlanan Başlangıç: ${formatDate(currentProjectData.project.start_date)}`, margin, y);
-                y += lineHeight;
-                doc.text(`Planlanan Bitiş: ${formatDate(currentProjectData.project.end_date)}`, margin, y); 
-                y += lineHeight;
-                doc.text(`Proje Konumu: ${currentProjectData.project.project_location || 'Belirtilmemiş'}`, margin, y);
-                y += lineHeight;
-                doc.text(`Açıklama: ${currentProjectData.project.description || 'Yok'}`, margin, y);
-                y += lineHeight * 2;
+        } catch (error) {
+          console.error("Rapor verileri yüklenirken hata oluştu:", error);
+          showToast("Rapor verileri yüklenirken hata oluştu", true);
+        }
+      }
 
-                // Progress Steps Table
-                doc.setFontSize(16);
-                doc.text("İş Adımları Detayları", margin, y);
-                y += lineHeight * 1.5;
+      // Revize tablosunu render et
+      function renderRevisionsTable() {
+        const tbody = document.getElementById("revisionsTableBody");
+        if (!tbody) return;
 
-                const tableHeaders = [
-                    ['Adım Adı', 'Başlangıç', 'Bitiş', 'Gecikme', 'Erteleme', 'Gerçek Bitiş', 'Durum']
-                ];
-                const tableData = currentProjectData.progress_steps.map(step => {
-                    const { statusText } = getStepDisplayStatus(step); 
-                    return [
-                        step.step_name,
-                        formatDate(step.start_date),
-                        formatDate(step.end_date),
-                        (step.delay_days || 0) > 0 ? `${step.delay_days} gün` : '-',
-                        (step.custom_delay_days || 0) > 0 ? `${step.custom_delay_days} gün` : '-',
-                        formatDate(step.real_end_date),
-                        statusText 
-                    ];
-                });
+        if (revisionsData.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center">Veri bulunamadı</td></tr>';
+          document.getElementById('totalRevisionsCount').textContent = '0';
+          return;
+        }
 
-                doc.autoTable({
-                    startY: y,
-                    head: tableHeaders,
-                    body: tableData,
-                    theme: 'grid',
-                    styles: { fontSize: 10, cellPadding: 5 },
-                    headStyles: { fillColor: [9, 128, 211], textColor: [255, 255, 255] },
-                    didDrawPage: function (data) {
-                        // Footer
-                        let str = "Sayfa " + doc.internal.getNumberOfPages();
-                        doc.setFontSize(10);
-                        doc.text(str, data.settings.margin.left, doc.internal.pageSize.height - 10);
-                    }
-                });
+        tbody.innerHTML = '';
+        
+        // Pagination için dilimleme
+        const startIndex = (currentPageRevisions - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        const paginatedData = revisionsData.slice(startIndex, endIndex);
 
-                y = doc.autoTable.previous.finalY + lineHeight * 2;
-
-                // Charts (as images)
-                // Gecikme Analizi Grafiği
-                const delayChartCanvas = document.getElementById('delayChart');
-                if (delayChartCanvas) {
-                    const delayChartImg = delayChartCanvas.toDataURL('image/png');
-                    const chartWidth = doc.internal.pageSize.width - 2 * margin;
-                    const chartHeight = (delayChartCanvas.height * chartWidth) / delayChartCanvas.width;
-
-                    // Yeni sayfa kontrolü
-                    if (y + chartHeight + lineHeight * 2 > doc.internal.pageSize.height - margin) {
-                        doc.addPage();
-                        y = margin;
-                    }
-                    doc.text("Gecikme Analizi", margin, y);
-                    y += lineHeight;
-                    doc.addImage(delayChartImg, 'PNG', margin, y, chartWidth, chartHeight);
-                    y += chartHeight + lineHeight * 2;
-                }
-
-                // Genel Tamamlanma Durumu (Basit Metin)
-                // Yeni sayfa kontrolü
-                if (y + 50 > doc.internal.pageSize.height - margin) {
-                    doc.addPage();
-                    y = margin;
-                }
-                doc.text("Genel Tamamlanma Durumu", margin, y);
-                y += lineHeight;
-                doc.setFontSize(12);
-                doc.text(`Tamamlanma Yüzdesi: %${document.getElementById('completionPercentageText').textContent.replace('%', '')}`, margin, y);
-                y += lineHeight;
-                doc.text(`Tamamlanan Adım Sayısı: ${document.getElementById('completedStepsCount').textContent} / ${document.getElementById('totalStepsCount').textContent}`, margin, y);
-                y += lineHeight * 2;
-
-
-                // PDF'i kaydet
-                doc.save(`Proje_Raporu_${currentProjectData.project.project_name.replace(/\s/g, '_')}.pdf`);
-
-                // PDF oluşturma aktivitesini logla
-                const storedUser = localStorage.getItem('currentUser'); // currentUser kullanıldı
-                let userId = null;
-                if (storedUser) {
-                    try {
-                        const user = JSON.parse(storedUser);
-                        userId = user.id;
-                    } catch (e) {
-                        console.error("Kullanıcı verisi parse edilemedi:", e);
-                    }
-                }
-
-                if (userId) {
-                    // addActivity fonksiyonu çağrıldı
-                    addActivity('PDF Rapor Oluşturuldu', `Proje raporunun PDF çıktısı alındı: ${currentProjectData.project.project_name}`, userId, 'fas fa-file-pdf');
-                }
-            });
+        paginatedData.forEach(item => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td data-label="Proje Adı">${item.project_name || '-'}</td>
+            <td data-label="İş Adımı">${item.step_name || '-'}</td>
+            <td data-label="Planlanan Tarih">${formatDateForDisplay(item.planned_date) || '-'}</td>
+            <td data-label="Gerçekleşen Tarih">${formatDateForDisplay(item.actual_date) || '-'}</td>
+            <td data-label="Revize Sayısı">${item.revision_count || '0'}</td>
+            <td data-label="Gecikme (gün)">${item.delay_days || '0'}</td>
+            <td data-label="Durum">${getStatusBadgeHtml(item.status || '-')}</td>
+          `;
+          tbody.appendChild(row);
         });
 
-        // Yardımcı fonksiyon: URL'den parametre okuma
-        function getUrlParameter(name) {
-            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
-            var results = regex.exec(location.search);
-            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
-        };
+        document.getElementById('totalRevisionsCount').textContent = revisionsData.length;
+        updatePagination('revisions', revisionsData.length, currentPageRevisions, Math.ceil(revisionsData.length / rowsPerPage));
+      }
 
-        // Tarih formatlama yardımcı fonksiyonu
-        function formatDate(dateString) {
-            if (!dateString || dateString === 'None') return '-'; 
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) {
-                return '-';
-            }
-            return date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      // Geciken iş adımları tablosunu render et
+      function renderDelayedTasksTable() {
+        const tbody = document.getElementById("delayedTasksTableBody");
+        if (!tbody) return;
+
+        if (delayedTasksData.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center">Veri bulunamadı</td></tr>';
+          document.getElementById('totalDelayedTasksCount').textContent = '0';
+          return;
         }
 
-        // Harita güncelleme fonksiyonu (DOMContentLoaded dışına taşındı)
-        function updateMapDisplay(locationString) {
-            const reportProjectLocationSpan = document.getElementById('reportProjectLocation');
-            const openMapLink = document.getElementById('openMapLink');
+        tbody.innerHTML = '';
+        
+        // Pagination için dilimleme
+        const startIndex = (currentPageDelayedTasks - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        const paginatedData = delayedTasksData.slice(startIndex, endIndex);
 
-            if (!locationString || locationString.trim() === '') {
-                reportProjectLocationSpan.textContent = 'Konum Bilgisi Yok';
-                openMapLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Türkiye')}`; // Varsayılan Türkiye linki
-                openMapLink.style.display = 'inline'; // İkonu göster
-            } else {
-                reportProjectLocationSpan.textContent = locationString;
-                openMapLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationString)}`;
-                openMapLink.style.display = 'inline'; // İkonu göster
-            }
+        paginatedData.forEach(item => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td data-label="Proje Adı">${item.project_name || '-'}</td>
+            <td data-label="İş Adımı">${item.step_name || '-'}</td>
+            <td data-label="Planlanan Başlangıç">${formatDateForDisplay(item.planned_start) || '-'}</td>
+            <td data-label="Planlanan Bitiş">${formatDateForDisplay(item.planned_end) || '-'}</td>
+            <td data-label="Gerçekleşen Bitiş">${formatDateForDisplay(item.actual_end) || '-'}</td>
+            <td data-label="Gecikme (gün)">${item.delay_days || '0'}</td>
+            <td data-label="Durum">${getStatusBadgeHtml(item.status || '-')}</td>
+          `;
+          tbody.appendChild(row);
+        });
+
+        document.getElementById('totalDelayedTasksCount').textContent = delayedTasksData.length;
+        updatePagination('delayed', delayedTasksData.length, currentPageDelayedTasks, Math.ceil(delayedTasksData.length / rowsPerPage));
+      }
+
+      // Sayfalama bilgilerini güncelle
+      function updatePagination(type, totalItems, currentPage, totalPages) {
+        const currentPageSpan = document.getElementById(`currentPage${type === 'revisions' ? '' : 'Delayed'}`);
+        const totalPagesSpan = document.getElementById(`totalPages${type === 'revisions' ? '' : 'Delayed'}`);
+        
+        if (currentPageSpan) currentPageSpan.textContent = currentPage;
+        if (totalPagesSpan) totalPagesSpan.textContent = totalPages;
+      }
+
+      // Grafik verilerini yükle
+      async function loadChartsData() {
+        try {
+          // Proje durum dağılımı grafiği
+          const statusResponse = await fetch(`${API_BASE_URL}/api/reports/project-status`);
+          if (statusResponse.ok) {
+            const statusData = await statusResponse.json();
+            renderProjectStatusChart(statusData);
+          }
+
+          // Aylık tamamlanan projeler grafiği
+          const monthlyResponse = await fetch(`${API_BASE_URL}/api/reports/monthly-completed`);
+          if (monthlyResponse.ok) {
+            const monthlyData = await monthlyResponse.json();
+            renderMonthlyProjectsChart(monthlyData);
+          }
+        } catch (error) {
+          console.error("Grafik verileri yüklenirken hata oluştu:", error);
         }
+      }
 
-        // İş adımı durumunu belirleyen yeni fonksiyon
-        function getStepDisplayStatus(step) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0); // Sadece tarih kısmı
-
-            const stepPlannedEndDate = new Date(step.end_date);
-            stepPlannedEndDate.setHours(0, 0, 0, 0);
-
-            let statusText = '';
-            let statusClass = '';
-            const hasDelay = (step.delay_days || 0) > 0;
-            const hasCustomDelay = (step.custom_delay_days || 0) > 0;
-
-            if (step.is_completed === 1) { 
-                if (hasCustomDelay) {
-                    statusText = 'Bitti (Ertelemeli)';
-                    statusClass = 'completed-rescheduled';
-                } else if (hasDelay) {
-                    statusText = 'Bitti (Gecikmeli)';
-                    statusClass = 'completed-delayed';
-                } else {
-                    statusText = 'Tamamlandı';
-                    statusClass = 'completed'; 
-                }
-            } else if (stepPlannedEndDate < today) {
-                statusText = 'Gecikmeli';
-                statusClass = 'delayed'; 
-            } else {
-                statusText = 'Bekliyor';
-                statusClass = 'pending'; 
-            }
-            return { statusText, statusClass };
-        }
-
-        // Stepper zaman çizelgesini oluşturma
-        function renderStepperTimeline(progressSteps) {
-            const stepperBox = document.getElementById('stepperBox');
-            stepperBox.innerHTML = ''; // Önceki adımları temizle
-
-            progressSteps.forEach((step, index) => {
-                const { statusText, statusClass } = getStepDisplayStatus(step);
-                const stepElement = document.createElement('div');
-                stepElement.classList.add('stepper-step', `stepper-${statusClass}`);
-
-                const circleContent = (statusClass === 'completed' || statusClass === 'completed-delayed' || statusClass === 'completed-rescheduled')
-                    ? `<svg viewBox="0 0 16 16" class="bi bi-check-lg" fill="currentColor" height="16" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425z"></path></svg>`
-                    : (index + 1); // Adım numarası
-
-                const totalDelay = (step.delay_days || 0) + (step.custom_delay_days || 0);
-
-                stepElement.innerHTML = `
-                    <div class="stepper-circle">${circleContent}</div>
-                    ${index < progressSteps.length - 1 ? '<div class="stepper-line"></div>' : ''}
-                    <div class="stepper-content">
-                        <div class="stepper-title">${step.step_name}</div>
-                        <div class="stepper-status">${statusText}</div>
-                        <div class="stepper-time">
-                            Planlanan Bitiş: ${formatDate(step.end_date)}
-                            ${step.real_end_date && step.real_end_date !== 'None' ? `<br>Gerçek Bitiş: ${formatDate(step.real_end_date)}` : ''}
-                            ${totalDelay > 0 ? `<br>Toplam Gecikme: ${totalDelay} gün` : ''}
-                        </div>
-                    </div>
-                `;
-                stepperBox.appendChild(stepElement);
-            });
-        }
-
-        // Detaylı İş Adımları Tablosunu Doldurma
-        function populateProgressTable(progressSteps) {
-            const tableBody = document.getElementById('progressStepsTableBody');
-            tableBody.innerHTML = ''; 
-
-            progressSteps.forEach(step => {
-                const row = tableBody.insertRow();
-                const { statusText, statusClass } = getStepDisplayStatus(step); 
-
-                row.innerHTML = `
-                    <td data-label="Adım Adı">${step.step_name}</td>
-                    <td data-label="Başlangıç">${formatDate(step.start_date)}</td>
-                    <td data-label="Bitiş">${formatDate(step.end_date)}</td>
-                    <td data-label="Gecikme">${(step.delay_days || 0) > 0 ? step.delay_days + ' gün' : '-'}</td>
-                    <td data-label="Erteleme">${(step.custom_delay_days || 0) > 0 ? step.custom_delay_days + ' gün' : '-'}</td>
-                    <td data-label="Gerçek Bitiş">${formatDate(step.real_end_date)}</td>
-                    <td data-label="Durum">
-                        <span class="status-badge ${statusClass === 'completed' ? 'normal' : statusClass === 'delayed' ? 'gecikmeli' : statusClass === 'completed-delayed' ? 'completed-delayed' : statusClass === 'completed-rescheduled' ? 'completed-rescheduled' : 'pending'}">${statusText}</span>
-                    </td>
-                `;
-            });
-        }
-
-        // Gecikme Analizi Grafiğini Güncelleme
-        function updateDelayChart(progressSteps) {
-            const labels = progressSteps.map(step => step.step_name);
-            const data = progressSteps.map(step => {
-                const { statusText } = getStepDisplayStatus(step); 
-                if (statusText.includes('Gecikmeli') || statusText.includes('Ertelemeli')) {
-                    return (step.delay_days || 0) + (step.custom_delay_days || 0);
-                }
-                return 0; 
-            });
-            const backgroundColors = data.map(delay => delay > 0 ? '#ff4757' : '#2ed573'); 
-
-            if (delayChartInstance) {
-                delayChartInstance.destroy(); 
-            }
-
-            const delayCtx = document.getElementById('delayChart').getContext('2d');
-            delayChartInstance = new Chart(delayCtx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Gecikme (gün)',
-                        data: data,
-                        backgroundColor: backgroundColors
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Gün'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // Genel Tamamlanma Durumu Metriklerini Güncelleme
-        function updateCompletionMetrics(progressSteps) {
-            const totalSteps = progressSteps.length;
-            let completedSteps = 0;
-            let totalDelayDays = 0;
-
-            progressSteps.forEach(step => {
-                const { statusText } = getStepDisplayStatus(step);
-                if (statusText.includes('Bitti') || statusText.includes('Tamamlandı')) {
-                    completedSteps++;
-                }
-                totalDelayDays += (step.delay_days || 0) + (step.custom_delay_days || 0);
-            });
-
-            const completionPercentage = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
-
-            document.getElementById('completionPercentageText').textContent = `%${completionPercentage}`;
-            document.getElementById('completionProgressBar').style.width = `${completionPercentage}%`;
-            document.getElementById('completedStepsCount').textContent = completedSteps;
-            document.getElementById('totalStepsCount').textContent = totalSteps;
-            document.getElementById('reportTotalDelay').textContent = `${totalDelayDays} gün`;
-
-            const delayWarning = document.getElementById('reportDelayWarning');
-            if (totalDelayDays > 0) {
-                delayWarning.style.display = 'flex';
-                document.getElementById('reportDelayMessage').textContent = `Toplam ${totalDelayDays} gün gecikme bulunmaktadır. Acil önlem alınması gerekmektedir.`;
-            } else {
-                delayWarning.style.display = 'none';
-            }
-        }
-
-
-        // Rapor verilerini API'den çekme ve sayfayı doldurma
-        async function fetchAndRenderReportData(projectId) {
-            const projectReportContent = document.getElementById('projectReportContent');
-            const stepperContainerWrapper = document.getElementById('stepperContainerWrapper'); 
-            const progressStepsContainer = document.getElementById('progressStepsContainer');
-            const metricsContainer = document.getElementById('metricsContainer');
-
-            if (!projectId) {
-                console.log("Proje ID'si seçilmedi. Rapor içeriği gizleniyor.");
-                projectReportContent.style.display = 'none';
-                stepperContainerWrapper.style.display = 'none'; 
-                progressStepsContainer.style.display = 'none';
-                metricsContainer.style.display = 'none';
-                // Önceki verileri temizle
-                document.getElementById('reportProjectName').textContent = "";
-                document.getElementById('reportProjectRef').textContent = "";
-                document.getElementById('reportCustomerName').textContent = "";
-                document.getElementById('reportProjectManager').textContent = "";
-                document.getElementById('reportProjectStatus').textContent = "";
-                document.getElementById('reportTotalDelay').textContent = "";
-                document.getElementById('reportContractDate').textContent = "";
-                document.getElementById('reportMeetingDate').textContent = "";
-                document.getElementById('reportStartDate').textContent = "";
-                document.getElementById('reportEndDate').textContent = "";
-                document.getElementById('reportProjectLocation').textContent = "";
-                document.getElementById('reportProjectDescription').textContent = "";
-                document.getElementById('reportDelayWarning').style.display = 'none';
-                document.getElementById('stepperBox').innerHTML = ''; 
-                document.getElementById('progressStepsTableBody').innerHTML = '';
-                if (delayChartInstance) {
-                    delayChartInstance.destroy();
-                    delayChartInstance = null;
-                }
-                updateCompletionMetrics([]); 
-                updateMapDisplay(null); 
-                return;
-            }
-
-            projectReportContent.style.display = 'block';
-            stepperContainerWrapper.style.display = 'block'; 
-            progressStepsContainer.style.display = 'block';
-            metricsContainer.style.display = 'grid'; 
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/reports/project/${projectId}`);
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Rapor verileri çekilemedi.');
-                }
-                currentProjectData = await response.json(); 
-                const { project, progress_steps } = currentProjectData; 
-
-                // 1. Genel Proje Özeti Alanını Doldur
-                document.getElementById('reportProjectName').textContent = project.project_name;
-                document.getElementById('reportProjectRef').textContent = project.reference_no;
-                document.getElementById('reportCustomerName').textContent = project.customer_name;
-                document.getElementById('reportProjectManager').textContent = project.project_manager_name;
-                
-                const projectStatusElement = document.getElementById('reportProjectStatus');
-                projectStatusElement.textContent = project.status; // Backend'den gelen genel proje durumunu kullan
-                projectStatusElement.className = 'summary-value status-indicator'; 
-                if (project.status === 'Gecikmeli') {
-                    projectStatusElement.classList.add('status-delayed');
-                } else if (project.status === 'Tamamlandı') {
-                    projectStatusElement.classList.add('status-active'); 
-                } else {
-                    projectStatusElement.classList.add('status-active'); // Diğer durumlar için varsayılan aktif
-                }
-
-                document.getElementById('reportContractDate').textContent = formatDate(project.contract_date);
-                document.getElementById('reportMeetingDate').textContent = formatDate(project.meeting_date);
-                document.getElementById('reportStartDate').textContent = formatDate(project.start_date);
-                document.getElementById('reportEndDate').textContent = formatDate(project.end_date);
-                updateMapDisplay(project.project_location);
-                document.getElementById('reportProjectDescription').textContent = project.description || 'Açıklama bulunmamaktadır.';
-
-                // 2. İş Adımları Zaman Çizelgesi (Stepper)
-                renderStepperTimeline(progress_steps);
-
-                // 3. Detaylı İş Adımları Tablosunu Doldur
-                populateProgressTable(progress_steps);
-
-                // 4. Performans Metriklerini Güncelle (progress_steps'e göre yeniden hesapla)
-                updateDelayChart(progress_steps);
-                updateCompletionMetrics(progress_steps); 
-
-            } catch (error) {
-                console.error("Rapor verileri çekilirken hata oluştu:", error);
-                document.getElementById('reportProjectName').textContent = "Hata: Rapor Yüklenemedi";
-                document.getElementById('reportProjectRef').textContent = "Veri çekilirken bir sorun oluştu.";
-                projectReportContent.style.display = 'block'; 
-                stepperContainerWrapper.style.display = 'none'; 
-                progressStepsContainer.style.display = 'none';
-                metricsContainer.style.display = 'none';
-                updateMapDisplay(null); 
-                showToast(`Rapor yüklenirken hata: ${error.message}`, true);
-            }
-        }
-
-        // Tüm projeleri çekip dropdown'a doldurma
-        async function populateProjectSelect() {
-            const projectSelect = document.getElementById('projectSelect');
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/projects`); // API_BASE_URL kullanıldı
-                if (!response.ok) {
-                    throw new Error('Projeler çekilemedi.');
-                }
-                const projects = await response.json();
-
-                // Projeleri adına göre alfabetik sırala
-                projects.sort((a, b) => a.project_name.localeCompare(b.project_name));
-
-                projects.forEach(project => {
-                    const option = document.createElement('option');
-                    option.value = project.project_id;
-                    option.textContent = `${project.project_name} (${project.reference_no})`;
-                    projectSelect.appendChild(option);
-                });
-
-                // URL'de bir proje ID'si varsa otomatik seç ve raporu yükle
-                const initialProjectId = getUrlParameter('project_id');
-                if (initialProjectId) {
-                    projectSelect.value = initialProjectId;
-                    fetchAndRenderReportData(initialProjectId);
-                } else {
-                    // İlk yüklemede boş seçeneği seçili bırak ve rapor içeriğini gizle
-                    projectSelect.value = "";
-                    fetchAndRenderReportData(null); 
-                }
-
-            } catch (error) {
-                console.error("Projeler yüklenirken hata oluştu:", error);
-                showToast(`Projeler yüklenirken hata: ${error.message}`, true);
-            }
+      // Proje durum dağılımı grafiğini oluştur
+      function renderProjectStatusChart(data) {
+        const ctx = document.getElementById('projectStatusChart').getContext('2d');
+        
+        // Mevcut grafiği temizle
+        if (window.projectStatusChart) {
+          window.projectStatusChart.destroy();
         }
         
-        // Toast mesajı gösterme (global olarak tanımlandı)
-        function showToast(message, isError = false) {
-            const toast = document.getElementById('toast');
-            const toastMessage = document.getElementById('toastMessage');
-            
-            toastMessage.textContent = message;
-            toast.className = 'toast show';
-            if (isError) {
-                toast.classList.add('error');
-            } else {
-                toast.classList.remove('error');
+        window.projectStatusChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: data.labels || [],
+            datasets: [{
+              data: data.values || [],
+              backgroundColor: [
+                '#0980d3', // Aktif
+                '#2ed573', // Tamamlandı
+                '#ff4757', // Gecikti
+                '#ffa502'  // Planlama
+              ],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'right',
+              },
+              title: {
+                display: false,
+              }
             }
-            
-            setTimeout(() => {
-                toast.className = 'toast';
-            }, 3000);
+          }
+        });
+      }
+
+      // Aylık tamamlanan projeler grafiğini oluştur
+      function renderMonthlyProjectsChart(data) {
+        const ctx = document.getElementById('monthlyProjectsChart').getContext('2d');
+        
+        // Mevcut grafiği temizle
+        if (window.monthlyProjectsChart) {
+          window.monthlyProjectsChart.destroy();
         }
         
-        // Aktivite ekleme fonksiyonu (bildirim.js'den alındı, burada da tanımlandı)
-        async function addActivity(title, description, user_id, icon = "fas fa-info-circle") {
-            if (!user_id) {
-                console.warn("Kullanıcı ID'si bulunamadı, aktivite kaydedilemedi.");
-                return;
-            }
-
-            const activityData = {
-                user_id: user_id,
-                title: title,
-                description: description, 
-                icon: icon
-            };
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/activities`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(activityData)
-                });
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Aktivite eklenirken bilinmeyen bir hata oluştu.');
+        window.monthlyProjectsChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: data.labels || [],
+            datasets: [{
+              label: 'Tamamlanan Proje Sayısı',
+              data: data.values || [],
+              backgroundColor: '#0980d3',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  stepSize: 1
                 }
-                // Aktivite eklendikten sonra bildirim panelini yenile (bildirim.js'deki fonksiyon)
-                if (typeof fetchUnreadNotificationCount === 'function') {
-                    fetchUnreadNotificationCount();
-                }
-            } catch (error) {
-                console.error('Aktivite ekleme hatası:', error);
+              }
             }
+          }
+        });
+      }
+
+      // DOM yüklendiğinde çalışacak kod
+      document.addEventListener("DOMContentLoaded", function () {
+        loadUserInfo();
+        loadReportsData();
+
+        // Tema değiştirme
+        const themeToggle = document.getElementById("theme-toggle");
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme) {
+          document.body.setAttribute("data-theme", savedTheme);
+          themeToggle.innerHTML = savedTheme === "dark" ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
         }
+        
+        themeToggle.addEventListener("click", () => {
+          const currentTheme = document.body.getAttribute("data-theme");
+          const newTheme = currentTheme === "dark" ? "light" : "dark";
+          document.body.setAttribute("data-theme", newTheme);
+          themeToggle.innerHTML = newTheme === "dark" ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+          localStorage.setItem("theme", newTheme);
+        });
+
+        // Çıkış Yap butonu
+        document.getElementById("logoutButton").addEventListener("click", () => {
+          localStorage.removeItem("currentUser");
+          window.location.href = "login.html";
+        });
+
+        // Hamburger menü işlevselliği
+        const hamburgerMenu = document.getElementById('hamburgerMenu');
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+        
+        hamburgerMenu.addEventListener('click', () => {
+          sidebar.classList.toggle('show');
+          mainContent.classList.toggle('expanded');
+        });
+
+        // Sidebar dışına tıklayınca kapatma
+        document.addEventListener('click', (event) => {
+          if (sidebar.classList.contains('show') && 
+              !sidebar.contains(event.target) && 
+              !hamburgerMenu.contains(event.target)) {
+            sidebar.classList.remove('show');
+            mainContent.classList.remove('expanded');
+          }
+        });
+
+        // Sayfalama butonları
+        document.getElementById("prevPage").addEventListener("click", () => {
+          if (currentPageRevisions > 1) {
+            currentPageRevisions--;
+            renderRevisionsTable();
+          }
+        });
+
+        document.getElementById("nextPage").addEventListener("click", () => {
+          if (currentPageRevisions < Math.ceil(revisionsData.length / rowsPerPage)) {
+            currentPageRevisions++;
+            renderRevisionsTable();
+          }
+        });
+
+        document.getElementById("prevPageDelayed").addEventListener("click", () => {
+          if (currentPageDelayedTasks > 1) {
+            currentPageDelayedTasks--;
+            renderDelayedTasksTable();
+          }
+        });
+
+        document.getElementById("nextPageDelayed").addEventListener("click", () => {
+          if (currentPageDelayedTasks < Math.ceil(delayedTasksData.length / rowsPerPage)) {
+            currentPageDelayedTasks++;
+            renderDelayedTasksTable();
+          }
+        });
+
+        // Filtre uygula butonu
+        document.getElementById("applyFilters").addEventListener("click", () => {
+          // Filtreleme işlemleri burada yapılacak
+          showToast("Filtreler uygulandı");
+          loadReportsData(); // Filtrelenmiş verileri yeniden yükle
+        });
+
+        // Rapor oluştur butonu
+        document.getElementById("generateReport").addEventListener("click", () => {
+          generatePDFReport();
+        });
+
+        // Excel'e aktar butonları
+        document.getElementById("exportRevisions").addEventListener("click", () => {
+          exportToExcel(revisionsData, 'revize_raporu');
+        });
+
+        document.getElementById("exportDelayedTasks").addEventListener("click", () => {
+          exportToExcel(delayedTasksData, 'geciken_is_adimlari');
+        });
+      });
+
+      // PDF raporu oluştur
+      async function generatePDFReport() {
+        showToast("PDF raporu oluşturuluyor...");
+        
+        try {
+          const element = document.createElement('div');
+          element.innerHTML = `
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #333; background: #fff;">
+              <h1 style="color: #005c9d; text-align: center; margin-bottom: 20px;">Ser Elektrik Otomasyon - Rapor</h1>
+              <p style="text-align: center; color: #666; margin-bottom: 30px;">${new Date().toLocaleDateString('tr-TR')} tarihli rapor</p>
+              
+              <h2 style="color: #0980d3; border-bottom: 1px solid #eee; padding-bottom: 10px;">Özet Bilgiler</h2>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
+                <div style="text-align: center; width: 30%;">
+                  <h3 style="color: #005c9d;">Toplam Proje</h3>
+                  <p style="font-size: 24px; font-weight: bold;">${document.getElementById('totalProjects').textContent}</p>
+                </div>
+                <div style="text-align: center; width: 30%;">
+                  <h3 style="color: #005c9d;">Geciken Projeler</h3>
+                  <p style="font-size: 24px; font-weight: bold;">${document.getElementById('delayedProjects').textContent}</p>
+                </div>
+                <div style="text-align: center; width: 30%;">
+                  <h3 style="color: #005c9d;">Ort. Revize Sayısı</h3>
+                  <p style="font-size: 24px; font-weight: bold;">${document.getElementById('avgRevisions').textContent}</p>
+                </div>
+              </div>
+              
+              <h2 style="color: #0980d3; border-bottom: 1px solid #eee; padding-bottom: 10px;">Revize Raporu</h2>
+              <!-- Tablo içeriği buraya eklenecek -->
+              
+              <div style="margin-top: 40px; text-align: center; color: #666; font-size: 12px;">
+                © 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır.
+              </div>
+            </div>
+          `;
+
+          const options = {
+            margin: 10,
+            filename: 'Ser_Elektrik_Raporu.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          };
+
+          await html2pdf().set(options).from(element).save();
+          showToast("PDF raporu başarıyla oluşturuldu");
+        } catch (error) {
+          console.error("PDF oluşturulurken hata oluştu:", error);
+          showToast("PDF oluşturulurken hata oluştu", true);
+        }
+      }
+
+      // Excel'e aktar
+      function exportToExcel(data, fileName) {
+        // Basit bir CSV dönüşümü - Gerçek uygulamada daha kapsamlı bir çözüm kullanılmalı
+        if (data.length === 0) {
+          showToast("Aktarılacak veri bulunamadı", true);
+          return;
+        }
+
+        let csvContent = "";
+        
+        // Başlık satırı
+        const headers = Object.keys(data[0]);
+        csvContent += headers.join(",") + "\n";
+        
+        // Veri satırları
+        data.forEach(item => {
+          const row = headers.map(header => {
+            return item[header] || "";
+          });
+          csvContent += row.join(",") + "\n";
+        });
+        
+        // Blob oluştur ve indir
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `${fileName}_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showToast("Excel dosyası indiriliyor...");
+      }
     </script>
-    <!-- Bootstrap JS Bundle (En sona eklenmeli) -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
+    <script src="static/bildirim.js"></script>
+    <script src="static/user-avatar.js"></script>
+  </body>
 </html>
