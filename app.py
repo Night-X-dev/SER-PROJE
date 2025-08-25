@@ -4341,8 +4341,8 @@ def get_reports():
             # 2. En Çok Revize Alan Projeyi Bul
             sql_most_revised_project = """
                 SELECT 
-                    p.project_name AS projectName,  -- 'title' yerine 'project_name' kullanıldı
-                    c.name AS customerName,
+                    p.project_name AS projectName,
+                    c.customer_name AS customerName,  -- 'c.name' yerine 'c.customer_name' kullanıldı
                     p.status,
                     COUNT(rr.id) AS revisionCount
                 FROM revision_requests rr
@@ -4367,8 +4367,8 @@ def get_reports():
             # 3. Gecikme Durumu Olan İş Adımlarını Listele
             sql_delayed_tasks = """
                 SELECT 
-                    pp.title AS taskName,             -- 'project_progress' tablosundaki 'title' doğru
-                    p.project_name AS projectName,    -- 'projects' tablosundaki 'project_name' kullanıldı
+                    pp.title AS taskName,
+                    p.project_name AS projectName,
                     pp.delay_days AS delayDays,
                     pp.status,
                     u.fullname AS responsible
