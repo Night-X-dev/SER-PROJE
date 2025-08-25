@@ -1275,11 +1275,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='config.js') }}"></script>
     <script src="{{ url_for('static', filename='user-avatar.js') }}"></script>
-<script>
-    // Diğer mevcut JavaScript kodlarınız...
-
-    // Sayfa yüklendiğinde rapor verilerini API'den çekme
-    window.addEventListener('load', async function() {
+    <script>
+       window.addEventListener('load', async function() {
         const statsContainer = document.getElementById('stats-container');
         const mostRevisedProjectCard = document.getElementById('most-revised-project');
         const delayedTasksTableBody = document.getElementById('delayed-tasks-table-body');
@@ -1425,62 +1422,80 @@
         // Sayfa yüklendiğinde API'den veriyi çek
         fetchReportData();
     });
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tema Değiştirme
+            const themeToggle = document.getElementById('theme-toggle');
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.body.setAttribute('data-theme', savedTheme);
+                themeToggle.innerHTML = savedTheme === 'dark' ?
+                    '<i class="fas fa-sun"></i>' :
+                    '<i class="fas fa-moon"></i>';
+            }
+            themeToggle.addEventListener('click', () => {
+                const currentTheme = document.body.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                document.body.setAttribute('data-theme', newTheme);
+                themeToggle.innerHTML = newTheme === 'dark' ?
+                    '<i class="fas fa-sun"></i>' :
+                    '<i class="fas fa-moon"></i>';
+                localStorage.setItem('theme', newTheme);
+            });
 
-    // Sayfa yüklendiğinde kullanıcı bilgilerini yükle
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
-        try {
-            const user = JSON.parse(storedUser);
-            document.getElementById('userName').textContent = user.fullname || user.username || 'Kullanıcı';
-            document.getElementById('userRole').textContent = user.role || 'Rol Yok';
-            updateUserAvatar(user);
-        } catch (e) {
-            console.error("Kullanıcı bilgileri yüklenirken hata:", e);
-        }
-    }
+            // Hamburger menü işlevselliği
+            const hamburgerMenu = document.getElementById('hamburgerMenu');
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            
+            hamburgerMenu.addEventListener('click', () => {
+                sidebar.classList.toggle('show');
+                mainContent.classList.toggle('expanded');
+            });
 
-    // Çıkış butonu işlevselliği
-    document.getElementById('logoutButton').addEventListener('click', function() {
-        localStorage.removeItem('currentUser');
-        window.location.href = '/';
-    });
+            // Sidebar dışına tıklayınca kapatma
+            document.addEventListener('click', (event) => {
+                if (sidebar.classList.contains('show') && 
+                    !sidebar.contains(event.target) && 
+                    !hamburgerMenu.contains(event.target)) {
+                    sidebar.classList.remove('show');
+                    mainContent.classList.remove('expanded');
+                }
+            });
 
-    // Bildirim panelini yükle
-    fetch('bildirim.html')
-        .then(response => response.text())
-        .then(data => {
-            document.getElementById('notification-panel-placeholder').innerHTML = data;
-            // Bildirim paneli yüklendikten sonra bildirimleri ve olayları ayarla
-            initializeNotifications();
-        })
-        .catch(error => console.error('Bildirim paneli yüklenirken hata oluştu:', error));
+            // Pencere boyutu değiştiğinde sidebar durumunu sıfırla
+            window.addEventListener('resize', () => {
+                if (window.innerWidth > 992) {
+                    sidebar.classList.remove('show');
+                    mainContent.classList.remove('expanded');
+                }
+            });
 
-    // Hamburger menü işlevselliği
-    document.getElementById('hamburger-btn').addEventListener('click', () => {
-        document.getElementById('sidebar').classList.toggle('show');
-        document.getElementById('main-content').classList.toggle('expanded');
-    });
+            // Sayfa yüklendiğinde kullanıcı bilgilerini yükle
+            const storedUser = localStorage.getItem('currentUser');
+            if (storedUser) {
+                try {
+                    const user = JSON.parse(storedUser);
+                    document.getElementById('userName').textContent = user.fullname || user.username || 'Kullanıcı';
+                    document.getElementById('userRole').textContent = user.role || 'Rol Yok';
+                    updateUserAvatar(user);
+                } catch (e) {
+                    console.error("Kullanıcı bilgileri yüklenirken hata:", e);
+                }
+            }
 
-    // Menü dışında bir yere tıklandığında menüyü kapat
-    document.addEventListener('click', (event) => {
-        const sidebar = document.getElementById('sidebar');
-        const hamburgerBtn = document.getElementById('hamburger-btn');
-        if (!sidebar.contains(event.target) && !hamburgerBtn.contains(event.target)) {
-            sidebar.classList.remove('show');
-            document.getElementById('main-content').classList.remove('expanded');
-        }
-    });
+            // Çıkış butonu işlevselliği
+            document.getElementById('logoutButton').addEventListener('click', function() {
+                localStorage.removeItem('currentUser');
+                window.location.href = '/';
+            });
 
-    // Pencere boyutu değiştiğinde sidebar durumunu sıfırla
-    window.addEventListener('resize', () => {
-        if (window.innerWidth > 992) {
-            document.getElementById('sidebar').classList.remove('show');
-            document.getElementById('main-content').classList.remove('expanded');
-        }
-    });
+            // Bildirim panelini yükle
+        });
 
-</script>
-<script src="static/bildirim.js"></script>
+       
+    </script>
+    
+    <script src="static/bildirim.js"></script>
 
 </body>
 </html>
