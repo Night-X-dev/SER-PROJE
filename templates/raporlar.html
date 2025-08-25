@@ -1276,31 +1276,10 @@
     <script src="{{ url_for('static', filename='config.js') }}"></script>
     <script src="{{ url_for('static', filename='user-avatar.js') }}"></script>
     <script>
-                async function loadReports() {
-    try {
-      try {
-        const response = await fetch("/api/reports");
-        if (!response.ok) {
-            throw new Error("API hata döndü: " + response.status);
-        }
-
-        const data = await response.json();
-        if (!data || !data.stats) {
-            throw new Error("API beklenen veriyi döndürmedi.");
-        }
-
-        document.getElementById("totalProjects").innerText = data.stats.totalProjectsCount;
-        document.getElementById("avgRevisions").innerText = data.stats.avgRevisions;
-        document.getElementById("delayedSteps").innerText = data.stats.delayedStepsCount;
-        document.getElementById("mostRevisedProject").innerText =
-            data.mostRevisedProject?.projectName || "-";
-
-        // tablo doldurma...
-    } catch (error) {
-        console.error("Rapor verisi yüklenemedi:", error);
-    }
-        const response = await fetch("/api/reports");
-        const data = await response.json();
+    async function loadReports() {
+        try {
+            const response = await fetch("/api/reports");
+            const data = await response.json();
 
         // --- Stat Kartları ---
         document.getElementById("totalProjects").innerText = data.stats.totalProjectsCount;
@@ -1323,13 +1302,7 @@
             delayedTbody.appendChild(tr);
         });
 
-        // --- Ertelenen İş Adımları Tablosu ---
-        // API’den postponedSteps listesi dönmüyor. Eğer dönecekse benzer mantıkla buraya eklenir.
-        // ör: data.postponedTasks.forEach(...) şeklinde tbody'ye basılır.
-
-        // --- Revize Edilen İş Adımları Tablosu ---
-        // API şu an revize adımların detaylarını dönmüyor sadece count dönüyor.
-        // Eğer liste ekleyeceksen API’ye SELECT ile job_step ve revision_count çekmen lazım.
+    
         
     } catch (error) {
         console.error("Rapor verisi yüklenemedi:", error);

@@ -4314,24 +4314,24 @@ def get_reports():
         with connection.cursor() as cursor:
             # 1. Genel İstatistikleri Hesapla
             # Revize Edilmiş Adım Sayısı
-            sql_revised_steps = "SELECT COUNT(*) FROM revision_requests"
+            sql_revised_steps = "SELECT COUNT(*) AS count FROM revision_requests"
             cursor.execute(sql_revised_steps)
-            revised_steps_count = cursor.fetchone()['COUNT(*)']
+            revised_steps_count = cursor.fetchone()['count']
 
             # Ertelenen Adım Sayısı (custom_delay_days > 0)
-            sql_postponed_steps = "SELECT COUNT(*) FROM project_progress WHERE custom_delay_days > 0"
+            sql_postponed_steps = "SELECT COUNT(*) AS count FROM project_progress WHERE custom_delay_days > 0"
             cursor.execute(sql_postponed_steps)
-            postponed_steps_count = cursor.fetchone()['COUNT(*)']
+            postponed_steps_count = cursor.fetchone()['count']
 
             # Gecikmeli Adım Sayısı (delay_days > 0 ve tamamlanmamış)
-            sql_delayed_steps = "SELECT COUNT(*) FROM project_progress WHERE delay_days > 0 AND is_completed = FALSE"
+            sql_delayed_steps = "SELECT COUNT(*) AS count FROM project_progress WHERE delay_days > 0 AND is_completed = FALSE"
             cursor.execute(sql_delayed_steps)
-            delayed_steps_count = cursor.fetchone()['COUNT(*)']
+            delayed_steps_count = cursor.fetchone()['count']
 
             # Toplam Proje Sayısı
-            sql_total_projects = "SELECT COUNT(*) FROM projects"
+            sql_total_projects = "SELECT COUNT(*) AS count FROM projects"
             cursor.execute(sql_total_projects)
-            total_projects_count = cursor.fetchone()['COUNT(*)']
+            total_projects_count = cursor.fetchone()['count']
             
             # Ortalama revize sayısını hesapla
             avg_revisions = revised_steps_count / total_projects_count if total_projects_count > 0 else 0
@@ -4339,16 +4339,15 @@ def get_reports():
             # 2. En Çok Revize Alan Projeyi Bul
             sql_most_revised_project = """
                 SELECT 
-                    rr.project_id, 
-                    p.title AS project_name, 
-                    c.name AS customer_name,
+                    p.title AS projectName, 
+                    c.name AS customerName,
                     p.status,
-                    COUNT(rr.id) AS revision_count
+                    COUNT(rr.id) AS revisionCount
                 FROM revision_requests rr
                 JOIN projects p ON rr.project_id = p.project_id
                 JOIN customers c ON p.customer_id = c.customer_id
                 GROUP BY rr.project_id
-                ORDER BY revision_count DESC
+                ORDER BY revisionCount DESC
                 LIMIT 1
             """
             cursor.execute(sql_most_revised_project)
@@ -4357,9 +4356,9 @@ def get_reports():
             most_revised_project_details = {}
             if most_revised_project:
                 most_revised_project_details = {
-                    "projectName": most_revised_project['project_name'],
-                    "revisionCount": most_revised_project['revision_count'],
-                    "customerName": most_revised_project['customer_name'],
+                    "projectName": most_revised_project['projectName'],
+                    "revisionCount": most_revised_project['revisionCount'],
+                    "customerName": most_revised_project['customerName'],
                     "status": most_revised_project['status']
                 }
             
@@ -4396,9 +4395,11 @@ def get_reports():
             return jsonify(report_data)
 
     except Exception as e:
+        # Hata izini konsola yazdır
         app.logger.error(f"Rapor verisi çekme hatası: {e}")
         traceback.print_exc()
-        return jsonify({"error": "Rapor verisi çekilirken bir hata oluştu."}), 500
+        # Ön uca daha anlaşılır bir hata mesajı gönder
+        return jsonify({"error": f"Rapor verisi çekilirken bir hata oluştu: {str(e)}"}), 500
     finally:
         if connection:
             connection.close()
