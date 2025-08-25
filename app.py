@@ -4384,19 +4384,35 @@ def get_reports():
             """)
             revised_tasks = cursor.fetchall()
             
-            # Son 10 ertelenen iş adımı
+            # Son 10 geciken iş adımı (delay_days > 0 olanlar)
             cursor.execute("""
                 SELECT 
                     p.project_name as projectName,
                     pp.title as taskName,
                     pp.end_date as originalDate,
-                    DATE_ADD(pp.end_date, INTERVAL IFNULL(pp.delay_days, 0) DAY) as newDate,
-                    rr.message as delayReason,
-                    IFNULL(pp.delay_days, 0) as delayDays
+                    DATE_ADD(pp.end_date, INTERVAL pp.delay_days DAY) as newDate,
+                    pp.delay_reason as delayReason,
+                    pp.delay_days as delayDays
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
-                LEFT JOIN revision_requests rr ON pp.progress_id = rr.progress_id AND rr.status = 'approved'
-                WHERE (pp.delay_days > 1 OR (rr.id IS NOT NULL AND rr.status = 'approved'))
+                WHERE pp.delay_days > 0
+                ORDER BY pp.end_date DESC
+                LIMIT 10
+            """)
+            delayed_tasks = cursor.fetchall()
+            
+            # Son 10 ertelenen iş adımı (custom_delay_days > 0 olanlar)
+            cursor.execute("""
+                SELECT 
+                    p.project_name as projectName,
+                    pp.title as taskName,
+                    pp.end_date as originalDate,
+                    DATE_ADD(pp.end_date, INTERVAL pp.custom_delay_days DAY) as newDate,
+                    pp.delay_reason as delayReason,
+                    pp.custom_delay_days as delayDays
+                FROM project_progress pp
+                JOIN projects p ON pp.project_id = p.project_id
+                WHERE pp.custom_delay_days > 0
                 ORDER BY pp.end_date DESC
                 LIMIT 10
             """)
@@ -4408,11 +4424,34 @@ def get_reports():
                     'revisedStepsCount': revised_steps,
                     'delayedStepsCount': delayed_steps,
                     'postponedStepsCount': postponed_steps,
-                    'avgRevisions': round(float(avg_revisions), 1)
+                    'averageRevisions': float(avg_revisions) if avg_revisions else 0,
+                    'mostRevisedProject': most_revised_project.get('projectName', 'Yok'),
+                    'mostRevisionsCount': most_revised_project.get('revisionCount', 0)
                 },
-                'mostRevisedProject': most_revised_project,
-                'revisedTasks': revised_tasks,
-                'postponedTasks': postponed_tasks
+                'revisedTasks': [{
+                    'projectName': task['projectName'],
+                    'taskName': task['taskName'],
+                    'revisionDate': task['revisionDate'].strftime('%Y-%m-%d %H:%M') if task['revisionDate'] else None,
+                    'revisionReason': task['revisionReason'],
+                    'status': task['revisionStatus'],
+                    'requestedBy': task['requestedBy']
+                } for task in revised_tasks],
+                'delayedTasks': [{
+                    'projectName': task['projectName'],
+                    'taskName': task['taskName'],
+                    'originalDate': task['originalDate'].strftime('%Y-%m-%d') if task['originalDate'] else None,
+                    'newDate': task['newDate'].strftime('%Y-%m-%d') if task['newDate'] else None,
+                    'delayReason': task['delayReason'],
+                    'delayDays': task['delayDays']
+                } for task in delayed_tasks],
+                'postponedTasks': [{
+                    'projectName': task['projectName'],
+                    'taskName': task['taskName'],
+                    'originalDate': task['originalDate'].strftime('%Y-%m-%d') if task['originalDate'] else None,
+                    'newDate': task['newDate'].strftime('%Y-%m-%d') if task['newDate'] else None,
+                    'delayReason': task['delayReason'],
+                    'delayDays': task['delayDays']
+                } for task in postponed_tasks]
             })
             
     except Exception as e:
