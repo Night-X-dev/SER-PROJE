@@ -1429,19 +1429,21 @@
             const notificationPanel = document.getElementById('notification-panel');
             const closeButton = document.querySelector('.notification-panel-header .close-btn');
 
-            notificationButton.addEventListener('click', () => {
-                notificationPanel.classList.toggle('show');
-            });
+            if (notificationButton && notificationPanel && closeButton) {
+                notificationButton.addEventListener('click', () => {
+                    notificationPanel.classList.toggle('show');
+                });
 
-            closeButton.addEventListener('click', () => {
-                notificationPanel.classList.remove('show');
-            });
-
-            document.addEventListener('click', (event) => {
-                if (!notificationPanel.contains(event.target) && !notificationButton.contains(event.target)) {
+                closeButton.addEventListener('click', () => {
                     notificationPanel.classList.remove('show');
-                }
-            });
+                });
+
+                document.addEventListener('click', (event) => {
+                    if (notificationPanel.classList.contains('show') && !notificationPanel.contains(event.target) && !notificationButton.contains(event.target)) {
+                        notificationPanel.classList.remove('show');
+                    }
+                });
+            }
         }
     </script>
 </body>
