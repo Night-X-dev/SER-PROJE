@@ -1276,14 +1276,16 @@
     <script src="{{ url_for('static', filename='config.js') }}"></script>
     <script src="{{ url_for('static', filename='user-avatar.js') }}"></script>
     <script>
-async function loadReports() {
+  async function loadReports() {
+            // DOM elemanlarını seçmeden önce varlıklarını kontrol et
             const reportLoader = document.getElementById('reportLoader');
             const reportError = document.getElementById('reportError');
             const noDataMessage = document.getElementById('noDataMessage');
 
-            reportLoader.style.display = 'block';
-            reportError.style.display = 'none';
-            noDataMessage.style.display = 'none';
+            // Eğer elemanlar varsa stillerini ayarla
+            if (reportLoader) reportLoader.style.display = 'block';
+            if (reportError) reportError.style.display = 'none';
+            if (noDataMessage) noDataMessage.style.display = 'none';
 
             try {
                 const response = await fetch('/api/reports');
@@ -1333,26 +1335,30 @@ async function loadReports() {
                             });
                         } else {
                             delayedTasksTableBody.innerHTML = '<tr><td colspan="5">Veri bulunamadı.</td></tr>';
-                            noDataMessage.style.display = 'block';
+                            if (noDataMessage) noDataMessage.style.display = 'block';
                         }
                     } else {
                          // API'den gelen veri boş veya yanlış yapıda ise
-                        noDataMessage.style.display = 'block';
+                        if (noDataMessage) noDataMessage.style.display = 'block';
                     }
                 } else {
                     // API'den bir hata kodu geldiyse (örn. 500)
                     const errorMsg = data.error || 'Bilinmeyen bir hata oluştu.';
-                    reportError.textContent = 'Rapor verileri yüklenirken bir hata oluştu: ' + errorMsg;
-                    reportError.style.display = 'block';
+                    if (reportError) {
+                        reportError.textContent = 'Rapor verileri yüklenirken bir hata oluştu: ' + errorMsg;
+                        reportError.style.display = 'block';
+                    }
                     console.error('API hatası:', data);
                 }
             } catch (error) {
                 // Ağ hatası veya JSON ayrıştırma hatası
-                reportError.textContent = 'Rapor verileri yüklenirken bir ağ hatası oluştu.';
-                reportError.style.display = 'block';
+                if (reportError) {
+                    reportError.textContent = 'Rapor verileri yüklenirken bir ağ hatası oluştu.';
+                    reportError.style.display = 'block';
+                }
                 console.error('Rapor verisi yüklenemedi:', error);
             } finally {
-                reportLoader.style.display = 'none';
+                if (reportLoader) reportLoader.style.display = 'none';
             }
         }
         
