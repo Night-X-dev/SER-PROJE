@@ -1276,89 +1276,59 @@
     <script src="{{ url_for('static', filename='config.js') }}"></script>
     <script src="{{ url_for('static', filename='user-avatar.js') }}"></script>
     <script>
-  async function loadReports() {
-            // DOM elemanlarını seçmeden önce varlıklarını kontrol et
-            const reportLoader = document.getElementById('reportLoader');
-            const reportError = document.getElementById('reportError');
-            const noDataMessage = document.getElementById('noDataMessage');
-
-            // Eğer elemanlar varsa stillerini ayarla
-            if (reportLoader) reportLoader.style.display = 'block';
-            if (reportError) reportError.style.display = 'none';
-            if (noDataMessage) noDataMessage.style.display = 'none';
-
+ async function loadReports() {
             try {
                 const response = await fetch('/api/reports');
                 const data = await response.json();
 
                 if (response.ok) {
-                    if (data && data.stats) {
-                        // İstatistik kartlarını güncelle
-                        document.getElementById('revisedStepsCount').textContent = data.stats.revisedStepsCount || 0;
-                        document.getElementById('postponedStepsCount').textContent = data.stats.postponedStepsCount || 0;
-                        document.getElementById('delayedStepsCount').textContent = data.stats.delayedStepsCount || 0;
-                        document.getElementById('avgRevisions').textContent = data.stats.avgRevisions || 0;
+                    // İstatistikleri güncelle
+                    const stats = data.stats;
+                    
+                    // Sizin HTML'inizdeki ID'lere göre güncelleme
+                    document.getElementById('totalProjects').textContent = stats.totalProjectsCount;
+                    document.getElementById('revisedSteps').textContent = stats.revisedStepsCount;
+                    document.getElementById('delayedSteps').textContent = stats.delayedStepsCount;
+                    document.getElementById('postponedSteps').textContent = stats.postponedStepsCount;
+                    document.getElementById('avgRevisions').textContent = stats.avgRevisions;
 
-                        // En çok revize edilen proje tablosunu doldur
-                        const mostRevisedProjectTableBody = document.getElementById('mostRevisedProjectTableBody');
-                        mostRevisedProjectTableBody.innerHTML = '';
-                        if (data.mostRevisedProject && data.mostRevisedProject.projectName) {
-                            const project = data.mostRevisedProject;
-                            const row = `
-                                <tr>
-                                    <td>${project.projectName}</td>
-                                    <td>${project.customerName}</td>
-                                    <td>${project.revisionCount}</td>
-                                    <td><span class="status-badge status-${project.status.toLowerCase().replace(' ', '-')}">${project.status}</span></td>
-                                </tr>
-                            `;
-                            mostRevisedProjectTableBody.innerHTML = row;
-                        } else {
-                            mostRevisedProjectTableBody.innerHTML = '<tr><td colspan="4">Veri bulunamadı.</td></tr>';
-                        }
-                        
-                        // Gecikmeli görevler tablosunu doldur
-                        const delayedTasksTableBody = document.getElementById('delayedTasksTableBody');
-                        delayedTasksTableBody.innerHTML = '';
-                        if (data.delayedTasks && data.delayedTasks.length > 0) {
-                            data.delayedTasks.forEach(task => {
-                                const row = `
-                                    <tr>
-                                        <td>${task.taskName}</td>
-                                        <td>${task.projectName}</td>
-                                        <td>${task.delayDays}</td>
-                                        <td>${task.responsible || 'Atanmamış'}</td>
-                                        <td><span class="status-badge status-${task.status.toLowerCase().replace(' ', '-')}">${task.status}</span></td>
-                                    </tr>
-                                `;
-                                delayedTasksTableBody.innerHTML += row;
-                            });
-                        } else {
-                            delayedTasksTableBody.innerHTML = '<tr><td colspan="5">Veri bulunamadı.</td></tr>';
-                            if (noDataMessage) noDataMessage.style.display = 'block';
-                        }
+                    // En çok revize alan projeyi güncelle
+                    const mostRevisedProject = data.mostRevisedProject;
+                    if (mostRevisedProject && mostRevisedProject.projectName) {
+                         document.getElementById('mostRevisedProject').textContent = `${mostRevisedProject.projectName} (${mostRevisedProject.revisionCount} Revizyon)`;
                     } else {
-                         // API'den gelen veri boş veya yanlış yapıda ise
-                        if (noDataMessage) noDataMessage.style.display = 'block';
+                        document.getElementById('mostRevisedProject').textContent = "Veri Yok";
+                    }
+                    
+                    // Gecikmiş iş adımlarını listele
+                    const delayedTasksTableBody = document.getElementById('delayedTasksTableBody');
+                    delayedTasksTableBody.innerHTML = ''; // Eski verileri temizle
+
+                    if (data.delayedTasks && data.delayedTasks.length > 0) {
+                        data.delayedTasks.forEach(task => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${task.taskName}</td>
+                                <td>${task.projectName}</td>
+                                <td>${task.delayDays}</td>
+                                <td>${task.responsible || 'Belirlenmemiş'}</td>
+                            `;
+                            delayedTasksTableBody.appendChild(row);
+                        });
+                    } else {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `<td colspan="4" class="text-center">Gecikmiş iş adımı bulunmamaktadır.</td>`;
+                        delayedTasksTableBody.appendChild(row);
                     }
                 } else {
-                    // API'den bir hata kodu geldiyse (örn. 500)
-                    const errorMsg = data.error || 'Bilinmeyen bir hata oluştu.';
-                    if (reportError) {
-                        reportError.textContent = 'Rapor verileri yüklenirken bir hata oluştu: ' + errorMsg;
-                        reportError.style.display = 'block';
-                    }
-                    console.error('API hatası:', data);
+                    // API'den hata döndüğünde
+                    console.error("API hatası:", data);
+                    showMessage(`Rapor verisi yüklenemedi: ${data.error}`, 'error');
                 }
             } catch (error) {
-                // Ağ hatası veya JSON ayrıştırma hatası
-                if (reportError) {
-                    reportError.textContent = 'Rapor verileri yüklenirken bir ağ hatası oluştu.';
-                    reportError.style.display = 'block';
-                }
-                console.error('Rapor verisi yüklenemedi:', error);
-            } finally {
-                if (reportLoader) reportLoader.style.display = 'none';
+                // Fetch işlemi sırasında bir hata oluştuğunda
+                console.error("Rapor verisi yüklenemedi:", error);
+                showMessage("Rapor verisi yüklenirken bir ağ hatası oluştu. Lütfen tekrar deneyin.", 'error');
             }
         }
         
