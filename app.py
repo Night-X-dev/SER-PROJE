@@ -3267,27 +3267,31 @@ def add_task():
     assigned_user_id = int(data.get('assigned_user_id')) if data.get('assigned_user_id') else None
     created_by = int(data.get('created_by')) if data.get('created_by') else None
 
+    # Gerekli alanların kontrolü
     if not all([title, start, assigned_user_id, created_by]):
         return jsonify({'message': 'Required fields are missing!'}), 400
 
     connection = None
     try:
         connection = get_db_connection()
+        # Cursor ile tüm işlemler tek bir transaction içinde olacak.
         with connection.cursor() as cursor:
+            # 1. Görev Ekleme İşlemi
             sql = """
                 INSERT INTO tasks (title, description, start, end, priority, assigned_user_id, created_by)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
             cursor.execute(sql, (title, description, start, end, priority, assigned_user_id, created_by))
-            connection.commit()
-
+            
+            # 2. Bildirim gönderme işlemleri
             # Atayan kullanıcının adını al
             created_by_fullname = get_user_fullname_by_id(cursor, created_by)
             # Öncelik çevirisini al
             translated_priority = PRIORITY_TRANSLATIONS.get(priority.lower(), priority.capitalize())
-            send_notification(cursor, assigned_user_id, "Yeni Görev Atandı", f"Size yeni bir görev atandı: '{title}'")
+            
             # Send notification to the newly assigned user
-
+            send_notification(cursor, assigned_user_id, "Yeni Görev Atandı", f"Size yeni bir görev atandı: '{title}'")
+            
             # Atanan kullanıcının e-posta adresini al ve e-posta gönder
             cursor.execute("SELECT email FROM users WHERE id = %s", (assigned_user_id,))
             assigned_user_email_info = cursor.fetchone()
@@ -3312,14 +3316,21 @@ def add_task():
             else:
                 print(f"UYARI: Atanan kullanıcı {assigned_user_id} için e-posta adresi bulunamadı.")
 
+            # ÖNEMLİ: Tüm işlemler (hem görev hem de bildirim) başarılı olduktan sonra commit işlemini burada yapın.
+            connection.commit()
 
         return jsonify({'message': 'Task successfully added!'}), 201
     except Exception as e:
         print(f"Error adding task: {e}")
+        # Hata durumunda rollback de yapabilirsiniz
+        if connection:
+            connection.rollback()
         return jsonify({'message': 'Error adding task.'}), 500
     finally:
         if connection:
             connection.close()
+
+
 # API to update an existing task - Güncellendi
 @app.route('/api/tasks/<int:task_id>', methods=['PUT'])
 def update_task(task_id):
