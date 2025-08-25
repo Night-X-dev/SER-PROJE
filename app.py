@@ -4352,7 +4352,7 @@ def get_reports():
             
             # En çok revize alan proje
             cursor.execute("""
-                SELECT p.project_name as projectName, COUNT(rr.request_id) as revisionCount
+                SELECT p.project_name as projectName, COUNT(rr.id) as revisionCount
                 FROM revision_requests rr
                 JOIN projects p ON rr.project_id = p.project_id
                 WHERE rr.status = 'approved'
@@ -4373,7 +4373,7 @@ def get_reports():
                         WHEN pp.real_end_date IS NOT NULL THEN 'completed'
                         ELSE 'pending'
                     END as revisionStatus,
-                    u.full_name as requestedBy
+                    u.fullname as requestedBy
                 FROM revision_requests rr
                 JOIN project_progress pp ON rr.progress_id = pp.progress_id
                 JOIN projects p ON rr.project_id = p.project_id
