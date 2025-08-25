@@ -2044,6 +2044,125 @@ def parse_date_safe(date_str):
         print(f"HATALI TARİH FORMAT: {date_str}")
         return None
 
+@app.route('/api/reports')
+def get_reports():
+    """Rapor verilerini getirir"""
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Toplam proje sayısı
+            cursor.execute("SELECT COUNT(*) as total FROM projects")
+            total_projects = cursor.fetchone()['total']
+            
+            # Revize edilen adım sayısı
+            cursor.execute("""
+                SELECT COUNT(DISTINCT id) as count 
+                FROM project_progress 
+                WHERE revision_reason IS NOT NULL
+            """)
+            revised_steps = cursor.fetchone()['count']
+            
+            # Geciken adım sayısı
+            cursor.execute("""
+                SELECT COUNT(*) as count 
+                FROM project_progress 
+                WHERE delay_days > 0 AND real_end_date IS NULL
+            """)
+            delayed_steps = cursor.fetchone()['count']
+            
+            # Ertelenen adım sayısı
+            cursor.execute("""
+                SELECT COUNT(*) as count 
+                FROM project_progress 
+                WHERE new_end_date IS NOT NULL
+            """)
+            postponed_steps = cursor.fetchone()['count']
+            
+            # Ortalama revizyon sayısı
+            cursor.execute("""
+                SELECT AVG(revision_count) as avg_revisions
+                FROM (
+                    SELECT project_id, COUNT(*) as revision_count
+                    FROM project_progress 
+                    WHERE revision_reason IS NOT NULL
+                    GROUP BY project_id
+                ) as revisions
+            """)
+            avg_revisions = cursor.fetchone()['avg_revisions'] or 0
+            
+            # En çok revize alan proje
+            cursor.execute("""
+                SELECT p.project_name as projectName, COUNT(pp.id) as revisionCount
+                FROM project_progress pp
+                JOIN projects p ON pp.project_id = p.id
+                WHERE pp.revision_reason IS NOT NULL
+                GROUP BY p.project_name
+                ORDER BY revisionCount DESC
+                LIMIT 1
+            """)
+            most_revised_project = cursor.fetchone() or {}
+            
+            # Revize edilen iş adımları
+            cursor.execute("""
+                SELECT 
+                    p.project_name as projectName,
+                    pp.title as taskName,
+                    pp.revision_date as revisionDate,
+                    pp.revision_reason as revisionReason,
+                    CASE 
+                        WHEN pp.real_end_date IS NOT NULL THEN 'completed'
+                        ELSE 'pending'
+                    END as revisionStatus,
+                    u.full_name as requestedBy
+                FROM project_progress pp
+                JOIN projects p ON pp.project_id = p.id
+                LEFT JOIN users u ON pp.revised_by = u.id
+                WHERE pp.revision_reason IS NOT NULL
+                ORDER BY pp.revision_date DESC
+                LIMIT 10
+            """)
+            revised_tasks = cursor.fetchall()
+            
+            # Ertelenen iş adımları
+            cursor.execute("""
+                SELECT 
+                    p.project_name as projectName,
+                    pp.title as taskName,
+                    pp.start_date as originalDate,
+                    pp.new_end_date as newDate,
+                    pp.delay_reason as delayReason,
+                    pp.delay_days as delayDays
+                FROM project_progress pp
+                JOIN projects p ON pp.project_id = p.id
+                WHERE pp.new_end_date IS NOT NULL
+                ORDER BY pp.new_end_date DESC
+                LIMIT 10
+            """)
+            postponed_tasks = cursor.fetchall()
+            
+            return jsonify({
+                'stats': {
+                    'totalProjectsCount': total_projects,
+                    'revisedStepsCount': revised_steps,
+                    'delayedStepsCount': delayed_steps,
+                    'postponedStepsCount': postponed_steps,
+                    'avgRevisions': round(float(avg_revisions), 1)
+                },
+                'mostRevisedProject': most_revised_project,
+                'revisedTasks': revised_tasks,
+                'postponedTasks': postponed_tasks
+            })
+            
+    except Exception as e:
+        print(f"Raporlar alınırken hata oluştu: {e}")
+        return jsonify({
+            'error': 'Raporlar alınırken bir hata oluştu',
+            'details': str(e)
+        }), 500
+    finally:
+        if connection:
+            connection.close()
+
 @app.route('/api/projects', methods=['POST'])
 def add_project():
     data = request.json
