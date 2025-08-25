@@ -1732,11 +1732,11 @@ def get_user_fullname_by_id(cursor, user_id):
 
 @app.route('/api/projects/<int:project_id>', methods=['PUT'])
 def update_project(project_id):
-    """Proje bilgilerini günceller ve proje yöneticisine bildirim gönderir."""
+    """Updates a project."""
     data = request.get_json()
     user_id = data.get('user_id')
     if not user_id:
-        return jsonify({'message': 'Kullanıcı Kimliği (User ID) gereklidir.'}), 400
+        return jsonify({'message': 'User ID is required.'}), 400
 
     # Tüm olası sütunlar
     possible_columns = [
@@ -1752,19 +1752,12 @@ def update_project(project_id):
     connection = None
     try:
         connection = get_db_connection()
-        with connection.cursor(dictionary=True) as cursor: # dictionary=True ekleyerek sütun adlarına erişimi kolaylaştırıyoruz
+        with connection.cursor() as cursor:
             # Mevcut projeyi getir
-            cursor.execute(
-                "SELECT project_name, project_manager_id FROM projects WHERE project_id = %s",
-                (project_id,)
-            )
+            cursor.execute("SELECT * FROM projects WHERE project_id = %s", (project_id,))
             existing_project = cursor.fetchone()
             if not existing_project:
-                return jsonify({'message': 'Proje bulunamadı.'}), 404
-
-            # Proje adını ve yönetici kimliğini al
-            project_name = existing_project['project_name']
-            project_manager_id = existing_project['project_manager_id']
+                return jsonify({'message': 'Project not found.'}), 404
 
             # Güncellenecek değerleri belirle
             for column in possible_columns:
@@ -1780,22 +1773,18 @@ def update_project(project_id):
 
             # Hiçbir güncelleme yoksa
             if not updates:
-                return jsonify({'message': 'Güncellenecek bilgi yok.'}), 200
+                return jsonify({'message': 'No information to update.'}), 200
 
             # SQL sorgusunu oluştur
             sql = f"UPDATE projects SET {', '.join(updates)} WHERE project_id = %s"
             params.append(project_id)
 
-            # print(f"Güncelleme sorgusu: {sql}")
-            # print(f"Parametre değerleri: {params}")
+            print(f"Güncelleme sorgusu: {sql}")
+            print(f"Parametre değerleri: {params}")
 
             # Sorguyu çalıştır
             cursor.execute(sql, params)
             connection.commit() # update_project tarafından yapılan değişiklikleri commit et
-
-            # Proje yöneticisine bildirim gönder
-            if project_manager_id:
-                send_notification(cursor, project_manager_id, "Proje Güncellendi", f"Yönettiğiniz '{project_name}' projesinin bilgileri güncellendi.")
 
             # Projenin genel durumunu belirle ve güncelle
             determine_and_update_project_status(cursor, project_id)
@@ -1804,17 +1793,15 @@ def update_project(project_id):
             return jsonify({'message': 'Proje başarıyla güncellendi!'}), 200
 
     except Exception as e:
-        # Hata durumunda hata mesajı yazdır
         print(f"Proje güncelleme hatası: {str(e)}")
         traceback.print_exc()
         if connection:
             connection.rollback()
-        return jsonify({'message': f'Sunucu hatası: {str(e)}'}), 500
+        return jsonify({'message': f'Server error: {str(e)}'}), 500
 
     finally:
         if connection:
             connection.close()
-
 
 # Proje silme api (DELETE)
 # API to list project managers
