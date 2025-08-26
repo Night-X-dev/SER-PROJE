@@ -3938,18 +3938,6 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
 
 
 
-/**
- * @file Proje PDF Raporu Oluşturma Fonksiyonu
- * @description Proje ile ilgili API verilerini çeker, işler ve çıktı olarak bir PDF raporu görüntüler.
- * Bu sürümde, ilerleme çubuğu erteleme ve gecikme sürelerini ayrı ayrı renklendirir.
- * Fonksiyon Türkçe olarak yorumlanmıştır ve kullanıcı isteklerine göre özelleştirilmiştir.
- */
-
-/**
- * Proje verilerini alarak bir PDF raporu oluşturan asenkron fonksiyon.
- * @param {object} project - Proje ana verilerini içeren nesne.
- * @returns {void}
- */
 async function generateProjectPdf(project) {
     // API'den çekilecek veriler için boş diziler ve nesneler tanımla.
     let progressSteps = [];
@@ -4135,12 +4123,16 @@ async function generateProjectPdf(project) {
         const totalPlannedDuration = calculateTotalPlannedDuration(project, lastPlannedEndDate);
         
         let completedDays = 0;
-        let postponedDays = 0;
-        let delayedDays = 0;
+        let postponedDays = 0; // ERTELEME
+        let delayedDays = 0; // GECİKME
         
         progressSteps.forEach(step => {
+            // Her bir adımın planlanan süresini hesapla.
             const stepPlannedDuration = calculatePlannedDuration(step.planned_start_date, step.real_end_date) || 0;
+            
+            // "Erteleme" günlerini topla.
             postponedDays += step.delay_days || 0;
+            // "Gecikme" günlerini topla.
             delayedDays += step.custom_delay_days || 0;
 
             if (step.is_completed) {
@@ -4154,37 +4146,28 @@ async function generateProjectPdf(project) {
         });
 
         // Kalan süreyi toplam planlanandan çıkararak bul.
-        const totalElapsed = completedDays + postponedDays + delayedDays;
-        let remainingDays = totalPlannedDuration > totalElapsed ? totalPlannedDuration - totalElapsed : 0;
-        
         const totalDurationForPercentage = totalPlannedDuration + delayedDays + postponedDays;
-        
-        if (totalDurationForPercentage === 0) {
-            return {
-                completedDays: 0, postponedDays: 0, delayedDays: 0, remainingDays: 0,
-                completedPercentage: 0, postponementPercentage: 0, delayPercentage: 0, remainingPercentage: 0
-            };
-        }
 
         // Yüzde hesaplamaları.
         let completedPercentage = (completedDays / totalDurationForPercentage) * 100;
         let postponementPercentage = (postponedDays / totalDurationForPercentage) * 100;
         let delayPercentage = (delayedDays / totalDurationForPercentage) * 100;
-        let remainingPercentage = (remainingDays / totalDurationForPercentage) * 100;
-
+        let remainingPercentage = ((totalDurationForPercentage - (completedDays + postponedDays + delayedDays)) / totalDurationForPercentage) * 100;
+        
+        // Yüzdelerin toplamının 100 olmasını sağla.
         const totalPercentage = completedPercentage + postponementPercentage + delayPercentage + remainingPercentage;
-        if (Math.round(totalPercentage) !== 100) {
-            remainingPercentage += (100 - totalPercentage);
+        if (Math.round(totalPercentage) !== 100 && totalDurationForPercentage > 0) {
+             remainingPercentage += (100 - totalPercentage);
         }
 
         return {
             completedDays: completedDays,
-            postponementDays: postponedDays,
-            delayedDays: delayedDays,
-            remainingDays: remainingDays,
+            postponementDays: postponedDays, // ERTELEME SÜRESİ
+            delayedDays: delayedDays, // GECİKME SÜRESİ
+            remainingDays: totalDurationForPercentage - (completedDays + postponedDays + delayedDays),
             completedPercentage: completedPercentage,
-            postponementPercentage: postponementPercentage,
-            delayPercentage: delayPercentage,
+            postponementPercentage: postponementPercentage, // ERTELEME YÜZDESİ
+            delayPercentage: delayPercentage, // GECİKME YÜZDESİ
             remainingPercentage: remainingPercentage
         };
     };
@@ -4443,9 +4426,13 @@ async function generateProjectPdf(project) {
 
                         <div style="height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px;">
                             <div style="height: 100%; display: flex;">
+                                <!-- Tamamlanan süre çubuğu -->
                                 <div style="background-color: #4CAF50; width: ${progressBarData.completedPercentage}%;"></div>
+                                <!-- Erteleme süresi çubuğu -->
                                 <div style="background-color: #FFC107; width: ${progressBarData.postponementPercentage}%;"></div>
+                                <!-- Gecikme süresi çubuğu -->
                                 <div style="background-color: #f44336; width: ${progressBarData.delayPercentage}%;"></div>
+                                <!-- Kalan süre çubuğu -->
                                 <div style="background-color: #ccc; width: ${progressBarData.remainingPercentage}%;"></div>
                             </div>
                         </div>
@@ -4487,6 +4474,7 @@ async function generateProjectPdf(project) {
         // showToast ve addActivity fonksiyonları ana dosyanızda tanımlı olmalıdır.
     };
 }
+
 
      
 async function exportAllProjectsToPdf() {
