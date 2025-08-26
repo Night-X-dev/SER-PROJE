@@ -2486,18 +2486,15 @@ def update_project_progress_step(progress_id):
                 prev_end_date = previous_step['end_date']
                 current_start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
                 time_diff = (current_start_date - prev_end_date).days
-                if time_diff > 1:
-                    calculated_delay_days = time_diff
-            elif not previous_step: # Eğer bu ilk iş adımıysa, projenin başlangıç tarihine göre gecikmeyi hesapla
+                calculated_delay_days = max(time_diff - 1, 0)  # 1 gün çıkar, negatif olursa 0
+            elif not previous_step:
                 cursor.execute("SELECT start_date FROM projects WHERE project_id = %s", (current_project_id,))
                 project_start_info = cursor.fetchone()
                 if project_start_info and project_start_info['start_date']:
                     project_start_date = project_start_info['start_date']
                     current_start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
                     time_diff = (current_start_date - project_start_date).days
-                    if time_diff >= 0:
-                        calculated_delay_days = time_diff - 1
-
+                    calculated_delay_days = max(time_diff - 1, 0)
             sql_update = """
                 UPDATE project_progress
                 SET title = %s, description = %s, start_date = %s, end_date = %s,
