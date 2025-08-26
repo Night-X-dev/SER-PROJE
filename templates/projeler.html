@@ -3956,24 +3956,34 @@ async function generateProjectPdf(project) {
     let revisionCounts = {};
 
     try {
-        // Proje ilerleme adımlarını API'den çekme
-        const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
-        if (progressResponse.ok) {
-            progressSteps = await progressResponse.json();
-        } else {
-            console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
-        }
+    // Proje ilerleme adımlarını API'den çekme
+    const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
+    if (progressResponse.ok) {
+        progressSteps = await progressResponse.json();
 
-        // Revizyon sayılarını API'den çekme
-        const revisionCountResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/revision-counts-by-step`);
-        if (revisionCountResponse.ok) {
-            revisionCounts = await revisionCountResponse.json();
-        } else {
-            console.error("Revizyon sayıları çekilirken hata oluştu. HTTP Status:", revisionCountResponse.status);
-        }
-    } catch (e) {
-        console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
+        // Her adımın start_date'ini planned_start_date ile güncelle
+        progressSteps = progressSteps.map(step => {
+            if (step.planned_start_date) {
+                return { ...step, start_date: step.planned_start_date };
+            }
+            return step;
+        });
+
+    } else {
+        console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
     }
+
+    // Revizyon sayılarını API'den çekme
+    const revisionCountResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/revision-counts-by-step`);
+    if (revisionCountResponse.ok) {
+        revisionCounts = await revisionCountResponse.json();
+    } else {
+        console.error("Revizyon sayıları çekilirken hata oluştu. HTTP Status:", revisionCountResponse.status);
+    }
+} catch (e) {
+    console.error("Veri çekme veya işleme sırasında beklenmeyen bir hata oluştu:", e);
+}
+
 
     // Gerçek Proje Bitiş tarihini belirleme: En son tamamlanan adımı bulur ve onun gerçek bitiş tarihini kullanır.
     const lastStepWithEndDate = progressSteps.filter(step => step.end_date).reduce(

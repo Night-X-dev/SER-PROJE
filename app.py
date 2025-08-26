@@ -2204,32 +2204,34 @@ def get_project_progress_steps(project_id):
                 connection.commit()
 
             sql = """
-            SELECT
+                SELECT
                 progress_id,
                 project_id,
-                title AS step_name,
-                description,
-                start_date,
-                end_date,
-                delay_days,
-                custom_delay_days,
-                real_end_date,
-                is_completed,  # Added this line
-                created_at
-            FROM project_progress
-            WHERE project_id = %s
-            ORDER BY start_date ASC, created_at ASC
+            title AS step_name,
+            description,
+            start_date,
+            planned_start_date,  -- EKLENDİ
+            end_date,
+            delay_days,
+            custom_delay_days,
+            real_end_date,
+            is_completed,
+            created_at
+        FROM project_progress
+        WHERE project_id = %s
+        ORDER BY planned_start_date ASC, created_at ASC
             """
             cursor.execute(sql, (project_id,))
             steps = cursor.fetchall()
 
             for step in steps:
                 step['start_date'] = step['start_date'].isoformat() if isinstance(step['start_date'], datetime.date) else None
+                step['planned_start_date'] = step['planned_start_date'].isoformat() if isinstance(step['planned_start_date'], datetime.date) else None
                 step['end_date'] = step['end_date'].isoformat() if isinstance(step['end_date'], datetime.date) else None
                 step['real_end_date'] = step['real_end_date'].isoformat() if isinstance(step['real_end_date'], datetime.date) else None
                 step['created_at'] = step['created_at'].isoformat() if isinstance(step['created_at'], datetime.datetime) else None
                 step['custom_delay_days'] = int(step['custom_delay_days']) if step['custom_delay_days'] is not None else 0
-                step['is_completed'] = bool(step['is_completed'])  # Convert TINYINT to boolean
+                step['is_completed'] = bool(step['is_completed'])
 
         return jsonify(steps), 200
     except pymysql.Error as e:
