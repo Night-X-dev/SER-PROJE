@@ -2301,11 +2301,14 @@ def add_project_progress_step_from_modal(project_id):
                 connection.commit()
 
             sql_insert = """
-                INSERT INTO project_progress (project_id, title, description, start_date, end_date, delay_days, custom_delay_days, real_end_date)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO project_progress (
+                project_id, title, description, start_date, end_date, planned_start_date, 
+                delay_days, custom_delay_days, real_end_date
+          )
+          VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             # BURADA DEĞİŞİKLİK YAPILDI: Yeni eklenen iş adımının real_end_date'i, başlangıçta end_date ile aynı olacak
-            cursor.execute(sql_insert, (project_id, step_name, description, start_date_str, end_date_str, delay_days, 0, end_date_str))
+            cursor.execute(sql_insert, (project_id, step_name, description, start_date_str, end_date_str, start_date_str, delay_days, 0, end_date_str))
             new_progress_id = cursor.lastrowid
 
             update_result = update_project_dates(cursor, project_id)
