@@ -2490,7 +2490,6 @@ def update_project_progress_step(progress_id):
             """, (current_project_id, progress_id))
             subsequent_steps = cursor.fetchall()
 
-            # Yeni bitiş tarihi
             last_end_date_for_recalc = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
 
             for sub_step in subsequent_steps:
@@ -2500,15 +2499,15 @@ def update_project_progress_step(progress_id):
                 sub_real_end_date_from_db = sub_step['real_end_date']
                 sub_custom_delay = int(sub_step.get('custom_delay_days', 0) or 0)
 
-                # Eğer gecikmeli adımın bitiş tarihi >= alt adımın başlangıcı, kaydır
-                if last_end_date_for_recalc + datetime.timedelta(days=1) > sub_start_date:
+                # Eğer alt adımın başlangıcı, gecikmeli iş adımının bitiş tarihinden sonraysa kaydır
+                if sub_start_date > last_end_date_for_recalc:
                     duration = (sub_end_date - sub_start_date).days
                     sub_start_date = last_end_date_for_recalc + datetime.timedelta(days=1)
                     sub_end_date = sub_start_date + datetime.timedelta(days=duration)
                     recalculated_sub_delay_days = max((sub_start_date - last_end_date_for_recalc).days + sub_custom_delay, 0)
                     sub_real_end_date_to_save = sub_real_end_date_from_db.isoformat() if sub_real_end_date_from_db else sub_end_date.isoformat()
                 else:
-                    # Tarihler değişmeyecek
+                    # Eğer alt adımın başlangıcı gecikmeli adımın bitiş tarihinden önceyse, tarihleri değiştirme
                     recalculated_sub_delay_days = sub_custom_delay
                     sub_real_end_date_to_save = sub_real_end_date_from_db.isoformat() if sub_real_end_date_from_db else sub_end_date.isoformat()
 
@@ -2519,6 +2518,7 @@ def update_project_progress_step(progress_id):
                 """, (sub_start_date, sub_end_date, recalculated_sub_delay_days, sub_real_end_date_to_save, sub_progress_id))
 
                 last_end_date_for_recalc = max(last_end_date_for_recalc, sub_end_date)
+
 
             update_project_dates(cursor, current_project_id)
             determine_and_update_project_status(cursor, current_project_id)
