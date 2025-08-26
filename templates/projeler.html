@@ -3958,17 +3958,7 @@ async function generateProjectPdf(project) {
     try {
         // Proje ilerleme adımlarını API'den çekme
         const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
-        if (progressResponse.ok) {
-            progressSteps = await progressResponse.json();
-
-            // Her adımın start_date'ini planned_start_date ile güncelle
-            progressSteps = progressSteps.map(step => ({
-                ...step,
-                start_date: step.planned_start_date
-            }));
-        } else {
-            console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
-        }
+       
 
         // Revizyon sayılarını API'den çekme
         const revisionCountResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/revision-counts-by-step`);
