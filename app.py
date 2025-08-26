@@ -634,6 +634,7 @@ def determine_and_update_project_status(cursor, project_id):
         print(f"Error determining and updating project status: {e}")
         traceback.print_exc()
         return False
+
 # API to get notifications (for notifications table)
 @app.route('/api/notifications', methods=['GET'])
 def get_notifications():
@@ -2409,15 +2410,6 @@ def send_email_async(to_emails, subject, body):
             traceback.print_exc()
 # API to update project progress step
 
-import datetime
-import traceback
-from flask import request, jsonify, session
-# get_db_connection, update_project_dates, determine_and_update_project_status fonksiyonlarınızın tanımlı olduğunu varsayıyoruz.
-# from your_module import get_db_connection, update_project_dates, determine_and_update_project_status
-
-# Bu fonksiyonun eksiksiz çalışması için gerekli kütüphaneleri içe aktarın.
-# Eğer kullanmıyorsanız, bu satırları silebilirsiniz.
-# import datetime, traceback
 
 @app.route('/api/progress/<int:progress_id>', methods=['PUT'])
 def update_project_progress_step(progress_id):
