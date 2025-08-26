@@ -2413,11 +2413,6 @@ def send_email_async(to_emails, subject, body):
 
 @app.route('/api/progress/<int:progress_id>', methods=['PUT'])
 def update_project_progress_step(progress_id):
-    """
-    Belirli bir proje ilerleme adımını günceller.
-    Gecikme eklenmesi durumunda, sadece sonraki adımlarla çakışma varsa
-    zincirleme bir şekilde tarihleri günceller.
-    """
     data = request.get_json()
     print(f"Received data for updating progress {progress_id}: {data}")
 
@@ -2428,7 +2423,7 @@ def update_project_progress_step(progress_id):
 
     newly_added_custom_delay = int(data.get('newly_added_custom_delay', 0) or 0)
 
-    user_id = session.get('user_id')
+    user_id = session.get('user_id')    
     if not user_id and 'user_id' in data:
         user_id = data.get('user_id')
 
@@ -2455,7 +2450,7 @@ def update_project_progress_step(progress_id):
             real_end_date_row = cursor.fetchone()
             real_end_date_to_save = real_end_date_row['real_end_date'] if real_end_date_row and real_end_date_row['real_end_date'] else datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date().isoformat()
 
-            # Önceki adımın bitiş tarihini al
+            # Previous step
             cursor.execute("""
                 SELECT end_date FROM project_progress
                 WHERE project_id = %s AND progress_id < %s
@@ -2488,54 +2483,44 @@ def update_project_progress_step(progress_id):
                 calculated_delay_days, final_custom_delay_for_db, real_end_date_to_save, progress_id
             ))
 
-            # Sonraki adımların listesini al
+            # Sonraki adımların delay hesaplaması
             cursor.execute("""
-                SELECT progress_id, title, start_date, end_date, real_end_date, custom_delay_days
+                SELECT progress_id, start_date, end_date, real_end_date, custom_delay_days
                 FROM project_progress
                 WHERE project_id = %s AND progress_id > %s
                 ORDER BY start_date ASC, created_at ASC
             """, (current_project_id, progress_id))
             subsequent_steps = cursor.fetchall()
 
-            # Zincirleme kaydırma için referans bitiş tarihi
             last_end_date_for_recalc = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
 
-            # Sonraki adımları kontrol et ve sadece çakışma varsa güncelle
             for sub_step in subsequent_steps:
                 sub_progress_id = sub_step['progress_id']
                 sub_start_date = sub_step['start_date']
                 sub_end_date = sub_step['end_date']
                 sub_real_end_date_from_db = sub_step['real_end_date']
-                
-                # Adımın orijinal süresini hesapla
-                duration_days = (sub_end_date - sub_start_date).days
-                
-                # Eğer bir sonraki adımın başlangıcı, bir önceki adımın bitiş tarihi ile aynı veya önceyse
-                if sub_start_date <= last_end_date_for_recalc:
-                    # 1 gün ileri kaydır
-                    new_sub_start_date = last_end_date_for_recalc + datetime.timedelta(days=1)
-                    new_sub_end_date = new_sub_start_date + datetime.timedelta(days=duration_days)
-                    
-                    # Yeni gecikme ve gerçek bitiş tarihini hesapla
-                    recalculated_sub_delay_days = max((new_sub_start_date - last_end_date_for_recalc).days, 0) + int(sub_step.get('custom_delay_days', 0) or 0)
-                    sub_real_end_date_to_save = sub_real_end_date_from_db if sub_real_end_date_from_db else new_sub_end_date.isoformat()
-                    
-                    # Sonraki adımı güncelle
-                    cursor.execute("""
-                        UPDATE project_progress
-                        SET start_date=%s, end_date=%s, delay_days=%s, real_end_date=%s
-                        WHERE progress_id=%s
-                    """, (new_sub_start_date.isoformat(), new_sub_end_date.isoformat(), 
-                         recalculated_sub_delay_days, sub_real_end_date_to_save, sub_progress_id))
-                    
-                    # Zincirleme için referans tarihini güncelle
-                    last_end_date_for_recalc = new_sub_end_date
-                    
-                    # Bir sonraki adım için devam et (zincirleme)
-                    continue
+                sub_custom_delay = int(sub_step.get('custom_delay_days', 0) or 0)
+
+                # Eğer alt adımın başlangıcı, gecikmeli iş adımının bitiş tarihinden sonraysa kaydır
+                if sub_start_date > last_end_date_for_recalc:
+                    duration = (sub_end_date - sub_start_date).days
+                    sub_start_date = last_end_date_for_recalc + datetime.timedelta(days=1)
+                    sub_end_date = sub_start_date + datetime.timedelta(days=duration)
+                    recalculated_sub_delay_days = max((sub_start_date - last_end_date_for_recalc).days + sub_custom_delay, 0)
+                    sub_real_end_date_to_save = sub_real_end_date_from_db.isoformat() if sub_real_end_date_from_db else sub_end_date.isoformat()
                 else:
-                    # Eğer sonraki adım zaten daha ilerideyse, zinciri sonlandır
-                    break
+                    # Eğer alt adımın başlangıcı gecikmeli adımın bitiş tarihinden önceyse, tarihleri değiştirme
+                    recalculated_sub_delay_days = sub_custom_delay
+                    sub_real_end_date_to_save = sub_real_end_date_from_db.isoformat() if sub_real_end_date_from_db else sub_end_date.isoformat()
+
+                cursor.execute("""
+                    UPDATE project_progress
+                    SET start_date=%s, end_date=%s, delay_days=%s, real_end_date=%s
+                    WHERE progress_id=%s
+                """, (sub_start_date, sub_end_date, recalculated_sub_delay_days, sub_real_end_date_to_save, sub_progress_id))
+
+                last_end_date_for_recalc = max(last_end_date_for_recalc, sub_end_date)
+
 
             update_project_dates(cursor, current_project_id)
             determine_and_update_project_status(cursor, current_project_id)
