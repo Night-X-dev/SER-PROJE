@@ -413,8 +413,7 @@ def get_project_report_data(project_id):
                     completed_steps_count += 1
                 
                 # Sonraki döngü için bitiş tarihini güncelle
-                last_end_date = step_real_end_date_obj or step_end_date_obj
-
+                last_end_date = datetime.date.fromisoformat(str(step['end_date'])) if step['end_date'] else None
 
             # 3. Genel Tamamlanma Yüzdesini Hesapla
             total_steps = len(progress_steps)
@@ -2545,6 +2544,24 @@ def update_project_progress_step(progress_id):
             update_project_dates(cursor, current_project_id)
             determine_and_update_project_status(cursor, current_project_id)
             connection.commit()
+
+            return jsonify({
+                'message': 'Progress step successfully updated!',
+                'custom_delay_days': final_custom_delay_for_db,
+                'delay_days': calculated_delay_days,
+                'real_end_date': real_end_date_to_save
+            }), 200
+
+    except Exception as e:
+        print(f"Proje güncelleme hatası: {str(e)}")
+        traceback.print_exc()
+        if connection:
+            connection.rollback()
+        return jsonify({'message': f'Server error: {str(e)}'}), 500
+
+    finally:
+        if connection:
+            connection.close()
 
 @app.route('/api/progress/<int:progress_id>', methods=['DELETE'])
 def delete_project_progress_step(progress_id):
