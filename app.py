@@ -2415,8 +2415,8 @@ def send_email_async(to_emails, subject, body):
 def update_project_progress_step(progress_id):
     """
     Belirli bir proje ilerleme adımını günceller.
-    Gecikme eklenmesi durumunda, mevcut adımın tarihini ve
-    çakışma varsa sonraki adımları zincirleme olarak kaydırır.
+    Gecikme eklenmesi durumunda, sadece sonraki adımlarla çakışma varsa
+    zincirleme bir şekilde tarihleri günceller.
     """
     data = request.get_json()
     print(f"Received data for updating progress {progress_id}: {data}")
@@ -2488,7 +2488,7 @@ def update_project_progress_step(progress_id):
                 calculated_delay_days, final_custom_delay_for_db, real_end_date_to_save, progress_id
             ))
 
-            # Sonraki adımları zincirleme kaydırma
+            # Sonraki adımların listesini al
             cursor.execute("""
                 SELECT progress_id, title, start_date, end_date, real_end_date, custom_delay_days
                 FROM project_progress
@@ -2497,33 +2497,44 @@ def update_project_progress_step(progress_id):
             """, (current_project_id, progress_id))
             subsequent_steps = cursor.fetchall()
 
+            # Zincirleme kaydırma için referans bitiş tarihi
             last_end_date_for_recalc = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
 
+            # Sonraki adımları kontrol et ve sadece çakışma varsa güncelle
             for sub_step in subsequent_steps:
                 sub_progress_id = sub_step['progress_id']
                 sub_start_date = sub_step['start_date']
                 sub_end_date = sub_step['end_date']
                 sub_real_end_date_from_db = sub_step['real_end_date']
 
+                # Eğer bir sonraki adımın başlangıcı, bir önceki adımın bitiş tarihinden
+                # önce veya aynı günse, kaydırma işlemini başlat veya devam ettir.
                 if sub_start_date <= last_end_date_for_recalc:
+                    # Sadece 1 gün ileri kaydır ve zinciri durdur
                     duration = (sub_end_date - sub_start_date).days
                     new_sub_start_date = last_end_date_for_recalc + datetime.timedelta(days=1)
                     new_sub_end_date = new_sub_start_date + datetime.timedelta(days=duration)
-
+                    
+                    # Yeni gecikme ve gerçek bitiş tarihini hesapla
                     recalculated_sub_delay_days = max((new_sub_start_date - last_end_date_for_recalc).days, 0) + int(sub_step.get('custom_delay_days', 0) or 0)
                     sub_real_end_date_to_save = sub_real_end_date_from_db if sub_real_end_date_from_db else new_sub_end_date.isoformat()
 
+                    # Sonraki adımı güncelle
                     cursor.execute("""
                         UPDATE project_progress
                         SET start_date=%s, end_date=%s, delay_days=%s, real_end_date=%s
                         WHERE progress_id=%s
                     """, (new_sub_start_date.isoformat(), new_sub_end_date.isoformat(), recalculated_sub_delay_days, sub_real_end_date_to_save, sub_progress_id))
-
+                    
+                    # Zincirleme için referans tarihini güncelle
                     last_end_date_for_recalc = new_sub_end_date
+                    # Sadece bir adım kaydırdık, şimdi döngüyü durdur
+                    break
                 else:
-                    last_end_date_for_recalc = sub_end_date
+                    # Bir sonraki adımın başlangıcı zaten ileride.
+                    # Zinciri burada sonlandır ve döngüden çık.
+                    break
 
-            # Proje tarih ve durumlarını güncelle
             update_project_dates(cursor, current_project_id)
             determine_and_update_project_status(cursor, current_project_id)
             connection.commit()
