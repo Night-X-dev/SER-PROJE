@@ -413,7 +413,7 @@ def get_project_report_data(project_id):
                     completed_steps_count += 1
                 
                 # Sonraki döngü için bitiş tarihini güncelle
-                last_end_date = datetime.date.fromisoformat(str(step['end_date'])) if step['end_date'] else None
+                last_end_date = step_real_end_date_obj or step_end_date_obj
 
             # 3. Genel Tamamlanma Yüzdesini Hesapla
             total_steps = len(progress_steps)
