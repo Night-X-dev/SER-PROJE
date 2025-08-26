@@ -2499,8 +2499,10 @@ def update_project_progress_step(progress_id):
                 ORDER BY start_date ASC, created_at ASC
             """, (current_project_id, progress_id))
             subsequent_steps = cursor.fetchall()
-
+            # Zincirleme güncelleme: sonraki adımların delay_days hesaplaması
+            recalculated_sub_delay_days = 0  # <-- burayı ekle
             last_end_date_for_recalc = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
             for sub_step in subsequent_steps:
                 sub_progress_id = sub_step['progress_id']
                 sub_start_date = sub_step['start_date']
@@ -2514,9 +2516,8 @@ def update_project_progress_step(progress_id):
                     sub_end_date = sub_start_date + datetime.timedelta(days=duration)
 
                 # 2) Yeni delay hesapla
-                final_sub_custom_delay = (sub_step['custom_delay_days'] or 0)
-                recalculated_sub_delay_days += final_sub_custom_delay
-
+                final_sub_custom_delay = int(sub_step.get('custom_delay_days', 0) or 0)
+                recalculated_sub_delay_days = final_sub_custom_delay  # += yerine direkt set, yoksa sürekli artar
 
                 # 3) real_end_date koru
                 sub_real_end_date_to_save = sub_real_end_date_from_db.isoformat() if sub_real_end_date_from_db else sub_end_date.isoformat()
@@ -2527,7 +2528,9 @@ def update_project_progress_step(progress_id):
                     SET start_date=%s, end_date=%s, delay_days=%s, real_end_date=%s
                     WHERE progress_id=%s
                 """, (sub_start_date, sub_end_date, recalculated_sub_delay_days, sub_real_end_date_to_save, sub_progress_id))
+
                 last_end_date_for_recalc = sub_end_date
+
 
             # Proje genel tarihlerini ve durumunu güncelle
             update_project_dates(cursor, current_project_id)
