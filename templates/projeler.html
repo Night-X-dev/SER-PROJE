@@ -3217,30 +3217,25 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
     try {
         console.log(`${allSteps[stepIndex].step_name} adımına ${newlyAddedDelayDays} gün erteleme uygulanıyor.`);
 
-        // Sadece mevcut adımın verilerini al.
+        // İlk olarak, gecikmenin eklendiği mevcut adımın verilerini al ve güncelle.
         const currentStep = allSteps[stepIndex];
         const currentProgressId = currentStep.progress_id;
-        
-        // Gerekli DOM elemanlarını al.
-        const startDateInput = document.getElementById(`step-${currentProgressId}-start`);
-        const endDateInput = document.getElementById(`step-${currentProgressId}-end`);
-        const stepNameInput = document.getElementById(`step-${currentProgressId}-name`);
-        const descriptionInput = document.getElementById(`step-${currentProgressId}-desc`);
+        const originalCurrentStepEndDate = new Date(document.getElementById(`step-${currentProgressId}-end`).value);
 
-        if (!startDateInput || !endDateInput || !stepNameInput || !descriptionInput) {
-            console.error(`Gerekli inputlar bulunamadı.`);
-            showToast("Güncelleme için gerekli elementler bulunamadı.", true);
-            return null;
-        }
+        // Gecikmeyi ekleyerek mevcut adımın yeni bitiş tarihini hesapla.
+        const newCurrentStepEndDate = new Date(originalCurrentStepEndDate);
+        newCurrentStepEndDate.setDate(newCurrentStepEndDate.getDate() + newlyAddedDelayDays);
+        const newCurrentStepEndDateStr = newCurrentStepEndDate.toISOString().split('T')[0];
 
-        // Frontend'de tarih hesaplaması yapma. Sadece backend'e göndermek için verileri topla.
-        // `end_date` ve `start_date`'i olduğu gibi backend'e gönderiyoruz,
-        // backend'deki mantık gecikmeyi ekleyecek.
+        // Frontend'deki bitiş tarihini hemen güncelle.
+        document.getElementById(`step-${currentProgressId}-end`).value = newCurrentStepEndDateStr;
+
+        // Backend'e gönderilecek payload'u oluştur.
         const targetStepData = {
-            step_name: stepNameInput.value,
-            description: descriptionInput.value,
-            start_date: startDateInput.value,
-            end_date: endDateInput.value,
+            step_name: document.getElementById(`step-${currentProgressId}-name`).value,
+            description: document.getElementById(`step-${currentProgressId}-desc`).value,
+            start_date: document.getElementById(`step-${currentProgressId}-start`).value,
+            end_date: newCurrentStepEndDateStr,
             newly_added_custom_delay: newlyAddedDelayDays
         };
 
@@ -3258,14 +3253,88 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
 
         console.log(`"${targetStepData.step_name}" iş adımı başarıyla güncellendi.`);
 
-        // Backend'den gelen yeni verileri yansıtmak için tüm proje adımlarını yeniden yükle.
-        // Bu, backend'deki zincirleme kaydırma mantığının doğru şekilde yansımasını sağlar.
+        // === YENİ MANTIK BURADA BAŞLIYOR ===
+
+        // Sadece bir sonraki adımları etkileyeceği için döngüye sonraki adımdan başla.
+        for (let i = stepIndex + 1; i < allSteps.length; i++) {
+            const previousStep = allSteps[i - 1];
+            const currentStepInLoop = allSteps[i];
+            const progressId = currentStepInLoop.progress_id;
+
+            // Önceki adımın güncel bitiş tarihini kontrol et.
+            // Eğer önceki adımın güncel bitiş tarihi bir sonraki adımın başlangıç tarihinden önce veya eşitse,
+            // tarihlerde bir çakışma yoktur ve sonraki adımların tarihlerini değiştirmeye gerek yoktur.
+            const previousStepEndDate = new Date(document.getElementById(`step-${previousStep.progress_id}-end`).value);
+            const currentStepInLoopStartDate = new Date(document.getElementById(`step-${currentStepInLoop.progress_id}-start`).value);
+            
+            // Eğer yeni bitiş tarihi bir sonraki adımın başlangıç tarihini geçmiyorsa, döngüyü sonlandır.
+            // Bu, gereksiz API çağrılarını ve güncellemeleri önler.
+            if (previousStepEndDate <= currentStepInLoopStartDate) {
+                console.log(`"${currentStepInLoop.step_name}" adımının başlangıç tarihi, önceki adımın yeni bitiş tarihini geçmiyor. Tarih güncellemesi yapılmayacak.`);
+                break;
+            }
+
+            // Gerekli DOM elemanlarını al.
+            const startDateInput = document.getElementById(`step-${progressId}-start`);
+            const endDateInput = document.getElementById(`step-${progressId}-end`);
+            const stepNameInput = document.getElementById(`step-${progressId}-name`);
+            const descriptionInput = document.getElementById(`step-${progressId}-desc`);
+
+            if (!startDateInput || !endDateInput || !stepNameInput || !descriptionInput) {
+                console.error(`${i}. adım için gerekli inputlar bulunamadı`);
+                continue;
+            }
+
+            // Eğer bir çakışma varsa, yeni başlangıç ve bitiş tarihlerini hesapla.
+            const originalStartDate = new Date(startDateInput.value);
+            const originalEndDate = new Date(endDateInput.value);
+            
+            // Adımın orijinal süresini hesapla (bitiş - başlangıç).
+            const durationInMs = originalEndDate.getTime() - originalStartDate.getTime();
+            
+            // Bir sonraki adımın yeni başlangıç tarihi, önceki adımın bitiş tarihinden 1 gün sonrasıdır.
+            const newStartDate = new Date(previousStepEndDate);
+            newStartDate.setDate(newStartDate.getDate() + 1);
+
+            // Yeni bitiş tarihini, yeni başlangıç tarihi ve orijinal süreye göre hesapla.
+            const newEndDate = new Date(newStartDate.getTime() + durationInMs);
+            
+            // Frontend inputlarını güncelle.
+            const newStartDateStr = newStartDate.toISOString().split('T')[0];
+            const newEndDateStr = newEndDate.toISOString().split('T')[0];
+            startDateInput.value = newStartDateStr;
+            endDateInput.value = newEndDateStr;
+            
+            // Backend'e göndermek için payload oluştur.
+            const subsequentStepData = {
+                step_name: stepNameInput.value,
+                description: descriptionInput.value,
+                start_date: newStartDateStr,
+                end_date: newEndDateStr,
+                newly_added_custom_delay: 0
+            };
+
+            // Sonraki adımı backend'de güncelle.
+            const subsequentStepResponse = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(subsequentStepData)
+            });
+
+            const subsequentStepResponseData = await subsequentStepResponse.json();
+            if (!subsequentStepResponse.ok) {
+                console.error(`Sonraki iş adımı (${stepNameInput.value}) güncellenemedi:`, subsequentStepResponseData.message);
+                showToast(`"${stepNameInput.value}" iş adımı güncellenirken hata: ${subsequentStepResponseData.message}`, true);
+            } else {
+                console.log(`"${stepNameInput.value}" iş adımı başarıyla güncellendi.`);
+            }
+        }
+
+        // Tüm güncellemeler bittikten sonra projeyi yeniden yükle.
         await fetchProgressSteps(projectId, true);
         await fetchProjects();
 
-        showToast("Başarılı", "Proje tarihleri başarıyla güncellendi.", false);
         return targetStepResponseData;
-
     } catch (error) {
         console.error("Erteleme uygulama hatası:", error);
         showToast("Erteleme uygulanırken bir hata oluştu: " + error.message, true);
