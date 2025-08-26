@@ -2514,8 +2514,9 @@ def update_project_progress_step(progress_id):
                     sub_end_date = sub_start_date + datetime.timedelta(days=duration)
 
                 # 2) Yeni delay hesapla
-                gap = (sub_start_date - last_end_date_for_recalc).days
-                recalculated_sub_delay_days = max(gap - 1, 0)
+                final_sub_custom_delay = (sub_step['custom_delay_days'] or 0)
+                recalculated_sub_delay_days += final_sub_custom_delay
+
 
                 # 3) real_end_date koru
                 sub_real_end_date_to_save = sub_real_end_date_from_db.isoformat() if sub_real_end_date_from_db else sub_end_date.isoformat()
