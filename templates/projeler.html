@@ -3960,12 +3960,6 @@ async function generateProjectPdf(project) {
         const progressResponse = await fetch(`${API_BASE_URL}/api/projects/${project.project_id}/progress`);
         if (progressResponse.ok) {
             progressSteps = await progressResponse.json();
-
-            // Her adımın start_date'ini planned_start_date ile güncelle
-            progressSteps = progressSteps.map(step => ({
-                ...step,
-                start_date: step.planned_start_date
-            }));
         } else {
             console.error("Proje ilerleme adımları çekilirken hata oluştu. HTTP Status:", progressResponse.status);
         }
@@ -3982,8 +3976,6 @@ async function generateProjectPdf(project) {
     }
 
     // Gerçek Proje Bitiş tarihini belirleme: En son tamamlanan adımı bulur ve onun gerçek bitiş tarihini kullanır.
-    // DÜZELTME: Hatanın kaynağı olan `reduce` fonksiyonu, boş dizi durumunda `TypeError` veriyordu.
-    // Bu sorunu çözmek için `filter` sonrası dizi boşsa doğrudan `null` dönecek şekilde kod güncellendi.
     const completedSteps = progressSteps.filter(step => step.end_date);
     const lastStepWithEndDate = completedSteps.length > 0 ? completedSteps.reduce(
         (prev, current) => (new Date(prev.end_date) > new Date(current.end_date) ? prev : current)
@@ -3995,7 +3987,6 @@ async function generateProjectPdf(project) {
         (prev, current) => (prev && new Date(prev.real_end_date) > new Date(current.real_end_date)) ? prev : current, null
     );
     const lastPlannedEndDate = lastPlannedStep ? lastPlannedStep.real_end_date : null;
-
 
     // Tarihleri okunabilir formatta göstermek için yardımcı fonksiyon
     const formatDateForDisplay = (dateStr) => {
@@ -4053,12 +4044,12 @@ async function generateProjectPdf(project) {
             return `Tamamlandı <i class="fas fa-check-circle" style="color: green;"></i>`;
         }
         
-        // Düzeltme: Bekliyor durumu için adımın başlangıç tarihini kontrol et.
+        // Adımın gerçek başlangıç tarihi gelecekteyse, 'Bekliyor' durumunu gösterir.
         if (today < startDate) {
             return `Bekliyor <i class="fas fa-hourglass-start" style="color: grey;"></i>`;
         }
 
-        // Düzeltme: Gecikme durumu, adım tamamlanmamışsa ve planlanan bitiş tarihi geçmişse kontrol edilir.
+        // Adım tamamlanmamışsa ve planlanan bitiş tarihi geçmişse, 'Gecikmeli' durumunu gösterir.
         if (today > plannedEndDate && !step.is_completed) {
             return `Gecikmeli <i class="fas fa-exclamation-triangle" style="color: red;"></i>`;
         }
@@ -4115,7 +4106,6 @@ async function generateProjectPdf(project) {
         steps.forEach(step => {
             if (step.start_date) {
                 const startDate = new Date(step.start_date);
-                // DÜZELTME: Adım tamamlanmadıysa, süreyi bugünün tarihine kadar hesapla.
                 const endDate = step.is_completed && step.end_date 
                     ? new Date(step.end_date) 
                     : new Date();
@@ -4149,7 +4139,7 @@ async function generateProjectPdf(project) {
         let delayedDays = 0;
         
         progressSteps.forEach(step => {
-            const stepPlannedDuration = calculatePlannedDuration(step.start_date, step.real_end_date) || 0;
+            const stepPlannedDuration = calculatePlannedDuration(step.planned_start_date, step.real_end_date) || 0;
             postponedDays += step.delay_days || 0;
             delayedDays += step.custom_delay_days || 0;
 
@@ -4231,7 +4221,7 @@ async function generateProjectPdf(project) {
                             <p><strong>Revize Sayısı:</strong> ${revisionCountForStep}</p>
                         </div>
                         <div style="width:50%; text-align:right;">
-                            <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.start_date, step.real_end_date)} gün</p>
+                            <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.planned_start_date, step.real_end_date)} gün</p>
                             <p><strong>Erteleme Gün Sayısı</strong> <span style="color: ${postponementColor};">${postponementDays} gün</span></p>
                             <p><strong>Gecikme Süresi:</strong> <span style="color: ${customDelayColor};">${customDelayDays} gün</span></p>
                             <p><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.end_date)} gün</p>
