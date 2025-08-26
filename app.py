@@ -2486,7 +2486,7 @@ def update_project_progress_step(progress_id):
                 prev_end_date = previous_step['end_date']
                 current_start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
                 time_diff = (current_start_date - prev_end_date).days
-                if time_diff >= 1:
+                if time_diff > 1:
                     calculated_delay_days = time_diff
             elif not previous_step: # Eğer bu ilk iş adımıysa, projenin başlangıç tarihine göre gecikmeyi hesapla
                 cursor.execute("SELECT start_date FROM projects WHERE project_id = %s", (current_project_id,))
