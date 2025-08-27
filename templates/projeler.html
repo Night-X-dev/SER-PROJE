@@ -2981,6 +2981,86 @@ function attachProjectTableEventListeners() {
 }
 
 
+  // Function to validate a progress step date change
+  function validateProgressStepDate(inputElement, dateType, progressId, otherDateValue) {
+    const newDate = inputElement.value;
+    const originalDate = inputElement.getAttribute('data-original-date');
+    
+    // If no date is selected, reset to original date
+    if (!newDate) {
+      showToast("Hata", "Tarih alanı boş bırakılamaz.", "error");
+      inputElement.value = originalDate ? formatDateForInput(originalDate) : '';
+      return false;
+    }
+    
+    const newDateObj = new Date(newDate);
+    const otherDateObj = otherDateValue ? new Date(otherDateValue) : null;
+    
+    // Validate start date
+    if (dateType === 'start') {
+      // Check if start date is after end date
+      if (otherDateObj && newDateObj > otherDateObj) {
+        showToast("Hata", "Başlangıç tarihi, bitiş tarihinden sonra olamaz.", "error");
+        inputElement.value = originalDate ? formatDateForInput(originalDate) : '';
+        return false;
+      }
+      
+      // Check against previous step's end date if not the first step
+      const currentStep = inputElement.closest('.progress-detail-item');
+      if (currentStep) {
+        const prevStep = currentStep.previousElementSibling;
+        if (prevStep && !prevStep.id) { // Check if previous element is a step (not a form or other element)
+          const prevEndInput = prevStep.querySelector('input[type="date"]:nth-of-type(2)');
+          if (prevEndInput && prevEndInput.value) {
+            const prevEndDate = new Date(prevEndInput.value);
+            // Add one day to previous end date for comparison
+            prevEndDate.setDate(prevEndDate.getDate() + 1);
+            
+            if (newDateObj < prevEndDate) {
+              showToast("Hata", `Başlangıç tarihi, önceki adımın bitiş tarihinden (${formatDateForDisplay(prevEndInput.value)}) en az bir gün sonra olmalıdır.`, "error");
+              inputElement.value = originalDate ? formatDateForInput(originalDate) : '';
+              return false;
+            }
+          }
+        }
+      }
+    } 
+    // Validate end date
+    else if (dateType === 'end') {
+      // Check if end date is before start date
+      if (otherDateObj && newDateObj < otherDateObj) {
+        showToast("Hata", "Bitiş tarihi, başlangıç tarihinden önce olamaz.", "error");
+        inputElement.value = originalDate ? formatDateForInput(originalDate) : '';
+        return false;
+      }
+      
+      // Check against next step's start date if not the last step
+      const currentStep = inputElement.closest('.progress-detail-item');
+      if (currentStep) {
+        const nextStep = currentStep.nextElementSibling;
+        if (nextStep && !nextStep.id) { // Check if next element is a step (not a form or other element)
+          const nextStartInput = nextStep.querySelector('input[type="date"]:first-of-type');
+          if (nextStartInput && nextStartInput.value) {
+            const nextStartDate = new Date(nextStartInput.value);
+            // Add one day to current end date for comparison
+            const currentEndDate = new Date(newDate);
+            currentEndDate.setDate(currentEndDate.getDate() + 1);
+            
+            if (nextStartDate < currentEndDate) {
+              showToast("Hata", `Bitiş tarihi, sonraki adımın başlangıç tarihinden (${formatDateForDisplay(nextStartInput.value)}) en az bir gün önce olmalıdır.`, "error");
+              inputElement.value = originalDate ? formatDateForInput(originalDate) : '';
+              return false;
+            }
+          }
+        }
+      }
+    }
+    
+    // If validation passed, update the original date
+    inputElement.setAttribute('data-original-date', newDate);
+    return true;
+  }
+  
   // Function to validate contract and meeting dates against progress steps
   function validateProjectDates(contractDate, meetingDate, projectId) {
     // Get all progress steps
@@ -3484,6 +3564,8 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                            class="progress-datepicker ${readonlyClass}" 
                            value="${formatDateForInput(step.start_date || '')}" 
                            ${disabledAttr} 
+                           data-original-date="${step.start_date || ''}"
+                           onchange="validateProgressStepDate(this, 'start', ${step.progress_id}, '${step.end_date || ''}')"
                            required>` :
                     `Başlangıç: ${formatDateForDisplay(step.start_date || '-')}`;
 
@@ -3492,7 +3574,9 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     <input type="date" id="step-${step.progress_id}-end" 
                            class="progress-datepicker ${readonlyClass}" 
                            value="${formatDateForInput(step.end_date || '')}" 
-                           ${disabledAttr} 
+                           ${disabledAttr}
+                           data-original-date="${step.end_date || ''}"
+                           onchange="validateProgressStepDate(this, 'end', ${step.progress_id}, '${step.start_date || ''}')" 
                            required>` :
                     `Bitiş: ${formatDateForDisplay(step.end_date || '-')}`;
 
