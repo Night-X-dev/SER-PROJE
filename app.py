@@ -2093,34 +2093,23 @@ def add_project():
             for step in progress_steps:
                 step_title = step.get('title')
                 step_desc = step.get('description')
-                # Girilen tarihleri planned olarak al
-                planned_start = parse_date_safe(step.get('startDate'))
-                planned_end = parse_date_safe(step.get('endDate'))
-                
-                # Gerçek başlangıç ve bitiş tarihlerini şimdilik planlanan tarihler olarak ayarla
-                step_start = planned_start
-                step_end = planned_end
+                step_start = parse_date_safe(step.get('startDate'))
+                step_end = parse_date_safe(step.get('endDate'))
 
-                if not step_title or not planned_start or not planned_end:
+                if not step_title or not step_start or not step_end:
                     print(f"WARNING: Eksik veya hatalı progress step, project_id={new_project_id}. Atlandı.")
                     continue
 
                 delay_days = 0
-                if last_step_end_date and planned_start > last_step_end_date:
-                    diff = (planned_start - last_step_end_date).days
-                    if diff > 0:
-                        delay_days = diff
+                if last_step_end_date:
+                    diff = (step_start - last_step_end_date).days
+                    if diff > 1:
+                        delay_days = diff - 1
 
                 cursor.execute("""
-                    INSERT INTO project_progress (project_id, title, description,
-                                                  planned_start_date, end_date,
-                                                  real_start_date, real_end_date,
-                                                  delay_days)
+                    INSERT INTO project_progress (project_id, title, description, start_date, end_date, planned_start_date, delay_days, real_end_date)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """, (new_project_id, step_title, step_desc,
-                      planned_start, planned_end,
-                      step_start, step_end,
-                      delay_days))
+                """, (new_project_id, step_title, step_desc, step_start, step_end, step_start, delay_days, step_end))
 
                 last_step_end_date = step_end
 
