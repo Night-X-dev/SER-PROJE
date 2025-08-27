@@ -3769,45 +3769,6 @@ def _check_and_notify_completed_steps(cursor):
         print(f"Genel hata (_check_and_notify_completed_steps): {e}")
         traceback.print_exc()
 
-            
-def check_and_notify_completed_steps():
-    """
-    Her gün 00:10'da çalışacak olan zamanlanmış görev fonksiyonu.
-    Bitiş tarihi geçmiş ve tamamlanmamış iş adımlarını bulur ve mail gönderir.
-    """
-    print("Zamanlanmış görev başlatıldı: Tamamlanmamış iş adımları kontrol ediliyor...")
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # Bugünden önce bitiş tarihi olan ve henüz tamamlanmamış (real_end_date NULL olan) adımları bul
-            sql = """
-                SELECT progress_id
-                FROM project_progress
-                WHERE end_date < CURDATE()
-                AND real_end_date IS NULL
-                AND completion_notified = 0
-            """
-            cursor.execute(sql)
-            steps_to_notify = cursor.fetchall()
-
-            for step in steps_to_notify:
-                progress_id = step['progress_id']
-                notify_on_step_completion_or_update(progress_id, is_update=False)
-
-                # Bildirim gönderildikten sonra `completion_notified` flag'ini güncelle
-                cursor.execute("UPDATE project_progress SET completion_notified = 1 WHERE progress_id = %s", (progress_id,))
-
-            connection.commit()
-            print(f"DEBUG: {len(steps_to_notify)} adet tamamlanmamış iş adımı için bildirim gönderildi.")
-
-    except Exception as e:
-        print(f"Zamanlanmış görevde hata: {e}")
-        traceback.print_exc()
-    finally:
-        if connection:
-            connection.close()
-# Endpoint to list all work progress headers
 @app.route('/api/work-progress-headers', methods=['GET'])
 def list_work_progress_headers():
     try:
