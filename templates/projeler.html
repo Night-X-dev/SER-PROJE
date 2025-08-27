@@ -2336,6 +2336,35 @@
         return `<span class="status-badge ${statusClass}">${statusText}</span>`;
     }
 
+    function validateAndSaveNewProgressStep(projectId, form) {
+        const title = form.querySelector('input[name="new_step_title"]').value;
+        const description = form.querySelector('textarea[name="new_step_description"]').value;
+        const startDate = form.querySelector('input[name="new_step_start_date"]').value;
+        const endDate = form.querySelector('input[name="new_step_end_date"]').value;
+
+        if (!title || !startDate || !endDate) {
+            showToast('Lütfen yeni iş adımı için başlık, başlangıç ve bitiş tarihlerini girin.', 'error');
+            return;
+        }
+
+        const lastStepEndDate = form.dataset.lastStepEndDate;
+        if (lastStepEndDate && startDate <= lastStepEndDate) {
+            showToast('Yeni iş adımının başlangıç tarihi, önceki adımın bitiş tarihinden sonra olmalıdır.', 'error');
+            return;
+        }
+
+        const newStepData = {
+            project_id: projectId,
+            title: title,
+            description: description,
+            start_date: startDate,
+            end_date: endDate,
+            user_id: currentUser.id
+        };
+
+        saveNewProgressStep(newStepData);
+    }
+
 // Tabloda kullanırken şöyle çağırın:
 // getStatusBadgeHtml(project.display_status, project.total_delay_days)
 
