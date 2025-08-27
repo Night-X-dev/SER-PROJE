@@ -2981,24 +2981,93 @@ function attachProjectTableEventListeners() {
 }
 
 
-  async function saveProjectChanges() {
-        const projectId = document.getElementById("editProjectId").value;
-        const projectName = document.getElementById("editProjectName").value;
-        const referenceNo = document.getElementById("editReferenceNo").value;
-        const customerId = document.getElementById("editCustomerId").value;
-        const projectLocation = document.getElementById("editLocation").value;
-        const selectedStatus = document.getElementById("editStatus").value; // Kullanıcının seçtiği durum
-        const contractDate = document.getElementById("editContractDate").value;
-        const meetingDate = document.getElementById("editMeetingDate").value;
-        const startDate = document.getElementById("editStartDate").value;
-        const endDate = document.getElementById("editEndDate").value;
-        const projectManagerId = document.getElementById("editProjectManagerId").value;
-        const description = document.getElementById("editDescription").value;
-
-        if (!projectName || !customerId || !projectManagerId || !startDate || !endDate) {
-            showToast("Uyarı", "Lütfen tüm zorunlu alanları doldurun: Proje Adı, Müşteri, Proje Yöneticisi, Başlangıç Tarihi, Bitiş Tarihi.");
-            return;
+  // Function to validate contract and meeting dates against progress steps
+  function validateProjectDates(contractDate, meetingDate, projectId) {
+    // Get all progress steps
+    const progressSteps = document.querySelectorAll('.progress-detail-item:not([id="newProgressForm"])');
+    
+    if (progressSteps.length === 0) return true; // No steps to validate against
+    
+    // Find the first step's start date
+    const firstStep = progressSteps[0];
+    const firstStepStartDateInput = firstStep.querySelector('.progress-datepicker');
+    const firstStepStartDate = firstStepStartDateInput ? firstStepStartDateInput.value : null;
+    
+    if (!firstStepStartDate) return true; // No start date to validate against
+    
+    // Convert dates to timestamps for comparison
+    const contractTimestamp = contractDate ? new Date(contractDate).getTime() : 0;
+    const meetingTimestamp = meetingDate ? new Date(meetingDate).getTime() : 0;
+    const firstStepTimestamp = new Date(firstStepStartDate).getTime();
+    
+    if (contractDate && contractTimestamp >= firstStepTimestamp) {
+      showToast("Hata", "Sözleşme tarihi, ilk iş adımının başlangıç tarihinden (" + formatDateForDisplay(firstStepStartDate) + ") önce olmalıdır.", "error");
+      return false;
+    }
+    
+    if (meetingDate && meetingTimestamp >= firstStepTimestamp) {
+      showToast("Hata", "Toplantı tarihi, ilk iş adımının başlangıç tarihinden (" + formatDateForDisplay(firstStepStartDate) + ") önce olmalıdır.", "error");
+      return false;
+    }
+    
+    return true;
+  }
+  
+  // Function to validate progress step dates
+  function validateProgressSteps(projectId) {
+    const steps = document.querySelectorAll('.progress-detail-item:not([id="newProgressForm"])');
+    
+    for (var i = 1; i < steps.length; i++) {
+      var prevStep = steps[i - 1];
+      var currentStep = steps[i];
+      
+      var prevEndDateInput = prevStep.querySelector('input[type="date"]:nth-of-type(2)');
+      var currentStartDateInput = currentStep.querySelector('input[type="date"]:first-of-type');
+      
+      if (prevEndDateInput && currentStartDateInput && prevEndDateInput.value && currentStartDateInput.value) {
+        // Add one day to previous end date for comparison
+        var prevEnd = new Date(prevEndDateInput.value);
+        prevEnd.setDate(prevEnd.getDate() + 1);
+        var currentStart = new Date(currentStartDateInput.value);
+        
+        if (currentStart < prevEnd) {
+          showToast("Hata", "İş adımı #" + (i + 1) + " başlangıç tarihi, önceki adımın bitiş tarihinden (" + formatDateForDisplay(prevEndDateInput.value) + ") en az bir gün sonra olmalıdır.", "error");
+          return false;
         }
+      }
+    }
+    
+    return true;
+  }
+
+  async function saveProjectChanges() {
+    const projectId = document.getElementById("editProjectId").value;
+    const projectName = document.getElementById("editProjectName").value;
+    const referenceNo = document.getElementById("editReferenceNo").value;
+    const customerId = document.getElementById("editCustomerId").value;
+    const projectLocation = document.getElementById("editLocation").value;
+    const selectedStatus = document.getElementById("editStatus").value;
+    const contractDate = document.getElementById("editContractDate").value;
+    const meetingDate = document.getElementById("editMeetingDate").value;
+    const startDate = document.getElementById("editStartDate").value;
+    const endDate = document.getElementById("editEndDate").value;
+    const projectManagerId = document.getElementById("editProjectManagerId").value;
+    const description = document.getElementById("editDescription").value;
+
+    if (!projectName || !customerId || !projectManagerId || !startDate || !endDate) {
+      showToast("Uyarı", "Lütfen tüm zorunlu alanları doldurun: Proje Adı, Müşteri, Proje Yöneticisi, Başlangıç Tarihi, Bitiş Tarihi.");
+      return;
+    }
+    
+    // Validate contract/meeting dates against progress steps
+    if (!validateProjectDates(contractDate, meetingDate, projectId)) {
+      return;
+    }
+    
+    // Validate progress step dates
+    if (!validateProgressSteps(projectId)) {
+      return;
+    }
 
         const projectData = {
     user_id: currentUser.id,
@@ -3718,20 +3787,164 @@ document.querySelectorAll('.complete-step-checkbox').forEach(checkbox => {
         }
     }
 
-    async function addNewProgressStepForm(projectId) {
-  console.log("addNewProgressStepForm başladı, projectId:", projectId);
-  const progressStepsContainer = document.getElementById("progressStepsContainer");
-  if (!progressStepsContainer) {
-    console.error("progressStepsContainer elementi bulunamadı!");
-    showToast("Hata", "İş adımı eklenemiyor: Form container bulunamadı");
-    return;
+    // Function to add date validation to progress step date pickers
+  function addDateValidationToPickers(stepElement, isNewStep = false) {
+    const startDateInput = stepElement.querySelector('input[type="date"]:first-of-type');
+    const endDateInput = stepElement.querySelector('input[type="date"]:nth-of-type(2)');
+    
+    if (!startDateInput || !endDateInput) return;
+    
+    // Store the original values for comparison
+    const originalStartDate = startDateInput.value;
+    const originalEndDate = endDateInput.value;
+    
+    // Validate start date when changed
+    startDateInput.addEventListener('change', () => {
+      const startDate = new Date(startDateInput.value);
+      const endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+      
+      // Check if start date is after end date
+      if (endDate && startDate > endDate) {
+        showToast("Hata", "Başlangıç tarihi, bitiş tarihinden sonra olamaz.", "error");
+        startDateInput.value = originalStartDate;
+        return;
+      }
+      
+      // If this is not the first step, check against previous step's end date
+      if (!isNewStep) {
+        const prevStep = stepElement.previousElementSibling;
+        if (prevStep && !prevStep.id) { // Check if previous element is a step (not a form or other element)
+          const prevEndDateInput = prevStep.querySelector('input[type="date"]:nth-of-type(2)');
+          if (prevEndDateInput && prevEndDateInput.value) {
+            const prevEndDate = new Date(prevEndDateInput.value);
+            // Add one day to previous end date for comparison
+            prevEndDate.setDate(prevEndDate.getDate() + 1);
+            
+            if (startDate < prevEndDate) {
+              showToast("Hata", `Başlangıç tarihi, önceki adımın bitiş tarihinden (${formatDateForDisplay(prevEndDateInput.value)}) en az bir gün sonra olmalıdır.`, "error");
+              startDateInput.value = originalStartDate;
+              return;
+            }
+          }
+        }
+      }
+    });
+    
+    // Validate end date when changed
+    endDateInput.addEventListener('change', () => {
+      const startDate = startDateInput.value ? new Date(startDateInput.value) : null;
+      const endDate = new Date(endDateInput.value);
+      
+      // Check if end date is before start date
+      if (startDate && endDate < startDate) {
+        showToast("Hata", "Bitiş tarihi, başlangıç tarihinden önce olamaz.", "error");
+        endDateInput.value = originalEndDate;
+        return;
+      }
+      
+      // If this is not the last step, check against next step's start date
+      if (!isNewStep) {
+        const nextStep = stepElement.nextElementSibling;
+        if (nextStep && !nextStep.id) { // Check if next element is a step (not a form or other element)
+          const nextStartDateInput = nextStep.querySelector('input[type="date"]:first-of-type');
+          if (nextStartDateInput && nextStartDateInput.value) {
+            const nextStartDate = new Date(nextStartDateInput.value);
+            // Add one day to current end date for comparison
+            const currentEndDate = new Date(endDateInput.value);
+            currentEndDate.setDate(currentEndDate.getDate() + 1);
+            
+            if (nextStartDate < currentEndDate) {
+              showToast("Hata", `Bitiş tarihi, sonraki adımın başlangıç tarihinden (${formatDateForDisplay(nextStartDateInput.value)}) en az bir gün önce olmalıdır.`, "error");
+              endDateInput.value = originalEndDate;
+              return;
+            }
+          }
+        }
+      }
+    });
   }
 
-  if (document.getElementById('newProgressForm')) {
-    console.log("Zaten açık bir ekleme formu var, yeni form açılmayacak.");
-    showToast("Uyarı", "Zaten açık bir ekleme formu var.");
-    return;
+  // Function to add date validation to progress step date pickers
+  function addDateValidationToPickers(stepElement, isNewStep) {
+    const startDateInput = stepElement.querySelector('input[type="date"]:first-of-type');
+    const endDateInput = stepElement.querySelector('input[type="date"]:nth-of-type(2)');
+    
+    if (!startDateInput || !endDateInput) return;
+    
+    // Store the original values for comparison
+    var originalStartDate = startDateInput.value;
+    var originalEndDate = endDateInput.value;
+    
+    // Validate start date when changed
+    startDateInput.addEventListener('change', function() {
+      if (!this.value) return;
+      
+      var startDate = new Date(this.value);
+      var endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+      
+      // Check if start date is after end date
+      if (endDate && startDate > endDate) {
+        showToast("Hata", "Başlangıç tarihi, bitiş tarihinden sonra olamaz.", "error");
+        this.value = originalStartDate;
+        return;
+      }
+      
+      // If this is not the first step, check against previous step's end date
+      if (!isNewStep) {
+        var prevStep = stepElement.previousElementSibling;
+        if (prevStep && !prevStep.id) { // Check if previous element is a step (not a form or other element)
+          var prevEndDateInput = prevStep.querySelector('input[type="date"]:nth-of-type(2)');
+          if (prevEndDateInput && prevEndDateInput.value) {
+            var prevEndDate = new Date(prevEndDateInput.value);
+            // Add one day to previous end date for comparison
+            prevEndDate.setDate(prevEndDate.getDate() + 1);
+            
+            if (startDate < prevEndDate) {
+              showToast("Hata", "Başlangıç tarihi, önceki adımın bitiş tarihinden (" + formatDateForDisplay(prevEndDateInput.value) + ") en az bir gün sonra olmalıdır.", "error");
+              this.value = originalStartDate;
+              return;
+            }
+          }
+        }
+      }
+      
+      // Update the original value for next comparison
+      originalStartDate = this.value;
+    });
+    
+    // Validate end date when changed
+    endDateInput.addEventListener('change', function() {
+      if (!this.value) return;
+      
+      var startDate = startDateInput.value ? new Date(startDateInput.value) : null;
+      var endDate = new Date(this.value);
+      
+      // Check if end date is before start date
+      if (startDate && endDate < startDate) {
+        showToast("Hata", "Bitiş tarihi, başlangıç tarihinden önce olamaz.", "error");
+        this.value = originalEndDate;
+        return;
+      }
+      
+      // Update the original value for next comparison
+      originalEndDate = this.value;
+    });
   }
+
+  async function addNewProgressStepForm(projectId) {
+    console.log("addNewProgressStepForm başladı, projectId:", projectId);
+    const progressStepsContainer = document.getElementById("progressStepsContainer");
+    if (!progressStepsContainer) {
+      console.error("progressStepsContainer elementi bulunamadı!");
+      showToast("Hata", "İş adımı eklenemiyor: Form container bulunamadı");
+      return;
+    }
+
+    if (document.getElementById('newProgressForm')) {
+      console.log("Zaten açık bir ekleme formu var, yeni form açılmayacak.");
+      showToast("Uyarı", "Zaten açık bir ekleme formu var.");
+      return;
+    }
 
   // API'den başlıkları çek
   let headersList = [];
