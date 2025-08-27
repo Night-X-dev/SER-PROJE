@@ -3938,7 +3938,7 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
 
 
 
-async function generateProjectPdf(project) {
+    async function generateProjectPdf(project) {
     // API'den çekilecek veriler için boş diziler ve nesneler tanımla.
     let progressSteps = [];
     let revisionCounts = {};
@@ -4119,52 +4119,54 @@ async function generateProjectPdf(project) {
         const today = new Date();
         const projectStartDate = new Date(project.start_date);
 
-        // Toplam planlanan süreyi hesapla.
-        const totalPlannedDuration = calculateTotalPlannedDuration(project, lastPlannedEndDate);
-        
+        // Kullanıcının isteği üzerine yeni hesaplama mantığı
         let completedDays = 0;
-        let postponedDays = 0; // ERTELEME
-        let delayedDays = 0; // GECİKME
-        
-        progressSteps.forEach(step => {
-            // Her bir adımın planlanan süresini hesapla.
-            const stepPlannedDuration = calculatePlannedDuration(step.planned_start_date, step.real_end_date) || 0;
-            
-            // "Erteleme" günlerini topla.
-            postponedDays += step.delay_days || 0;
-            // "Gecikme" günlerini topla.
-            delayedDays += step.custom_delay_days || 0;
+        if (projectStartDate) {
+            const diffTime = today.getTime() - projectStartDate.getTime();
+            completedDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        }
 
-            if (step.is_completed) {
-                // Adım tamamlandıysa, bu adımın planlanan süresini tamamlanan süreye ekle.
-                completedDays += stepPlannedDuration;
-            } else if (today >= new Date(step.start_date)) {
-                // Adım devam ediyorsa, başlangıcından bugüne kadarki süreyi tamamlanan süreye ekle.
-                const diffTime = today.getTime() - new Date(step.start_date).getTime();
-                completedDays += Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-            }
+        let postponedDays = 0;
+        let delayedDays = 0;
+        progressSteps.forEach(step => {
+            postponedDays += step.delay_days || 0;
+            delayedDays += step.custom_delay_days || 0;
         });
 
-        // Kalan süreyi toplam planlanandan çıkararak bul.
-        const totalDurationForPercentage = totalPlannedDuration + delayedDays + postponedDays;
+        // Toplam planlanan süreyi hesapla
+        const totalPlannedDuration = calculateTotalPlannedDuration(project, lastPlannedEndDate) || 0;
+        const totalDurationForPercentage = totalPlannedDuration + postponedDays + delayedDays;
 
-        // Yüzde hesaplamaları.
-        let completedPercentage = (completedDays / totalDurationForPercentage) * 100;
-        let postponementPercentage = (postponedDays / totalDurationForPercentage) * 100;
-        let delayPercentage = (delayedDays / totalDurationForPercentage) * 100;
-        let remainingPercentage = ((totalDurationForPercentage - (completedDays + postponedDays + delayedDays)) / totalDurationForPercentage) * 100;
+        // Kalan süreyi hesapla (negatif olmasını önle)
+        const remainingDays = Math.max(0, totalDurationForPercentage - completedDays - postponedDays - delayedDays);
+
+        // Yüzde hesaplamaları
+        let completedPercentage = totalDurationForPercentage > 0 ? (completedDays / totalDurationForPercentage) * 100 : 0;
+        let postponementPercentage = totalDurationForPercentage > 0 ? (postponedDays / totalDurationForPercentage) * 100 : 0;
+        let delayPercentage = totalDurationForPercentage > 0 ? (delayedDays / totalDurationForPercentage) * 100 : 0;
+        let remainingPercentage = totalDurationForPercentage > 0 ? (remainingDays / totalDurationForPercentage) * 100 : 0;
         
         // Yüzdelerin toplamının 100 olmasını sağla.
         const totalPercentage = completedPercentage + postponementPercentage + delayPercentage + remainingPercentage;
         if (Math.round(totalPercentage) !== 100 && totalDurationForPercentage > 0) {
-             remainingPercentage += (100 - totalPercentage);
+            const diff = 100 - totalPercentage;
+            // Farkı en büyük pozitif yüzdeye ekle
+            if (completedPercentage >= 0 && completedPercentage > postponementPercentage && completedPercentage > delayPercentage && completedPercentage > remainingPercentage) {
+                completedPercentage += diff;
+            } else if (remainingPercentage >= 0) {
+                remainingPercentage += diff;
+            } else if (postponementPercentage >= 0) {
+                postponementPercentage += diff;
+            } else if (delayPercentage >= 0) {
+                delayPercentage += diff;
+            }
         }
 
         return {
             completedDays: completedDays,
             postponementDays: postponedDays, // ERTELEME SÜRESİ
             delayedDays: delayedDays, // GECİKME SÜRESİ
-            remainingDays: totalDurationForPercentage - (completedDays + postponedDays + delayedDays),
+            remainingDays: remainingDays,
             completedPercentage: completedPercentage,
             postponementPercentage: postponementPercentage, // ERTELEME YÜZDESİ
             delayPercentage: delayPercentage, // GECİKME YÜZDESİ
@@ -4357,9 +4359,9 @@ async function generateProjectPdf(project) {
                         page-break-inside: avoid;
                         break-inside: avoid;
                         margin-bottom: 20px;
-                         overflow: hidden; /* Taşmayı önler */
-        text-overflow: ellipsis; /* Taşan metni üç nokta ile gösterir */
-        white-space: nowrap; /* Metni tek satırda tutar */
+                        overflow: hidden; /* Taşmayı önler */
+                        text-overflow: ellipsis; /* Taşan metni üç nokta ile gösterir */
+                        white-space: nowrap; /* Metni tek satırda tutar */
                     }
 
                     .progress-step-item:first-of-type {
