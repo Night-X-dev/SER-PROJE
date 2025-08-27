@@ -1458,18 +1458,37 @@
                     allowInput: true,
                     onChange: function(selectedDates, dateStr, instance) {
                         const startInput = newItem.querySelector(`#${currentId}-start`);
-                        const endInput   = newItem.querySelector(`#${currentId}-end`);
+                        const endInput = newItem.querySelector(`#${currentId}-end`);
+                        const allItems = Array.from(document.querySelectorAll('.progress-item'));
+                        const currentIndex = allItems.indexOf(newItem);
 
+                        // Başlangıç ve bitiş tarihlerini kontrol et
                         if (startInput.value && endInput.value) {
                             if (startInput.value > endInput.value) {
                                 showToast("Başlangıç tarihi bitiş tarihinden büyük olamaz.", "Hata", "error");
-                                // Hatalı olan alanı temizleyelim
                                 if (instance.input.id.includes("start")) {
                                     startInput.value = "";
                                 } else {
                                     endInput.value = "";
                                 }
                                 return;
+                            }
+                        }
+
+                        // Önceki adımla olan ilişkiyi kontrol et (ilk adım değilse)
+                        if (currentIndex > 0) {
+                            const prevItem = allItems[currentIndex - 1];
+                            const prevEndInput = prevItem.querySelector('input[placeholder="Bitiş"]');
+                            
+                            if (startInput.value && prevEndInput.value) {
+                                const oneDayAfterPrevEnd = new Date(prevEndInput.value);
+                                oneDayAfterPrevEnd.setDate(oneDayAfterPrevEnd.getDate() + 1);
+                                
+                                if (new Date(startInput.value) < oneDayAfterPrevEnd) {
+                                    showToast("Başlangıç tarihi önceki adımın bitiş tarihinden en az 1 gün sonra olmalıdır.", "Hata", "error");
+                                    startInput.value = "";
+                                    return;
+                                }
                             }
                         }
 
@@ -1512,22 +1531,103 @@
             });
 
 
+            // İlerleme adımlarını sıralı hale getiren fonksiyon
+            function getSortedProgressItems() {
+                const items = Array.from(progressList.querySelectorAll('.progress-item'));
+                return items.sort((a, b) => {
+                    const aStart = a.querySelector('input[placeholder="Başlangıç"]').value;
+                    const bStart = b.querySelector('input[placeholder="Başlangıç"]').value;
+                    return new Date(aStart) - new Date(bStart);
+                });
+            }
+
+            // Tarih validasyon fonksiyonları
+            function validateContractAndMeetingDates() {
+                const contractDate = document.getElementById('contract-date').value;
+                const meetingDate = document.getElementById('meeting-date').value;
+                
+                // İlk iş gidişatını bul
+                const firstProgressItem = document.querySelector('.progress-item');
+                if (!firstProgressItem) return true; // Eğer iş gidişatı yoksa doğru kabul et
+                
+                const firstStartDate = firstProgressItem.querySelector('input[placeholder="Başlangıç"]').value;
+                if (!firstStartDate) return true; // Eğer başlangıç tarihi yoksa doğru kabul et
+                
+                if (contractDate && new Date(contractDate) >= new Date(firstStartDate)) {
+                    showToast('Sözleşme tarihi ilk iş gidişatının başlangıç tarihinden önce olmalıdır.', true);
+                    return false;
+                }
+                
+                if (meetingDate && new Date(meetingDate) >= new Date(firstStartDate)) {
+                    showToast('Toplantı tarihi ilk iş gidişatının başlangıç tarihinden önce olmalıdır.', true);
+                    return false;
+                }
+                
+                return true;
+            }
+            
+            function validateProgressDates() {
+                const items = getSortedProgressItems();
+                let prevEndDate = null;
+                
+                for (let i = 0; i < items.length; i++) {
+                    const currentItem = items[i];
+                    const startInput = currentItem.querySelector('input[placeholder="Başlangıç"]');
+                    const endInput = currentItem.querySelector('input[placeholder="Bitiş"]');
+                    
+                    if (!startInput.value || !endInput.value) continue;
+                    
+                    const currentStartDate = new Date(startInput.value);
+                    const currentEndDate = new Date(endInput.value);
+                    
+                    // Başlangıç tarihi bitiş tarihinden büyük olamaz
+                    if (currentStartDate > currentEndDate) {
+                        showToast(`${i+1}. iş gidişatında başlangıç tarihi bitiş tarihinden büyük olamaz.`, true);
+                        return false;
+                    }
+                    
+                    // Önceki adımın bitiş tarihinden en az 1 gün sonra başlamalı (ilk adım hariç)
+                    if (prevEndDate && i > 0) {
+                        const oneDayAfterPrevEnd = new Date(prevEndDate);
+                        oneDayAfterPrevEnd.setDate(oneDayAfterPrevEnd.getDate() + 1);
+                        
+                        if (currentStartDate < oneDayAfterPrevEnd) {
+                            showToast(`${i+1}. iş gidişatının başlangıç tarihi, önceki adımın bitiş tarihinden en az 1 gün sonra olmalıdır.`, true);
+                            return false;
+                        }
+                    }
+                    
+                    prevEndDate = currentEndDate;
+                }
+                
+                return true;
+            }
+
             // --- Projeyi Kaydet ---
             saveProjectButton.addEventListener('click', async () => {
-  const projectName = document.getElementById('project-name').value.trim();
-  const projectRef = document.getElementById('project-ref').value.trim();
-  const projectDescription = document.getElementById('project-description').value.trim();
-  let customerId = customerNameSelect.value;
-  const projectManagerId = projectManagerSelect.value;
-  const contractDate = document.getElementById('contract-date').value;
-  const meetingDate = document.getElementById('meeting-date').value;
-  const projectLocation = document.getElementById('project-location').value.trim();
+                const projectName = document.getElementById('project-name').value.trim();
+                const projectRef = document.getElementById('project-ref').value.trim();
+                const projectDescription = document.getElementById('project-description').value.trim();
+                let customerId = customerNameSelect.value;
+                const projectManagerId = projectManagerSelect.value;
+                const contractDate = document.getElementById('contract-date').value;
+                const meetingDate = document.getElementById('meeting-date').value;
+                const projectLocation = document.getElementById('project-location').value.trim();
 
-  // Temel validasyon
-  if (!projectName || !customerId || !projectManagerId) {
-    showToast('Lütfen Proje Adı, Müşteri ve Proje Yöneticisi alanlarını doldurun.', true);
-    return;
-  }
+                // Tarih validasyonlarını yap
+                if (!validateContractAndMeetingDates()) {
+                    return;
+                }
+                
+                if (!validateProgressDates()) {
+                    return;
+                }
+
+                // Temel validasyon
+                if (!projectName || !customerId || !projectManagerId) {
+                    showToast('Lütfen Proje Adı, Müşteri ve Proje Yöneticisi alanlarını doldurun.', true);
+                    return;
+                }
   if (customerId === "") {
     showToast("Lütfen bir müşteri seçin.", true);
     return;
