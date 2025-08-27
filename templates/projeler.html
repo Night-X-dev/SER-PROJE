@@ -4210,7 +4210,7 @@ async function generateProjectPdf(project) {
                             <p><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.end_date)} gün</p>
                         </div>
                     </div>
-                    ${step.description ? `<div class="progress-step-description" style="font-size:13px; margin-top: 5px;">Açıklama: ${step.description}</div>` : ''}
+                    ${step.description ? `<div class="progress-step-description">Açıklama: ${step.description.replace(/\n/g, '<br>')}</div>` : ''}
                 </div>
             `;
         }).join('');
@@ -4309,10 +4309,14 @@ async function generateProjectPdf(project) {
                         padding-bottom: 5px;
                     }
                     .progress-step-description {
-                        overflow: hidden; /* Taşmayı önler */
-                        white-space: normal; /* Metni birden fazla satıra yayar */
-                        max-height: none; /* Maksimum yükseklik ayarını kaldır */
-                        display: block; /* Normal blok düzende göster */
+                        overflow-wrap: break-word;
+                        word-wrap: break-word;
+                        word-break: break-word;
+                        white-space: pre-wrap;
+                        max-width: 100%;
+                        margin-top: 5px;
+                        font-size: 13px;
+                        line-height: 1.4;
                     }
 
                     .print-header img {
