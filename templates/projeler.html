@@ -3801,10 +3801,8 @@ endDateInput.addEventListener('input', () => {
     if (startDateInput.value && endDateInput.value < startDateInput.value) {
         endDateInput.value = ''; // hatalı inputu sıfırla
         showToast("Hata", "Bitiş tarihi başlangıç tarihinden önce olamaz.", "error");
-
     }
 });
-
 
   document.getElementById('saveNewProgressBtn').addEventListener('click', async () => {
     const headerId = document.getElementById('newStepHeader').value;
@@ -3818,9 +3816,28 @@ endDateInput.addEventListener('input', () => {
       showToast("Uyarı", "Lütfen tüm zorunlu alanları doldurun.");
       return;
     }
-     if (startDate > endDate ) {
-        showToast("Başlangıç tarihi bitiş tarihinden büyük olamaz.", true);
-        return; // kaydetmeye izin verme
+    if (startDate > endDate) {
+      showToast("Hata", "Başlangıç tarihi bitiş tarihinden büyük olamaz.", "error");
+      return;
+    }
+
+    // Önceki adımın bitiş tarihini kontrol et
+    const allSteps = document.querySelectorAll('.progress-detail-item:not(#newProgressForm)');
+    if (allSteps.length > 0) {
+      const lastStep = allSteps[allSteps.length - 1];
+      const lastStepEndDateInput = lastStep.querySelector('input[type="date"]:nth-of-type(2)');
+      
+      if (lastStepEndDateInput && lastStepEndDateInput.value) {
+        const lastStepEndDate = new Date(lastStepEndDateInput.value);
+        const newStartDate = new Date(startDate);
+        
+        // Yeni başlangıç tarihi, önceki adımın bitiş tarihinden önce veya eşitse hata ver
+        if (newStartDate <= lastStepEndDate) {
+          const formattedDate = lastStepEndDate.toLocaleDateString('tr-TR');
+          showToast("Hata", `Yeni iş adımının başlangıç tarihi, önceki adımın bitiş tarihinden (${formattedDate}) sonra olmalıdır.`, "error");
+          return;
+        }
+      }
     }
 
     try {
