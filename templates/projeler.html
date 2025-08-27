@@ -4210,9 +4210,10 @@ async function generateProjectPdf(project) {
                             <p><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.end_date)} gün</p>
                         </div>
                     </div>
-                    ${step.description ? `<div style="font-size:13px; margin-top: 5px;">Açıklama: ${step.description}</div>` : ''}
+                    ${step.description ? `<div class="progress-step-description" style="font-size:13px; margin-top: 5px;">Açıklama: ${step.description}</div>` : ''}
                 </div>
             `;
+
         }).join('');
     };
 
@@ -4308,7 +4309,15 @@ async function generateProjectPdf(project) {
                         border-bottom: 1px solid #eee;
                         padding-bottom: 5px;
                     }
-
+                    .progress-step-description {
+                        overflow: hidden; /* Taşmayı önler */
+                        text-overflow: ellipsis; /* Taşan metni üç nokta ile gösterir */
+                        white-space: normal; /* Metni birden fazla satıra yayar */
+                        max-height: 50px; /* Maksimum yükseklik ayarı */
+                        display: -webkit-box; /* Flexbox kullanarak çok satırlı metin için */
+                        -webkit-line-clamp: 3; /* Gösterilecek maksimum satır sayısı */
+                        -webkit-box-orient: vertical; /* Dikey yönlendirme */
+                        }
                     .print-header img {
                         height: 40px;
                         margin-right: 15px;
@@ -4347,6 +4356,9 @@ async function generateProjectPdf(project) {
                         page-break-inside: avoid;
                         break-inside: avoid;
                         margin-bottom: 20px;
+                         overflow: hidden; /* Taşmayı önler */
+        text-overflow: ellipsis; /* Taşan metni üç nokta ile gösterir */
+        white-space: nowrap; /* Metni tek satırda tutar */
                     }
 
                     .progress-step-item:first-of-type {
