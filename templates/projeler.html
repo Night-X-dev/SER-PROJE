@@ -3893,21 +3893,26 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
         const startDate = new Date(updatedStepData.start_date);
         const endDate = new Date(updatedStepData.end_date);
 
+        // Kontrol 1: Başlangıç tarihi bitiş tarihinden büyük olamaz
         if (endDate < startDate) {
             showToast("Hata", "Başlangıç tarihi bitiş tarihinden büyük olamaz.", "error");
-            return; // İşlemi durdur
+            return;
         }
-        
+
         // Projenin mevcut iş adımlarını çek
         const resSteps = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`);
         if (!resSteps.ok) throw new Error("Mevcut adımlar alınamadı");
-        const existingSteps = await resSteps.json();
+        let existingSteps = await resSteps.json();
 
-        // Güncellenen adımı listeden bul ve kaldır
-        const stepsExcludingCurrent = existingSteps.filter(step => step.id !== progressId);
-        
-        let previousStepEndDate = null;
-         if (updatedStepIndex > 0) {
+        // Adımları başlangıç tarihine göre kronolojik olarak sırala
+        // Bu, bir önceki adımı doğru şekilde bulmamızı sağlar.
+        existingSteps.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+
+        // Güncellenecek adımın dizideki indexini bul
+        const updatedStepIndex = existingSteps.findIndex(step => step.id === progressId);
+
+        // Kontrol 2: Eğer güncellenecek adım ilk adım değilse (index > 0)
+        if (updatedStepIndex > 0) {
             // Bir önceki adımın bitiş tarihini al
             const previousStep = existingSteps[updatedStepIndex - 1];
             const previousStepEndDate = new Date(previousStep.end_date);
@@ -3917,12 +3922,6 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
                 showToast("Hata", `İş adımı başlangıç tarihi, bir önceki adımın bitiş tarihi olan ${previousStep.end_date} tarihinden önce olamaz.`, "error");
                 return;
             }
-        }
-
-        // Başlangıç tarihi kontrolü
-        if (previousStepEndDate && new Date(updatedStepData.start_date) < new Date(previousStepEndDate)) {
-             showToast("Hata", `İş adımı başlangıç tarihi, bir önceki adımın bitiş tarihi olan ${previousStepEndDate} tarihinden önce olamaz.`, "error");
-             return;
         }
 
         const payload = {
@@ -3940,11 +3939,9 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
 
         if (response.ok) {
             showToast("İş adımı başarıyla güncellendi.");
-
             await updateProjectDatesFromSteps(projectId);
             fetchProjects();
             fetchProgressSteps(projectId, true);
-
             addActivity(
                 "İş Adımı Güncellendi",
                 `Proje ID: ${projectId} için "${updatedStepData.step_name}" iş adımı güncellendi.`,
