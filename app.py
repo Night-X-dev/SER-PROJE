@@ -2517,7 +2517,6 @@ def update_project_progress_step(progress_id):
             ))
 
             print(f"SQL query executed. Rows affected: {cursor.rowcount}")
-            connection.commit()
 
             # Proje yöneticisine bildirim gönderme işlemi
             if project_manager_id:
