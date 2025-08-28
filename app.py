@@ -1786,9 +1786,19 @@ def update_project(project_id):
             connection.commit() # update_project tarafından yapılan değişiklikleri commit et
             determine_and_update_project_status(cursor, project_id)
             connection.commit() # determine_and_update_project_status tarafından yapılan değişiklikleri commit et
+ # Proje yöneticisine bildirim gönderme işlemi
+            project_manager_id = existing_project.get('project_manager_id')
+            project_name = existing_project.get('project_name')
 
+            if project_manager_id:
+                title = f"Proje Güncellendi: {project_name}"
+                message = f"'{project_name}' Adlı proje güncellendi."
+                send_notification(cursor, project_manager_id, title, message)
+
+            determine_and_update_project_status(cursor, project_id)
+            connection.commit() # determine_and_update_project_status tarafından yapılan değişiklikleri commit et
+            
             return jsonify({'message': 'Proje başarıyla güncellendi!'}), 200
-
     except Exception as e:
         print(f"Proje güncelleme hatası: {str(e)}")
         traceback.print_exc()
