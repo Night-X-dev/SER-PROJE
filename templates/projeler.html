@@ -3907,10 +3907,16 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
         const stepsExcludingCurrent = existingSteps.filter(step => step.id !== progressId);
         
         let previousStepEndDate = null;
-        if (stepsExcludingCurrent.length > 0) {
-            // Geri kalan adımları bitiş tarihine göre sırala
-            stepsExcludingCurrent.sort((a, b) => new Date(b.end_date) - new Date(a.end_date));
-            previousStepEndDate = stepsExcludingCurrent[0].end_date;
+         if (updatedStepIndex > 0) {
+            // Bir önceki adımın bitiş tarihini al
+            const previousStep = existingSteps[updatedStepIndex - 1];
+            const previousStepEndDate = new Date(previousStep.end_date);
+
+            // Başlangıç tarihi kontrolü
+            if (startDate < previousStepEndDate) {
+                showToast("Hata", `İş adımı başlangıç tarihi, bir önceki adımın bitiş tarihi olan ${previousStep.end_date} tarihinden önce olamaz.`, "error");
+                return;
+            }
         }
 
         // Başlangıç tarihi kontrolü
@@ -3982,7 +3988,6 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
             showToast("Hata", "İş adımı silinirken bir sorun oluştu.");
         }
     }
-
 
 
     async function generateProjectPdf(project) {
