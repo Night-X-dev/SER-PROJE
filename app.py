@@ -1792,7 +1792,7 @@ def update_project(project_id):
 
             if project_manager_id:
                 title = f"Proje Güncellendi: {project_name}"
-                message = f"'{project_name}' Adlı proje güncellendi."
+                message = f"Yönettiğiniz '{project_name}' Adlı proje güncellendi."
                 send_notification(cursor, project_manager_id, title, message)
 
             determine_and_update_project_status(cursor, project_id)
