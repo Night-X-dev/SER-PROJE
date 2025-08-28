@@ -2345,6 +2345,12 @@ def add_project_progress_step_from_modal(project_id):
                     cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
                     manager_email = cursor.fetchone()
                     if manager_email and manager_email['email']:
+                        send_notification(
+                            cursor,
+                            project_manager_id,
+                            "Proje İlerleme Adımı Eklendi",
+                            f"Yönettiğiniz '{project_name}' projesine '{step_name}' adında yeni bir iş adımı eklendi."
+                        )
                         send_email_notification(
                             manager_email['email'],
                             "Proje İlerleme Adımı Eklendi",
