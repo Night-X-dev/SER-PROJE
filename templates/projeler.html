@@ -3906,33 +3906,17 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
         // Güncellenen adımı listeden bul ve kaldır
         const stepsExcludingCurrent = existingSteps.filter(step => step.id !== progressId);
         
-        // Önceki ve sonraki adımları bul
         let previousStepEndDate = null;
-        let nextStepStartDate = null;
-
-        // Güncellenen iş adımının mevcut dizindeki indeksini bul
-        const currentIndex = existingSteps.findIndex(step => step.id === progressId);
-        
-        // Önceki adımın bitiş tarihini bul
-        if (currentIndex > 0) {
-            previousStepEndDate = new Date(existingSteps[currentIndex - 1].end_date);
-        }
-
-        // Sonraki adımın başlangıç tarihini bul
-        if (currentIndex < existingSteps.length - 1) {
-            nextStepStartDate = new Date(existingSteps[currentIndex + 1].start_date);
+        if (stepsExcludingCurrent.length > 0) {
+            // Geri kalan adımları bitiş tarihine göre sırala
+            stepsExcludingCurrent.sort((a, b) => new Date(b.end_date) - new Date(a.end_date));
+            previousStepEndDate = stepsExcludingCurrent[0].end_date;
         }
 
         // Başlangıç tarihi kontrolü
-        if (previousStepEndDate && startDate < previousStepEndDate) {
-            showToast("Hata", `İş adımı başlangıç tarihi, bir önceki adımın bitiş tarihi olan ${previousStepEndDate} tarihinden önce olamaz.`, "error");
-            return;
-        }
-
-        // Bitiş tarihi kontrolü
-        if (nextStepStartDate && endDate > nextStepStartDate) {
-            showToast("Hata", `İş adımı bitiş tarihi, sonraki adımın başlangıç tarihi olan ${nextStepStartDate} tarihinden sonra olamaz.`, "error");
-            return;
+        if (previousStepEndDate && new Date(updatedStepData.start_date) < new Date(previousStepEndDate)) {
+             showToast("Hata", `İş adımı başlangıç tarihi, bir önceki adımın bitiş tarihi olan ${previousStepEndDate} tarihinden önce olamaz.`, "error");
+             return;
         }
 
         const payload = {
