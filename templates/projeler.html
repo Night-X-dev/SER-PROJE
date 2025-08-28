@@ -3913,10 +3913,12 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
                 previousStepEndDate = new Date(step.end_date);
             }
         }
-        // Sonraki adımın başlangıç tarihini bul
+        // Güncellenen iş adımının mevcut dizindeki indeksini bul
         const currentIndex = existingSteps.findIndex(step => step.id === progressId);
-        if (currentIndex < stepsExcludingCurrent.length) {
-            nextStepStartDate = new Date(stepsExcludingCurrent[currentIndex].start_date);
+        
+        // Eğer güncellenen iş adımından sonra bir adım varsa, sonraki adımın başlangıç tarihini al
+        if (currentIndex >= 0 && currentIndex < existingSteps.length - 1) {
+            nextStepStartDate = new Date(existingSteps[currentIndex + 1].start_date);
         }
         // Başlangıç tarihi kontrolü
         if (previousStepEndDate && startDate < previousStepEndDate) {
