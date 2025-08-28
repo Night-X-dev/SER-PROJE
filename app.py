@@ -2336,7 +2336,7 @@ def add_project_progress_step_from_modal(project_id):
             if project_manager_id:
                 try:
                     send_notification(
-                        cursor, # Pass the cursor here
+                        cursor,
                         project_manager_id,
                         "Proje İlerleme Adımı Eklendi",
                         f"Yönettiğiniz '{project_name}' projesine '{step_name}' adında yeni bir iş adımı eklendi."
