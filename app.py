@@ -2517,6 +2517,13 @@ def update_project_progress_step(progress_id):
             ))
 
             print(f"SQL query executed. Rows affected: {cursor.rowcount}")
+            connection.commit()
+
+            # Proje yöneticisine bildirim gönderme işlemi
+            if project_manager_id:
+                title = f"İş Adımı Güncellendi: {step_name}"
+                message = f"'{project_name}' projesindeki '{step_name}' adlı iş adımı güncellendi."
+                send_notification(cursor, project_manager_id, title, message)
 
             # Sonraki adımların delay_days'ini yeniden hesapla ve güncelle
             # Bu, güncel adımı takip eden tüm adımların gecikme durumunu doğru yansıtır
@@ -2569,8 +2576,6 @@ def update_project_progress_step(progress_id):
 
                 # 7) Zincirleme etki için bitişi güncelle
                 last_end_date_for_recalc = sub_end_date
-
-
             # Projenin genel başlangıç ve bitiş tarihlerini iş adımlarına göre güncelle
             update_project_dates(cursor, current_project_id)
             # Projenin genel durumunu belirle ve güncelle
