@@ -1191,6 +1191,31 @@
 
         // Tarih seçicileri başlat
         document.addEventListener('DOMContentLoaded', function() {
+                const contractDateInput = document.getElementById('contract-date');
+                const meetingDateInput = document.getElementById('meeting-date');
+
+                contractDateInput.addEventListener('change', function() {
+                    const contractDate = contractDateInput.value;
+                    const meetingDate = meetingDateInput.value;
+                    if (!meetingDate) {
+                        showToast('Önce toplantı tarihi seçmelisiniz.', true);
+                        contractDateInput.value = '';
+                        return;
+                    }
+                    if (contractDate && meetingDate && new Date(meetingDate) < new Date(contractDate)) {
+                        showToast('Toplantı tarihi sözleşme tarihinden önce olamaz.', true);
+                        contractDateInput.value = '';
+                    }
+                });
+
+                meetingDateInput.addEventListener('change', function() {
+                    const contractDate = contractDateInput.value;
+                    const meetingDate = meetingDateInput.value;
+                    if (contractDate && meetingDate && new Date(meetingDate) < new Date(contractDate)) {
+                        showToast('Toplantı tarihi sözleşme tarihinden önce olamaz.', true);
+                        meetingDateInput.value = '';
+                    }
+                });
             const dateOptions = {
                 dateFormat: "Y-m-d", // Veritabanı için ISO 8601 (YYYY-MM-DD) formatı daha uygun
                 locale: "tr",
