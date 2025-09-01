@@ -664,13 +664,18 @@
                 // Hata ayıklama için konsola log ekliyoruz
                 console.log("Backend'e giriş isteği gönderiliyor...");
                 
-                const formData = new FormData(loginForm);
+                const formData = {
+                    email: loginForm.querySelector('input[name="email"]').value,
+                    password: loginForm.querySelector('input[name="password"]').value
+                };
                 
                 fetch(loginForm.action, {
                     method: 'POST',
-                    body: formData,
+                    body: JSON.stringify(formData),
                     headers: {
-                        'Accept': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
                 })
                 .then(response => response.json())

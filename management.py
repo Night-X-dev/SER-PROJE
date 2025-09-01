@@ -48,23 +48,42 @@ def index():
 @management_bp.route('/login.html', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
-        
         try:
-            # Check if it's a login attempt
-            if email and password:
-                # TODO: Implement proper authentication with database
-                if email == "admin@example.com" and password == "admin123":
-                    session['personel_logged_in'] = True
-                    session['personel_email'] = email
-                    return jsonify({"success": True, "redirect": url_for('management.dashboard')})
-                else:
-                    return jsonify({"success": False, "message": "Geçersiz e-posta veya şifre!"}), 401
+            # Get form data
+            data = request.get_json() if request.is_json else request.form
+            email = data.get('email')
+            password = data.get('password')
+            
+            # Debug log
+            print(f"Login attempt - Email: {email}")
+            
+            # Simple authentication (replace with database check in production)
+            if email == "admin@example.com" and password == "admin123":
+                session['personel_logged_in'] = True
+                session['personel_email'] = email
+                
+                # Return JSON response for AJAX requests
+                if request.is_json:
+                    return jsonify({
+                        "success": True, 
+                        "redirect": url_for('management.dashboard', _external=True)
+                    })
+                # Redirect for form submissions
+                return redirect(url_for('management.dashboard'))
+            else:
+                error_msg = "Geçersiz e-posta veya şifre!"
+                if request.is_json:
+                    return jsonify({"success": False, "message": error_msg}), 401
+                flash(error_msg, 'error')
+                
         except Exception as e:
-            return jsonify({"success": False, "message": "Bir hata oluştu: " + str(e)}), 500
+            error_msg = f"Bir hata oluştu: {str(e)}"
+            print(error_msg)
+            if request.is_json:
+                return jsonify({"success": False, "message": error_msg}), 500
+            flash(error_msg, 'error')
     
-    # For GET request, just render the login page
+    # For GET request, render the login page
     return render_template('personel/login.html')
 
 @management_bp.route('/logout')
