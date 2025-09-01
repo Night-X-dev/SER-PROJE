@@ -3,16 +3,14 @@ from flask import Flask, render_template, request, url_for, redirect
 
 # Flask uygulamasını oluşturuyoruz.
 # templates_folder parametresi, bu uygulama için şablonların hangi klasörde olduğunu belirtir.
-app = Flask(__name__, template_folder="templates/personel")
-
-# Eğer uygulamanızın statik dosyalara (CSS, JS, resimler) ihtiyacı varsa,
-# statik klasörü de doğru şekilde belirtmelisiniz. Varsayılan olarak 'static' klasörünü kullanır.
+# static_folder parametresi, statik dosyaların hangi klasörde olduğunu belirtir.
+app = Flask(__name__, template_folder="templates/personel", static_folder="templates/personel/static")
 
 # Giriş sayfasını gösteren rota.
 # Bu rota, ana URL'ye (`/`) gelen istekleri karşılar ve `login.html` dosyasını render eder.
 @app.route("/")
 def login_page():
-    # 'personel/login.html' dosyasını render eder.
+    # 'personel/login.html' yerine sadece 'login.html' dosyasını render eder.
     return render_template("login.html")
 
 # Formdan gelen verileri işleyen rota.
