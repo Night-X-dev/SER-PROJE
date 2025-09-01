@@ -4429,6 +4429,30 @@ def get_reports():
                     'taskName': task.get('taskName', ''),
                     'originalDate': task.get('originalDate').strftime('%Y-%m-%d') if task.get('originalDate') else None,
                     'newDate': task.get('newDate').strftime('%Y-%m-%d') if task.get('newDate') else None,
+                    'delayDays': task.get('delayDays', 0)
+                } for task in delayed_tasks],
+                'postponedTasks': [{
+                    'projectName': task.get('projectName', ''),
+                    'taskName': task.get('taskName', ''),
+                    'originalDate': task.get('originalDate').strftime('%Y-%m-%d') if task.get('originalDate') else None,
+                    'newDate': task.get('newDate').strftime('%Y-%m-%d') if task.get('newDate') else None,
+                    'delayDays': task.get('delayDays', 0),
+                    'delayReason': task.get('delayReason', 'Revizyon talep edildi')
+                } for task in postponed_tasks],
+                'revisionRequests': [{
+                    'projectName': task.get('projectName', ''),
+                    'taskName': task.get('taskName', ''),
+                    'originalDate': task.get('originalDate').strftime('%Y-%m-%d') if task.get('originalDate') else None,
+                    'revisionDate': task.get('revisionDate').strftime('%Y-%m-%d') if task.get('revisionDate') else None,
+                    'requestedBy': task.get('requestedBy', 'Bilinmiyor')
+                } for task in revised_tasks]
+                    'requestedBy': task.get('requestedBy', 'Sistem')
+                } for task in revised_tasks],
+                'delayedTasks': [{
+                    'projectName': task.get('projectName', ''),
+                    'taskName': task.get('taskName', ''),
+                    'originalDate': task.get('originalDate').strftime('%Y-%m-%d') if task.get('originalDate') else None,
+                    'newDate': task.get('newDate').strftime('%Y-%m-%d') if task.get('newDate') else None,
                     'delayReason': 'Sistem tarafından otomatik hesaplandı',
                     'delayDays': int(task.get('delayDays', 0)) if task.get('delayDays') is not None else 0
                 } for task in delayed_tasks if task.get('delayDays', 0) > 0],
