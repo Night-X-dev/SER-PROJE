@@ -4345,6 +4345,7 @@ def get_reports():
                     p.project_name AS projectName,
                     pp.title AS taskName,
                     pp.end_date AS originalDate,
+                    DATE_ADD(pp.end_date, INTERVAL pp.delay_days DAY) AS newDate,
                     pp.delay_days AS delayDays
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
