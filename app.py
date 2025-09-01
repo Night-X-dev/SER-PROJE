@@ -4389,18 +4389,20 @@ def get_reports():
             
             # Son 10 ertelenen iş adımı (revizyon isteği onaylanmış olanlar)
             cursor.execute("""
-                SELECT DISTINCT
+                SELECT 
                     p.project_name as projectName,
                     pp.title as taskName,
                     pp.start_date as originalDate,
                     DATE_ADD(pp.end_date, INTERVAL pp.custom_delay_days DAY) as newDate,
                     'Ertelenme' as delayType,
                     pp.custom_delay_days as delayDays,
-                    rr.message as delayReason
+                    rr.message as delayReason,
+                    rr.created_at as created_at
                 FROM revision_requests rr
                 JOIN project_progress pp ON rr.progress_id = pp.progress_id
                 JOIN projects p ON pp.project_id = p.project_id
                 WHERE rr.status = 'approved' AND pp.custom_delay_days > 0
+                GROUP BY p.project_name, pp.title, pp.start_date, pp.end_date, pp.custom_delay_days, rr.message, rr.created_at
                 ORDER BY rr.created_at DESC
                 LIMIT 10
             """)
