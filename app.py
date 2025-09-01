@@ -4421,23 +4421,24 @@ def get_reports():
                 'revisedTasks': [{
                     'projectName': task.get('projectName', ''),
                     'taskName': task.get('taskName', ''),
-                    'revisionDate': task.get('revisionDate').strftime('%Y-%m-%d %H:%M:%S') if task.get('revisionDate') else None,
-                    'revisionReason': task.get('revisionReason', ''),
-                    'revisionStatus': task.get('revisionStatus', 'pending'),
-                    'requestedBy': task.get('requestedBy', 'Sistem')
+                    'originalDate': task.get('originalDate', ''),
+                    'revisionDate': task.get('revisionDate', ''),
+                    'requestedBy': task.get('requestedBy', 'Sistem'),
+                    'delayDays': task.get('delayDays', 0)
                 } for task in revised_tasks],
                 'delayedTasks': [{
                     'projectName': task.get('projectName', ''),
                     'taskName': task.get('taskName', ''),
-                    'originalDate': task.get('originalDate').strftime('%Y-%m-%d') if task.get('originalDate') else None,
-                    'newDate': task.get('newDate').strftime('%Y-%m-%d') if task.get('newDate') else None,
+                    'originalDate': task.get('originalDate', ''),
+                    'newDate': task.get('newDate', ''),
                     'delayReason': task.get('delayReason', 'Gecikme nedeni belirtilmemiş'),
                     'delayDays': int(task.get('delayDays', 0)) if task.get('delayDays') is not None else 0
                 } for task in delayed_tasks],
                 'postponedTasks': [{
                     'projectName': task.get('projectName', ''),
                     'taskName': task.get('taskName', ''),
-                    'originalDate': task.get('originalDate').strftime('%Y-%m-%d') if task.get('originalDate') else None,
+                    'originalDate': task.get('originalDate', ''),
+                    'newDate': task.get('newDate', ''),
                     'newDate': task.get('newDate').strftime('%Y-%m-%d') if task.get('newDate') else None,
                     'delayReason': task.get('delayReason', 'Ertelenme nedeni belirtilmemiş'),
                     'delayDays': int(task.get('delayDays', 0)) if task.get('delayDays') is not None else 0
