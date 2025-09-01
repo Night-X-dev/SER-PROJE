@@ -106,12 +106,12 @@ def register():
             data = request.get_json() if request.is_json else request.form
             
             # Form verilerini al
-            ad = data.get('ad')
-            soyad = data.get('soyad')
-            email = data.get('email')
-            telefon = data.get('telefon')
-            sifre = data.get('password')
-            sifre_tekrar = data.get('password_confirm')
+            ad = data.get('ad', '').strip()
+            soyad = data.get('soyad', '').strip()
+            email = data.get('email', '').strip().lower()
+            telefon = data.get('telefon', '').strip()
+            sifre = data.get('password', '')
+            sifre_tekrar = data.get('password_confirm', '')
             
             # Zorunlu alan kontrolü
             if not all([ad, soyad, email, sifre, sifre_tekrar]):
@@ -132,7 +132,10 @@ def register():
             # Telefon numarası kontrolü
             if telefon and not validate_phone(telefon):
                 return jsonify({"success": False, "message": "Geçerli bir telefon numarası giriniz! (05XX XXX XX XX)"}), 400
-                
+            
+            # Telefon numarasını temizle (sadece rakamlar)
+            telefon = ''.join(filter(str.isdigit, telefon))
+            
             # Email kontrolü
             if get_user_by_email(email):
                 return jsonify({"success": False, "message": "Bu email adresi zaten kayıtlı!"}), 400
@@ -157,21 +160,19 @@ def register():
                         'aktif'  # Varsayılan durum
                     ))
                     
-                    # Kullanıcıyı oturum açmış olarak işaretle
+                    # Yeni oluşturulan kullanıcıyı al
                     user_id = cursor.lastrowid
+                    
+                    # Kullanıcıyı oturum açık olarak işaretle
                     session['personel_logged_in'] = True
                     session['personel_id'] = user_id
                     session['personel_email'] = email
                     session['personel_adi'] = f"{ad} {soyad}"
                     
-                    # JWT token oluştur
-                    token = create_jwt_token(user_id, email)
-                    
                     return jsonify({
                         "success": True,
                         "message": "Kayıt başarılı! Yönlendiriliyorsunuz...",
-                        "redirect": url_for('management.dashboard'),
-                        "token": token
+                        "redirect": url_for('management.dashboard')
                     })
                     
             except Exception as e:
@@ -185,8 +186,8 @@ def register():
             print(f"Beklenmeyen hata: {e}")
             return jsonify({"success": False, "message": "Beklenmeyen bir hata oluştu!"}), 500
     
-    # GET isteği için kayıt sayfasını göster
-    return render_template('register.html')
+    # GET isteği için giriş sayfasını göster (register formu login.html'de)
+    return redirect(url_for('management.login'))
 
 @management_bp.route('/login', methods=['GET', 'POST'])
 @management_bp.route('/login.html', methods=['GET', 'POST'])
