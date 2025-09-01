@@ -4408,13 +4408,15 @@ def get_reports():
             """)
             postponed_tasks = cursor.fetchall()
             
-            # Format the response data
+            # Format the response data to match frontend expectations
             response_data = {
-                'totalProjects': total_projects,  # Changed to match frontend expectation
-                'revisedSteps': revised_steps,
-                'delayedSteps': delayed_steps,
-                'postponedSteps': postponed_steps,
-                'avgRevisions': float(avg_revisions) if avg_revisions else 0,
+                'stats': {
+                    'totalProjects': total_projects,
+                    'revisedStepsCount': revised_steps,
+                    'delayedStepsCount': delayed_steps,
+                    'postponedStepsCount': postponed_steps,
+                    'avgRevisions': float(avg_revisions) if avg_revisions else 0
+                },
                 'mostRevisedProject': most_revised_project or {'projectName': 'Veri yok', 'revisionCount': 0},
                 'revisedTasks': [{
                     'projectName': task.get('projectName', ''),
