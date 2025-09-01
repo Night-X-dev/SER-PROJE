@@ -514,206 +514,53 @@
     <div id="toast"><span class="toast-icon"></span><span class="toast-message"></span></div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const loginToggle = document.getElementById('loginToggle');
-            const registerToggle = document.getElementById('registerToggle');
+          document.addEventListener('DOMContentLoaded', function () {
             const loginForm = document.getElementById('loginForm');
-            const registerForm = document.getElementById('registerForm');
-            const formContainer = document.getElementById('formContainer');
-            const passwordToggles = document.querySelectorAll('.password-toggle');
-            const phoneInput = document.getElementById('registerPhone');
-            
-            // Calculate initial form heights after the page loads
-            let loginFormHeight = loginForm.scrollHeight;
-            let registerFormHeight = registerForm.scrollHeight;
-            
-            function updateFormHeights() {
-                // To get correct heights, ensure forms are visible but not affecting layout
-                loginForm.style.position = 'absolute';
-                loginForm.style.visibility = 'hidden';
-                loginForm.style.display = 'block';
-                registerForm.style.position = 'absolute';
-                registerForm.style.visibility = 'hidden';
-                registerForm.style.display = 'block';
-                
-                loginFormHeight = loginForm.scrollHeight;
-                registerFormHeight = registerForm.scrollHeight;
-                
-                // Reset form styles
-                loginForm.style.position = '';
-                loginForm.style.visibility = '';
-                registerForm.style.position = '';
-                registerForm.style.visibility = '';
-                registerForm.style.display = '';
-                loginForm.style.display = 'block'; // Make sure the active form is displayed
-            }
+            const loginButton = document.getElementById('loginButton');
+            const toastContainer = document.getElementById('toast-container');
 
-            // Call it initially and on window resize
-            updateFormHeights();
-            window.addEventListener('resize', updateFormHeights);
+            function showToast(message, type) {
+                const toast = document.createElement('div');
+                toast.classList.add('toast', type);
+                toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i> ${message}`;
+                toastContainer.appendChild(toast);
 
-            // Set initial container height
-            formContainer.style.height = `${loginFormHeight + 120}px`;
-
-            function showToast(message, type = 'success') {
-                const toast = document.getElementById('toast');
-                const messageSpan = toast.querySelector('.toast-message');
-                messageSpan.textContent = message;
-                toast.className = '';
-                toast.classList.add(type, 'show');
                 setTimeout(() => {
-                    toast.classList.remove('show');
+                    toast.remove();
                 }, 3000);
             }
 
-            function switchForm(activeForm, inactiveForm, direction) {
-                // Mevcut aktif formu gizle ve yeni formu göster
-                inactiveForm.classList.remove('active');
-                if (direction === 'left') {
-                    inactiveForm.classList.add('inactive-left');
-                } else {
-                    inactiveForm.classList.add('inactive-right');
-                }
+            // Artık formun gönderimini kontrol eden tek bir olay dinleyicisi var.
+            // Bu dinleyici, doğru veriyi backend'e gönderir ve yanıta göre toast mesajını gösterir.
+            loginForm.addEventListener('submit', function (e) {
+                // Formun varsayılan gönderimini engelliyoruz.
+                e.preventDefault();
                 
-                // Form Container yüksekliğini güncelle
-                const newHeight = activeForm === loginForm ? loginFormHeight : registerFormHeight;
-                formContainer.style.height = `${newHeight + 120}px`;
+                // Hata ayıklama için konsola log ekliyoruz
+                console.log("Backend'e fetch isteği gönderiliyor...");
 
-                // Yeni formu aktif hale getir
-                activeForm.classList.remove('inactive-left', 'inactive-right');
-                activeForm.classList.add('active');
-
-                // Animasyon bittikten sonra inactive sınıflarını kaldır
-                setTimeout(() => {
-                    inactiveForm.classList.remove('inactive-left', 'inactive-right');
-                }, 500);
-            }
-
-            loginToggle.addEventListener('click', function () {
-                if (!loginToggle.classList.contains('active')) {
-                    loginToggle.classList.add('active');
-                    registerToggle.classList.remove('active');
-                    switchForm(loginForm, registerForm, 'right');
-                }
-            });
-
-            registerToggle.addEventListener('click', function () {
-                if (!registerToggle.classList.contains('active')) {
-                    registerToggle.classList.add('active');
-                    loginToggle.classList.remove('active');
-                    switchForm(registerForm, loginForm, 'left');
-                }
-            });
-
-            // Şifre gösterme/gizleme
-            passwordToggles.forEach(toggle => {
-                toggle.addEventListener('click', function () {
-                    const targetId = this.dataset.target;
-                    const passwordInput = document.getElementById(targetId);
-                    if (passwordInput.type === 'password') {
-                        passwordInput.type = 'text';
-                        this.classList.remove('fa-eye');
-                        this.classList.add('fa-eye-slash');
+                const formData = new FormData(loginForm);
+                
+                fetch('/login_backend', {
+                    method: 'POST',
+                    body: formData,
+                })
+                .then(response => response.text())
+                .then(data => {
+                    // Sunucudan gelen yanıta göre toast bildirimini gösteriyoruz.
+                    if (data.includes("Giriş başarılı")) {
+                        showToast(data, 'success');
                     } else {
-                        passwordInput.type = 'password';
-                        this.classList.remove('fa-eye-slash');
-                        this.classList.add('fa-eye');
+                        showToast(data, 'error');
                     }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.', 'error');
                 });
-            });
-            
-            // Telefon numarası formatlama
-            phoneInput.addEventListener('input', function (e) {
-                let value = e.target.value.replace(/\D/g, '');
-                
-                // Sadece rakamları al ve 10 haneyle sınırla
-                if (value.length > 10) {
-                    value = value.substring(0, 10);
-                }
-                
-                // Formatı uygula: (5xx) xxx xx xx
-                let formattedValue = '';
-                if (value.length > 0) {
-                    formattedValue = '(' + value.substring(0, 3) + ')';
-                }
-                if (value.length > 3) {
-                    formattedValue += ' ' + value.substring(3, 6);
-                }
-                if (value.length > 6) {
-                    formattedValue += ' ' + value.substring(6, 8);
-                }
-                if (value.length > 8) {
-                    formattedValue += ' ' + value.substring(8, 10);
-                }
-                
-                e.target.value = formattedValue;
-            });
-            
-            // Telefon numarası doğrulama
-            function validatePhoneNumber(phone) {
-                // Tüm boşlukları ve parantezleri kaldır
-                const digits = phone.replace(/\D/g, '');
-                // 10 haneli mi ve 5 ile mi başlıyor kontrol et
-                return digits.length === 10 && digits.startsWith('5');
-            }
-
-            // Form submission handlers
-            loginForm.addEventListener('submit', function (e) {
-                e.preventDefault();
-                showToast('Giriş işlemi başarılı! Yönlendiriliyorsunuz...', 'success');
-            });
-            loginForm.addEventListener('submit', function (e) {
-                    e.preventDefault();
-                    
-                    // Hata ayıklama için konsola log ekliyoruz
-                    console.log("Backend'e fetch isteği gönderiliyor...");
-
-                    const formData = new FormData(this);
-                    
-                    fetch('/login_backend', {
-                        method: 'POST',
-                        body: formData,
-                    })
-                    .then(response => response.text())
-                    .then(data => {
-                        // Sunucudan gelen yanıta göre toast bildirimini gösteriyoruz.
-                        if (data.includes("Giriş başarılı")) {
-                            showToast(data, 'success');
-                        } else {
-                            showToast(data, 'error');
-                        }
-                        
-                        // Başarılı girişten sonra yönlendirme yapmak isterseniz buraya kod ekleyebilirsiniz.
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        showToast('Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.', 'error');
-                    });
-                });
-            registerForm.addEventListener('submit', function (e) {
-                e.preventDefault();
-                const password = document.getElementById('registerPassword').value;
-                const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
-                const phone = document.getElementById('registerPhone').value;
-
-                if (password !== passwordConfirm) {
-                    showToast('Şifreler eşleşmiyor!', 'error');
-                    return;
-                }
-
-                if (password.length < 8) {
-                    showToast('Şifre en az 8 karakter olmalıdır!', 'error');
-                    return;
-                }
-                
-                if (!validatePhoneNumber(phone)) {
-                    showToast('Geçerli bir telefon numarası giriniz!', 'error');
-                    return;
-                }
-
-                showToast('Kayıt işlemi başarılı! Giriş sayfasına yönlendiriliyorsunuz...', 'success');
             });
         });
     </script>
+
 </body>
 </html>
