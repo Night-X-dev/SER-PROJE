@@ -4357,7 +4357,7 @@ def get_reports():
                         WHEN pp.real_end_date IS NOT NULL THEN 'completed'
                         ELSE 'pending'
                     END as revisionStatus,
-                    u.fullname as requestedBy
+                    COALESCE(u.fullname, 'Sistem') as requestedBy
                 FROM revision_requests rr
                 JOIN project_progress pp ON rr.progress_id = pp.progress_id
                 JOIN projects p ON rr.project_id = p.project_id
@@ -4373,10 +4373,11 @@ def get_reports():
                 SELECT 
                     p.project_name as projectName,
                     pp.title as taskName,
-                    pp.end_date as originalDate,
+                    pp.start_date as originalDate,
                     pp.end_date as newDate,
                     'Gecikme' as delayType,
-                    DATEDIFF(CURDATE(), pp.end_date) as delayDays
+                    DATEDIFF(CURDATE(), pp.end_date) as delayDays,
+                    '' as delayReason
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
                 WHERE pp.end_date < CURDATE() 
@@ -4391,10 +4392,11 @@ def get_reports():
                 SELECT DISTINCT
                     p.project_name as projectName,
                     pp.title as taskName,
-                    pp.end_date as originalDate,
+                    pp.start_date as originalDate,
                     DATE_ADD(pp.end_date, INTERVAL rr.delay_days DAY) as newDate,
                     'Ertelenme' as delayType,
-                    rr.delay_days as delayDays
+                    rr.delay_days as delayDays,
+                    rr.message as delayReason
                 FROM revision_requests rr
                 JOIN project_progress pp ON rr.progress_id = pp.progress_id
                 JOIN projects p ON pp.project_id = p.project_id
@@ -4411,38 +4413,38 @@ def get_reports():
                 'delayedSteps': delayed_steps,
                 'postponedSteps': postponed_steps,
                 'avgRevisions': float(avg_revisions) if avg_revisions else 0,
-                'mostRevisedProject': most_revised_project,
+                'mostRevisedProject': most_revised_project or {'projectName': 'Veri yok', 'revisionCount': 0},
                 'revisedTasks': [{
-                    'projectName': task.get('projectName'),
-                    'taskName': task.get('taskName'),
+                    'projectName': task.get('projectName', ''),
+                    'taskName': task.get('taskName', ''),
                     'revisionDate': task.get('revisionDate').strftime('%Y-%m-%d %H:%M:%S') if task.get('revisionDate') else None,
-                    'revisionReason': task.get('revisionReason'),
-                    'revisionStatus': task.get('revisionStatus'),
-                    'requestedBy': task.get('requestedBy')
+                    'revisionReason': task.get('revisionReason', ''),
+                    'revisionStatus': task.get('revisionStatus', 'pending'),
+                    'requestedBy': task.get('requestedBy', 'Sistem')
                 } for task in revised_tasks],
                 'delayedTasks': [{
-                    'projectName': task.get('projectName'),
-                    'taskName': task.get('taskName'),
+                    'projectName': task.get('projectName', ''),
+                    'taskName': task.get('taskName', ''),
                     'originalDate': task.get('originalDate').strftime('%Y-%m-%d') if task.get('originalDate') else None,
                     'newDate': task.get('newDate').strftime('%Y-%m-%d') if task.get('newDate') else None,
-                    'delayReason': task.get('delayReason', ''),
-                    'delayDays': task.get('delayDays', 0)
+                    'delayReason': task.get('delayReason', 'Gecikme nedeni belirtilmemiş'),
+                    'delayDays': int(task.get('delayDays', 0)) if task.get('delayDays') is not None else 0
                 } for task in delayed_tasks],
                 'postponedTasks': [{
-                    'projectName': task.get('projectName'),
-                    'taskName': task.get('taskName'),
+                    'projectName': task.get('projectName', ''),
+                    'taskName': task.get('taskName', ''),
                     'originalDate': task.get('originalDate').strftime('%Y-%m-%d') if task.get('originalDate') else None,
                     'newDate': task.get('newDate').strftime('%Y-%m-%d') if task.get('newDate') else None,
-                    'delayReason': task.get('delayReason', ''),
-                    'delayDays': task.get('delayDays', 0)
+                    'delayReason': task.get('delayReason', 'Ertelenme nedeni belirtilmemiş'),
+                    'delayDays': int(task.get('delayDays', 0)) if task.get('delayDays') is not None else 0
                 } for task in postponed_tasks],
                 'revisionRequests': [{
-                    'projectName': task.get('projectName'),
-                    'taskName': task.get('taskName'),
+                    'projectName': task.get('projectName', ''),
+                    'taskName': task.get('taskName', ''),
                     'revisionDate': task.get('revisionDate').strftime('%Y-%m-%d %H:%M:%S') if task.get('revisionDate') else None,
-                    'revisionReason': task.get('revisionReason'),
-                    'revisionStatus': task.get('revisionStatus'),
-                    'requestedBy': task.get('requestedBy')
+                    'revisionReason': task.get('revisionReason', ''),
+                    'revisionStatus': task.get('revisionStatus', 'pending'),
+                    'requestedBy': task.get('requestedBy', 'Sistem')
                 } for task in revised_tasks]
             }
             
