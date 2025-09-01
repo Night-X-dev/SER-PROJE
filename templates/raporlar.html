@@ -1281,13 +1281,26 @@
     <script>
 async function loadReports() {
             try {
-                // Yükleme göstergelerini etkinleştir
-                document.getElementById('delayedTasksLoading').classList.remove('hidden');
-                document.getElementById('revisedTasksLoading').classList.remove('hidden');
-                document.getElementById('postponedTasksLoading').classList.remove('hidden');
-                document.getElementById('delayedTasksTable').classList.add('hidden');
-                document.getElementById('revisedTasksTable').classList.add('hidden');
-                document.getElementById('postponedTasksTable').classList.add('hidden');
+                // Yükleme göstergelerini etkinleştir (null kontrolü ile)
+                const loadingElements = [
+                    'delayedTasksLoading',
+                    'revisedTasksLoading',
+                    'postponedTasksLoading',
+                    'delayedTasksTable',
+                    'revisedTasksTable',
+                    'postponedTasksTable'
+                ];
+
+                loadingElements.forEach(id => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        if (id.includes('Loading')) {
+                            element.classList.remove('hidden');
+                        } else if (id.includes('Table')) {
+                            element.classList.add('hidden');
+                        }
+                    }
+                });
                 
                 const response = await fetch('/api/reports');
                 const data = await response.json();
@@ -1390,13 +1403,26 @@ async function loadReports() {
                     }
 
 
-                    // Yükleme göstergelerini gizle ve tabloları göster
-                    document.getElementById('delayedTasksLoading').classList.add('hidden');
-                    document.getElementById('revisedTasksLoading').classList.add('hidden');
-                    document.getElementById('postponedTasksLoading').classList.add('hidden');
-                    document.getElementById('delayedTasksTable').classList.remove('hidden');
-                    document.getElementById('revisedTasksTable').classList.remove('hidden');
-                    document.getElementById('postponedTasksTable').classList.remove('hidden');
+                    // Yükleme göstergelerini gizle ve tabloları göster (null kontrolü ile)
+                    const elementsToUpdate = [
+                        { id: 'delayedTasksLoading', action: 'add', className: 'hidden' },
+                        { id: 'revisedTasksLoading', action: 'add', className: 'hidden' },
+                        { id: 'postponedTasksLoading', action: 'add', className: 'hidden' },
+                        { id: 'delayedTasksTable', action: 'remove', className: 'hidden' },
+                        { id: 'revisedTasksTable', action: 'remove', className: 'hidden' },
+                        { id: 'postponedTasksTable', action: 'remove', className: 'hidden' }
+                    ];
+
+                    elementsToUpdate.forEach(item => {
+                        const element = document.getElementById(item.id);
+                        if (element) {
+                            if (item.action === 'add') {
+                                element.classList.add(item.className);
+                            } else {
+                                element.classList.remove(item.className);
+                            }
+                        }
+                    });
 
                 } else {
                     console.error("API'den hata alındı:", data);
