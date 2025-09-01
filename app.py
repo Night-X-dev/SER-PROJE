@@ -4375,7 +4375,7 @@ def get_reports():
                     pp.title as taskName,
                     pp.end_date as originalDate,
                     DATE_ADD(pp.end_date, INTERVAL pp.delay_days DAY) as newDate,
-                    pp.delay_reason as delayReason,
+                    '' as delayReason,  -- Removed delay_reason as it doesn't exist
                     pp.delay_days as delayDays
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
@@ -4392,7 +4392,7 @@ def get_reports():
                     pp.title as taskName,
                     pp.end_date as originalDate,
                     DATE_ADD(pp.end_date, INTERVAL pp.custom_delay_days DAY) as newDate,
-                    pp.delay_reason as delayReason,
+                    '' as delayReason,  -- Removed delay_reason as it doesn't exist
                     pp.custom_delay_days as delayDays
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
