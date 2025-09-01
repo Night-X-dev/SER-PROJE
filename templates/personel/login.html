@@ -384,7 +384,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="{{ url_for('static', filename='serlogobeyaz.png') }}" alt="SER Elektrik Otomasyon Logo" />
+            <img src="static/serlogobeyaz.png" alt="SER Elektrik Otomasyon Logo" />
             <h1>Personel Yönetim Sistemi</h1>
             <p style="margin-top: 20px;">
                 Personel kayıt ve yönetim işlemlerinizi kolayca yapabilirsiniz.
@@ -662,7 +662,34 @@
                 e.preventDefault();
                 showToast('Giriş işlemi başarılı! Yönlendiriliyorsunuz...', 'success');
             });
+            loginForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    
+                    // Hata ayıklama için konsola log ekliyoruz
+                    console.log("Backend'e fetch isteği gönderiliyor...");
 
+                    const formData = new FormData(this);
+                    
+                    fetch('/login_backend', {
+                        method: 'POST',
+                        body: formData,
+                    })
+                    .then(response => response.text())
+                    .then(data => {
+                        // Sunucudan gelen yanıta göre toast bildirimini gösteriyoruz.
+                        if (data.includes("Giriş başarılı")) {
+                            showToast(data, 'success');
+                        } else {
+                            showToast(data, 'error');
+                        }
+                        
+                        // Başarılı girişten sonra yönlendirme yapmak isterseniz buraya kod ekleyebilirsiniz.
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showToast('Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.', 'error');
+                    });
+                });
             registerForm.addEventListener('submit', function (e) {
                 e.preventDefault();
                 const password = document.getElementById('registerPassword').value;
@@ -688,5 +715,6 @@
             });
         });
     </script>
+    
 </body>
 </html>
