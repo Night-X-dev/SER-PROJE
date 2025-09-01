@@ -2,7 +2,7 @@ from flask import Flask, render_template, request
 
 # Flask uygulamasını oluşturuyoruz.
 # templates_folder parametresi, bu uygulamanın şablonlarının hangi klasörde olduğunu belirtir.
-app = Flask(__name__, template_folder='templates')
+app = Flask(__name__, template_folder='templates/personel')
 
 # Ana sayfayı gösteren rota.
 # Bu rota, ana URL'ye (`/`) gelen istekleri karşılar ve 'login.html' dosyasını gönderir.
