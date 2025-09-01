@@ -26,9 +26,6 @@ app = Flask(__name__)
 # Session management secret key
 # THIS SHOULD BE A SECURE AND UNPREDICTABLE STRING!
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex")
-from management import management_bp  # management.py’den import ettik
-
-app.register_blueprint(management_bp)  # Blueprint’i kaydet
 
 PRIORITY_TRANSLATIONS = {
     "low": "Düşük Öncelik",
