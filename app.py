@@ -4288,6 +4288,7 @@ def get_revision_counts_by_step(project_id):
         if conn:
             conn.close()
 
+@app.route('/api/reports')
 def get_reports():
     """
     Veritabanından çeşitli proje raporlama verilerini çeken API endpoint'i.
