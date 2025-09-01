@@ -194,33 +194,34 @@ def register():
 def login():
     if request.method == 'POST':
         try:
-            # İstek verilerini al
+            # Get request data (handle both JSON and form data)
             data = request.get_json() if request.is_json else request.form
-            email = data.get('email')
-            password = data.get('password')
+            email = data.get('email', '').strip().lower()
+            password = data.get('password', '')
             
-            # Zorunlu alan kontrolü
+            # Required field validation
             if not email or not password:
                 return jsonify({"success": False, "message": "E-posta ve şifre alanları zorunludur!"}), 400
-                
-            # Kullanıcıyı veritabanından bul
+            
+            # Email format validation
+            if not validate_email(email):
+                return jsonify({"success": False, "message": "Geçerli bir e-posta adresi giriniz!"}), 400
+            
+            # Get user from database
             user = get_user_by_email(email)
             
-            # Kullanıcı yoksa veya şifre yanlışsa
+            # Check if user exists and password is correct
             if not user or not check_password(user['sifre'], password):
                 return jsonify({"success": False, "message": "Geçersiz e-posta veya şifre!"}), 401
-                
-            # Kullanıcı pasifse
-            if user.get('durum') != 'aktif':
-                return jsonify({"success": False, "message": "Hesabınız aktif değil! Lütfen yöneticinizle iletişime geçin."}), 403
-                
-            # Oturum bilgilerini ayarla
-            session['personel_logged_in'] = True
-            session['personel_id'] = user['id']
-            session['personel_email'] = user['email']
-            session['personel_adi'] = f"{user['ad']} {user['soyad']}"
             
-            # Son giriş tarihini güncelle
+            # Check if user is active
+            if user.get('durum') != 'aktif':
+                return jsonify({
+                    "success": False, 
+                    "message": "Hesabınız aktif değil! Lütfen yöneticinizle iletişime geçin."
+                }), 403
+            
+            # Update last login time
             connection = get_db_connection()
             try:
                 with connection.cursor() as cursor:
@@ -229,10 +230,17 @@ def login():
             finally:
                 connection.close()
             
-            # JWT token oluştur
+            # Set session data
+            session['personel_logged_in'] = True
+            session['personel_id'] = user['id']
+            session['personel_email'] = user['email']
+            session['personel_adi'] = f"{user['ad']} {user['soyad']}"
+            
+            # Create JWT token for API authentication
             token = create_jwt_token(user['id'], user['email'])
             
-            return jsonify({
+            # Prepare response data
+            response_data = {
                 "success": True,
                 "message": "Giriş başarılı!",
                 "redirect": url_for('management.dashboard'),
@@ -245,13 +253,31 @@ def login():
                     "departman": user.get('departman', ''),
                     "pozisyon": user.get('pozisyon', '')
                 }
-            })
+            }
+            
+            # If it's a JSON request, return JSON response
+            if request.is_json:
+                return jsonify(response_data)
+            
+            # For form submission, redirect to dashboard
+            flash('Başarıyla giriş yaptınız!', 'success')
+            return redirect(url_for('management.dashboard'))
             
         except Exception as e:
-            print(f"Giriş sırasında hata oluştu: {e}")
-            return jsonify({"success": False, "message": "Giriş sırasında bir hata oluştu!"}), 500
+            error_message = "Giriş sırasında bir hata oluştu!"
+            print(f"{error_message}: {e}")
+            
+            if request.is_json:
+                return jsonify({"success": False, "message": error_message}), 500
+            
+            flash(error_message, 'danger')
+            return redirect(url_for('management.login'))
     
-    # For GET request, render the login page
+    # For GET request, check if user is already logged in
+    if 'personel_logged_in' in session:
+        return redirect(url_for('management.dashboard'))
+    
+    # Show login page for non-logged in users
     return render_template('personel/login.html')
 
 @management_bp.route('/logout')
