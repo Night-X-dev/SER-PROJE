@@ -4361,7 +4361,7 @@ def get_reports():
                         COALESCE(pp.title, 'Genel Revizyon') AS task_name,
                         rr.created_at,
                         rr.progress_id,
-                        pp.status,
+                        rr.status,
                         pp.real_end_date,
                         pp.delay_days,
                         pp.end_date,
