@@ -4368,56 +4368,53 @@ def get_reports():
             """)
             revised_tasks = cursor.fetchall()
             
-            # Son 10 geciken iş adımı (delay_days > 0 olanlar)
+            # Son 10 geciken iş adımı (bitiş tarihi geçmiş ve tamamlanmamış)
             cursor.execute("""
                 SELECT 
                     p.project_name as projectName,
                     pp.title as taskName,
                     pp.end_date as originalDate,
-                    DATE_ADD(pp.end_date, INTERVAL pp.delay_days DAY) as newDate,
-                    '' as delayReason,  -- Removed delay_reason as it doesn't exist
-                    pp.delay_days as delayDays
+                    pp.end_date as newDate,
+                    'Gecikme' as delayType,
+                    DATEDIFF(CURDATE(), pp.end_date) as delayDays
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
-                WHERE pp.delay_days > 0
+                WHERE pp.end_date < CURDATE() 
+                AND (pp.real_end_date IS NULL OR pp.real_end_date > pp.end_date)
                 ORDER BY pp.end_date DESC
                 LIMIT 10
             """)
             delayed_tasks = cursor.fetchall()
             
-            # Son 10 ertelenen iş adımı (custom_delay_days > 0 olanlar)
+            # Son 10 ertelenen iş adımı (revizyon isteği onaylanmış olanlar)
             cursor.execute("""
-                SELECT 
+                SELECT DISTINCT
                     p.project_name as projectName,
                     pp.title as taskName,
                     pp.end_date as originalDate,
-                    DATE_ADD(pp.end_date, INTERVAL pp.custom_delay_days DAY) as newDate,
-                    '' as delayReason,  -- Removed delay_reason as it doesn't exist
-                    pp.custom_delay_days as delayDays
-                FROM project_progress pp
+                    DATE_ADD(pp.end_date, INTERVAL rr.delay_days DAY) as newDate,
+                    'Ertelenme' as delayType,
+                    rr.delay_days as delayDays
+                FROM revision_requests rr
+                JOIN project_progress pp ON rr.progress_id = pp.progress_id
                 JOIN projects p ON pp.project_id = p.project_id
-                WHERE pp.custom_delay_days > 0
-                ORDER BY pp.end_date DESC
+                WHERE rr.status = 'approved' AND rr.delay_days > 0
+                ORDER BY rr.created_at DESC
                 LIMIT 10
             """)
             postponed_tasks = cursor.fetchall()
             
             return jsonify({
-                'stats': {
-                    'totalProjectsCount': total_projects,
-                    'revisedStepsCount': revised_steps,
-                    'delayedStepsCount': delayed_steps,
-                    'postponedStepsCount': postponed_steps,
-                    'averageRevisions': float(avg_revisions) if avg_revisions else 0,
-                    'mostRevisedProject': most_revised_project.get('projectName', 'Yok'),
-                    'mostRevisionsCount': most_revised_project.get('revisionCount', 0)
-                },
-                'revisedTasks': [{
-                    'projectName': task['projectName'],
-                    'taskName': task['taskName'],
-                    'revisionDate': task['revisionDate'].strftime('%Y-%m-%d %H:%M') if task['revisionDate'] else None,
-                    'revisionReason': task['revisionReason'],
-                    'status': task['revisionStatus'],
+                'totalProjects': total_projects,
+                'revisedSteps': revised_steps,
+                'delayedSteps': delayed_steps,
+                'postponedSteps': postponed_steps,
+                'avgRevisions': float(avg_revisions) if avg_revisions else 0,
+                'mostRevisedProject': most_revised_project,
+                'revisedTasks': revised_tasks,
+                'delayedTasks': delayed_tasks,
+                'postponedTasks': postponed_tasks,
+                'revisionRequests': revised_tasks
                     'requestedBy': task['requestedBy']
                 } for task in revised_tasks],
                 'delayedTasks': [{

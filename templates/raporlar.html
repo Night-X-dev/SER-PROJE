@@ -1331,7 +1331,7 @@
                     }
                 }
                 
-                // Gecikmiş iş adımlarını listele
+                // Gecikmiş iş adımlarını listele (Bitiş tarihi geçmiş ve tamamlanmamış)
                 const delayedTasksTableBody = document.getElementById('delayedTasksTableBody');
                 if (delayedTasksTableBody) {
                     delayedTasksTableBody.innerHTML = ''; // Eski verileri temizle
@@ -1344,39 +1344,37 @@
                                 <td>${task.taskName || ''}</td>
                                 <td>${task.originalDate ? new Date(task.originalDate).toLocaleDateString('tr-TR') : ''}</td>
                                 <td>${task.newDate ? new Date(task.newDate).toLocaleDateString('tr-TR') : ''}</td>
-                                <td>${task.delayReason || 'Belirtilmemiş'}</td>
-                                <td><span class="status-badge delayed">${task.delayDays || '0'} gün</span></td>
+                                <td>${task.delayDays || '0'} gün gecikme</td>
                             `;
                             delayedTasksTableBody.appendChild(row);
                         });
                     } else {
                         const row = document.createElement('tr');
-                        row.innerHTML = '<td colspan="4" class="text-center">Gecikmiş iş adımı bulunmamaktadır.</td>';
+                        row.innerHTML = '<td colspan="5" class="text-center">Gecikmiş iş adımı bulunmamaktadır.</td>';
                         delayedTasksTableBody.appendChild(row);
                     }
                 }
                 
-                // Ertelenen iş adımlarını listele
+                // Ertelenen iş adımlarını listele (Revizyon isteği onaylanmış olanlar)
                 const postponedTasksTableBody = document.getElementById('postponedTasksTableBody');
                 if (postponedTasksTableBody) {
                     postponedTasksTableBody.innerHTML = ''; // Eski verileri temizle
 
-                    if (data.postponedTasks && data.postponedTasks.length > 0) {
-                        data.postponedTasks.forEach(task => {
+                    if (data.revisionRequests && data.revisionRequests.length > 0) {
+                        data.revisionRequests.forEach(task => {
                             const row = document.createElement('tr');
                             row.innerHTML = `
                                 <td>${task.projectName || ''}</td>
                                 <td>${task.taskName || ''}</td>
                                 <td>${task.originalDate ? new Date(task.originalDate).toLocaleDateString('tr-TR') : ''}</td>
-                                <td>${task.newDate ? new Date(task.newDate).toLocaleDateString('tr-TR') : ''}</td>
-                                <td>${task.delayReason || 'Belirtilmemiş'}</td>
-                                <td><span class="status-badge postponed">+${task.delayDays || '0'} gün</span></td>
+                                <td>${task.revisionDate ? new Date(task.revisionDate).toLocaleDateString('tr-TR') : ''}</td>
+                                <td>${task.requestedBy || 'Bilinmiyor'}</td>
                             `;
                             postponedTasksTableBody.appendChild(row);
                         });
                     } else {
                         const row = document.createElement('tr');
-                        row.innerHTML = '<td colspan="6" class="text-center">Ertelenmiş iş adımı bulunmamaktadır.</td>';
+                        row.innerHTML = '<td colspan="5" class="text-center">Ertelenmiş iş adımı bulunmamaktadır.</td>';
                         postponedTasksTableBody.appendChild(row);
                     }
                 }
