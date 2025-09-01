@@ -1,23 +1,25 @@
-# management.py
-import os
+from flask import Blueprint, render_template, redirect, url_for, session, flash, request, jsonify
 import pymysql.cursors
+import os
 from dotenv import load_dotenv
-from flask import Blueprint, request, jsonify, render_template
+from functools import wraps
 
-
+# Load environment variables
 load_dotenv()
 
-# Blueprint oluştur
+# Create Blueprint
 management_bp = Blueprint(
     'management',
     __name__,
     template_folder='templates/personel',
-    static_folder='static',  # sadece 'static' yaz
-    static_url_path='/personel/static'  # URL’de bu path kullanılacak
+    static_folder='static',
+    static_url_path='/personel/static',
+    url_prefix='/personel'
 )
-# Yeni veritabanı bağlantısı
+
+# Database connection
 def get_db_connection():
-    connection = pymysql.connect(
+    return pymysql.connect(
         host=os.getenv("MYSQL_HOST_NEW", "localhost"),
         user=os.getenv("MYSQL_USER_NEW", "serik"),
         password=os.getenv("MYSQL_PASSWORD_NEW", "Ser.1712_"),
@@ -25,32 +27,79 @@ def get_db_connection():
         port=int(os.getenv("MYSQL_PORT_NEW", 3306)),
         cursorclass=pymysql.cursors.DictCursor
     )
-    return connection
-management_bp = Blueprint(
-    'management',
-    __name__,
-    template_folder='templates/personel',  # blueprint templates path
-    static_folder='static',
-    static_url_path='/personel/static'
-)
-@management_bp.route('/login.html')
-def serve_personel_login_page():
-    return render_template('login.html')  # sadece 'login.html', çünkü blueprint template_folder zaten 'templates/personel'
-@management_bp.route("/login_backend", methods=["POST"])
-def login_backend():
-    email = request.form.get("email")
-    password = request.form.get("password")
 
-    if email == "12345678@gmail.com" and password == "12345678":
-        return "Giriş başarılı!"
-    else:
-        return "Giriş başarısız, lütfen bilgilerinizi kontrol edin."
+# Login required decorator
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'personel_logged_in' not in session:
+            return redirect(url_for('management.login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
-@management_bp.route('/test_db')
+# Routes
+@management_bp.route('/')
+def index():
+    if 'personel_logged_in' in session:
+        return redirect(url_for('management.dashboard'))
+    return redirect(url_for('management.login'))
+
+@management_bp.route('/login', methods=['GET', 'POST'])
+@management_bp.route('/login.html', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        # TODO: Implement proper authentication
+        if email == "admin@example.com" and password == "admin123":
+            session['personel_logged_in'] = True
+            session['personel_email'] = email
+            return redirect(url_for('management.dashboard'))
+        else:
+            flash('Geçersiz e-posta veya şifre!', 'danger')
+    
+    return render_template('login.html')
+
+@management_bp.route('/logout')
+def logout():
+    session.pop('personel_logged_in', None)
+    session.pop('personel_email', None)
+    return redirect(url_for('management.login'))
+
+@management_bp.route('/dashboard')
+@login_required
+def dashboard():
+    return render_template('dashboard.html')
+
+@management_bp.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    if request.method == 'POST':
+        current_password = request.form.get('current_password')
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+        
+        # TODO: Implement password change logic
+        if new_password == confirm_password:
+            flash('Şifre başarıyla değiştirildi!', 'success')
+            return redirect(url_for('management.dashboard'))
+        else:
+            flash('Yeni şifreler eşleşmiyor!', 'danger')
+    
+    return render_template('change_password.html')
+
+# API Endpoints
+@management_bp.route('/api/test-db')
 def test_db():
-    conn = get_db_connection()
-    with conn.cursor() as cursor:
-        cursor.execute("SHOW TABLES;")
-        tables = cursor.fetchall()
-    conn.close()
-    return jsonify(tables)
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute("SHOW TABLES;")
+            tables = cursor.fetchall()
+        return jsonify({"status": "success", "tables": tables})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
