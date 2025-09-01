@@ -189,19 +189,182 @@
 
         .btn {
             width: 100%;
-            padding: 15px;
+            padding: 12px;
             background: #1a56db;
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 5px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.3s ease;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
 
         .btn:hover {
-            background: #164cc5;
+            background: #1e4ed8;
+            box-shadow: 0 4px 12px rgba(26, 86, 219, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(26, 86, 219, 0.3);
+        }
+
+        .btn-primary {
+            background: #1a56db;
+        }
+
+        .btn-primary:hover {
+            background: #1e4ed8;
+        }
+
+        .btn .btn-text {
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .btn .btn-loading {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .btn.loading .btn-text {
+            visibility: hidden;
+        }
+
+        .btn.loading .btn-loading {
+            display: block;
+        }
+
+        .input-with-icon {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-with-icon i {
+            position: absolute;
+            left: 15px;
+            color: #6b7280;
+            font-size: 16px;
+        }
+
+        .input-with-icon input {
+            padding-left: 40px !important;
+        }
+
+        .password-strength {
+            margin-top: 5px;
+            width: 100%;
+        }
+
+        .strength-bar {
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 4px;
+        }
+
+        .strength-bar::after {
+            content: '';
+            display: block;
+            height: 100%;
+            width: 0;
+            background: #ef4444;
+            transition: width 0.3s ease, background 0.3s ease;
+        }
+
+        .strength-text {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .form-message {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .form-message.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #34d399;
+            display: block;
+        }
+
+        .form-message.error {
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #f87171;
+            display: block;
+        }
+
+        .error-message {
+            color: #dc2626;
+            font-size: 13px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .input-group.error input {
+            border-color: #dc2626;
+        }
+
+        .input-group.error .error-message {
+            display: block;
+        }
+
+        .hint {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+            display: block;
+        }
+
+        .form-footer {
+            margin-top: 24px;
+            text-align: center;
+        }
+
+        .login-link {
+            margin-top: 16px;
+            font-size: 14px;
+            color: #4b5563;
+        }
+
+        .login-link a {
+            color: #1a56db;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+
+        .terms-notice {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #6b7280;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .terms-notice a {
+            color: #1a56db;
+            text-decoration: none;
+        }
+
+        .terms-notice a:hover {
+            text-decoration: underline;
         }
 
         .password-toggle {
@@ -428,66 +591,84 @@
                     <button type="submit" class="btn">Giriş Yap</button>
                 </form>
 
-                <form class="form" id="registerForm" action="{{ url_for('management.register') }}" method="POST">
+                <form class="form" id="registerForm" action="{{ url_for('management.register') }}" method="POST" novalidate>
                     <h2>Yeni Hesap Oluşturun</h2>
+                    
+                    <div class="form-message" id="registerMessage"></div>
 
                     <div class="input-row">
                         <div class="input-group">
-                            <label for="registerFirstName">Ad</label>
+                            <label for="registerFirstName">Ad *</label>
                             <input
                                 type="text"
                                 id="registerFirstName"
                                 name="ad"
                                 placeholder="Adınız"
                                 required
+                                minlength="2"
+                                maxlength="50"
+                                pattern="[A-Za-zÇçĞğIıİiÖöŞşÜü ]+"
+                                title="Lütfen sadece harf kullanın"
                             />
+                            <span class="error-message" id="firstNameError"></span>
                         </div>
 
                         <div class="input-group">
-                            <label for="registerLastName">Soyad</label>
+                            <label for="registerLastName">Soyad *</label>
                             <input
                                 type="text"
                                 id="registerLastName"
                                 name="soyad"
                                 placeholder="Soyadınız"
                                 required
+                                minlength="2"
+                                maxlength="50"
+                                pattern="[A-Za-zÇçĞğIıİiÖöŞşÜü ]+"
+                                title="Lütfen sadece harf kullanın"
                             />
+                            <span class="error-message" id="lastNameError"></span>
                         </div>
                     </div>
 
                     <div class="input-group">
-                        <label for="registerEmail">E-posta</label>
+                        <label for="registerEmail">E-posta *</label>
+                        <div class="input-with-icon">
+                            <i class="fas fa-envelope"></i>
                             <input
                                 type="email"
                                 id="registerEmail"
                                 name="email"
-                                placeholder="E-posta adresiniz"
+                                placeholder="ornek@firma.com"
                                 required
+                                autocomplete="username"
                             />
+                        </div>
+                        <span class="error-message" id="emailError"></span>
                     </div>
                     
                     <div class="input-group">
-                        <label for="registerPhone">Telefon Numarası</label>
-                        <div class="phone-input-container">
-                            <span class="phone-prefix">+90 </span>
+                        <label for="registerPhone">Telefon Numarası *</label>
+                        <div class="input-with-icon">
+                            <i class="fas fa-phone"></i>
                             <input
                                 type="tel"
                                 id="registerPhone"
                                 name="telefon"
                                 placeholder="5xx xxx xx xx"
-                                maxlength="15"
                                 required
                                 pattern="[0-9]{10,15}"
                                 title="Lütfen geçerli bir telefon numarası girin (5xx xxx xx xx)"
+                                oninput="formatPhoneNumber(this)"
                             />
                         </div>
-                        <p class="phone-format">
-                            Telefon numarası 10 haneli olmalıdır (5xx xxx xx xx)
-                        </p>
+                        <span class="hint">Başında 0 olmadan giriniz (örn: 5xx xxx xx xx)</span>
+                        <span class="error-message" id="phoneError"></span>
                     </div>
 
                     <div class="input-group">
-                        <label for="registerPassword">Şifre</label>
+                        <label for="registerPassword">Şifre *</label>
+                        <div class="input-with-icon">
+                            <i class="fas fa-lock"></i>
                             <input
                                 type="password"
                                 id="registerPassword"
@@ -495,16 +676,52 @@
                                 placeholder="En az 8 karakter"
                                 minlength="8"
                                 required
+                                autocomplete="new-password"
+                                oninput="checkPasswordStrength(this.value)"
                             />
-                        <i class="fas fa-eye password-toggle" data-target="registerPassword"></i>
-                        <p class="password-info">
-                            Şifreniz en az 8 karakter uzunluğunda olmalıdır.
+                            <i class="fas fa-eye password-toggle" data-target="registerPassword"></i>
+                        </div>
+                        <div class="password-strength">
+                            <div class="strength-bar"></div>
+                            <span class="strength-text">Şifre gücü: <span id="strengthText">Zayıf</span></span>
+                        </div>
+                        <span class="error-message" id="passwordError"></span>
+                    </div>
 
-                        <button type="submit" class="btn">Giriş Yap</button>
-                    </form>
+                    <div class="input-group">
+                        <label for="registerPasswordConfirm">Şifre Tekrar *</label>
+                        <div class="input-with-icon">
+                            <i class="fas fa-lock"></i>
+                            <input
+                                type="password"
+                                id="registerPasswordConfirm"
+                                name="password_confirm"
+                                placeholder="Şifrenizi tekrar girin"
+                                minlength="8"
+                                required
+                                autocomplete="new-password"
+                                oninput="checkPasswordMatch()"
+                            />
+                            <i class="fas fa-eye password-toggle" data-target="registerPasswordConfirm"></i>
+                        </div>
+                        <span class="error-message" id="confirmPasswordError"></span>
+                    </div>
 
-                    <form class="form" id="registerForm" action="{{ url_for('management.register') }}" method="POST">
-                        <h2>Yeni Hesap Oluşturun</h2>
+                    <div class="form-footer">
+                        <button type="submit" class="btn btn-primary" id="registerButton">
+                            <span class="btn-text">Hesap Oluştur</span>
+                            <span class="btn-loading">
+                                <i class="fas fa-spinner fa-spin"></i>
+                            </span>
+                        </button>
+                        <p class="login-link">Zaten hesabınız var mı? <a href="#" id="showLoginForm">Giriş yapın</a></p>
+                    </div>
+                    
+                    <div class="terms-notice">
+                        <p>Hesap oluşturarak, <a href="#" target="_blank">Kullanım Koşullarını</a> ve <a href="#" target="_blank">Gizlilik Politikasını</a> kabul etmiş olursunuz.</p>
+                    </div>
+                </form>
+
             </div>
         </div>
     </div>
