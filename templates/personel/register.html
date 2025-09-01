@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kayıt Ol - Personel Yönetim Sistemi</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4a6cf7;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --border-radius: 8px;
+            --box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            overflow: hidden;
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            min-height: 600px;
+        }
+
+        .left-side {
+            flex: 1;
+            background: linear-gradient(rgba(74, 108, 247, 0.9), rgba(74, 108, 247, 0.8)), 
+                        url('https://source.unsplash.com/random/800x600/?office,work') center/cover no-repeat;
+            color: white;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .left-side h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+
+        .left-side p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        .right-side {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .form-container {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo img {
+            max-width: 150px;
+            height: auto;
+        }
+
+        .form-title {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .form-title h2 {
+            color: var(--dark-color);
+            margin-bottom: 10px;
+        }
+
+        .form-title p {
+            color: var(--secondary-color);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark-color);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(74, 108, 247, 0.25);
+            outline: none;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .input-group input {
+            padding-right: 40px;
+        }
+
+        .input-group i {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--secondary-color);
+            cursor: pointer;
+        }
+
+        .btn {
+            display: inline-block;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            transition: var(--transition);
+        }
+
+        .btn:hover {
+            background: #3a5bd9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .btn-outline:hover {
+            background: rgba(74, 108, 247, 0.1);
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 25px 0;
+            color: var(--secondary-color);
+        }
+
+        .divider::before,
+        .divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: #ddd;
+            margin: 0 10px;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+            color: var(--secondary-color);
+        }
+
+        .login-link a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+
+        .form-footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 0.9rem;
+            color: var(--secondary-color);
+        }
+
+        .form-footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: var(--border-radius);
+            color: white;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            z-index: 1000;
+            transform: translateX(150%);
+            transition: transform 0.3s ease-in-out;
+            max-width: 350px;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast i {
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+
+        .toast.success {
+            background: var(--success-color);
+        }
+
+        .toast.error {
+            background: var(--danger-color);
+        }
+
+        .toast.warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                max-width: 500px;
+            }
+
+            .left-side {
+                display: none;
+            }
+
+            .right-side {
+                padding: 30px 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .right-side {
+                padding: 20px 15px;
+            }
+
+            .form-title h2 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-side">
+            <h1>Hoş Geldiniz</h1>
+            <p>Personel yönetim sistemimize kayıt olarak tüm iş süreçlerinizi kolayca yönetebilir, izinlerinizi takip edebilir ve ekip arkadaşlarınızla iletişim kurabilirsiniz.</p>
+            <div style="margin-top: auto;">
+                <p><i class="fas fa-check-circle"></i> Kolay ve hızlı kayıt</p>
+                <p><i class="fas fa-check-circle"></i> Güvenli hesap yönetimi</p>
+                <p><i class="fas fa-check-circle"></i> 7/24 destek</p>
+            </div>
+        </div>
+        <div class="right-side">
+            <div class="form-container">
+                <div class="logo">
+                    <img src="{{ url_for('static', filename='serimage.png') }}" alt="Logo">
+                </div>
+                <div class="form-title">
+                    <h2>Hesap Oluştur</h2>
+                    <p>Personel yönetim sistemine erişmek için kayıt olun</p>
+                </div>
+                <form id="registerForm">
+                    <div class="form-group">
+                        <div class="input-group">
+                            <input type="text" id="firstName" name="ad" class="form-control" placeholder="Adınız" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <input type="text" id="lastName" name="soyad" class="form-control" placeholder="Soyadınız" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <input type="email" id="email" name="email" class="form-control" placeholder="E-posta adresiniz" required>
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <input type="tel" id="phone" name="telefon" class="form-control" placeholder="Telefon numaranız (05XX XXX XX XX)" pattern="[0-9]{10}" maxlength="10">
+                            <i class="fas fa-phone"></i>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <input type="password" id="password" name="password" class="form-control" placeholder="Şifreniz" required>
+                            <i class="fas fa-eye password-toggle"></i>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <input type="password" id="passwordConfirm" name="password_confirm" class="form-control" placeholder="Şifrenizi tekrar girin" required>
+                            <i class="fas fa-eye password-toggle"></i>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn">
+                            <i class="fas fa-user-plus"></i> Kayıt Ol
+                        </button>
+                    </div>
+                </form>
+                <div class="divider">veya</div>
+                <div class="login-link">
+                    Zaten bir hesabınız var mı? <a href="{{ url_for('management.login') }}">Giriş yapın</a>
+                </div>
+                <div class="form-footer">
+                    <p>Hesap oluşturarak <a href="#">Kullanım Koşulları</a>'nı ve <a href="#">Gizlilik Politikası</a>'nı kabul etmiş olursunuz.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toast-message">Mesaj burada gösterilecek</span>
+    </div>
+
+    <script>
+        // Show/hide password
+        document.querySelectorAll('.password-toggle').forEach(icon => {
+            icon.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-target') || 'password';
+                const passwordInput = document.getElementById(targetId) || 
+                                    this.parentElement.querySelector('input');
+                
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    this.classList.remove('fa-eye');
+                    this.classList.add('fa-eye-slash');
+                } else {
+                    passwordInput.type = 'password';
+                    this.classList.remove('fa-eye-slash');
+                    this.classList.add('fa-eye');
+                }
+            });
+        });
+
+        // Format phone number
+        const phoneInput = document.getElementById('phone');
+        if (phoneInput) {
+            phoneInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                
+                if (value.length > 0) {
+                    value = value.match(/(\d{0,4})(\d{0,3})(\d{0,2})(\d{0,2})/);
+                    value = !value[3] ? value[1] + (value[2] ? ' ' + value[2] : '') : 
+                            value[1] + ' ' + value[2] + ' ' + value[3] + (value[4] ? ' ' + value[4] : '');
+                }
+                
+                e.target.value = value.trim();
+            });
+        }
+
+        // Show toast message
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            
+            // Set message and type
+            toastMessage.textContent = message;
+            
+            // Remove all existing type classes
+            toast.classList.remove('success', 'error', 'warning');
+            
+            // Set the new type class
+            toast.classList.add(type);
+            
+            // Set appropriate icon
+            const icon = toast.querySelector('i');
+            icon.className = '';
+            
+            if (type === 'success') {
+                icon.classList.add('fas', 'fa-check-circle');
+            } else if (type === 'error') {
+                icon.classList.add('fas', 'fa-times-circle');
+            } else if (type === 'warning') {
+                icon.classList.add('fas', 'fa-exclamation-triangle');
+            }
+            
+            // Show toast
+            toast.classList.add('show');
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 5000);
+        }
+
+        // Form submission
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const form = e.target;
+            const formData = new FormData(form);
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
+            
+            try {
+                // Disable submit button and show loading state
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Kayıt Olunuyor...';
+                
+                // Convert form data to object
+                const data = {};
+                formData.forEach((value, key) => {
+                    data[key] = value;
+                });
+                
+                // Basic client-side validation
+                if (data.password !== data.password_confirm) {
+                    throw new Error('Şifreler eşleşmiyor!');
+                }
+                
+                if (data.password.length < 8) {
+                    throw new Error('Şifre en az 8 karakter olmalıdır!');
+                }
+                
+                // Send registration request
+                const response = await fetch('{{ url_for("management.register") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.message || 'Kayıt sırasında bir hata oluştu!');
+                }
+                
+                // Show success message
+                showToast(result.message || 'Kayıt başarılı! Yönlendiriliyorsunuz...', 'success');
+                
+                // Redirect to dashboard after a short delay
+                setTimeout(() => {
+                    window.location.href = result.redirect || '{{ url_for("management.dashboard") }}';
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Registration error:', error);
+                showToast(error.message || 'Kayıt sırasında bir hata oluştu!', 'error');
+            } finally {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+            }
+        });
+    </script>
+</body>
+</html>

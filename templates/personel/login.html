@@ -428,7 +428,7 @@
                     <button type="submit" class="btn">Giriş Yap</button>
                 </form>
 
-                <form class="form" id="registerForm">
+                <form class="form" id="registerForm" action="{{ url_for('management.register') }}" method="POST">
                     <h2>Yeni Hesap Oluşturun</h2>
 
                     <div class="input-row">
@@ -437,6 +437,7 @@
                             <input
                                 type="text"
                                 id="registerFirstName"
+                                name="ad"
                                 placeholder="Adınız"
                                 required
                             />
@@ -447,6 +448,7 @@
                             <input
                                 type="text"
                                 id="registerLastName"
+                                name="soyad"
                                 placeholder="Soyadınız"
                                 required
                             />
@@ -455,12 +457,13 @@
 
                     <div class="input-group">
                         <label for="registerEmail">E-posta</label>
-                        <input
-                            type="email"
-                            id="registerEmail"
-                            placeholder="E-posta adresiniz"
-                            required
-                        />
+                            <input
+                                type="email"
+                                id="registerEmail"
+                                name="email"
+                                placeholder="E-posta adresiniz"
+                                required
+                            />
                     </div>
                     
                     <div class="input-group">
@@ -470,9 +473,12 @@
                             <input
                                 type="tel"
                                 id="registerPhone"
+                                name="telefon"
                                 placeholder="5xx xxx xx xx"
                                 maxlength="15"
                                 required
+                                pattern="[0-9]{10,15}"
+                                title="Lütfen geçerli bir telefon numarası girin (5xx xxx xx xx)"
                             />
                         </div>
                         <p class="phone-format">
@@ -482,31 +488,23 @@
 
                     <div class="input-group">
                         <label for="registerPassword">Şifre</label>
-                        <input
-                            type="password"
-                            id="registerPassword"
-                            placeholder="En az 8 karakter"
-                            required
-                        />
+                            <input
+                                type="password"
+                                id="registerPassword"
+                                name="password"
+                                placeholder="En az 8 karakter"
+                                minlength="8"
+                                required
+                            />
                         <i class="fas fa-eye password-toggle" data-target="registerPassword"></i>
                         <p class="password-info">
                             Şifreniz en az 8 karakter uzunluğunda olmalıdır.
-                        </p>
-                    </div>
 
-                    <div class="input-group">
-                        <label for="registerPasswordConfirm">Şifre Tekrar</label>
-                        <input
-                            type="password"
-                            id="registerPasswordConfirm"
-                            placeholder="Şifrenizi tekrar girin"
-                            required
-                        />
-                        <i class="fas fa-eye password-toggle" data-target="registerPasswordConfirm"></i>
-                    </div>
+                        <button type="submit" class="btn">Giriş Yap</button>
+                    </form>
 
-                    <button type="submit" class="btn">Kayıt Ol</button>
-                </form>
+                    <form class="form" id="registerForm" action="{{ url_for('management.register') }}" method="POST">
+                        <h2>Yeni Hesap Oluşturun</h2>
             </div>
         </div>
     </div>
@@ -729,28 +727,76 @@
                     submitBtn.innerHTML = originalBtnText;
                 }
             });
-            registerForm.addEventListener('submit', function (e) {
+            registerForm.addEventListener('submit', async function (e) {
                 e.preventDefault();
-                const password = document.getElementById('registerPassword').value;
-                const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
-                const phone = document.getElementById('registerPhone').value;
-
-                if (password !== passwordConfirm) {
-                    showToast('Şifreler eşleşmiyor!', 'error');
-                    return;
-                }
-
-                if (password.length < 8) {
-                    showToast('Şifre en az 8 karakter olmalıdır!', 'error');
-                    return;
-                }
                 
-                if (!validatePhoneNumber(phone)) {
-                    showToast('Geçerli bir telefon numarası giriniz!', 'error');
-                    return;
+                const submitBtn = registerForm.querySelector('button[type="submit"]');
+                const originalBtnText = submitBtn.innerHTML;
+                
+                try {
+                    // Disable submit button and show loading state
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Kayıt Olunuyor...';
+                    
+                    const formData = {
+                        ad: registerForm.querySelector('input[name="ad"]').value.trim(),
+                        soyad: registerForm.querySelector('input[name="soyad"]').value.trim(),
+                        email: registerForm.querySelector('input[name="email"]').value.trim(),
+                        telefon: registerForm.querySelector('input[name="telefon"]').value.trim(),
+                        password: registerForm.querySelector('input[name="password"]').value,
+                        password_confirm: registerForm.querySelector('input[name="password_confirm"]').value
+                    };
+                    
+                    // Client-side validation
+                    if (formData.password !== formData.password_confirm) {
+                        throw new Error('Şifreler eşleşmiyor!');
+                    }
+
+                    if (formData.password.length < 8) {
+                        throw new Error('Şifre en az 8 karakter olmalıdır!');
+                    }
+                    
+                    if (!validatePhoneNumber(formData.telefon)) {
+                        throw new Error('Geçerli bir telefon numarası giriniz! (5XX XXX XX XX)');
+                    }
+                    
+                    // Send registration request
+                    const response = await fetch(registerForm.action, {
+                        method: 'POST',
+                        body: JSON.stringify(formData),
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        credentials: 'same-origin'
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Kayıt sırasında bir hata oluştu!');
+                    }
+                    
+                    // Show success message and redirect to login
+                    showToast('Kayıt başarılı! Giriş yapabilirsiniz.', 'success');
+                    
+                    // Switch to login form after a short delay
+                    setTimeout(() => {
+                        loginToggle.click();
+                        // Clear form
+                        registerForm.reset();
+                    }, 2000);
+                    
+                } catch (error) {
+                    console.error('Kayıt hatası:', error);
+                    showToast(error.message || 'Kayıt sırasında bir hata oluştu!', 'error');
+                } finally {
+                    // Re-enable submit button
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
                 }
 
-                showToast('Kayıt işlemi başarılı! Giriş sayfasına yönlendiriliyorsunuz...', 'success');
             });
         });
     </script>
