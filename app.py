@@ -4355,21 +4355,35 @@ def get_reports():
             
             # 4. Son 10 Revize Edilen İş Adımını Listele
             sql_revised_tasks = """
+                WITH RankedRevisions AS (
+                    SELECT 
+                        p.project_name,
+                        COALESCE(pp.title, 'Genel Revizyon') AS task_name,
+                        rr.created_at,
+                        rr.progress_id,
+                        pp.status,
+                        pp.real_end_date,
+                        pp.delay_days,
+                        pp.end_date,
+                        COUNT(rr.id) OVER (PARTITION BY rr.progress_id) AS revision_count,
+                        ROW_NUMBER() OVER (PARTITION BY rr.progress_id ORDER BY rr.created_at DESC) as rn
+                    FROM revision_requests rr
+                    JOIN projects p ON rr.project_id = p.project_id
+                    LEFT JOIN project_progress pp ON rr.progress_id = pp.progress_id
+                )
                 SELECT 
-                    p.project_name AS projectName,
-                    COALESCE(pp.title, 'Genel Revizyon') AS taskName,
-                    rr.created_at AS lastRevisedDate,
-                    COUNT(rr.id) OVER (PARTITION BY rr.progress_id) AS revision_count,
+                    project_name AS projectName,
+                    task_name AS taskName,
+                    created_at AS lastRevisedDate,
+                    revision_count,
                     CASE 
-                        WHEN pp.real_end_date IS NOT NULL THEN 'Completed'
-                        WHEN pp.delay_days > 0 AND pp.end_date < CURDATE() THEN 'Rejected'
+                        WHEN status = 'approved' THEN 'Completed'
+                        WHEN status = 'rejected' OR (delay_days > 0 AND end_date < CURDATE()) THEN 'Rejected'
                         ELSE 'Pending'
-                    END AS status,
-                    rr.message AS revisionReason
-                FROM revision_requests rr
-                JOIN projects p ON rr.project_id = p.project_id
-                LEFT JOIN project_progress pp ON rr.progress_id = pp.progress_id
-                ORDER BY rr.created_at DESC
+                    END AS status
+                FROM RankedRevisions
+                WHERE rn = 1
+                ORDER BY created_at DESC
                 LIMIT 10
             """
             cursor.execute(sql_revised_tasks)

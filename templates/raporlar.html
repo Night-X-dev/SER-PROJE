@@ -1404,16 +1404,19 @@ async function loadReports() {
                                 
                                 // Handle different status types
                                 let statusText, statusClass;
-                                switch(task.status) {
-                                    case 'Completed':
+                                const status = task.status ? task.status.toLowerCase() : 'pending';
+                                
+                                switch(status) {
+                                    case 'completed':
+                                    case 'approved':
                                         statusText = 'Tamamlandı';
                                         statusClass = 'completed';
                                         break;
-                                    case 'Rejected':
+                                    case 'rejected':
                                         statusText = 'Reddedildi';
                                         statusClass = 'rejected';
                                         break;
-                                    case 'Pending':
+                                    case 'pending':
                                     default:
                                         statusText = 'Beklemede';
                                         statusClass = 'pending';
