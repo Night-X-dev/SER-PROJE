@@ -7,8 +7,13 @@ from flask import Blueprint, request, jsonify
 load_dotenv()
 
 # Blueprint oluştur
-management_bp = Blueprint('management', __name__)
-
+management_bp = Blueprint(
+    'management',
+    __name__,
+    template_folder='templates/personel',
+    static_folder='static',  # sadece 'static' yaz
+    static_url_path='/personel/static'  # URL’de bu path kullanılacak
+)
 # Yeni veritabanı bağlantısı
 def get_db_connection():
     connection = pymysql.connect(
