@@ -4393,14 +4393,14 @@ def get_reports():
                     p.project_name as projectName,
                     pp.title as taskName,
                     pp.start_date as originalDate,
-                    DATE_ADD(pp.end_date, INTERVAL rr.delay_days DAY) as newDate,
+                    DATE_ADD(pp.end_date, INTERVAL rr.custom_delay_days DAY) as newDate,
                     'Ertelenme' as delayType,
-                    rr.delay_days as delayDays,
+                    rr.custom_delay_days as delayDays,
                     rr.message as delayReason
                 FROM revision_requests rr
                 JOIN project_progress pp ON rr.progress_id = pp.progress_id
                 JOIN projects p ON pp.project_id = p.project_id
-                WHERE rr.status = 'approved' AND rr.delay_days > 0
+                WHERE rr.status = 'approved' AND rr.custom_delay_days > 0
                 ORDER BY rr.created_at DESC
                 LIMIT 10
             """)
@@ -4480,8 +4480,8 @@ def get_reports():
             cursor.execute(sql_postponed_steps)
             postponed_steps_count = cursor.fetchone()['count']
 
-            # Gecikmeli Adım Sayısı (delay_days > 0 ve tamamlanmamış)
-            sql_delayed_steps = "SELECT COUNT(*) AS count FROM project_progress WHERE delay_days > 0 AND is_completed = FALSE"
+            # Gecikmeli Adım Sayısı (custom_delay_days > 0 ve tamamlanmamış)
+            sql_delayed_steps = "SELECT COUNT(*) AS count FROM project_progress WHERE custom_delay_days > 0 AND is_completed = FALSE"
             cursor.execute(sql_delayed_steps)
             delayed_steps_count = cursor.fetchone()['count']
 
