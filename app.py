@@ -4410,7 +4410,7 @@ def get_reports():
             
             # Format the response data
             response_data = {
-                'totalProjectsCount': total_projects,  # Changed to match frontend expectation
+                'totalProjects': total_projects,  # Changed to match frontend expectation
                 'revisedSteps': revised_steps,
                 'delayedSteps': delayed_steps,
                 'postponedSteps': postponed_steps,
@@ -4586,7 +4586,7 @@ def get_reports():
                     "revisedStepsCount": revised_steps_count,
                     "postponedStepsCount": postponed_steps_count,
                     "delayedStepsCount": delayed_steps_count,
-                    "totalProjectsCount": total_projects_count,
+                    "totalProjects": total_projects_count,
                     "avgRevisions": round(avg_revisions, 2)
                 },
                 "mostRevisedProject": most_revised_project_details,
