@@ -4410,7 +4410,7 @@ def get_reports():
             
             # Format the response data
             response_data = {
-                'totalProjects': total_projects,
+                'totalProjectsCount': total_projects,  # Changed to match frontend expectation
                 'revisedSteps': revised_steps,
                 'delayedSteps': delayed_steps,
                 'postponedSteps': postponed_steps,
