@@ -4404,36 +4404,49 @@ def get_reports():
             """)
             postponed_tasks = cursor.fetchall()
             
-            return jsonify({
+            # Format the response data
+            response_data = {
                 'totalProjects': total_projects,
                 'revisedSteps': revised_steps,
                 'delayedSteps': delayed_steps,
                 'postponedSteps': postponed_steps,
                 'avgRevisions': float(avg_revisions) if avg_revisions else 0,
                 'mostRevisedProject': most_revised_project,
-                'revisedTasks': revised_tasks,
-                'delayedTasks': delayed_tasks,
-                'postponedTasks': postponed_tasks,
-                'revisionRequests': revised_tasks
-                    'requestedBy': task['requestedBy']
+                'revisedTasks': [{
+                    'projectName': task.get('projectName'),
+                    'taskName': task.get('taskName'),
+                    'revisionDate': task.get('revisionDate').strftime('%Y-%m-%d %H:%M:%S') if task.get('revisionDate') else None,
+                    'revisionReason': task.get('revisionReason'),
+                    'revisionStatus': task.get('revisionStatus'),
+                    'requestedBy': task.get('requestedBy')
                 } for task in revised_tasks],
                 'delayedTasks': [{
-                    'projectName': task['projectName'],
-                    'taskName': task['taskName'],
-                    'originalDate': task['originalDate'].strftime('%Y-%m-%d') if task['originalDate'] else None,
-                    'newDate': task['newDate'].strftime('%Y-%m-%d') if task['newDate'] else None,
-                    'delayReason': task['delayReason'],
-                    'delayDays': task['delayDays']
+                    'projectName': task.get('projectName'),
+                    'taskName': task.get('taskName'),
+                    'originalDate': task.get('originalDate').strftime('%Y-%m-%d') if task.get('originalDate') else None,
+                    'newDate': task.get('newDate').strftime('%Y-%m-%d') if task.get('newDate') else None,
+                    'delayReason': task.get('delayReason', ''),
+                    'delayDays': task.get('delayDays', 0)
                 } for task in delayed_tasks],
                 'postponedTasks': [{
-                    'projectName': task['projectName'],
-                    'taskName': task['taskName'],
-                    'originalDate': task['originalDate'].strftime('%Y-%m-%d') if task['originalDate'] else None,
-                    'newDate': task['newDate'].strftime('%Y-%m-%d') if task['newDate'] else None,
-                    'delayReason': task['delayReason'],
-                    'delayDays': task['delayDays']
-                } for task in postponed_tasks]
-            })
+                    'projectName': task.get('projectName'),
+                    'taskName': task.get('taskName'),
+                    'originalDate': task.get('originalDate').strftime('%Y-%m-%d') if task.get('originalDate') else None,
+                    'newDate': task.get('newDate').strftime('%Y-%m-%d') if task.get('newDate') else None,
+                    'delayReason': task.get('delayReason', ''),
+                    'delayDays': task.get('delayDays', 0)
+                } for task in postponed_tasks],
+                'revisionRequests': [{
+                    'projectName': task.get('projectName'),
+                    'taskName': task.get('taskName'),
+                    'revisionDate': task.get('revisionDate').strftime('%Y-%m-%d %H:%M:%S') if task.get('revisionDate') else None,
+                    'revisionReason': task.get('revisionReason'),
+                    'revisionStatus': task.get('revisionStatus'),
+                    'requestedBy': task.get('requestedBy')
+                } for task in revised_tasks]
+            }
+            
+            return jsonify(response_data)
             
     except Exception as e:
         print(f"Raporlar alınırken hata oluştu: {e}")
