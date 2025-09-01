@@ -4362,6 +4362,7 @@ def get_reports():
                     COUNT(rr.id) OVER (PARTITION BY rr.progress_id) AS revision_count,
                     CASE 
                         WHEN pp.real_end_date IS NOT NULL THEN 'Completed'
+                        WHEN pp.delay_days > 0 AND pp.end_date < CURDATE() THEN 'Rejected'
                         ELSE 'Pending'
                     END AS status,
                     rr.message AS revisionReason
