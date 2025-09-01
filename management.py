@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="templates/personel")
+
 
 @app.route("/login_backend", methods=["POST"])
 def login_backend():

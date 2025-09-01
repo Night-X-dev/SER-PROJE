@@ -1,0 +1,37 @@
+# Gerekli Flask modüllerini import ediyoruz
+from flask import Flask, render_template, request, url_for, redirect
+
+# Flask uygulamasını oluşturuyoruz.
+# templates_folder parametresi, bu uygulama için şablonların hangi klasörde olduğunu belirtir.
+app = Flask(__name__, template_folder="templates/personel")
+
+# Eğer uygulamanızın statik dosyalara (CSS, JS, resimler) ihtiyacı varsa,
+# statik klasörü de doğru şekilde belirtmelisiniz. Varsayılan olarak 'static' klasörünü kullanır.
+
+# Giriş sayfasını gösteren rota.
+# Bu rota, ana URL'ye (`/`) gelen istekleri karşılar ve `login.html` dosyasını render eder.
+@app.route("/")
+def login_page():
+    # 'personel/login.html' dosyasını render eder.
+    return render_template("login.html")
+
+# Formdan gelen verileri işleyen rota.
+# Sadece POST metodu ile erişime izin verir.
+@app.route("/login_backend", methods=["POST"])
+def login_backend():
+    # POST isteği ile gönderilen form verilerini alır.
+    email = request.form.get("email")
+    password = request.form.get("password")
+
+    # Burada veritabanı sorgulama, kullanıcı doğrulama vb. işlemleri yapabilirsiniz.
+    # Şimdilik sadece gelen verileri bir dize olarak döndürüyoruz.
+    # Gerçek bir uygulamada, başarılı giriş sonrası başka bir sayfaya yönlendirme yapılır.
+    # Örneğin: return redirect(url_for('dashboard_page'))
+
+    return f"Gelen veriler: Email: {email}, Password: {password}"
+
+# Bu kısım, dosya doğrudan çalıştırıldığında uygulamanın başlamasını sağlar.
+if __name__ == "__main__":
+    # Uygulamayı debug modunda çalıştırır.
+    # 'debug=True' ile kodda yaptığınız değişiklikler otomatik olarak yeniden yüklenir.
+    app.run(debug=True)

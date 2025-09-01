@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="light">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SER Elektrik - Personel Yönetim Sistemi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #a5b4fc;
+            --primary-dark: #4338ca;
+            --secondary: #7c3aed;
+            --accent: #f43f5e;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --dark-2: #1e293b;
+            --light: #f8fafc;
+            --light-2: #f1f5f9;
+            --gray: #64748b;
+            --gray-light: #e2e8f0;
+            --gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            --glass: rgba(255, 255, 255, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.18);
+            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            --shadow-sm: 0 4px 12px 0 rgba(31, 38, 135, 0.1);
+            --shadow-lg: 0 15px 30px -5px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --border-radius: 16px;
+            --border-radius-sm: 12px;
+            --border-radius-lg: 24px;
+            --blur: blur(12px);
+        }
+
+        [data-theme="dark"] {
+            --primary: #818cf8;
+            --primary-light: #4f46e5;
+            --primary-dark: #6366f1;
+            --dark: #f8fafc;
+            --dark-2: #e2e8f0;
+            --light: #0f172a;
+            --light-2: #1e293b;
+            --gray: #94a3b8;
+            --gray-light: #334155;
+            --glass: rgba(15, 23, 42, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.05);
+            --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            --shadow-sm: 0 4px 12px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        body {
+            background: var(--light);
+            color: var(--dark);
+            transition: var(--transition);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--light-2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+            transition: var(--transition);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Glassmorphism Mixin */
+        .glass {
+            background: var(--glass);
+            backdrop-filter: var(--blur);
+            -webkit-backdrop-filter: var(--blur);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow);
+        }
+
+        body {
+            background-color: #f3f4f6;
+            color: #1f2937;
+            line-height: 1.6;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            height: 100vh;
+            background: var(--glass);
+            backdrop-filter: var(--blur);
+            -webkit-backdrop-filter: var(--blur);
+            border-right: 1px solid var(--glass-border);
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            z-index: 1000;
+            overflow-y: auto;
+            transform: translateX(-100%);
+            opacity: 0;
+            animation: slideInLeft 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes slideInLeft {
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .sidebar.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .sidebar.collapsed {
+            width: 80px;
+        }
+
+        .logo {
+            padding: 30px 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--glass-border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .logo::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--gradient);
+            animation: gradientBG 8s ease infinite;
+            background-size: 200% 200%;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .logo img {
+            max-width: 150px;
+            height: auto;
+        }
+
+        .logo h2 {
+            font-size: 1.1rem;
+            margin-top: 10px;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .menu {
+            padding: 20px 0;
+        }
+
+        .menu-title {
+            padding: 10px 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 24px;
+            color: var(--dark);
+            text-decoration: none;
+            transition: var(--transition);
+            border-left: 4px solid transparent;
+            margin: 4px 16px;
+            border-radius: var(--border-radius-sm);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .menu-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--gradient);
+            transform: scaleY(0);
+            transform-origin: bottom;
+            transition: var(--transition);
+            opacity: 0;
+        }
+
+        .menu-item:hover::before {
+            transform: scaleY(1);
+            opacity: 1;
+        }
+
+        .menu-item:hover, .menu-item.active {
+            background: rgba(79, 70, 229, 0.1);
+            color: var(--primary);
+            transform: translateX(4px);
+        }
+
+        .menu-item.active {
+            background: rgba(79, 70, 229, 0.15);
+            font-weight: 600;
+        }
+
+        .menu-item i {
+            margin-right: 12px;
+            font-size: 1.1rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        .menu-item span {
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar.collapsed .menu-item span {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .sidebar.collapsed .menu-title {
+            opacity: 0;
+            height: 0;
+            overflow: hidden;
+            padding: 0;
+            margin: 0;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            margin-left: 260px;
+            transition: all 0.3s ease;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .main-content.expanded {
+            margin-left: 80px;
+        }
+
+        /* Header Styles */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background: var(--glass);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 25px;
+            backdrop-filter: var(--blur);
+            -webkit-backdrop-filter: var(--blur);
+            border: 1px solid var(--glass-border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient);
+            opacity: 0.8;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .toggle-sidebar {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--gray);
+            cursor: pointer;
+            margin-right: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-sidebar:hover {
+            background-color: var(--gray-light);
+        }
+
+        .header-title h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin: 0;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .notification-btn, .user-menu-btn {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            color: var(--gray);
+            cursor: pointer;
+            position: relative;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .notification-btn:hover, .user-menu-btn:hover {
+            background-color: var(--gray-light);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: var(--danger);
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--gradient);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 1rem;
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+            transition: var(--transition);
+        }
+
+        .user-menu-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: none;
+            border: none;
+            padding: 4px 8px 4px 4px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .user-menu-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .user-menu-btn i {
+            font-size: 0.8rem;
+            color: var(--gray);
+            transition: var(--transition);
+        }
+
+        .user-dropdown {
+            position: relative;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            width: 220px;
+            background: var(--glass);
+            backdrop-filter: var(--blur);
+            -webkit-backdrop-filter: var(--blur);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            padding: 8px 0;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(10px);
+            transition: var(--transition);
+            z-index: 1000;
+        }
+
+        .user-dropdown:hover .dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 16px;
+            color: var(--dark);
+            text-decoration: none;
+            transition: var(--transition);
+            font-size: 0.95rem;
+        }
+
+        .dropdown-item i {
+            width: 24px;
+            margin-right: 10px;
+            text-align: center;
+            color: var(--gray);
+        }
+
+        .dropdown-item:hover {
+            background: rgba(79, 70, 229, 0.1);
+            color: var(--primary);
+        }
+
+        .dropdown-item:hover i {
+            color: var(--primary);
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background: var(--glass-border);
+            margin: 8px 0;
+        }
+
+        .text-danger {
+            color: var(--danger) !important;
+        }
+
+        .text-danger:hover {
+            background: rgba(239, 68, 68, 0.1) !important;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: var(--dark);
+            cursor: pointer;
+            transition: var(--transition);
+            margin-right: 8px;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(79, 70, 229, 0.1);
+            color: var(--primary);
+        }
+
+        .theme-toggle i {
+            font-size: 1.1rem;
+            transition: var(--transition);
+        }
+
+        /* Dashboard Cards */
+        .dashboard-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            background: var(--glass);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: var(--blur);
+            -webkit-backdrop-filter: var(--blur);
+            border: 1px solid var(--glass-border);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient);
+            opacity: 0.8;
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary-light);
+        }
+
+        .card:hover .card-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            color: white;
+            transition: var(--transition);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .bg-primary { 
+            background: var(--gradient);
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+        }
+        .bg-success { 
+            background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+        .bg-warning { 
+            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+        .bg-danger { 
+            background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .card-title {
+            font-size: 0.95rem;
+            color: var(--gray);
+            margin: 0;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin: 8px 0 4px;
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
+        }
+
+        .card-change {
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            margin-top: 8px;
+            transition: var(--transition);
+        }
+
+        .card:hover .card-change {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateX(4px);
+        }
+
+        .card-change.positive { 
+            color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+        }
+        
+        .card-change.negative { 
+            color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Recent Activity */
+        .recent-activity {
+            background: var(--glass);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 25px;
+            backdrop-filter: var(--blur);
+            -webkit-backdrop-filter: var(--blur);
+            border: 1px solid var(--glass-border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .recent-activity::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient);
+            opacity: 0.8;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            position: relative;
+        }
+
+        .section-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: var(--gradient);
+            border-radius: 3px;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin: 0;
+        }
+
+        .view-all {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: rgba(79, 70, 229, 0.1);
+        }
+
+        .view-all:hover {
+            background: rgba(79, 70, 229, 0.2);
+            transform: translateX(4px);
+        }
+
+        .view-all i {
+            transition: var(--transition);
+        }
+
+        .view-all:hover i {
+            transform: translateX(4px);
+        }
+
+        .view-all:hover {
+            color: var(--secondary);
+            text-decoration: underline;
+        }
+
+        .activity-list {
+            list-style: none;
+        }
+
+        .activity-item {
+            display: flex;
+            padding: 16px;
+            border-radius: var(--border-radius-sm);
+            margin: 8px 0;
+            background: rgba(255, 255, 255, 0.05);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+        }
+
+        .activity-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--gradient);
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .activity-item:hover {
+            transform: translateX(4px);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .activity-item:hover::before {
+            opacity: 1;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--gradient);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 16px;
+            flex-shrink: 0;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.2);
+            transition: var(--transition);
+        }
+
+        .activity-item:hover .activity-icon {
+            transform: rotate(10deg) scale(1.1);
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-title {
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: var(--dark);
+            font-size: 1.05rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .activity-title::after {
+            content: '·';
+            color: var(--primary);
+            font-weight: 800;
+        }
+
+        .activity-desc {
+            font-size: 0.95rem;
+            color: var(--gray);
+            margin-bottom: 6px;
+            line-height: 1.5;
+        }
+
+        .activity-time {
+            font-size: 0.85rem;
+            color: var(--gray);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
+        }
+
+        .activity-time::before {
+            content: '🕒';
+            font-size: 0.9em;
+            opacity: 0.7;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .main-content.expanded {
+                margin-left: 0;
+            }
+            
+            .toggle-sidebar {
+                display: flex;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .header-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+
+        /* Role-specific styles */
+        .role-worker .menu-item[data-role="admin"],
+        .role-worker .menu-item[data-role="accounting"],
+        .role-admin .menu-item[data-role="accounting"],
+        .role-admin .menu-item[data-role="worker"],
+        .role-accounting .menu-item[data-role="admin"],
+        .role-accounting .menu-item[data-role="worker"] {
+            display: none;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+<body class="role-worker"> <!-- Change class to role-admin or role-accounting to see different views -->
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo">
+            <img src="logobeyaz.png" alt="SER Elektrik Logo" />
+            <h2>Personel Yönetim</h2>
+        </div>
+        
+        <nav class="menu">
+            <div class="menu-title">Ana Menü</div>
+            <a href="#" class="menu-item active" data-role="all">
+                <i class="fas fa-home"></i>
+                <span>Ana Sayfa</span>
+            </a>
+            
+            <!-- Worker Menu -->
+            <a href="#" class="menu-item" data-role="worker">
+                <i class="fas fa-user"></i>
+                <span>Profilim</span>
+            </a>
+            <a href="#" class="menu-item" data-role="worker">
+                <i class="fas fa-calendar-alt"></i>
+                <span>İzin Taleplerim</span>
+            </a>
+            <a href="#" class="menu-item" data-role="worker">
+                <i class="fas fa-plus-circle"></i>
+                <span>Yeni İzin Talebi</span>
+            </a>
+            
+            <!-- Admin Menu -->
+            <a href="#" class="menu-item" data-role="admin">
+                <i class="fas fa-users"></i>
+                <span>Çalışanlar</span>
+            </a>
+            <a href="#" class="menu-item" data-role="admin">
+                <i class="fas fa-tasks"></i>
+                <span>İzin Talepleri</span>
+            </a>
+            <a href="#" class="menu-item" data-role="admin">
+                <i class="fas fa-chart-bar"></i>
+                <span>Raporlar</span>
+            </a>
+            
+            <!-- Accounting Menu -->
+            <a href="#" class="menu-item" data-role="accounting">
+                <i class="fas fa-id-card"></i>
+                <span>Çalışan Bilgileri</span>
+            </a>
+            <a href="#" class="menu-item" data-role="accounting">
+                <i class="fas fa-file-invoice-dollar"></i>
+                <span>Maaş Yönetimi</span>
+            </a>
+            <a href="#" class="menu-item" data-role="accounting">
+                <i class="fas fa-file-export"></i>
+                <span>Dışa Aktar</span>
+            </a>
+            
+            <div class="menu-title">Hesap</div>
+            <a href="#" class="menu-item" data-role="all">
+                <i class="fas fa-cog"></i>
+                <span>Ayarlar</span>
+            </a>
+            <a href="login.html" class="menu-item" data-role="all">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Çıkış Yap</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <button class="toggle-sidebar" id="toggleSidebar">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="header-title">
+                    <h1>Hoş Geldiniz, <span id="userName">Ahmet Yılmaz</span></h1>
+                </div>
+            </div>
+            
+            <div class="header-actions">
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                    <i class="fas fa-moon"></i>
+                    <i class="fas fa-sun" style="display: none;"></i>
+                </button>
+                <button class="notification-btn">
+                    <i class="far fa-bell"></i>
+                    <span class="notification-badge">3</span>
+                </button>
+                <div class="user-dropdown">
+                    <button class="user-menu-btn" id="userMenuBtn">
+                        <div class="user-avatar">AY</div>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-menu" id="userDropdown">
+                        <a href="#" class="dropdown-item"><i class="fas fa-user"></i> Profilim</a>
+                        <a href="#" class="dropdown-item"><i class="fas fa-cog"></i> Ayarlar</a>
+                        <div class="dropdown-divider"></div>
+                        <a href="login.html" class="dropdown-item text-danger"><i class="fas fa-sign-out-alt"></i> Çıkış Yap</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Cards -->
+        <div class="dashboard-cards">
+            <!-- Worker Dashboard -->
+            <div class="card" data-role="worker">
+                <div class="card-header">
+                    <div>
+                        <p class="card-title">Kalan İzin Hakkı</p>
+                        <h3 class="card-value">15 Gün</h3>
+                    </div>
+                    <div class="card-icon bg-primary">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                </div>
+                <div class="card-change positive">
+                    <i class="fas fa-arrow-up"></i> 5 gün yeni hak kazandınız
+                </div>
+            </div>
+
+            <div class="card" data-role="worker">
+                <div class="card-header">
+                    <div>
+                        <p class="card-title">Bekleyen Talepler</p>
+                        <h3 class="card-value">2</h3>
+                    </div>
+                    <div class="card-icon bg-warning">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+                <div class="card-change">
+                    Son talep: 2 gün önce
+                </div>
+            </div>
+
+            <div class="card" data-role="worker">
+                <div class="card-header">
+                    <div>
+                        <p class="card-title">Onaylanan İzinler</p>
+                        <h3 class="card-value">5</h3>
+                    </div>
+                    <div class="card-icon bg-success">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                </div>
+                <div class="card-change positive">
+                    Bu yıl kullanılan: 10 gün
+                </div>
+            </div>
+
+            <!-- Admin Dashboard -->
+            <div class="card" data-role="admin">
+                <div class="card-header">
+                    <div>
+                        <p class="card-title">Toplam Çalışan</p>
+                        <h3 class="card-value">124</h3>
+                    </div>
+                    <div class="card-icon bg-primary">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+                <div class="card-change positive">
+                    <i class="fas fa-arrow-up"></i> 5 yeni çalışan
+                </div>
+            </div>
+
+            <div class="card" data-role="admin">
+                <div class="card-header">
+                    <div>
+                        <p class="card-title">Bekleyen İzinler</p>
+                        <h3 class="card-value">18</h3>
+                    </div>
+                    <div class="card-icon bg-warning">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                </div>
+                <div class="card-change negative">
+                    <i class="fas fa-arrow-up"></i> 5 yeni talep
+                </div>
+            </div>
+
+            <div class="card" data-role="admin">
+                <div class="card-header">
+                    <div>
+                        <p class="card-title">Bugün İzinde Olanlar</p>
+                        <h3 class="card-value">7</h3>
+                    </div>
+                    <div class="card-icon bg-success">
+                        <i class="fas fa-umbrella-beach"></i>
+                    </div>
+                </div>
+                <div class="card-change">
+                    Yarın izinli: 3 kişi
+                </div>
+            </div>
+
+            <!-- Accounting Dashboard -->
+            <div class="card" data-role="accounting">
+                <div class="card-header">
+                    <div>
+                        <p class="card-title">Toplam Maaş Ödemesi</p>
+                        <h3 class="card-value">₺245,680</h3>
+                    </div>
+                    <div class="card-icon bg-primary">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                </div>
+                <div class="card-change positive">
+                    <i class="fas fa-arrow-up"></i> %5.2 artış
+                </div>
+            </div>
+
+            <div class="card" data-role="accounting">
+                <div class="card-header">
+                    <div>
+                        <p class="card-title">Bekleyen Ödemeler</p>
+                        <h3 class="card-value">12</h3>
+                    </div>
+                    <div class="card-icon bg-warning">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+                <div class="card-change">
+                    Toplam: ₺48,500
+                </div>
+            </div>
+
+            <div class="card" data-role="accounting">
+                <div class="card-header">
+                    <div>
+                        <p class="card-title">Ortalama Maaş</p>
+                        <h3 class="card-value">₺12,500</h3>
+                    </div>
+                    <div class="card-icon bg-success">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+                <div class="card-change positive">
+                    <i class="fas fa-arrow-up"></i> %3.2 artış
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity Section -->
+        <section class="recent-activity">
+            <div class="section-header">
+                <h2 class="section-title">Son İşlemler</h2>
+                <a href="#" class="view-all">Tümünü Görüntüle</a>
+            </div>
+            
+            <ul class="activity-list">
+                <!-- Worker Activities -->
+                <li class="activity-item" data-role="worker">
+                    <div class="activity-icon">
+                        <i class="fas fa-paper-plane"></i>
+                    </div>
+                    <div class="activity-content">
+                        <h3 class="activity-title">İzin Talebi Gönderildi</h3>
+                        <p class="activity-desc">15-20 Eylül 2023 tarihleri arasında yıllık izin talebiniz gönderildi.</p>
+                        <span class="activity-time">2 saat önce</span>
+                    </div>
+                </li>
+                
+                <li class="activity-item" data-role="worker">
+                    <div class="activity-icon" style="background-color: #e9f7ef; color: #10b981;">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="activity-content">
+                        <h3 class="activity-title">İzin Onaylandı</h3>
+                        <p class="activity-desc">5-7 Ağustos 2023 tarihli izin talebiniz onaylandı.</p>
+                        <span class="activity-time">3 gün önce</span>
+                    </div>
+                </li>
+                
+                <!-- Admin Activities -->
+                <li class="activity-item" data-role="admin">
+                    <div class="activity-icon" style="background-color: #eef2ff; color: #4f46e5;">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <div class="activity-content">
+                        <h3 class="activity-title">Yeni Çalışan Eklendi</h3>
+                        <p class="activity-desc">Mehmet Yılmaz, Yazılım Departmanı'na eklendi.</p>
+                        <span class="activity-time">Bugün, 10:45</span>
+                    </div>
+                </li>
+                
+                <li class="activity-item" data-role="admin">
+                    <div class="activity-icon" style="background-color: #fef3c7; color: #d97706;">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <div class="activity-content">
+                        <h3 class="activity-title">İzin Talebi Bekliyor</h3>
+                        <p class="activity-desc">Ayşe Kaya, 15-20 Eylül tarihleri için yıllık izin talebinde bulundu.</p>
+                        <span class="activity-time">Dün, 16:30</span>
+                    </div>
+                </li>
+                
+                <!-- Accounting Activities -->
+                <li class="activity-item" data-role="accounting">
+                    <div class="activity-icon" style="background-color: #f0fdf4; color: #059669;">
+                        <i class="fas fa-money-check-alt"></i>
+                    </div>
+                    <div class="activity-content">
+                        <h3 class="activity-title">Maaş Ödemesi Tamamlandı</h3>
+                        <p class="activity-desc">Ağustos 2023 maaş ödemeleri çalışan hesaplarına aktarıldı.</p>
+                        <span class="activity-time">Bugün, 09:00</span>
+                    </div>
+                </li>
+                
+                <li class="activity-item" data-role="accounting">
+                    <div class="activity-icon" style="background-color: #eff6ff; color: #2563eb;">
+                        <i class="fas fa-file-export"></i>
+                    </div>
+                    <div class="activity-content">
+                        <h3 class="activity-title">Bordro Raporu Oluşturuldu</h3>
+                        <p class="activity-desc">Ağustos 2023 dönemi bordro raporu oluşturuldu ve indirildi.</p>
+                        <span class="activity-time">Dün, 14:15</span>
+                    </div>
+                </li>
+            </ul>
+        </section>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const toggleSidebar = document.getElementById('toggleSidebar');
+            const sidebar = document.querySelector('.sidebar');
+            const mainContent = document.querySelector('.main-content');
+            const roleSwitcher = document.getElementById('roleSwitcher');
+            const roleSections = document.querySelectorAll('[data-role]');
+            const themeToggle = document.getElementById('themeToggle');
+            const sunIcon = themeToggle.querySelector('.fa-sun');
+            const moonIcon = themeToggle.querySelector('.fa-moon');
+            const html = document.documentElement;
+            const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+
+            // Theme Management
+            function setTheme(theme) {
+                if (theme === 'dark') {
+                    html.setAttribute('data-theme', 'dark');
+                    localStorage.setItem('theme', 'dark');
+                    sunIcon.style.display = 'none';
+                    moonIcon.style.display = 'block';
+                } else {
+                    html.setAttribute('data-theme', 'light');
+                    localStorage.setItem('theme', 'light');
+                    sunIcon.style.display = 'block';
+                    moonIcon.style.display = 'none';
+                }
+            }
+            
+            // Update the welcome message based on role
+            const updateWelcomeMessage = (role) => {
+                const userName = document.getElementById('userName');
+                if (role === 'worker') {
+                    userName.textContent = 'Ahmet Yılmaz';
+                } else if (role === 'admin') {
+                    userName.textContent = 'Yönetici';
+                } else if (role === 'accounting') {
+                    userName.textContent = 'Muhasebe';
+                }
+            };
+
+            // Initialize theme
+            const savedTheme = localStorage.getItem('theme') || (prefersDarkScheme.matches ? 'dark' : 'light');
+            setTheme(savedTheme);
+
+            // Toggle theme
+            themeToggle.addEventListener('click', () => {
+                const currentTheme = html.getAttribute('data-theme');
+                setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+            });
+
+            // Toggle sidebar
+            toggleSidebar.addEventListener('click', function() {
+                sidebar.classList.toggle('collapsed');
+                mainContent.classList.toggle('expanded');
+                // Save sidebar state
+                const isCollapsed = sidebar.classList.contains('collapsed');
+                localStorage.setItem('sidebarCollapsed', isCollapsed);
+            });
+
+            // Restore sidebar state
+            if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                sidebar.classList.add('collapsed');
+                mainContent.classList.add('expanded');
+            }
+
+            // Role switcher functionality
+            roleSwitcher.addEventListener('change', function() {
+                const selectedRole = this.value;
+                
+                // Hide all role-specific sections
+                roleSections.forEach(section => {
+                    section.style.display = 'none';
+                });
+                
+                // Show sections for selected role
+                document.querySelectorAll(`[data-role="${selectedRole}"]`).forEach(section => {
+                    section.style.display = 'block';
+                });
+                
+                // Update active state in sidebar
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                
+                // Set dashboard as active
+                const activeItem = document.querySelector(`.nav-item[data-role="${selectedRole}"][data-page="dashboard"]`);
+                if (activeItem) activeItem.classList.add('active');
+
+                // Update welcome message
+                updateWelcomeMessage(selectedRole);
+
+                // Save selected role
+                localStorage.setItem('selectedRole', selectedRole);
+            });
+
+            // Set initial role (from localStorage or default to worker)
+            const savedRole = localStorage.getItem('selectedRole') || 'worker';
+            roleSwitcher.value = savedRole;
+            roleSwitcher.dispatchEvent(new Event('change'));
+
+            // Mobile menu toggle
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const mobileMenu = document.getElementById('mobileMenu');
+            
+            if (mobileMenuBtn && mobileMenu) {
+                mobileMenuBtn.addEventListener('click', function() {
+                    mobileMenu.classList.toggle('show');
+                });
+            }
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(event) {
+                const userDropdown = document.getElementById('userDropdown');
+                const userMenuBtn = document.getElementById('userMenuBtn');
+                
+                if (userDropdown && userMenuBtn) {
+                    if (!userMenuBtn.contains(event.target) && !userDropdown.contains(event.target)) {
+                        userDropdown.style.opacity = '0';
+                        userDropdown.style.visibility = 'hidden';
+                        userDropdown.style.transform = 'translateY(10px)';
+                    }
+                }
+            });
+    </script>
+</body>
+</html>
