@@ -4357,15 +4357,17 @@ def get_reports():
             sql_revised_tasks = """
                 SELECT 
                     p.project_name AS projectName,
-                    pp.title AS taskName,
-                    rr.created_at AS revisionDate,
-                    rr.message AS revisionReason,
-                    'Revize Edildi' AS revisionStatus,
-                    COALESCE(u.fullname, 'Sistem') AS requestedBy
+                    COALESCE(pp.title, 'Genel Revizyon') AS taskName,
+                    rr.created_at AS lastRevisedDate,
+                    COUNT(rr.id) OVER (PARTITION BY rr.progress_id) AS revision_count,
+                    CASE 
+                        WHEN pp.real_end_date IS NOT NULL THEN 'Completed'
+                        ELSE 'Pending'
+                    END AS status,
+                    rr.message AS revisionReason
                 FROM revision_requests rr
                 JOIN projects p ON rr.project_id = p.project_id
                 LEFT JOIN project_progress pp ON rr.progress_id = pp.progress_id
-                LEFT JOIN users u ON rr.requested_by = u.id
                 ORDER BY rr.created_at DESC
                 LIMIT 10
             """
