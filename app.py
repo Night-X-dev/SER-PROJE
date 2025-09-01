@@ -4430,15 +4430,16 @@ def get_reports():
                     'taskName': task.get('taskName', ''),
                     'originalDate': task.get('originalDate').strftime('%Y-%m-%d') if task.get('originalDate') else None,
                     'newDate': task.get('newDate').strftime('%Y-%m-%d') if task.get('newDate') else None,
-                    'delayReason': task.get('delayReason', 'Gecikme nedeni belirtilmemiş'),
+                    'delayReason': 'Sistem tarafından otomatik hesaplandı',
                     'delayDays': int(task.get('delayDays', 0)) if task.get('delayDays') is not None else 0
-                } for task in delayed_tasks],
+                } for task in delayed_tasks if task.get('delayDays', 0) > 0],
                 'revisionRequests': [{
                     'projectName': task.get('projectName', ''),
                     'taskName': task.get('taskName', ''),
                     'originalDate': task.get('originalDate').strftime('%Y-%m-%d') if task.get('originalDate') else None,
                     'revisionDate': task.get('newDate').strftime('%Y-%m-%d') if task.get('newDate') else None,
-                    'requestedBy': task.get('requestedBy', 'Sistem')
+                    'requestedBy': task.get('requestedBy', 'Sistem'),
+                    'delayReason': task.get('delayReason', 'Revizyon talep edildi')
                 } for task in postponed_tasks]
             }
             
