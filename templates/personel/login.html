@@ -660,36 +660,33 @@
             // Form submission handlers
             loginForm.addEventListener('submit', function (e) {
                 e.preventDefault();
-                showToast('Giriş işlemi başarılı! Yönlendiriliyorsunuz...', 'success');
-            });
-            loginForm.addEventListener('submit', function (e) {
-                    e.preventDefault();
-                    
-                    // Hata ayıklama için konsola log ekliyoruz
-                    console.log("Backend'e fetch isteği gönderiliyor...");
-
-                    const formData = new FormData(this);
-                    
-                    fetch('/login_backend', {
-                        method: 'POST',
-                        body: formData,
-                    })
-                    .then(response => response.text())
-                    .then(data => {
-                        // Sunucudan gelen yanıta göre toast bildirimini gösteriyoruz.
-                        if (data.includes("Giriş başarılı")) {
-                            showToast(data, 'success');
-                        } else {
-                            showToast(data, 'error');
-                        }
-                        
-                        // Başarılı girişten sonra yönlendirme yapmak isterseniz buraya kod ekleyebilirsiniz.
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        showToast('Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.', 'error');
-                    });
+                
+                // Hata ayıklama için konsola log ekliyoruz
+                console.log("Backend'e giriş isteği gönderiliyor...");
+                
+                const formData = new FormData(loginForm);
+                
+                fetch(loginForm.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Giriş başarılı! Yönlendiriliyorsunuz...', 'success');
+                        window.location.href = data.redirect;
+                    } else {
+                        showToast(data.message || 'Giriş başarısız!', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Bir hata oluştu! Lütfen tekrar deneyin.', 'error');
                 });
+            });
             registerForm.addEventListener('submit', function (e) {
                 e.preventDefault();
                 const password = document.getElementById('registerPassword').value;
