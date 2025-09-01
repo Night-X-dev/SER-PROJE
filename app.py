@@ -4368,21 +4368,20 @@ def get_reports():
             """)
             revised_tasks = cursor.fetchall()
             
-            # Son 10 geciken iş adımı (bitiş tarihi geçmiş ve tamamlanmamış)
+            # Gecikmiş iş adımlarını getir (delay_days > 0 olanlar)
             cursor.execute("""
                 SELECT 
                     p.project_name as projectName,
                     pp.title as taskName,
-                    pp.start_date as originalDate,
-                    pp.end_date as newDate,
+                    pp.planned_start_date as originalDate,
+                    pp.start_date as newDate,
                     'Gecikme' as delayType,
-                    DATEDIFF(CURDATE(), pp.end_date) as delayDays,
-                    '' as delayReason
+                    pp.delay_days as delayDays,
+                    'Sistem tarafından otomatik hesaplandı' as delayReason
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
-                WHERE pp.end_date < CURDATE() 
-                AND (pp.real_end_date IS NULL OR pp.real_end_date > pp.end_date)
-                ORDER BY pp.end_date DESC
+                WHERE pp.delay_days > 0
+                ORDER BY pp.delay_days DESC
                 LIMIT 10
             """)
             delayed_tasks = cursor.fetchall()
