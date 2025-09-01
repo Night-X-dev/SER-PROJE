@@ -4401,7 +4401,7 @@ def get_reports():
                 LEFT JOIN revision_requests rr ON rr.progress_id = pp.progress_id
                 WHERE pp.custom_delay_days > 0
                 GROUP BY p.project_name, pp.title, pp.planned_start_date, pp.start_date, pp.custom_delay_days, rr.message
-                ORDER BY COALESCE(rr.created_at, pp.updated_at) DESC
+                ORDER BY COALESCE(rr.created_at, pp.updated_date) DESC
                 LIMIT 10
             """)
             postponed_tasks = cursor.fetchall()
