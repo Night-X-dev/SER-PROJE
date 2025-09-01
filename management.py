@@ -95,7 +95,7 @@ def logout():
 @management_bp.route('/dashboard')
 @login_required
 def dashboard():
-    return render_template('dashboard.html')
+    return render_template('personel/dashboard.html')
 
 @management_bp.route('/change-password', methods=['GET', 'POST'])
 @login_required
