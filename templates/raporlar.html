@@ -1330,19 +1330,22 @@
                     }
                 }
                 
-                // Gecikmiş iş adımlarını listele (Bitiş tarihi geçmiş ve tamamlanmamış)
+                // Gecikmiş iş adımlarını listele (delay_days > 0 olanlar)
                 const delayedTasksTableBody = document.getElementById('delayedTasksTableBody');
                 if (delayedTasksTableBody) {
                     delayedTasksTableBody.innerHTML = ''; // Eski verileri temizle
 
                     if (data.delayedTasks && data.delayedTasks.length > 0) {
                         data.delayedTasks.forEach(task => {
+                            const originalDate = task.originalDate ? new Date(task.originalDate) : null;
+                            const newDate = task.newDate ? new Date(task.newDate) : null;
+                            
                             const row = document.createElement('tr');
                             row.innerHTML = `
                                 <td>${task.projectName || ''}</td>
                                 <td>${task.taskName || ''}</td>
-                                <td>${task.originalDate ? new Date(task.originalDate).toLocaleDateString('tr-TR') : ''}</td>
-                                <td>${task.newDate ? new Date(task.newDate).toLocaleDateString('tr-TR') : ''}</td>
+                                <td>${originalDate ? originalDate.toLocaleDateString('tr-TR') : ''}</td>
+                                <td>${newDate ? newDate.toLocaleDateString('tr-TR') : ''}</td>
                                 <td>${task.delayDays || '0'} gün gecikme</td>
                             `;
                             delayedTasksTableBody.appendChild(row);
@@ -1354,26 +1357,30 @@
                     }
                 }
                 
-                // Ertelenen iş adımlarını listele (Revizyon isteği onaylanmış olanlar)
+                // Ertelenen iş adımlarını listele (custom_delay_days > 0 olanlar)
                 const postponedTasksTableBody = document.getElementById('postponedTasksTableBody');
                 if (postponedTasksTableBody) {
                     postponedTasksTableBody.innerHTML = ''; // Eski verileri temizle
 
-                    if (data.revisionRequests && data.revisionRequests.length > 0) {
-                        data.revisionRequests.forEach(task => {
+                    if (data.postponedTasks && data.postponedTasks.length > 0) {
+                        data.postponedTasks.forEach(task => {
+                            const originalDate = task.originalDate ? new Date(task.originalDate) : null;
+                            const newDate = task.newDate ? new Date(task.newDate) : null;
+                            
                             const row = document.createElement('tr');
                             row.innerHTML = `
                                 <td>${task.projectName || ''}</td>
                                 <td>${task.taskName || ''}</td>
-                                <td>${task.originalDate ? new Date(task.originalDate).toLocaleDateString('tr-TR') : ''}</td>
-                                <td>${task.revisionDate ? new Date(task.revisionDate).toLocaleDateString('tr-TR') : ''}</td>
-                                <td>${task.requestedBy || 'Bilinmiyor'}</td>
+                                <td>${originalDate ? originalDate.toLocaleDateString('tr-TR') : ''}</td>
+                                <td>${newDate ? newDate.toLocaleDateString('tr-TR') : ''}</td>
+                                <td>${task.delayDays || '0'} gün ertelendi</td>
+                                <td>${task.delayReason || 'Bilinmiyor'}</td>
                             `;
                             postponedTasksTableBody.appendChild(row);
                         });
                     } else {
                         const row = document.createElement('tr');
-                        row.innerHTML = '<td colspan="5" class="text-center">Ertelenmiş iş adımı bulunmamaktadır.</td>';
+                        row.innerHTML = '<td colspan="6" class="text-center">Ertelenmiş iş adımı bulunmamaktadır.</td>';
                         postponedTasksTableBody.appendChild(row);
                     }
                 }
