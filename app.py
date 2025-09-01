@@ -4308,19 +4308,16 @@ def get_reports():
             cursor.execute("SELECT COUNT(DISTINCT progress_id) AS count FROM revision_requests")
             revised_steps_count = cursor.fetchone()['count'] or 0
 
-            # Gecikmeli İş Adımı Sayısı (Planlanan bitiş tarihi geçmiş ve tamamlanmamış)
+            # Gecikmeli İş Adımı Sayısı (Planlanan bitiş tarihi geçmiş ve tamamlanmamış veya gecikme süresi olanlar)
             cursor.execute("""
                 SELECT COUNT(*) AS count FROM project_progress 
-                WHERE end_date < CURDATE() AND real_end_date IS NULL
+                WHERE (end_date < CURDATE() AND real_end_date IS NULL) OR delay_days > 0
             """)
             delayed_steps_count = cursor.fetchone()['count'] or 0
-
+            
             # Ertelenen İş Adımı Sayısı (Özel gecikme süresi olanlar)
-            cursor.execute("""
-                SELECT COUNT(*) AS count FROM project_progress 
-                WHERE custom_delay_days > 0
-            """)
-            postponed_steps_count = cursor.fetchone()['count'] or 0
+            # Bu artık delayed_steps_count içinde sayılıyor, bu yüzden ayrıca saymaya gerek yok
+            postponed_steps_count = 0
             
             # Ortalama revize sayısını hesapla (Toplam revizyon / Toplam proje)
             cursor.execute("SELECT COUNT(*) AS total_revisions FROM revision_requests")
