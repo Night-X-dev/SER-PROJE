@@ -51,15 +51,21 @@ def login():
         email = request.form.get('email')
         password = request.form.get('password')
         
-        # TODO: Implement proper authentication
-        if email == "admin@example.com" and password == "admin123":
-            session['personel_logged_in'] = True
-            session['personel_email'] = email
-            return redirect(url_for('management.dashboard'))
-        else:
-            flash('Geçersiz e-posta veya şifre!', 'danger')
+        try:
+            # Check if it's a login attempt
+            if email and password:
+                # TODO: Implement proper authentication with database
+                if email == "admin@example.com" and password == "admin123":
+                    session['personel_logged_in'] = True
+                    session['personel_email'] = email
+                    return jsonify({"success": True, "redirect": url_for('management.dashboard')})
+                else:
+                    return jsonify({"success": False, "message": "Geçersiz e-posta veya şifre!"}), 401
+        except Exception as e:
+            return jsonify({"success": False, "message": "Bir hata oluştu: " + str(e)}), 500
     
-    return render_template('login.html')
+    # For GET request, just render the login page
+    return render_template('personel/login.html')
 
 @management_bp.route('/logout')
 def logout():
