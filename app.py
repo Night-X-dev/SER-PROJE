@@ -42,6 +42,12 @@ def serve_welcome_page():
 def serve_login_page():
     """Directs /login.html requests to the login.html page."""
     return render_template('login.html')
+
+@app.route('/personel/login.html')
+def serve_personel_login_page():
+    """Directs /personel/login.html requests to the personel/login.html page."""
+    return render_template('personel/login.html')
+    
 # Yeni rota: sifremi_unuttum.html sayfasını sunar
 @app.route('/sifremi_unuttum.html')
 def serve_forgot_password_page():
