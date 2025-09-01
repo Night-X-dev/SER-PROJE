@@ -17,21 +17,18 @@ def login_page():
 # Sadece POST metodu ile erişime izin verir.
 @app.route("/login_backend", methods=["POST"])
 def login_backend():
- # POST isteği ile gönderilen form verilerini alır.
-  email = request.form.get("email")
-  password = request.form.get("password")
+    # POST isteği ile gönderilen form verilerini alır.
+    email = request.form.get("email")
+    password = request.form.get("password")
 
-  # Gelen verileri terminale yazdırıyoruz
-  print(f"Alınan veriler: Email: {email}, Şifre: {password}")
-
-  # TEST amaçlı kullanıcı doğrulama
-  if email == "admin@gmail.com" and password == "admin123":
-    # Doğru bilgiler girildiğinde
-    return "Giriş başarılı!"
-  else:
-    # Yanlış bilgiler girildiğinde
-    return "Giriş başarısız, lütfen bilgilerinizi kontrol edin."
-
+    # TEST amaçlı kullanıcı doğrulama
+    # Kullanıcının istediği spesifik email ve şifre ile kontrol ediyoruz.
+    if email == "12345678@gmail.com" and password == "12345678":
+        # Doğru bilgiler girildiğinde
+        return "Giriş başarılı!"
+    else:
+        # Yanlış bilgiler girildiğinde
+        return "Giriş başarısız, lütfen bilgilerinizi kontrol edin."
 
 # Bu kısım, dosya doğrudan çalıştırıldığında uygulamanın başlamasını sağlar.
 if __name__ == "__main__":
