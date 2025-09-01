@@ -28,7 +28,14 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex")
 from management import management_bp  # Blueprint’i import et
 app.register_blueprint(management_bp) # Blueprint’i kaydet
-
+@management_bp.route('/test_db')
+def test_db():
+    conn = get_db_connection()
+    with conn.cursor() as cursor:
+        cursor.execute("SHOW TABLES;")
+        tables = cursor.fetchall()
+    conn.close()
+    return jsonify(tables)
 PRIORITY_TRANSLATIONS = {
     "low": "Düşük Öncelik",
     "medium": "Orta Öncelik",

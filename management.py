@@ -8,30 +8,16 @@ import urllib.parse
 management_bp = Blueprint('management', __name__)
 
 def get_db_connection():
-    """Yeni veritabanına bağlanmak için fonksiyon"""
-    connection = None
-    try:
-        # Ortam değişkenlerinden bağlantı bilgilerini al
-        host = os.getenv("MYSQL_HOST", "localhost")
-        port = int(os.getenv("MYSQL_PORT", 3306))
-        user = os.getenv("MYSQL_USER", "ser")
-        password = os.getenv("MYSQL_PASSWORD", "Ser.1712_")
-        database = os.getenv("MYSQL_DATABASE", "yeni_veritabani")
-
-        connection = pymysql.connect(
-            host=host,
-            user=user,
-            password=password,
-            database=database,
-            port=port,
-            cursorclass=pymysql.cursors.DictCursor
-        )
-        return connection
-    except Exception as e:
-        print(f"DB connection error: {e}")
-        if connection:
-            connection.close()
-        raise
+    """Yeni ser_ik veritabanına bağlanır."""
+    connection = pymysql.connect(
+        host=os.getenv("MYSQL_HOST_NEW", "localhost"),
+        user=os.getenv("MYSQL_USER_NEW", "serik"),
+        password=os.getenv("MYSQL_PASSWORD_NEW", "Ser.1712_"),
+        database=os.getenv("MYSQL_DATABASE_NEW", "ser_ik"),
+        port=int(os.getenv("MYSQL_PORT_NEW", 3306)),
+        cursorclass=pymysql.cursors.DictCursor
+    )
+    return connection
 
 @management_bp.route("/login_backend", methods=["POST"])
 def login_backend():
