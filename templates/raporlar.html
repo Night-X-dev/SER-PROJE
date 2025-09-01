@@ -1279,7 +1279,7 @@
     <script src="{{ url_for('static', filename='config.js') }}"></script>
     <script src="{{ url_for('static', filename='user-avatar.js') }}"></script>
     <script>
-    async function loadReports() {
+ async function loadReports() {
             try {
                 // Yükleme göstergelerini etkinleştir
                 document.getElementById('delayedTasksLoading').classList.remove('hidden');
@@ -1374,6 +1374,8 @@
                         row.innerHTML = '<td colspan="5" class="text-center">Ertelenmiş iş adımı bulunmamaktadır.</td>';
                         postponedTasksTableBody.appendChild(row);
                     }
+                    
+                    document.getElementById('postponedSteps').textContent = data.postponedTasks.length;
 
                     // Yükleme göstergelerini gizle ve tabloları göster
                     document.getElementById('delayedTasksLoading').classList.add('hidden');
@@ -1388,7 +1390,10 @@
                 }
             } catch (error) {
                 console.error("Raporlar yüklenirken hata oluştu:", error);
-            }}
+            }
+        }
+
+
     // Sayfa yüklendiğinde raporları yükle
     document.addEventListener('DOMContentLoaded', function() {
         // Raporları yükle
