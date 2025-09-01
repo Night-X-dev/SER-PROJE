@@ -2,7 +2,8 @@
 import os
 import pymysql.cursors
 from dotenv import load_dotenv
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, render_template
+
 
 load_dotenv()
 
@@ -25,7 +26,16 @@ def get_db_connection():
         cursorclass=pymysql.cursors.DictCursor
     )
     return connection
-
+management_bp = Blueprint(
+    'management',
+    __name__,
+    template_folder='templates/personel',  # blueprint templates path
+    static_folder='static',
+    static_url_path='/personel/static'
+)
+@management_bp.route('/login.html')
+def serve_personel_login_page():
+    return render_template('login.html')  # sadece 'login.html', çünkü blueprint template_folder zaten 'templates/personel'
 @management_bp.route("/login_backend", methods=["POST"])
 def login_backend():
     email = request.form.get("email")
