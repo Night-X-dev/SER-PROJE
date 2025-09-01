@@ -4368,7 +4368,7 @@ def get_reports():
             """)
             revised_tasks = cursor.fetchall()
             
-            # Gecikmiş iş adımlarını getir (delay_days > 0 olanlar)
+            # Gecikmiş iş adımlarını getir (delay_days > 0 ve custom_delay_days = 0 olanlar)
             cursor.execute("""
                 SELECT 
                     p.project_name as projectName,
@@ -4380,29 +4380,29 @@ def get_reports():
                     'Sistem tarafından otomatik hesaplandı' as delayReason
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
-                WHERE pp.delay_days > 0
+                WHERE pp.delay_days > 0 AND (pp.custom_delay_days IS NULL OR pp.custom_delay_days = 0)
                 ORDER BY pp.delay_days DESC
                 LIMIT 10
             """)
             delayed_tasks = cursor.fetchall()
             
-            # Son 10 ertelenen iş adımı (revizyon isteği onaylanmış olanlar)
+            # Ertelenen iş adımlarını getir (custom_delay_days > 0 olanlar)
             cursor.execute("""
                 SELECT 
                     p.project_name as projectName,
                     pp.title as taskName,
-                    pp.start_date as originalDate,
-                    DATE_ADD(pp.end_date, INTERVAL pp.custom_delay_days DAY) as newDate,
+                    pp.planned_start_date as originalDate,
+                    DATE_ADD(pp.planned_start_date, INTERVAL pp.custom_delay_days DAY) as newDate,
                     'Ertelenme' as delayType,
                     pp.custom_delay_days as delayDays,
                     rr.message as delayReason,
                     rr.created_at as created_at
-                FROM revision_requests rr
-                JOIN project_progress pp ON rr.progress_id = pp.progress_id
+                FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
-                WHERE rr.status = 'approved' AND pp.custom_delay_days > 0
-                GROUP BY p.project_name, pp.title, pp.start_date, pp.end_date, pp.custom_delay_days, rr.message, rr.created_at
-                ORDER BY rr.created_at DESC
+                LEFT JOIN revision_requests rr ON rr.progress_id = pp.progress_id
+                WHERE (rr.status = 'approved' OR rr.status IS NULL) AND pp.custom_delay_days > 0
+                GROUP BY p.project_name, pp.title, pp.planned_start_date, pp.custom_delay_days, rr.message, rr.created_at
+                ORDER BY COALESCE(rr.created_at, pp.updated_at) DESC
                 LIMIT 10
             """)
             postponed_tasks = cursor.fetchall()
