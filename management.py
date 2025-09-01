@@ -49,39 +49,58 @@ def index():
 def login():
     if request.method == 'POST':
         try:
-            # Get form data
-            data = request.get_json() if request.is_json else request.form
+            print("Login request received")
+            print(f"Request headers: {dict(request.headers)}")
+            print(f"Request content type: {request.content_type}")
+            
+            # Get form data based on content type
+            if request.is_json:
+                data = request.get_json()
+                print(f"JSON data received: {data}")
+            else:
+                data = request.form
+                print(f"Form data received: {data}")
+                
             email = data.get('email')
             password = data.get('password')
             
-            # Debug log
-            print(f"Login attempt - Email: {email}")
+            print(f"Login attempt - Email: {email}, Password: {'*' * (len(password) if password else 0)}")
+            
+            if not email or not password:
+                error_msg = "E-posta ve şifre alanları zorunludur!"
+                print(error_msg)
+                return jsonify({"success": False, "message": error_msg}), 400
             
             # Simple authentication (replace with database check in production)
             if email == "admin@example.com" and password == "admin123":
                 session['personel_logged_in'] = True
                 session['personel_email'] = email
                 
-                # Return JSON response for AJAX requests
-                if request.is_json:
-                    return jsonify({
-                        "success": True, 
-                        "redirect": url_for('management.dashboard', _external=True)
-                    })
-                # Redirect for form submissions
-                return redirect(url_for('management.dashboard'))
+                response_data = {
+                    "success": True, 
+                    "message": "Giriş başarılı!",
+                    "redirect": url_for('management.dashboard', _external=True)
+                }
+                print(f"Login successful for {email}")
+                return jsonify(response_data)
+                
             else:
                 error_msg = "Geçersiz e-posta veya şifre!"
-                if request.is_json:
-                    return jsonify({"success": False, "message": error_msg}), 401
-                flash(error_msg, 'error')
+                print(f"Login failed for {email}: {error_msg}")
+                return jsonify({
+                    "success": False, 
+                    "message": error_msg
+                }), 401
                 
         except Exception as e:
-            error_msg = f"Bir hata oluştu: {str(e)}"
-            print(error_msg)
-            if request.is_json:
-                return jsonify({"success": False, "message": error_msg}), 500
-            flash(error_msg, 'error')
+            import traceback
+            error_msg = f"Sunucu hatası: {str(e)}\n\n{traceback.format_exc()}"
+            print(f"Error in login route: {error_msg}")
+            return jsonify({
+                "success": False, 
+                "message": "Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.",
+                "debug": str(e)  # Only include this in development
+            }), 500
     
     # For GET request, render the login page
     return render_template('personel/login.html')

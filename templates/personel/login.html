@@ -658,39 +658,76 @@
             }
 
             // Form submission handlers
-            loginForm.addEventListener('submit', function (e) {
+            loginForm.addEventListener('submit', async function (e) {
                 e.preventDefault();
                 
-                // Hata ayıklama için konsola log ekliyoruz
-                console.log("Backend'e giriş isteği gönderiliyor...");
+                const submitBtn = loginForm.querySelector('button[type="submit"]');
+                const originalBtnText = submitBtn.innerHTML;
                 
-                const formData = {
-                    email: loginForm.querySelector('input[name="email"]').value,
-                    password: loginForm.querySelector('input[name="password"]').value
-                };
-                
-                fetch(loginForm.action, {
-                    method: 'POST',
-                    body: JSON.stringify(formData),
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
+                try {
+                    // Disable submit button and show loading state
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Giriş Yapılıyor...';
+                    
+                    console.log("Backend'e giriş isteği gönderiliyor...");
+                    
+                    const formData = {
+                        email: loginForm.querySelector('input[name="email"]').value.trim(),
+                        password: loginForm.querySelector('input[name="password"]').value
+                    };
+                    
+                    // Input validation
+                    if (!formData.email || !formData.password) {
+                        throw new Error('Lütfen tüm alanları doldurunuz.');
                     }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
+                    
+                    console.log("Gönderilen veri:", formData);
+                    
+                    const response = await fetch(loginForm.action, {
+                        method: 'POST',
+                        body: JSON.stringify(formData),
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        credentials: 'same-origin'  // Include cookies for session
+                    });
+                    
+                    console.log("Sunucu yanıtı:", response);
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    console.log("İşlenen yanıt:", data);
+                    
+                    if (data.success && data.redirect) {
                         showToast('Giriş başarılı! Yönlendiriliyorsunuz...', 'success');
                         window.location.href = data.redirect;
                     } else {
-                        showToast(data.message || 'Giriş başarısız!', 'error');
+                        throw new Error(data.message || 'Giriş başarısız!');
                     }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showToast('Bir hata oluştu! Lütfen tekrar deneyin.', 'error');
-                });
+                    
+                } catch (error) {
+                    console.error('Hata oluştu:', error);
+                    let errorMessage = 'Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.';
+                    
+                    if (error.message) {
+                        errorMessage = error.message;
+                    } else if (error.response && error.response.data && error.response.data.message) {
+                        errorMessage = error.response.data.message;
+                    }
+                    
+                    showToast(errorMessage, 'error');
+                    
+                } finally {
+                    // Re-enable submit button
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
+                }
             });
             registerForm.addEventListener('submit', function (e) {
                 e.preventDefault();
