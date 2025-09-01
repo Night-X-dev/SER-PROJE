@@ -4290,6 +4290,164 @@ def get_revision_counts_by_step(project_id):
 
 @app.route('/api/reports')
 def get_reports():
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Toplam proje sayısı
+            cursor.execute("SELECT COUNT(*) as total FROM projects")
+            total_projects = cursor.fetchone()['total']
+            
+            # Revize isteği sayısı (revision_requests tablosundan)
+            cursor.execute("""
+                SELECT COUNT(DISTINCT progress_id) as count 
+                FROM revision_requests 
+                WHERE status = 'approved'
+            """)
+            revised_steps = cursor.fetchone()['count']
+            
+            # Geciken adım sayısı (bitiş tarihi geçmiş ve tamamlanmamış)
+            cursor.execute("""
+                SELECT COUNT(*) as count 
+                FROM project_progress 
+                WHERE end_date < CURDATE() 
+                AND (real_end_date IS NULL OR real_end_date > end_date)
+            """)
+            delayed_steps = cursor.fetchone()['count']
+            
+            # Ertelenen adım sayısı (revizyon isteği onaylanmış)
+            cursor.execute("""
+                SELECT COUNT(DISTINCT progress_id) as count 
+                FROM revision_requests 
+                WHERE status = 'approved'
+            """)
+            postponed_steps = cursor.fetchone()['count']
+            
+            # Ortalama revizyon sayısı
+            cursor.execute("""
+                SELECT AVG(revision_count) as avg_revisions
+                FROM (
+                    SELECT project_id, COUNT(*) as revision_count
+                    FROM revision_requests 
+                    WHERE status = 'approved'
+                    GROUP BY project_id
+                ) as revisions
+            """)
+            avg_revisions = cursor.fetchone()['avg_revisions'] or 0
+            
+            # En çok revize alan proje
+            cursor.execute("""
+                SELECT p.project_name as projectName, COUNT(rr.id) as revisionCount
+                FROM revision_requests rr
+                JOIN projects p ON rr.project_id = p.project_id
+                WHERE rr.status = 'approved'
+                GROUP BY p.project_name
+                ORDER BY revisionCount DESC
+                LIMIT 1
+            """)
+            most_revised_project = cursor.fetchone() or {}
+            
+            # Son 10 revize edilen iş adımı
+            cursor.execute("""
+                SELECT 
+                    p.project_name as projectName,
+                    pp.title as taskName,
+                    rr.created_at as revisionDate,
+                    rr.message as revisionReason,
+                    CASE 
+                        WHEN pp.real_end_date IS NOT NULL THEN 'completed'
+                        ELSE 'pending'
+                    END as revisionStatus,
+                    u.fullname as requestedBy
+                FROM revision_requests rr
+                JOIN project_progress pp ON rr.progress_id = pp.progress_id
+                JOIN projects p ON rr.project_id = p.project_id
+                LEFT JOIN users u ON rr.requested_by = u.id
+                WHERE rr.status = 'approved'
+                ORDER BY rr.created_at DESC
+                LIMIT 10
+            """)
+            revised_tasks = cursor.fetchall()
+            
+            # Son 10 geciken iş adımı (delay_days > 0 olanlar)
+            cursor.execute("""
+                SELECT 
+                    p.project_name as projectName,
+                    pp.title as taskName,
+                    pp.end_date as originalDate,
+                    DATE_ADD(pp.end_date, INTERVAL pp.delay_days DAY) as newDate,
+                    pp.delay_reason as delayReason,
+                    pp.delay_days as delayDays
+                FROM project_progress pp
+                JOIN projects p ON pp.project_id = p.project_id
+                WHERE pp.delay_days > 0
+                ORDER BY pp.end_date DESC
+                LIMIT 10
+            """)
+            delayed_tasks = cursor.fetchall()
+            
+            # Son 10 ertelenen iş adımı (custom_delay_days > 0 olanlar)
+            cursor.execute("""
+                SELECT 
+                    p.project_name as projectName,
+                    pp.title as taskName,
+                    pp.end_date as originalDate,
+                    DATE_ADD(pp.end_date, INTERVAL pp.custom_delay_days DAY) as newDate,
+                    pp.delay_reason as delayReason,
+                    pp.custom_delay_days as delayDays
+                FROM project_progress pp
+                JOIN projects p ON pp.project_id = p.project_id
+                WHERE pp.custom_delay_days > 0
+                ORDER BY pp.end_date DESC
+                LIMIT 10
+            """)
+            postponed_tasks = cursor.fetchall()
+            
+            return jsonify({
+                'stats': {
+                    'totalProjectsCount': total_projects,
+                    'revisedStepsCount': revised_steps,
+                    'delayedStepsCount': delayed_steps,
+                    'postponedStepsCount': postponed_steps,
+                    'averageRevisions': float(avg_revisions) if avg_revisions else 0,
+                    'mostRevisedProject': most_revised_project.get('projectName', 'Yok'),
+                    'mostRevisionsCount': most_revised_project.get('revisionCount', 0)
+                },
+                'revisedTasks': [{
+                    'projectName': task['projectName'],
+                    'taskName': task['taskName'],
+                    'revisionDate': task['revisionDate'].strftime('%Y-%m-%d %H:%M') if task['revisionDate'] else None,
+                    'revisionReason': task['revisionReason'],
+                    'status': task['revisionStatus'],
+                    'requestedBy': task['requestedBy']
+                } for task in revised_tasks],
+                'delayedTasks': [{
+                    'projectName': task['projectName'],
+                    'taskName': task['taskName'],
+                    'originalDate': task['originalDate'].strftime('%Y-%m-%d') if task['originalDate'] else None,
+                    'newDate': task['newDate'].strftime('%Y-%m-%d') if task['newDate'] else None,
+                    'delayReason': task['delayReason'],
+                    'delayDays': task['delayDays']
+                } for task in delayed_tasks],
+                'postponedTasks': [{
+                    'projectName': task['projectName'],
+                    'taskName': task['taskName'],
+                    'originalDate': task['originalDate'].strftime('%Y-%m-%d') if task['originalDate'] else None,
+                    'newDate': task['newDate'].strftime('%Y-%m-%d') if task['newDate'] else None,
+                    'delayReason': task['delayReason'],
+                    'delayDays': task['delayDays']
+                } for task in postponed_tasks]
+            })
+            
+    except Exception as e:
+        print(f"Raporlar alınırken hata oluştu: {e}")
+        return jsonify({
+            'error': 'Raporlar alınırken bir hata oluştu',
+            'details': str(e)
+        }), 500
+    finally:
+        if connection:
+            connection.close()
+
     """
     Raporlama verilerini veritabanından çeken API endpoint'i.
     projects tablosundaki proje başlığı için 'project_name',
@@ -4379,7 +4537,7 @@ def get_reports():
                     rr.status AS revisionStatus
                 FROM revision_requests rr
                 JOIN projects p ON rr.project_id = p.project_id
-                LEFT JOIN project_progress pp ON rr.progress_id = pp.progress_id
+                LEFT JOIN project_progress pp ON rr.progress_id = pp.id
                 LEFT JOIN users u ON rr.requested_by = u.id
                 ORDER BY rr.request_date DESC
                 LIMIT 10
@@ -4408,43 +4566,6 @@ def get_reports():
             cursor.execute(sql_postponed_tasks)
             postponed_tasks_list = cursor.fetchall()
             
-            # Tarih/saat nesnelerini string'e dönüştürerek JSON uyumlu hale getirme
-            # Bu, 500 hatasının ana nedenini çözer.
-            formatted_revised_tasks = [
-                {
-                    'revisionId': task['revisionId'],
-                    'projectName': task['projectName'],
-                    'taskName': task['taskName'],
-                    'revisionReason': task['revisionReason'],
-                    'revisionDate': task['revisionDate'].strftime('%Y-%m-%d %H:%M:%S') if task['revisionDate'] else None,
-                    'requestedBy': task['requestedBy'],
-                    'revisionStatus': task['revisionStatus']
-                } for task in revised_tasks_list
-            ]
-
-            formatted_delayed_tasks = [
-                {
-                    'taskName': task['taskName'],
-                    'projectName': task['projectName'],
-                    'delayDays': task['delayDays'],
-                    'responsible': task['responsible'],
-                    'plannedDate': task['plannedDate'].strftime('%Y-%m-%d') if task['plannedDate'] else None
-                } for task in delayed_tasks_list
-            ]
-
-            formatted_postponed_tasks = [
-                {
-                    'taskName': task['taskName'],
-                    'projectName': task['projectName'],
-                    'delayDays': task['delayDays'],
-                    'delayReason': task['delayReason'],
-                    'postponedDate': task['postponedDate'].strftime('%Y-%m-%d %H:%M:%S') if task['postponedDate'] else None,
-                    'postponedBy': task['postponedBy'],
-                    'originalDate': task['originalDate'].strftime('%Y-%m-%d') if task['originalDate'] else None,
-                    'newDate': task['newDate'].strftime('%Y-%m-%d') if task['newDate'] else None
-                } for task in postponed_tasks_list
-            ]
-            
             # Tüm verileri tek bir sözlükte topla
             report_data = {
                 "stats": {
@@ -4455,23 +4576,19 @@ def get_reports():
                     "avgRevisions": round(avg_revisions, 2)
                 },
                 "mostRevisedProject": most_revised_project_details,
-                "delayedTasks": formatted_delayed_tasks,
-                "revisedTasks": formatted_revised_tasks,
-                "postponedTasks": formatted_postponed_tasks
+                "delayedTasks": delayed_tasks_list,
+                "revisedTasks": revised_tasks_list,
+                "postponedTasks": postponed_tasks_list
             }
             
             return jsonify(report_data)
 
     except Exception as e:
         # Hata izini konsola yazdır
-        current_app.logger.error(f"Rapor verisi çekme hatası: {e}")
+        app.logger.error(f"Rapor verisi çekme hatası: {e}")
         traceback.print_exc()
         # Ön uca daha anlaşılır bir hata mesajı gönder
         return jsonify({"error": f"Rapor verisi çekilirken bir hata oluştu: {str(e)}"}), 500
     finally:
         if connection:
             connection.close()
-
-if __name__ == '__main__':
-    # Flask uygulamasını çalıştırmak için örnek kod
-    app.run(debug=True)
