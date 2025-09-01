@@ -1280,34 +1280,37 @@
     <script src="{{ url_for('static', filename='user-avatar.js') }}"></script>
     <script>
     async function loadReports() {
-        try {
-            const response = await fetch('/api/reports');
-            const data = await response.json();
+            try {
+                // Yükleme göstergelerini etkinleştir
+                document.getElementById('delayedTasksLoading').classList.remove('hidden');
+                document.getElementById('revisedTasksLoading').classList.remove('hidden');
+                document.getElementById('postponedTasksLoading').classList.remove('hidden');
+                document.getElementById('delayedTasksTable').classList.add('hidden');
+                document.getElementById('revisedTasksTable').classList.add('hidden');
+                document.getElementById('postponedTasksTable').classList.add('hidden');
 
-            if (response.ok) {
-                // İstatistikleri güncelle
-                const stats = data.stats;
-                
-                // İstatistik kartlarını güncelle
-                document.getElementById('totalProjects').textContent = stats.totalProjects;
-                document.getElementById('revisedSteps').textContent = stats.revisedStepsCount;
-                document.getElementById('delayedSteps').textContent = stats.delayedStepsCount;
-                document.getElementById('postponedSteps').textContent = stats.postponedStepsCount;
-                document.getElementById('avgRevisions').textContent = stats.avgRevisions;
+                const response = await fetch('/api/reports');
+                const data = await response.json();
 
-                // En çok revize alan projeyi güncelle
-                const mostRevisedProject = data.mostRevisedProject;
-                if (mostRevisedProject && mostRevisedProject.projectName) {
-                    document.getElementById('mostRevisedProject').textContent = `${mostRevisedProject.projectName} (${mostRevisedProject.revisionCount} Revizyon)`;
-                } else {
-                    document.getElementById('mostRevisedProject').textContent = "Veri Yok";
-                }
-                
-                // Revize edilen iş adımlarını listele
-                const revisedTasksTableBody = document.getElementById('revisedTasksTableBody');
-                if (revisedTasksTableBody) {
-                    revisedTasksTableBody.innerHTML = ''; // Eski verileri temizle
+                if (response.ok) {
+                    // İstatistikleri güncelle
+                    const stats = data.stats;
+                    document.getElementById('totalProjects').textContent = stats.totalProjects;
+                    document.getElementById('revisedSteps').textContent = stats.revisedStepsCount;
+                    document.getElementById('delayedSteps').textContent = stats.delayedStepsCount;
+                    document.getElementById('avgRevisions').textContent = stats.avgRevisions;
 
+                    // En çok revize alan projeyi güncelle
+                    const mostRevisedProject = data.mostRevisedProject;
+                    if (mostRevisedProject && mostRevisedProject.project_name) {
+                        document.getElementById('mostRevisedProject').textContent = `${mostRevisedProject.project_name} (${mostRevisedProject.revision_count} Revizyon)`;
+                    } else {
+                        document.getElementById('mostRevisedProject').textContent = "Veri Yok";
+                    }
+                    
+                    // Revize edilen iş adımlarını listele
+                    const revisedTasksTableBody = document.getElementById('revisedTasksTableBody');
+                    revisedTasksTableBody.innerHTML = '';
                     if (data.revisedTasks && data.revisedTasks.length > 0) {
                         data.revisedTasks.forEach(task => {
                             const row = document.createElement('tr');
@@ -1316,9 +1319,7 @@
                                 <td>${task.taskName || 'Genel Revizyon'}</td>
                                 <td>${task.revisionDate ? new Date(task.revisionDate).toLocaleDateString('tr-TR') : ''}</td>
                                 <td>${task.revisionReason || 'Belirtilmemiş'}</td>
-                                <td><span class="status-badge ${task.revisionStatus === 'completed' ? 'completed' : 'pending'}">
-                                    ${task.revisionStatus === 'completed' ? 'Tamamlandı' : 'Beklemede'}
-                                </span></td>
+                                <td><span class="status-badge completed">Revize Edildi</span></td>
                                 <td>${task.requestedBy || 'Bilinmiyor'}</td>
                             `;
                             revisedTasksTableBody.appendChild(row);
@@ -1328,70 +1329,66 @@
                         row.innerHTML = '<td colspan="6" class="text-center">Revize edilmiş iş adımı bulunmamaktadır.</td>';
                         revisedTasksTableBody.appendChild(row);
                     }
-                }
-                
-                // Gecikmiş iş adımlarını listele (delay_days > 0 olanlar)
-                const delayedTasksTableBody = document.getElementById('delayedTasksTableBody');
-                if (delayedTasksTableBody) {
-                    delayedTasksTableBody.innerHTML = ''; // Eski verileri temizle
+                    document.getElementById('revisedSteps').textContent = data.revisedTasks.length;
 
+                    // Gecikmiş iş adımlarını listele
+                    const delayedTasksTableBody = document.getElementById('delayedTasksTableBody');
+                    delayedTasksTableBody.innerHTML = '';
                     if (data.delayedTasks && data.delayedTasks.length > 0) {
                         data.delayedTasks.forEach(task => {
-                            const originalDate = task.originalDate ? new Date(task.originalDate) : null;
-                            const newDate = task.newDate ? new Date(task.newDate) : null;
-                            
                             const row = document.createElement('tr');
                             row.innerHTML = `
                                 <td>${task.projectName || ''}</td>
                                 <td>${task.taskName || ''}</td>
-                                <td>${originalDate ? originalDate.toLocaleDateString('tr-TR') : ''}</td>
-                                <td>${newDate ? newDate.toLocaleDateString('tr-TR') : ''}</td>
-                                <td>${task.delayDays || '0'} gün gecikme</td>
+                                <td>${task.originalDate ? new Date(task.originalDate).toLocaleDateString('tr-TR') : ''}</td>
+                                <td>${task.delayDays || '0'} gün</td>
                             `;
                             delayedTasksTableBody.appendChild(row);
                         });
                     } else {
                         const row = document.createElement('tr');
-                        row.innerHTML = '<td colspan="5" class="text-center">Gecikmiş iş adımı bulunmamaktadır.</td>';
+                        row.innerHTML = '<td colspan="4" class="text-center">Gecikmiş iş adımı bulunmamaktadır.</td>';
                         delayedTasksTableBody.appendChild(row);
                     }
-                }
-                
-                // Ertelenen iş adımlarını listele (custom_delay_days > 0 olanlar)
-                const postponedTasksTableBody = document.getElementById('postponedTasksTableBody');
-                if (postponedTasksTableBody) {
-                    postponedTasksTableBody.innerHTML = ''; // Eski verileri temizle
-
+                    document.getElementById('delayedSteps').textContent = data.delayedTasks.length;
+                    
+                    // Ertelenen iş adımlarını listele
+                    const postponedTasksTableBody = document.getElementById('postponedTasksTableBody');
+                    postponedTasksTableBody.innerHTML = '';
                     if (data.postponedTasks && data.postponedTasks.length > 0) {
                         data.postponedTasks.forEach(task => {
-                            const originalDate = task.originalDate ? new Date(task.originalDate) : null;
-                            const newDate = task.newDate ? new Date(task.newDate) : null;
-                            
                             const row = document.createElement('tr');
+                            const originalDate = task.originalDate ? new Date(task.originalDate).toLocaleDateString('tr-TR') : '';
+                            const newDate = task.newDate ? new Date(task.newDate).toLocaleDateString('tr-TR') : '';
                             row.innerHTML = `
                                 <td>${task.projectName || ''}</td>
                                 <td>${task.taskName || ''}</td>
-                                <td>${originalDate ? originalDate.toLocaleDateString('tr-TR') : ''}</td>
-                                <td>${newDate ? newDate.toLocaleDateString('tr-TR') : ''}</td>
-                                <td>${task.delayDays || '0'} gün ertelendi</td>
-                                <td>${task.delayReason || 'Bilinmiyor'}</td>
+                                <td>${originalDate}</td>
+                                <td>${newDate}</td>
+                                <td>${task.delayDays || '0'} gün</td>
                             `;
                             postponedTasksTableBody.appendChild(row);
                         });
                     } else {
                         const row = document.createElement('tr');
-                        row.innerHTML = '<td colspan="6" class="text-center">Ertelenmiş iş adımı bulunmamaktadır.</td>';
+                        row.innerHTML = '<td colspan="5" class="text-center">Ertelenmiş iş adımı bulunmamaktadır.</td>';
                         postponedTasksTableBody.appendChild(row);
                     }
-                }
-            } else {
-                console.error("API'den hata alındı:", data);
-            }
-        } catch (error) {
-            console.error("Raporlar yüklenirken hata oluştu:", error);
-        }
-    }
 
+                    // Yükleme göstergelerini gizle ve tabloları göster
+                    document.getElementById('delayedTasksLoading').classList.add('hidden');
+                    document.getElementById('revisedTasksLoading').classList.add('hidden');
+                    document.getElementById('postponedTasksLoading').classList.add('hidden');
+                    document.getElementById('delayedTasksTable').classList.remove('hidden');
+                    document.getElementById('revisedTasksTable').classList.remove('hidden');
+                    document.getElementById('postponedTasksTable').classList.remove('hidden');
+
+                } else {
+                    console.error("API'den hata alındı:", data);
+                }
+            } catch (error) {
+                console.error("Raporlar yüklenirken hata oluştu:", error);
+            }}
     // Sayfa yüklendiğinde raporları yükle
     document.addEventListener('DOMContentLoaded', function() {
         // Raporları yükle

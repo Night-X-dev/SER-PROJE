@@ -4288,312 +4288,130 @@ def get_revision_counts_by_step(project_id):
         if conn:
             conn.close()
 
-@app.route('/api/reports')
 def get_reports():
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # Toplam proje sayısı
-            cursor.execute("SELECT COUNT(*) as total FROM projects")
-            total_projects = cursor.fetchone()['total']
-            
-            # Revize isteği sayısı (revision_requests tablosundan)
-            cursor.execute("""
-                SELECT COUNT(DISTINCT progress_id) as count 
-                FROM revision_requests 
-                WHERE status = 'approved'
-            """)
-            revised_steps = cursor.fetchone()['count']
-            
-            # Geciken adım sayısı (bitiş tarihi geçmiş ve tamamlanmamış)
-            cursor.execute("""
-                SELECT COUNT(*) as count 
-                FROM project_progress 
-                WHERE end_date < CURDATE() 
-                AND (real_end_date IS NULL OR real_end_date > end_date)
-            """)
-            delayed_steps = cursor.fetchone()['count']
-            
-            # Ertelenen adım sayısı (revizyon isteği onaylanmış)
-            cursor.execute("""
-                SELECT COUNT(DISTINCT progress_id) as count 
-                FROM revision_requests 
-                WHERE status = 'approved'
-            """)
-            postponed_steps = cursor.fetchone()['count']
-            
-            # Ortalama revizyon sayısı
-            cursor.execute("""
-                SELECT AVG(revision_count) as avg_revisions
-                FROM (
-                    SELECT project_id, COUNT(*) as revision_count
-                    FROM revision_requests 
-                    WHERE status = 'approved'
-                    GROUP BY project_id
-                ) as revisions
-            """)
-            avg_revisions = cursor.fetchone()['avg_revisions'] or 0
-            
-            # En çok revize alan proje
-            cursor.execute("""
-                SELECT p.project_name as projectName, COUNT(rr.id) as revisionCount
-                FROM revision_requests rr
-                JOIN projects p ON rr.project_id = p.project_id
-                WHERE rr.status = 'approved'
-                GROUP BY p.project_name
-                ORDER BY revisionCount DESC
-                LIMIT 1
-            """)
-            most_revised_project = cursor.fetchone() or {}
-            
-            # Son 10 revize edilen iş adımı
-            cursor.execute("""
-                SELECT 
-                    p.project_name as projectName,
-                    pp.title as taskName,
-                    rr.created_at as revisionDate,
-                    rr.message as revisionReason,
-                    CASE 
-                        WHEN pp.real_end_date IS NOT NULL THEN 'completed'
-                        ELSE 'pending'
-                    END as revisionStatus,
-                    COALESCE(u.fullname, 'Sistem') as requestedBy
-                FROM revision_requests rr
-                JOIN project_progress pp ON rr.progress_id = pp.progress_id
-                JOIN projects p ON rr.project_id = p.project_id
-                LEFT JOIN users u ON rr.requested_by = u.id
-                WHERE rr.status = 'approved'
-                ORDER BY rr.created_at DESC
-                LIMIT 10
-            """)
-            revised_tasks = cursor.fetchall()
-            
-            # Gecikmiş iş adımlarını getir (delay_days > 0 olanlar)
-            cursor.execute("""
-                SELECT 
-                    p.project_name as projectName,
-                    pp.title as taskName,
-                    pp.planned_start_date as originalDate,
-                    pp.start_date as newDate,
-                    'Gecikme' as delayType,
-                    pp.delay_days as delayDays,
-                    'Sistem tarafından otomatik hesaplandı' as delayReason
-                FROM project_progress pp
-                JOIN projects p ON pp.project_id = p.project_id
-                WHERE pp.delay_days > 0
-                ORDER BY pp.delay_days DESC
-                LIMIT 10
-            """)
-            delayed_tasks = cursor.fetchall()
-            
-            # Ertelenen iş adımlarını getir (custom_delay_days > 0 olanlar)
-            cursor.execute("""
-                SELECT 
-                    p.project_name as projectName,
-                    pp.title as taskName,
-                    pp.planned_start_date as originalDate,
-                    pp.start_date as newDate,
-                    'Ertelenme' as delayType,
-                    pp.custom_delay_days as delayDays,
-                    COALESCE(rr.message, 'Revizyon talep edildi') as delayReason
-                FROM project_progress pp
-                JOIN projects p ON pp.project_id = p.project_id
-                LEFT JOIN revision_requests rr ON rr.progress_id = pp.progress_id
-                WHERE pp.custom_delay_days > 0
-                GROUP BY p.project_name, pp.title, pp.planned_start_date, pp.start_date, pp.custom_delay_days, rr.message
-                ORDER BY COALESCE(rr.created_at, pp.updated_date) DESC
-                LIMIT 10
-            """)
-            postponed_tasks = cursor.fetchall()
-            
-            # Format the response data to match frontend expectations
-            response_data = {
-                'stats': {
-                    'totalProjects': total_projects,
-                    'revisedStepsCount': revised_steps,
-                    'delayedStepsCount': delayed_steps,
-                    'postponedStepsCount': postponed_steps,
-                    'avgRevisions': float(avg_revisions) if avg_revisions else 0
-                },
-                'mostRevisedProject': most_revised_project or {'projectName': 'Veri yok', 'revisionCount': 0},
-                'revisedTasks': [{
-                    'projectName': task.get('projectName', ''),
-                    'taskName': task.get('taskName', ''),
-                    'revisionDate': task.get('revisionDate').strftime('%Y-%m-%d %H:%M:%S') if task.get('revisionDate') else None,
-                    'revisionReason': task.get('revisionReason', ''),
-                    'revisionStatus': task.get('revisionStatus', 'pending'),
-                    'requestedBy': task.get('requestedBy', 'Sistem')
-                } for task in revised_tasks],
-                'delayedTasks': [{
-                    'projectName': task.get('projectName', ''),
-                    'taskName': task.get('taskName', ''),
-                    'originalDate': task.get('originalDate').strftime('%Y-%m-%d') if task.get('originalDate') else None,
-                    'newDate': task.get('newDate').strftime('%Y-%m-%d') if task.get('newDate') else None,
-                    'delayReason': 'Sistem tarafından otomatik hesaplandı',
-                    'delayDays': int(task.get('delayDays', 0)) if task.get('delayDays') is not None else 0
-                } for task in delayed_tasks if task.get('delayDays', 0) > 0],
-                'revisionRequests': [{
-                    'projectName': task.get('projectName', ''),
-                    'taskName': task.get('taskName', ''),
-                    'originalDate': task.get('originalDate').strftime('%Y-%m-%d') if task.get('originalDate') else None,
-                    'revisionDate': task.get('newDate').strftime('%Y-%m-%d') if task.get('newDate') else None,
-                    'requestedBy': task.get('requestedBy', 'Sistem'),
-                    'delayReason': task.get('delayReason', 'Revizyon talep edildi')
-                } for task in postponed_tasks]
-            }
-            
-            return jsonify(response_data)
-            
-    except Exception as e:
-        print(f"Raporlar alınırken hata oluştu: {e}")
-        return jsonify({
-            'error': 'Raporlar alınırken bir hata oluştu',
-            'details': str(e)
-        }), 500
-    finally:
-        if connection:
-            connection.close()
-
     """
-    Raporlama verilerini veritabanından çeken API endpoint'i.
-    projects tablosundaki proje başlığı için 'project_name',
-    project_progress tablosundaki görev başlığı için 'title' sütununu kullanır.
+    Veritabanından çeşitli proje raporlama verilerini çeken API endpoint'i.
+    İstatistikler, en çok revize alan proje ve son 10 gecikmiş/revize edilmiş/ertelenmiş
+    iş adımının listesini döndürür.
     """
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
             # 1. Genel İstatistikleri Hesapla
-            # Revize Edilmiş Adım Sayısı
-            sql_revised_steps = "SELECT COUNT(*) AS count FROM revision_requests"
-            cursor.execute(sql_revised_steps)
-            revised_steps_count = cursor.fetchone()['count']
-
-            # Ertelenen Adım Sayısı (custom_delay_days > 0)
-            sql_postponed_steps = "SELECT COUNT(*) AS count FROM project_progress WHERE custom_delay_days > 0"
-            cursor.execute(sql_postponed_steps)
-            postponed_steps_count = cursor.fetchone()['count']
-
-            # Gecikmeli Adım Sayısı (custom_delay_days > 0 ve tamamlanmamış)
-            sql_delayed_steps = "SELECT COUNT(*) AS count FROM project_progress WHERE custom_delay_days > 0 AND is_completed = FALSE"
-            cursor.execute(sql_delayed_steps)
-            delayed_steps_count = cursor.fetchone()['count']
-
             # Toplam Proje Sayısı
-            sql_total_projects = "SELECT COUNT(*) AS count FROM projects"
-            cursor.execute(sql_total_projects)
-            total_projects_count = cursor.fetchone()['count']
+            cursor.execute("SELECT COUNT(*) AS count FROM projects")
+            total_projects_count = cursor.fetchone()['count'] or 0
+
+            # Revize Edilmiş İş Adımı Sayısı (Benzersiz adımlar)
+            cursor.execute("SELECT COUNT(DISTINCT progress_id) AS count FROM revision_requests")
+            revised_steps_count = cursor.fetchone()['count'] or 0
+
+            # Gecikmeli İş Adımı Sayısı (Planlanan bitiş tarihi geçmiş ve tamamlanmamış)
+            cursor.execute("""
+                SELECT COUNT(*) AS count FROM project_progress 
+                WHERE end_date < CURDATE() AND real_end_date IS NULL
+            """)
+            delayed_steps_count = cursor.fetchone()['count'] or 0
+
+            # Ertelenen İş Adımı Sayısı (Özel gecikme süresi olanlar)
+            cursor.execute("""
+                SELECT COUNT(*) AS count FROM project_progress 
+                WHERE custom_delay_days > 0
+            """)
+            postponed_steps_count = cursor.fetchone()['count'] or 0
             
-            # Ortalama revize sayısını hesapla
-            avg_revisions = revised_steps_count / total_projects_count if total_projects_count > 0 else 0
+            # Ortalama revize sayısını hesapla (Toplam revizyon / Toplam proje)
+            cursor.execute("SELECT COUNT(*) AS total_revisions FROM revision_requests")
+            total_revisions = cursor.fetchone()['total_revisions'] or 0
+            avg_revisions = round(total_revisions / total_projects_count, 2) if total_projects_count > 0 else 0
             
             # 2. En Çok Revize Alan Projeyi Bul
-            sql_most_revised_project = """
-                SELECT 
-                    p.project_name AS projectName,
-                    c.customer_name AS customerName,
-                    p.status,
-                    COUNT(rr.id) AS revisionCount
+            sql_most_revised = """
+                SELECT p.project_name, COUNT(rr.id) AS revision_count
                 FROM revision_requests rr
                 JOIN projects p ON rr.project_id = p.project_id
-                JOIN customers c ON p.customer_id = c.customer_id
-                GROUP BY rr.project_id
-                ORDER BY revisionCount DESC
+                GROUP BY p.project_name
+                ORDER BY revision_count DESC
                 LIMIT 1
             """
-            cursor.execute(sql_most_revised_project)
-            most_revised_project = cursor.fetchone()
+            cursor.execute(sql_most_revised)
+            most_revised_project = cursor.fetchone() or {'projectName': 'Veri yok', 'revisionCount': 0}
             
-            most_revised_project_details = {}
-            if most_revised_project:
-                most_revised_project_details = {
-                    "projectName": most_revised_project['projectName'],
-                    "revisionCount": most_revised_project['revisionCount'],
-                    "customerName": most_revised_project['customerName'],
-                    "status": most_revised_project['status']
-                }
-            
-            # 3. Gecikme Durumu Olan İş Adımlarını Listele
+            # 3. Son 10 Gecikmeli İş Adımını Listele
             sql_delayed_tasks = """
                 SELECT 
-                    pp.title AS taskName,
                     p.project_name AS projectName,
-                    pp.delay_days AS delayDays,
-                    u.fullname AS responsible,
-                    pp.planned_date AS plannedDate
+                    pp.title AS taskName,
+                    pp.end_date AS originalDate,
+                    pp.delay_days AS delayDays
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
-                LEFT JOIN users u ON p.project_manager_id = u.id
-                WHERE pp.delay_days > 0 AND pp.is_completed = FALSE
-                ORDER BY pp.delay_days DESC
+                WHERE pp.delay_days > 0
+                ORDER BY pp.created_at DESC
                 LIMIT 10
             """
             cursor.execute(sql_delayed_tasks)
             delayed_tasks_list = cursor.fetchall()
             
-            # 4. Revize Edilen İş Adımlarını Listele
+            # 4. Son 10 Revize Edilen İş Adımını Listele
             sql_revised_tasks = """
                 SELECT 
-                    rr.id AS revisionId,
                     p.project_name AS projectName,
                     pp.title AS taskName,
-                    rr.reason AS revisionReason,
-                    rr.request_date AS revisionDate,
-                    u.fullname AS requestedBy,
-                    rr.status AS revisionStatus
+                    rr.created_at AS revisionDate,
+                    rr.message AS revisionReason,
+                    'Revize Edildi' AS revisionStatus,
+                    COALESCE(u.fullname, 'Sistem') AS requestedBy
                 FROM revision_requests rr
                 JOIN projects p ON rr.project_id = p.project_id
-                LEFT JOIN project_progress pp ON rr.progress_id = pp.id
+                LEFT JOIN project_progress pp ON rr.progress_id = pp.progress_id
                 LEFT JOIN users u ON rr.requested_by = u.id
-                ORDER BY rr.request_date DESC
+                ORDER BY rr.created_at DESC
                 LIMIT 10
             """
             cursor.execute(sql_revised_tasks)
             revised_tasks_list = cursor.fetchall()
             
-            # 5. Ertelenen İş Adımlarını Listele
+            # 5. Son 10 Ertelenen İş Adımını Listele
             sql_postponed_tasks = """
                 SELECT 
-                    pp.title AS taskName,
                     p.project_name AS projectName,
+                    pp.title AS taskName,
+                    pp.end_date AS originalDate,
                     pp.custom_delay_days AS delayDays,
-                    pp.custom_delay_reason AS delayReason,
-                    pp.updated_at AS postponedDate,
-                    u.fullname AS postponedBy,
-                    pp.planned_date AS originalDate,
-                    DATE_ADD(pp.planned_date, INTERVAL pp.custom_delay_days DAY) AS newDate
+                    'Ertelenme' AS delayType,
+                    rr.message AS delayReason,
+                    DATE_ADD(pp.end_date, INTERVAL pp.custom_delay_days DAY) AS newDate
                 FROM project_progress pp
                 JOIN projects p ON pp.project_id = p.project_id
-                LEFT JOIN users u ON pp.updated_by = u.id
+                LEFT JOIN revision_requests rr ON pp.progress_id = rr.progress_id
                 WHERE pp.custom_delay_days > 0
-                ORDER BY pp.updated_at DESC
+                ORDER BY pp.created_at DESC
                 LIMIT 10
             """
             cursor.execute(sql_postponed_tasks)
             postponed_tasks_list = cursor.fetchall()
-            
-            # Tüm verileri tek bir sözlükte topla
-            report_data = {
+
+            # Tüm verileri tek bir JSON yanıtında birleştir
+            response_data = {
                 "stats": {
-                    "revisedStepsCount": revised_steps_count,
-                    "postponedStepsCount": postponed_steps_count,
-                    "delayedStepsCount": delayed_steps_count,
                     "totalProjects": total_projects_count,
-                    "avgRevisions": round(avg_revisions, 2)
+                    "revisedStepsCount": revised_steps_count,
+                    "delayedStepsCount": delayed_steps_count,
+                    "postponedStepsCount": postponed_steps_count,
+                    "avgRevisions": avg_revisions
                 },
-                "mostRevisedProject": most_revised_project_details,
+                "mostRevisedProject": most_revised_project,
                 "delayedTasks": delayed_tasks_list,
                 "revisedTasks": revised_tasks_list,
                 "postponedTasks": postponed_tasks_list
             }
             
-            return jsonify(report_data)
+            return jsonify(response_data)
 
     except Exception as e:
-        # Hata izini konsola yazdır
-        app.logger.error(f"Rapor verisi çekme hatası: {e}")
-        traceback.print_exc()
-        # Ön uca daha anlaşılır bir hata mesajı gönder
+        print(f"Rapor verisi çekilirken bir hata oluştu: {e}")
         return jsonify({"error": f"Rapor verisi çekilirken bir hata oluştu: {str(e)}"}), 500
     finally:
         if connection:
