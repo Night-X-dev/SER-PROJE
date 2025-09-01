@@ -1282,12 +1282,16 @@
  async function loadReports() {
             try {
                 // Yükleme göstergelerini etkinleştir
-                document.getElementById('delayedTasksLoading').classList.remove('hidden');
-                document.getElementById('revisedTasksLoading').classList.remove('hidden');
-                document.getElementById('postponedTasksLoading').classList.remove('hidden');
-                document.getElementById('delayedTasksTable').classList.add('hidden');
-                document.getElementById('revisedTasksTable').classList.add('hidden');
-                document.getElementById('postponedTasksTable').classList.add('hidden');
+                const toggleElement = (id, show) => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.classList[show ? 'remove' : 'add']('hidden');
+                    }
+                };
+
+                // Tüm yükleme göstergelerini göster, tabloları gizle
+                ['delayedTasksLoading', 'revisedTasksLoading', 'postponedTasksLoading'].forEach(id => toggleElement(id, true));
+                ['delayedTasksTable', 'revisedTasksTable', 'postponedTasksTable'].forEach(id => toggleElement(id, false));
 
                 const response = await fetch('/api/reports');
                 const data = await response.json();
@@ -1382,12 +1386,8 @@
 
 
                     // Yükleme göstergelerini gizle ve tabloları göster
-                    document.getElementById('delayedTasksLoading').classList.add('hidden');
-                    document.getElementById('revisedTasksLoading').classList.add('hidden');
-                    document.getElementById('postponedTasksLoading').classList.add('hidden');
-                    document.getElementById('delayedTasksTable').classList.remove('hidden');
-                    document.getElementById('revisedTasksTable').classList.remove('hidden');
-                    document.getElementById('postponedTasksTable').classList.remove('hidden');
+                    ['delayedTasksLoading', 'revisedTasksLoading', 'postponedTasksLoading'].forEach(id => toggleElement(id, false));
+                    ['delayedTasksTable', 'revisedTasksTable', 'postponedTasksTable'].forEach(id => toggleElement(id, true));
 
                 } else {
                     console.error("API'den hata alındı:", data);
