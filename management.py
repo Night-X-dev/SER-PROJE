@@ -1,14 +1,16 @@
 # management.py
-from flask import Blueprint, request
-import pymysql
 import os
-import urllib.parse
+import pymysql.cursors
+from dotenv import load_dotenv
+from flask import Blueprint, request, jsonify
 
-# Blueprint oluşturuyoruz
+load_dotenv()
+
+# Blueprint oluştur
 management_bp = Blueprint('management', __name__)
 
+# Yeni veritabanı bağlantısı
 def get_db_connection():
-    """Yeni ser_ik veritabanına bağlanır."""
     connection = pymysql.connect(
         host=os.getenv("MYSQL_HOST_NEW", "localhost"),
         user=os.getenv("MYSQL_USER_NEW", "serik"),
@@ -36,4 +38,4 @@ def test_db():
         cursor.execute("SHOW TABLES;")
         tables = cursor.fetchall()
     conn.close()
-    return {"tables": tables}
+    return jsonify(tables)
