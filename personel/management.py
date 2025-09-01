@@ -21,12 +21,13 @@ def login_backend():
     email = request.form.get("email")
     password = request.form.get("password")
 
-    # Burada veritabanı sorgulama, kullanıcı doğrulama vb. işlemleri yapabilirsiniz.
-    # Şimdilik sadece gelen verileri bir dize olarak döndürüyoruz.
-    # Gerçek bir uygulamada, başarılı giriş sonrası başka bir sayfaya yönlendirme yapılır.
-    # Örneğin: return redirect(url_for('dashboard_page'))
-
-    return f"Gelen veriler: Email: {email}, Password: {password}"
+    # TEST amaçlı kullanıcı doğrulama
+    if email == "admin@gmail.com" and password == "admin123":
+        # Doğru bilgiler girildiğinde
+        return "Giriş başarılı!"
+    else:
+        # Yanlış bilgiler girildiğinde
+        return "Giriş başarısız, lütfen bilgilerinizi kontrol edin."
 
 # Bu kısım, dosya doğrudan çalıştırıldığında uygulamanın başlamasını sağlar.
 if __name__ == "__main__":
