@@ -662,6 +662,26 @@
                 e.preventDefault();
                 showToast('Giriş işlemi başarılı! Yönlendiriliyorsunuz...', 'success');
             });
+  // Form submission handlers
+            loginForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                
+                fetch('/login_backend', {
+                    method: 'POST',
+                    body: formData,
+                })
+                .then(response => response.text())
+                .then(data => {
+                    showToast(data, 'success');
+                    // Başarılı girişten sonra yönlendirme yapmak isterseniz buraya kod ekleyebilirsiniz.
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.', 'error');
+                });
+            });
 
             registerForm.addEventListener('submit', function (e) {
                 e.preventDefault();
