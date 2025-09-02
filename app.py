@@ -4542,6 +4542,9 @@ def ik_register():
             if cursor.fetchone():
                 return jsonify({'success': False, 'message': 'Bu e-posta adresi zaten kullanılıyor'}), 409
             
+            cursor.execute("SELECT id FROM personel WHERE telefon = %s", (data['telefon'],))
+            if cursor.fetchone():
+                return jsonify({'success': False, 'message': 'Bu telefon numarası zaten kullanılıyor'}), 409
             # Insert new user
             cursor.execute(
                 """
