@@ -530,7 +530,7 @@
                     </div>
                 </div>
 
-                    <button type="submit" class="btn" id="registerBtn">Kayıt Ol</button>
+                    <button type="submit" class="btn">Kayıt Ol</button>
                 </form>
             </div>
         </div>
@@ -541,94 +541,46 @@
     <script>
         // Add CSRF token to all fetch requests
         function getCSRFToken() {
-            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-            return csrfMeta ? csrfMeta.getAttribute('content') : '';
+            const csrfToken = document.querySelector('meta[name="csrf-token"]');
+            return csrfToken ? csrfToken.getAttribute('content') : '';
         }
-        
-        // API endpoints
-        const API_ENDPOINTS = {
-            LOGIN: '/api/ik_login',
-            REGISTER: '/api/ik_register',
-            LOGOUT: '/api/ik_logout',
-            CHECK_AUTH: '/api/ik_check_auth'
-        };
         
         // Set up fetch defaults
         const originalFetch = window.fetch;
         window.fetch = function(resource, options = {}) {
-            // Make sure headers exist
-            options.headers = options.headers || {};
+            // Set default headers
+            options.headers = {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                ...options.headers
+            };
             
-            // For POST, PUT, PATCH, DELETE requests, set content-type
-            const method = (options.method || 'GET').toUpperCase();
-            if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-                if (!(options.body instanceof FormData)) {
-                    options.headers['Content-Type'] = 'application/json';
-                    if (options.body && typeof options.body === 'object') {
-                        options.body = JSON.stringify(options.body);
-                    }
-                }
-                
-                // Add CSRF token for non-GET requests
-                const csrfToken = getCSRFToken();
-                if (csrfToken) {
-                    options.headers['X-CSRFToken'] = csrfToken;
-                }
+            // Add CSRF token if available
+            const csrfToken = getCSRFToken();
+            if (csrfToken) {
+                options.headers['X-CSRF-Token'] = csrfToken;
             }
             
-            // Add credentials to include cookies
-            options.credentials = 'same-origin';
+            // Add auth token if available
+            const authToken = localStorage.getItem('auth_token');
+            if (authToken) {
+                options.headers['Authorization'] = `Bearer ${authToken}`;
+            }
             
-            return originalFetch.call(window, resource, options);
+            // Convert body to JSON if it's an object and content type is JSON
+            if (options.body && typeof options.body === 'object' && 
+                (!options.headers['Content-Type'] || options.headers['Content-Type'].includes('application/json'))) {
+                options.body = JSON.stringify(options.body);
+            }
+            
+            return originalFetch(resource, options);
         };
-        
-        // Show toast message
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            const toastMessage = document.querySelector('.toast-message');
-            const toastIcon = document.querySelector('.toast-icon');
-            
-            // Set message and icon based on type
-            toastMessage.textContent = message;
-            
-            if (type === 'success') {
-                toastIcon.className = 'fas fa-check-circle';
-                toast.className = 'show success';
-            } else {
-                toastIcon.className = 'fas fa-exclamation-circle';
-                toast.className = 'show error';
-            }
-            
-            // Hide after 5 seconds
-            setTimeout(() => {
-                toast.className = toast.className.replace('show', '');
-            }, 5000);
-        }
-        
         document.addEventListener('DOMContentLoaded', function () {
-            // Form elements
-            const loginForm = document.getElementById('loginForm');
-            const registerForm = document.getElementById('registerForm');
             const loginToggle = document.getElementById('loginToggle');
             const registerToggle = document.getElementById('registerToggle');
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
             const formContainer = document.getElementById('formContainer');
-            const loginBtn = loginForm ? loginForm.querySelector('button[type="submit"]') : null;
-            const registerBtn = registerForm ? registerForm.querySelector('button[type="submit"]') : null;
-            const toast = document.getElementById('toast');
-            const toastMessage = document.querySelector('.toast-message');
-            const toastIcon = document.querySelector('.toast-icon');
-            
-            // Input fields
-            const loginEmail = document.getElementById('loginEmail');
-            const loginPassword = document.getElementById('loginPassword');
-            const registerName = document.getElementById('registerFirstName');
-            const registerSurname = document.getElementById('registerLastName');
-            const registerEmail = document.getElementById('registerEmail');
-            const registerPhone = document.getElementById('registerPhone');
-            const registerPassword = document.getElementById('registerPassword');
-            const registerPasswordConfirm = document.getElementById('registerPasswordConfirm');
-            
-            // Password toggle buttons
             const passwordToggles = document.querySelectorAll('.password-toggle');
             const phoneInput = document.getElementById('registerPhone');
             
@@ -662,83 +614,17 @@
             window.addEventListener('resize', updateFormHeights);
 
             // Set initial container height
-            if (formContainer) {
-                formContainer.style.height = `${loginFormHeight + 120}px`;
-            }
-            
-            // Check if user is already logged in
-            checkAuthStatus();
-            
-            // Function to show login form
-            function showLoginForm(e) {
-                if (e) e.preventDefault();
-                if (loginToggle) loginToggle.classList.add('active');
-                if (registerToggle) registerToggle.classList.remove('active');
-                if (loginForm) loginForm.classList.add('active');
-                if (registerForm) registerForm.classList.remove('active');
-                updateFormHeights();
-            }
-            
-            // Function to show register form
-            function showRegisterForm(e) {
-                if (e) e.preventDefault();
-                if (registerToggle) registerToggle.classList.add('active');
-                if (loginToggle) loginToggle.classList.remove('active');
-                if (registerForm) registerForm.classList.add('active');
-                if (loginForm) loginForm.classList.remove('active');
-                updateFormHeights();
-            }
-            
-            // Add event listeners
-            if (loginToggle) loginToggle.addEventListener('click', showLoginForm);
-            if (registerToggle) registerToggle.addEventListener('click', showRegisterForm);
-            
-            if (loginForm) {
-                loginForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    
-                    const submitButton = this.querySelector('button[type="submit"]');
-                    if (submitButton) submitButton.disabled = true;
-                    
-                    const email = loginEmail ? loginEmail.value.trim() : '';
-                    const password = loginPassword ? loginPassword.value : '';
-                    
-                    if (!email || !password) {
-                        showToast('Lütfen tüm alanları doldurun', 'error');
-                        if (submitButton) submitButton.disabled = false;
-                        return;
-                    }
-                    
-                    try {
-                        const response = await fetch(API_ENDPOINTS.LOGIN, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': getCSRFToken()
-                            },
-                            body: JSON.stringify({
-                                email: email,
-                                password: password
-                            })
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (data.success) {
-                            showToast('Giriş başarılı! Yönlendiriliyorsunuz...', 'success');
-                            setTimeout(() => {
-                                window.location.href = '/ik_dashboard';
-                            }, 1500);
-                        } else {
-                            showToast(data.message || 'Giriş başarısız. Lütfen bilgilerinizi kontrol edin.', 'error');
-                        }
-                    } catch (error) {
-                        console.error('Login error:', error);
-                        showToast('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
-                    } finally {
-                        if (submitButton) submitButton.disabled = false;
-                    }
-                });
+            formContainer.style.height = `${loginFormHeight + 120}px`;
+
+            function showToast(message, type = 'success') {
+                const toast = document.getElementById('toast');
+                const messageSpan = toast.querySelector('.toast-message');
+                messageSpan.textContent = message;
+                toast.className = '';
+                toast.classList.add(type, 'show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3000);
             }
 
             function switchForm(activeForm, inactiveForm, direction) {
@@ -825,120 +711,14 @@
             });
             
             // Telefon numarası doğrulama
-            function formatPhoneNumber(phone) {
-                // Remove all non-digit characters including spaces
-                const cleaned = ('' + phone).replace(/\D/g, '');
-                // Check if the phone number is in the correct format (5xxxxxxxxx)
-                if (cleaned.length === 10 && cleaned.startsWith('5')) {
-                    return cleaned; // Return without country code
-                } else if (cleaned.length === 12 && cleaned.startsWith('90')) {
-                    return cleaned.slice(2); // Remove country code
-                } else if (cleaned.length === 11 && cleaned.startsWith('0')) {
-                    return cleaned.slice(1); // Remove leading zero
-                }
-                return null; // Invalid format
+            function validatePhoneNumber(phone) {
+                // Tüm boşlukları ve parantezleri kaldır
+                const digits = phone.replace(/\D/g, '');
+                // 10 haneli mi ve 5 ile mi başlıyor kontrol et
+                return digits.length === 10 && digits.startsWith('5');
             }
+
             
-            // Check authentication status
-            async function checkAuthStatus() {
-                try {
-                    const response = await fetch(API_ENDPOINTS.CHECK_AUTH);
-                    const data = await response.json();
-                    
-                    if (data.authenticated) {
-                        // Redirect to dashboard if already logged in
-                        window.location.href = '/ik_dashboard';
-                    }
-                } catch (error) {
-                    console.error('Authentication check failed:', error);
-                }
-            }
-            
-            // Handle register form submission
-            if (registerForm) {
-                registerForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    
-                    const submitButton = this.querySelector('button[type="submit"]');
-                    if (submitButton) submitButton.disabled = true;
-                    
-                    const name = registerName ? registerName.value.trim() : '';
-                    const surname = registerSurname ? registerSurname.value.trim() : '';
-                    const email = registerEmail ? registerEmail.value.trim() : '';
-                    const phone = registerPhone ? registerPhone.value.trim() : '';
-                    const password = registerPassword ? registerPassword.value : '';
-                    const confirmPassword = registerPasswordConfirm ? registerPasswordConfirm.value : '';
-                    
-                    // Basic validation
-                    if (!name || !surname || !email || !phone || !password || !confirmPassword) {
-                        showToast('Lütfen tüm alanları doldurun', 'error');
-                        if (submitButton) submitButton.disabled = false;
-                        return;
-                    }
-                    
-                    if (password !== confirmPassword) {
-                        showToast('Şifreler eşleşmiyor', 'error');
-                        if (submitButton) submitButton.disabled = false;
-                        return;
-                    }
-                    
-                    if (password.length < 8) {
-                        showToast('Şifre en az 8 karakter olmalıdır', 'error');
-                        if (submitButton) submitButton.disabled = false;
-                        return;
-                    }
-                    
-                    // Format phone number
-                    const formattedPhone = formatPhoneNumber(phone);
-                    if (!formattedPhone) {
-                        showToast('Lütfen geçerli bir telefon numarası girin (5xxxxxxxxx)', 'error');
-                        if (submitButton) submitButton.disabled = false;
-                        return;
-                    }
-                    
-                    // Email validation
-                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                    if (!emailRegex.test(email)) {
-                        showToast('Lütfen geçerli bir e-posta adresi girin', 'error');
-                        if (submitButton) submitButton.disabled = false;
-                        return;
-                    }
-                    
-                    try {
-                        const response = await fetch(API_ENDPOINTS.REGISTER, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': getCSRFToken()
-                            },
-                            body: JSON.stringify({
-                                ad: name,
-                                soyad: surname,
-                                email: email,
-                                telefon: formattedPhone,
-                                sifre: password
-                            })
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (data.success) {
-                            showToast('Kayıt başarılı! Giriş yapabilirsiniz.', 'success');
-                            // Switch to login form
-                            if (loginToggle) loginToggle.click();
-                            // Reset form
-                            if (registerForm) registerForm.reset();
-                        } else {
-                            showToast(data.message || 'Kayıt sırasında bir hata oluştu', 'error');
-                        }
-                    } catch (error) {
-                        console.error('Registration error:', error);
-                        showToast('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
-                    } finally {
-                        if (submitButton) submitButton.disabled = false;
-                    }
-                });
-            }
         });
     </script>
 </body>
