@@ -4459,59 +4459,42 @@ def ik_login():
         password = data.get('password')
 
         if not email or not password:
-            return jsonify({'success': False, 'message': 'E-posta ve şifre zorunludur'}), 400
+            return jsonify({'success': False, 'message': 'E-posta ve şifre zorunludur.'}), 400
 
         connection = get_ik_db_connection()
-        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            cursor.execute(
-                """
-                SELECT id, ad, soyad, email, sifre, durum 
-                FROM personel 
-                WHERE email = %s
-                """, 
-                (email,)
-            )
+        with connection.cursor(cursor_factory=psycopg2.extras.DictCursor) as cursor:
+            # Check if user exists
+            cursor.execute("SELECT id, sifre, ad, soyad, durum FROM personel WHERE email = %s", (email,))
             user = cursor.fetchone()
 
             if not user:
-                return jsonify({'success': False, 'message': 'Geçersiz e-posta veya şifre'}), 401
+                return jsonify({'success': False, 'message': 'Geçersiz e-posta veya şifre.'}), 401
 
-            if user['durum'] != 'aktif':
-                return jsonify({'success': False, 'message': 'Hesabınız aktif değil. Lütfen yöneticinizle iletişime geçin.'}), 403
+            # Check if password is correct
+            if not bcrypt.checkpw(password.encode('utf-8'), user['sifre'].encode('utf-8')):
+                return jsonify({'success': False, 'message': 'Geçersiz e-posta veya şifre.'}), 401
+            
+            # Check if account is active
+            if user['durum'] == 'pasif':
+                 return jsonify({'success': False, 'message': 'Hesabınız henüz yönetici onayı bekliyor. Lütfen daha sonra tekrar deneyin.'}), 403
 
-            if bcrypt.checkpw(password.encode('utf-8'), user['sifre'].encode('utf-8')):
-                # Update last login time
-                cursor.execute(
-                    "UPDATE personel SET son_giris_tarihi = NOW() WHERE id = %s",
-                    (user['id'],)
-                )
-                connection.commit()
+            # Set session variables
+            session['ik_user_id'] = user['id']
+            session['ik_email'] = email
+            session['ik_ad'] = user['ad']
+            session['ik_soyad'] = user['soyad']
 
-                # Create session
-                session['ik_user_id'] = user['id']
-                session['ik_email'] = user['email']
-                session['ik_ad'] = f"{user['ad']} {user['soyad']}"
-                session['ik_soyad'] = user['soyad']
-                
-                return jsonify({
-                    'success': True, 
-                    'message': 'Giriş başarılı',
-                    'user': {
-                        'id': user['id'],
-                        'ad': user['ad'],
-                        'soyad': user['soyad'],
-                        'email': user['email']
-                    }
-                })
-            else:
-                return jsonify({'success': False, 'message': 'Geçersiz e-posta veya şifre'}), 401
+            return jsonify({'success': True, 'message': 'Giriş başarılı.'})
 
     except Exception as e:
         print(f"Error in ik_login: {str(e)}")
-        return jsonify({'success': False, 'message': 'Bir hata oluştu. Lütfen daha sonra tekrar deneyin.'}), 500
+        if connection:
+            connection.rollback()
+        return jsonify({'success': False, 'message': 'Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.'}), 500
     finally:
         if connection:
             connection.close()
+
 
 # IK (İnsan Kaynakları) Register API
 @app.route('/api/ik_register', methods=['POST'])
