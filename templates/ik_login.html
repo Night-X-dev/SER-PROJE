@@ -607,13 +607,13 @@
         
         document.addEventListener('DOMContentLoaded', function () {
             // Form elements
-            const loginToggle = document.getElementById('loginToggle');
-            const registerToggle = document.getElementById('registerToggle');
             const loginForm = document.getElementById('loginForm');
             const registerForm = document.getElementById('registerForm');
+            const loginToggle = document.getElementById('loginToggle');
+            const registerToggle = document.getElementById('registerToggle');
             const formContainer = document.getElementById('formContainer');
-            const loginBtn = document.getElementById('loginBtn');
-            const registerBtn = document.getElementById('registerBtn');
+            const loginBtn = loginForm ? loginForm.querySelector('button[type="submit"]') : null;
+            const registerBtn = registerForm ? registerForm.querySelector('button[type="submit"]') : null;
             const toast = document.getElementById('toast');
             const toastMessage = document.querySelector('.toast-message');
             const toastIcon = document.querySelector('.toast-icon');
@@ -766,11 +766,18 @@
             });
             
             // Telefon numarası doğrulama
-            function validatePhoneNumber(phone) {
-                // Tüm boşlukları ve parantezleri kaldır
-                const digits = phone.replace(/\D/g, '');
-                // 10 haneli mi ve 5 ile mi başlıyor kontrol et
-                return digits.length === 10 && digits.startsWith('5');
+            function formatPhoneNumber(phone) {
+                // Remove all non-digit characters including spaces
+                const cleaned = ('' + phone).replace(/\D/g, '');
+                // Check if the phone number is in the correct format (5xxxxxxxxx)
+                if (cleaned.length === 10 && cleaned.startsWith('5')) {
+                    return cleaned; // Return without country code
+                } else if (cleaned.length === 12 && cleaned.startsWith('90')) {
+                    return cleaned.slice(2); // Remove country code
+                } else if (cleaned.length === 11 && cleaned.startsWith('0')) {
+                    return cleaned.slice(1); // Remove leading zero
+                }
+                return null; // Invalid format
             }
             
             // Check authentication status
@@ -788,120 +795,90 @@
                 }
             }
             
-            // Handle login form submission
-            async function handleLogin(e) {
-                e.preventDefault();
-                
-                const email = loginEmail.value.trim();
-                const password = loginPassword.value;
-                
-                if (!email || !password) {
-                    showToast('Lütfen tüm alanları doldurun', 'error');
-                    return;
-                }
-                
-                try {
-                    loginBtn.disabled = true;
-                    loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Giriş Yapılıyor...';
-                    
-                    const response = await fetch(API_ENDPOINTS.LOGIN, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCSRFToken()
-                        },
-                        body: JSON.stringify({ email, password })
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (response.ok) {
-                        showToast('Giriş başarılı! Yönlendiriliyorsunuz...', 'success');
-                        setTimeout(() => {
-                            window.location.href = '/ik_dashboard';
-                        }, 1500);
-                    } else {
-                        showToast(data.message || 'Giriş başarısız. Lütfen bilgilerinizi kontrol edin.', 'error');
-                    }
-                } catch (error) {
-                    console.error('Login error:', error);
-                    showToast('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
-                } finally {
-                    loginBtn.disabled = false;
-                    loginBtn.textContent = 'Giriş Yap';
-                }
-            }
-            
             // Handle register form submission
-            async function handleRegister(e) {
-                e.preventDefault();
-                
-                const name = registerName.value.trim();
-                const surname = registerSurname.value.trim();
-                const email = registerEmail.value.trim();
-                const phone = registerPhone.value.trim();
-                const password = registerPassword.value;
-                const confirmPassword = registerPasswordConfirm.value;
-                
-                // Form validation
-                if (!name || !surname || !email || !phone || !password || !confirmPassword) {
-                    showToast('Lütfen tüm alanları doldurun', 'error');
-                    return;
-                }
-                
-                if (password !== confirmPassword) {
-                    showToast('Şifreler eşleşmiyor', 'error');
-                    return;
-                }
-                
-                if (password.length < 8) {
-                    showToast('Şifre en az 8 karakter uzunluğunda olmalıdır', 'error');
-                    return;
-                }
-                
-                if (!validatePhoneNumber(phone)) {
-                    showToast('Geçerli bir telefon numarası giriniz', 'error');
-                    return;
-                }
-                
-                try {
-                    registerBtn.disabled = true;
-                    registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Kayıt Olunuyor...';
+            if (registerForm) {
+                registerForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
                     
-                    const response = await fetch(API_ENDPOINTS.REGISTER, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCSRFToken()
-                        },
-                        body: JSON.stringify({
-                            ad: name,
-                            soyad: surname,
-                            email: email,
-                            telefon: phone,
-                            password: password,
-                            confirm_password: confirmPassword
-                        })
-                    });
+                    const submitButton = this.querySelector('button[type="submit"]');
+                    if (submitButton) submitButton.disabled = true;
                     
-                    const data = await response.json();
+                    const name = registerName ? registerName.value.trim() : '';
+                    const surname = registerSurname ? registerSurname.value.trim() : '';
+                    const email = registerEmail ? registerEmail.value.trim() : '';
+                    const phone = registerPhone ? registerPhone.value.trim() : '';
+                    const password = registerPassword ? registerPassword.value : '';
+                    const confirmPassword = registerPasswordConfirm ? registerPasswordConfirm.value : '';
                     
-                    if (response.ok) {
-                        showToast(data.message || 'Kayıt başarılı! Giriş yapabilirsiniz.', 'success');
-                        // Switch to login form after successful registration
-                        loginToggle.click();
-                        // Clear form
-                        registerForm.reset();
-                    } else {
-                        showToast(data.message || 'Kayıt sırasında bir hata oluştu.', 'error');
+                    // Basic validation
+                    if (!name || !surname || !email || !phone || !password || !confirmPassword) {
+                        showToast('Lütfen tüm alanları doldurun', 'error');
+                        if (submitButton) submitButton.disabled = false;
+                        return;
                     }
-                } catch (error) {
-                    console.error('Registration error:', error);
-                    showToast('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
-                } finally {
-                    registerBtn.disabled = false;
-                    registerBtn.textContent = 'Kayıt Ol';
-                }
+                    
+                    if (password !== confirmPassword) {
+                        showToast('Şifreler eşleşmiyor', 'error');
+                        if (submitButton) submitButton.disabled = false;
+                        return;
+                    }
+                    
+                    if (password.length < 8) {
+                        showToast('Şifre en az 8 karakter olmalıdır', 'error');
+                        if (submitButton) submitButton.disabled = false;
+                        return;
+                    }
+                    
+                    // Format phone number
+                    const formattedPhone = formatPhoneNumber(phone);
+                    if (!formattedPhone) {
+                        showToast('Lütfen geçerli bir telefon numarası girin (5xxxxxxxxx)', 'error');
+                        if (submitButton) submitButton.disabled = false;
+                        return;
+                    }
+                    
+                    // Email validation
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(email)) {
+                        showToast('Lütfen geçerli bir e-posta adresi girin', 'error');
+                        if (submitButton) submitButton.disabled = false;
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch(API_ENDPOINTS.REGISTER, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCSRFToken()
+                            },
+                            body: JSON.stringify({
+                                ad: name,
+                                soyad: surname,
+                                email: email,
+                                telefon: formattedPhone,
+                                sifre: password
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            showToast('Kayıt başarılı! Giriş yapabilirsiniz.', 'success');
+                            // Switch to login form
+                            if (loginToggle) loginToggle.click();
+                            // Reset form
+                            if (registerForm) registerForm.reset();
+                        } else {
+                            showToast(data.message || 'Kayıt sırasında bir hata oluştu', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Registration error:', error);
+                        showToast('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
+                    } finally {
+                        if (submitButton) submitButton.disabled = false;
+                    }
+                });
             }
         });
     </script>
