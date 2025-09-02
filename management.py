@@ -40,6 +40,63 @@ def get_db_connection():
         autocommit=True
     )
 
+# Utility functions
+def validate_email(email):
+    """Email adresi doğrulama"""
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, email) is not None
+
+def validate_phone(phone):
+    """Telefon numarası doğrulama (05XX XXX XX XX formatında)"""
+    phone = ''.join(filter(str.isdigit, phone))
+    return len(phone) == 10 and phone.startswith('5')
+
+def hash_password(password):
+    """Şifre hashleme"""
+    return generate_password_hash(password)
+
+def check_password(hashed_password, password):
+    """Hash'li şifreyi doğrulama"""
+    return check_password_hash(hashed_password, password)
+
+def create_jwt_token(user_id, email):
+    """JWT token oluşturma"""
+    payload = {
+        'user_id': user_id,
+        'email': email,
+        'exp': datetime.utcnow() + timedelta(seconds=JWT_EXPIRATION)
+    }
+    return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+def get_user_by_email(email):
+    """Email ile kullanıcı bilgilerini getir"""
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            sql = "SELECT * FROM personel WHERE email = %s"
+            cursor.execute(sql, (email,))
+            return cursor.fetchone()
+    except Exception as e:
+        print(f"Kullanıcı getirilirken hata oluştu: {e}")
+        return None
+    finally:
+        connection.close()
+
+# Login required decorator
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'personel_logged_in' not in session:
+            return redirect(url_for('management.login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Routes
+@management_bp.route('/')
+def index():
+    if 'personel_logged_in' in session:
+        return redirect(url_for('management.dashboard'))
+    return redirect(url_for('management.login'))
 
 @management_bp.route('/register', methods=['GET', 'POST'])
 @management_bp.route('/register.html', methods=['GET', 'POST'])
