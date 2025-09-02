@@ -42,7 +42,6 @@ def serve_login_page():
     """Directs /login.html requests to the login.html page."""
     return render_template('login.html')
 
-# This route is now handled by the management blueprint
     
 # Yeni rota: sifremi_unuttum.html sayfasını sunar
 @app.route('/sifremi_unuttum.html')
@@ -222,7 +221,6 @@ def get_db_connection():
             connection.close()
         raise # Hatanın yukarıya iletilmesini sağla
 from auth import handle_forgot_password, handle_verify_code, handle_reset_password
-from management import management_bp
 @app.route('/forgot-password', methods=['POST'])
 def forgot_password_route():
      return handle_forgot_password()
