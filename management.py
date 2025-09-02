@@ -154,8 +154,12 @@ def register():
 
 @management_bp.route('/dashboard')
 def dashboard():
+    print("Dashboard route accessed")  # Debug log
+    print("Session data:", dict(session))  # Debug log
+    
     # Check if user is logged in via session
     if not session.get('logged_in'):
+        print("User not logged in, redirecting to login")  # Debug log
         return redirect(url_for('management.login'))
         
     try:
@@ -163,10 +167,14 @@ def dashboard():
         user_id = session.get('user_id')
         email = session.get('email')
         
+        print(f"User ID from session: {user_id}, Email: {email}")  # Debug log
+        
         if not user_id or not email:
+            print("Missing user info in session, redirecting to login")  # Debug log
             return redirect(url_for('management.login'))
             
         # Render dashboard with user info
+        print("Rendering dashboard template")  # Debug log
         return render_template('personel/dashboard.html', 
                              user_id=user_id, 
                              email=email)

@@ -27,9 +27,15 @@ load_dotenv()
 from management import management_bp
 
 app = Flask(__name__)
-# Session management secret key
-# THIS SHOULD BE A SECURE AND UNPREDICTABLE STRING!
-app.secret_key = os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex")
+# Session management configuration
+app.config.update(
+    # Session settings
+    SECRET_KEY=os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex"),
+    SESSION_COOKIE_SECURE=False,  # Set to True in production with HTTPS
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=24)  # Session expires after 24 hours
+)
 
 # Register blueprints
 app.register_blueprint(management_bp)
