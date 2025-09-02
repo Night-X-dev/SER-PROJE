@@ -4443,13 +4443,21 @@ def get_reports():
 def get_ik_db_connection():
     """Establishes and returns a database connection for IK module."""
     try:
-        # Use the same connection details as the main database
-        return get_db_connection()
-    except Exception as e:
+        # Load environment variables from .env file
+        load_dotenv()
+        
+        connection = mysql.connector.connect(
+            host=os.getenv('MYSQL_HOST_NEW'),
+            port=os.getenv('MYSQL_PORT_NEW'),
+            user=os.getenv('MYSQL_USER_NEW'),
+            password=os.getenv('MYSQL_PASSWORD_NEW'),
+            database=os.getenv('MYSQL_DATABASE_NEW')
+        )
+        return connection
+    except mysql.connector.Error as e:
         print(f"IK veritabanı bağlantı hatası: {e}")
         raise
 
-# IK (İnsan Kaynakları) Login API
 @app.route('/api/ik_login', methods=['POST'])
 def ik_login():
     connection = None
@@ -4462,7 +4470,7 @@ def ik_login():
             return jsonify({'success': False, 'message': 'E-posta ve şifre zorunludur.'}), 400
 
         connection = get_ik_db_connection()
-        with connection.cursor(cursor_factory=psycopg2.extras.DictCursor) as cursor:
+        with connection.cursor(dictionary=True) as cursor: # mysql-connector-python için dictionary=True
             # Check if user exists
             cursor.execute("SELECT id, sifre, ad, soyad, durum FROM personel WHERE email = %s", (email,))
             user = cursor.fetchone()
@@ -4472,6 +4480,7 @@ def ik_login():
 
             # Check if password is correct
             try:
+                # bcrypt, MySQL ile de uyumludur
                 if not bcrypt.checkpw(password.encode('utf-8'), user['sifre'].encode('utf-8')):
                     return jsonify({'success': False, 'message': 'Geçersiz e-posta veya şifre.'}), 401
             except ValueError:
