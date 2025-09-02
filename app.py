@@ -3220,12 +3220,14 @@ def get_calendar_events():
                     project_color = "#0980d3" # Blue
                 elif project['status'] == 'Planlama Aşamasında': # 'Planning' yerine 'Planlama Aşamasında'
                     project_color = "#ffa502" # Orange (Örnek renk)
-                        'status': project['status'],
-                        'project_manager_id': project['project_manager_id'],
-                        'id': project['project_id'], # Add original project ID here for detail modals
-                        'project_name': project['project_name'], # Add project_name to extendedProps for consistency
-                        'start': project['start_date'].isoformat() if isinstance(project['start_date'], (datetime.datetime, datetime.date)) else project['start_date'],
-                        'end': project['end_date'].isoformat() if isinstance(project['end_date'], (datetime.datetime, datetime.date)) else (project['end_date'] if project['end_date'] else None) # Add end to extendedProps for consistency
+                
+                return {
+                    'status': project['status'],
+                    'project_manager_id': project['project_manager_id'],
+                    'id': project['project_id'], # Add original project ID here for detail modals
+                    'project_name': project['project_name'], # Add project_name to extendedProps for consistency
+                    'start': project['start_date'].isoformat() if isinstance(project['start_date'], (datetime.datetime, datetime.date)) else project['start_date'],
+                    'end': project['end_date'].isoformat() if isinstance(project['end_date'], (datetime.datetime, datetime.date)) else (project['end_date'] if project['end_date'] else None) # Add end to extendedProps for consistency
                     }
                 })
 
