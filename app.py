@@ -4436,3 +4436,7 @@ def get_reports():
 
 #------------------------------------------------------------------ İşçi Yönetimi Bölümü ------------------------------------------------------------------
 
+@app.route('/ik_login.html')
+def serve_login_page():
+    """Directs /ik_login.html requests to the ik_login.html page."""
+    return render_template('ik_login.html')
