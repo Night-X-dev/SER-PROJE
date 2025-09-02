@@ -4439,10 +4439,13 @@ def get_reports():
             connection.close()
 
 #------------------------------------------------------------------ İşçi Yönetimi Bölümü ------------------------------------------------------------------
+app.secret_key = os.getenv('SECRET_KEY')
+
 def get_ik_db_connection():
     """Establishes and returns a database connection for IK module."""
     try:
         # Load environment variables from .env file
+        # Bu satır artık yukarı taşındığı için gerek yok, ancak güvenlik için kalsın.
         load_dotenv()
         
         # Log the connection parameters for debugging
