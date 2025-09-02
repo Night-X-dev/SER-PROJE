@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, session, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, session, flash, request, jsonify, current_app
 import pymysql.cursors
 import os
 import re
@@ -58,18 +58,30 @@ def login():
                 user = cursor.fetchone()
 
                 if user and 'sifre' in user and check_password_hash(user['sifre'], password):
-                    secret_key = os.getenv("SECRET_KEY", "gizli_anahtar")
+                    # Store user info in session
+                    session['user_id'] = user['id']
+                    session['email'] = user['email']
+                    session['logged_in'] = True
+                    
+                    # Also create a JWT token for API authentication
+                    secret_key = current_app.secret_key or os.getenv("SECRET_KEY", "gizli_anahtar")
                     token_payload = {
                         'user_id': user['id'],
                         'email': user['email'],
                         'exp': datetime.utcnow() + timedelta(hours=24)
                     }
                     token = jwt.encode(token_payload, secret_key, algorithm='HS256')
-                    return jsonify({"success": True, "message": "Giriş başarılı!", "token": token, "redirect": url_for('management.dashboard')})
+                    session['jwt_token'] = token
+                    
+                    # Return success response
+                    return jsonify({
+                        "success": True, 
+                        "message": "Giriş başarılı!", 
+                        "redirect": url_for('management.dashboard')
+                    })
                 else:
                     return jsonify({"success": False, "message": "Geçersiz e-posta veya şifre."})
         except Exception as e:
-            # Hata detayını terminale yazdır
             import traceback
             traceback.print_exc()
             return jsonify({"success": False, "message": f"Bir hata oluştu: {str(e)}"}), 500
@@ -77,6 +89,10 @@ def login():
             if 'conn' in locals():
                 conn.close()
 
+    # If GET request, check if already logged in
+    if session.get('logged_in'):
+        return redirect(url_for('management.dashboard'))
+        
     return render_template('personel/login.html')
 
 
@@ -137,7 +153,27 @@ def register():
 
 @management_bp.route('/dashboard')
 def dashboard():
-    return render_template('personel/dashboard.html')
+    # Check if user is logged in via session
+    if not session.get('logged_in'):
+        return redirect(url_for('management.login'))
+        
+    try:
+        # Get user info from session
+        user_id = session.get('user_id')
+        email = session.get('email')
+        
+        if not user_id or not email:
+            return redirect(url_for('management.login'))
+            
+        # Render dashboard with user info
+        return render_template('personel/dashboard.html', 
+                             user_id=user_id, 
+                             email=email)
+                             
+    except Exception as e:
+        # If any error occurs, log out and redirect to login
+        session.clear()
+        return redirect(url_for('management.login'))
 # API Endpoints
 @management_bp.route('/api/test-db')
 def test_db():
