@@ -4471,8 +4471,13 @@ def ik_login():
                 return jsonify({'success': False, 'message': 'Geçersiz e-posta veya şifre.'}), 401
 
             # Check if password is correct
-            if not bcrypt.checkpw(password.encode('utf-8'), user['sifre'].encode('utf-8')):
-                return jsonify({'success': False, 'message': 'Geçersiz e-posta veya şifre.'}), 401
+            try:
+                if not bcrypt.checkpw(password.encode('utf-8'), user['sifre'].encode('utf-8')):
+                    return jsonify({'success': False, 'message': 'Geçersiz e-posta veya şifre.'}), 401
+            except ValueError:
+                # This could happen if the hash format in the database is incorrect or not a bcrypt hash.
+                print(f"Password check failed for user {email}: Invalid hash format.")
+                return jsonify({'success': False, 'message': 'Şifre doğrulama hatası. Lütfen yönetici ile iletişime geçin.'}), 500
             
             # Check if account is active
             if user['durum'] == 'pasif':
@@ -4494,7 +4499,6 @@ def ik_login():
     finally:
         if connection:
             connection.close()
-
 
 # IK (İnsan Kaynakları) Register API
 @app.route('/api/ik_register', methods=['POST'])
