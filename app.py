@@ -24,21 +24,7 @@ import time
 # Load environment variables
 load_dotenv()
 
-from management import management_bp
-
 app = Flask(__name__)
-# Session management configuration
-app.config.update(
-    # Session settings
-    SECRET_KEY=os.getenv("SECRET_KEY", "supersecretkeythatshouldbemorecomplex"),
-    SESSION_COOKIE_SECURE=False,  # Set to True in production with HTTPS
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='Lax',
-    PERMANENT_SESSION_LIFETIME=timedelta(hours=24)  # Session expires after 24 hours
-)
-
-# Register blueprints
-app.register_blueprint(management_bp)
 
 PRIORITY_TRANSLATIONS = {
     "low": "Düşük Öncelik",
@@ -4449,3 +4435,6 @@ def get_reports():
     finally:
         if connection:
             connection.close()
+
+#------------------------------------------------------------------ İşçi Yönetimi Bölümü ------------------------------------------------------------------
+
