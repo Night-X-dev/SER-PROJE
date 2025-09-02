@@ -4449,16 +4449,17 @@ def get_ik_db_connection():
         # Using old variables as per user request
         print(f"DEBUG: Trying to connect to MySQL with old variables. host: {os.getenv('MYSQL_HOST')}, user: {os.getenv('MYSQL_USER')}, db: {os.getenv('MYSQL_DATABASE')}")
         
-        connection = mysql.connector.connect(
+        connection = pymysql.connect(
             host=os.getenv('MYSQL_HOST'),
-            port=os.getenv('MYSQL_PORT'),
+            port=int(os.getenv('MYSQL_PORT', 3306)),
             user=os.getenv('MYSQL_USER'),
             password=os.getenv('MYSQL_PASSWORD'),
-            database=os.getenv('MYSQL_DATABASE')
+            database=os.getenv('MYSQL_DATABASE'),
+            cursorclass=pymysql.cursors.DictCursor
         )
         print("Successfully connected to MySQL database!")
         return connection
-    except mysql.connector.Error as e:
+    except pymysql.Error as e:
         print(f"IK veritabanı bağlantı hatası: {e}")
         # Re-raise the exception to be caught by the calling function's try-except block
         raise
@@ -4475,7 +4476,7 @@ def ik_login():
             return jsonify({'success': False, 'message': 'E-posta ve şifre zorunludur.'}), 400
 
         connection = get_ik_db_connection()
-        with connection.cursor(dictionary=True) as cursor:
+        with connection.cursor() as cursor:
             # Check if user exists
             cursor.execute("SELECT id, sifre, ad, soyad, durum FROM personel WHERE email = %s", (email,))
             user = cursor.fetchone()
@@ -4537,7 +4538,7 @@ def ik_register():
         connection = get_ik_db_connection()
         with connection.cursor() as cursor:
             # Check if email already exists
-            cursor.execute("SELECT id FROM personel WHERE email = %s", (data['email'],))
+            cursor.execute("SELECT id FROM personel FROM personel WHERE email = %s", (data['email'],))
             if cursor.fetchone():
                 return jsonify({'success': False, 'message': 'Bu e-posta adresi zaten kullanılıyor'}), 409
             
