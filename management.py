@@ -36,67 +36,6 @@ def get_db_connection():
 @management_bp.route('/')
 def index():
     return redirect(url_for('management.dashboard'))
-
-@management_bp.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        try:
-            data = request.get_json(silent=True)
-            if not data:  # fallback form data
-                data = request.form
-
-            email = data.get('email')
-            password = data.get('password')
-
-            if not email or not password:
-                return jsonify({"success": False, "message": "E-posta ve şifre gereklidir."})
-
-            conn = get_db_connection()
-            with conn.cursor() as cursor:
-                sql = "SELECT * FROM personel WHERE email = %s"
-                cursor.execute(sql, (email,))
-                user = cursor.fetchone()
-
-                if user and 'sifre' in user and check_password_hash(user['sifre'], password):
-                    # Store user info in session
-                    session['user_id'] = user['id']
-                    session['email'] = user['email']
-                    session['logged_in'] = True
-                    
-                    # Also create a JWT token for API authentication
-                    secret_key = current_app.secret_key or os.getenv("SECRET_KEY", "gizli_anahtar")
-                    token_payload = {
-                        'user_id': user['id'],
-                        'email': user['email'],
-                        'exp': datetime.utcnow() + timedelta(hours=24)
-                    }
-                    token = jwt.encode(token_payload, secret_key, algorithm='HS256')
-                    session['jwt_token'] = token
-                    
-                    # Return success response with token
-                    return jsonify({
-                        "success": True, 
-                        "message": "Giriş başarılı!",
-                        "token": token, 
-                        "redirect": url_for('management.dashboard')
-                    })
-                else:
-                    return jsonify({"success": False, "message": "Geçersiz e-posta veya şifre."})
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return jsonify({"success": False, "message": f"Bir hata oluştu: {str(e)}"}), 500
-        finally:
-            if 'conn' in locals():
-                conn.close()
-
-    # If GET request, check if already logged in
-    if session.get('logged_in'):
-        return redirect(url_for('management.dashboard'))
-        
-    return render_template('personel/login.html')
-
-
 @management_bp.route('/register', methods=['POST'])
 def register():
     try:
@@ -151,38 +90,84 @@ def register():
     finally:
         if 'conn' in locals():
             conn.close()
+@management_bp.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        try:
+            data = request.get_json(silent=True)
+            if not data:
+                data = request.form
 
+            email = data.get('email')
+            password = data.get('password')
+
+            if not email or not password:
+                return jsonify({"success": False, "message": "E-posta ve şifre gereklidir."})
+
+            conn = get_db_connection()
+            with conn.cursor() as cursor:
+                sql = "SELECT * FROM personel WHERE email = %s"
+                cursor.execute(sql, (email,))
+                user = cursor.fetchone()
+
+            if user and check_password_hash(user['sifre'], password):
+                # Session
+                session['user_id'] = user['id']
+                session['email'] = user['email']
+                session['logged_in'] = True
+
+                # JWT Token
+                secret_key = current_app.secret_key or os.getenv("SECRET_KEY", "gizli_anahtar")
+                token_payload = {
+                    'user_id': user['id'],
+                    'email': user['email'],
+                    'exp': datetime.utcnow() + timedelta(hours=24)
+                }
+                token = jwt.encode(token_payload, secret_key, algorithm='HS256')
+                session['jwt_token'] = token
+
+                # Check if request is AJAX
+                if request.is_json:
+                    return jsonify({
+                        "success": True,
+                        "message": "Giriş başarılı!",
+                        "token": token,
+                        "redirect": url_for('management.dashboard')
+                    })
+                else:
+                    return redirect(url_for('management.dashboard'))
+
+            else:
+                message = "Geçersiz e-posta veya şifre."
+                if request.is_json:
+                    return jsonify({"success": False, "message": message})
+                else:
+                    return render_template('personel/login.html', error=message)
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            if request.is_json:
+                return jsonify({"success": False, "message": str(e)}), 500
+            else:
+                return render_template('personel/login.html', error=str(e))
+        finally:
+            if 'conn' in locals():
+                conn.close()
+
+    if session.get('logged_in'):
+        return redirect(url_for('management.dashboard'))
+    return render_template('personel/login.html')
+
+# Dashboard
 @management_bp.route('/dashboard')
 def dashboard():
-    print("Dashboard route accessed")  # Debug log
-    print("Session data:", dict(session))  # Debug log
-    
-    # Check if user is logged in via session
     if not session.get('logged_in'):
-        print("User not logged in, redirecting to login")  # Debug log
         return redirect(url_for('management.login'))
-        
-    try:
-        # Get user info from session
-        user_id = session.get('user_id')
-        email = session.get('email')
-        
-        print(f"User ID from session: {user_id}, Email: {email}")  # Debug log
-        
-        if not user_id or not email:
-            print("Missing user info in session, redirecting to login")  # Debug log
-            return redirect(url_for('management.login'))
-            
-        # Render dashboard with user info
-        print("Rendering dashboard template")  # Debug log
-        return render_template('personel/dashboard.html', 
-                             user_id=user_id, 
-                             email=email)
-                             
-    except Exception as e:
-        # If any error occurs, log out and redirect to login
-        session.clear()
-        return redirect(url_for('management.login'))
+    return render_template('personel/dashboard.html', 
+                           user_id=session.get('user_id'),
+                           email=session.get('email'))
+
 # API Endpoints
 @management_bp.route('/api/test-db')
 def test_db():
