@@ -468,12 +468,26 @@
             background-position: right 16px center;
             background-size: 20px;
             padding-right: 50px;
+            position: relative; /* Ekledik */
         }
 
         input[type="date"]:focus {
             border-color: var(--primary);
             box-shadow: 0 0 0 0.25rem rgba(26, 86, 219, 0.15);
             outline: none;
+        }
+
+        /* Yeni tarih seçici stili */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            background: transparent;
+            color: transparent;
+            cursor: pointer;
+            /* Kaldırılan ve güncellenen özellikler */
+            position: absolute; /* Ekledik */
+            right: 0; /* Ekledik */
+            width: 40px; /* Ekledik */
+            height: 100%; /* Ekledik */
+            opacity: 0; /* Ekledik */
         }
 
         /* Toast bildirimi */
@@ -908,10 +922,20 @@
                             <textarea class="form-control" id="description" rows="4" placeholder="İzin talebinizle ilgili açıklama ekleyin..."></textarea>
                         </div>
                         
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="emergencyContactName" class="form-label">Acil Durum Kişisi Adı Soyadı</label>
+                                <input type="text" class="form-control" id="emergencyContactName" placeholder="Adı Soyadı" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="emergencyContactNumber" class="form-label">Acil Durum Kişisi Telefon Numarası</label>
+                                <input type="tel" class="form-control" id="emergencyContactNumber" placeholder="(5xx) xxx xx xx" maxlength="15" required>
+                            </div>
+                        </div>
                         <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="emergencyContact" required>
-                            <label class="form-check-label" for="emergencyContact">
-                                Acil durumlarda ulaşılabilecek kişi bilgilerimi ilettiğimi onaylıyorum.
+                            <input type="checkbox" class="form-check-input" id="emergencyContactConfirm" required>
+                            <label class="form-check-label" for="emergencyContactConfirm">
+                                Acil durumlarda ulaşılabilecek kişi bilgilerimin doğru olduğunu ve ilettiğimi onaylıyorum.
                             </label>
                         </div>
                     </form>
@@ -1079,6 +1103,27 @@
             });
             
             endDateInput.addEventListener('change', calculateDuration);
+
+            // Telefon numarası formatlama
+            const emergencyContactNumber = document.getElementById('emergencyContactNumber');
+            emergencyContactNumber.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, ''); // Sadece rakamları al
+                let formattedValue = '';
+
+                if (value.length > 0) {
+                    formattedValue += '(' + value.substring(0, 3);
+                }
+                if (value.length >= 4) {
+                    formattedValue += ') ' + value.substring(3, 6);
+                }
+                if (value.length >= 7) {
+                    formattedValue += ' ' + value.substring(6, 8);
+                }
+                if (value.length >= 9) {
+                    formattedValue += ' ' + value.substring(8, 10);
+                }
+                e.target.value = formattedValue;
+            });
             
             // Form gönderme
             document.getElementById('submitLeaveRequest').addEventListener('click', function() {
