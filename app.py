@@ -4439,6 +4439,15 @@ def get_reports():
             connection.close()
 
 #------------------------------------------------------------------ İşçi Yönetimi Bölümü ------------------------------------------------------------------
+import pymysql
+import os
+from dotenv import load_dotenv
+from flask import Flask, jsonify, request, session, redirect, url_for, render_template
+import bcrypt
+import re
+
+app = Flask(__name__)
+
 def get_ik_db_connection():
     """Establishes and returns a database connection for IK module."""
     try:
@@ -4446,15 +4455,15 @@ def get_ik_db_connection():
         load_dotenv()
         
         # Log the connection parameters for debugging
-        # Using old variables as per user request
-        print(f"DEBUG: Trying to connect to MySQL with old variables. host: {os.getenv('MYSQL_HOST')}, user: {os.getenv('MYSQL_USER')}, db: {os.getenv('MYSQL_DATABASE')}")
+        # Using new variables for the ser_ik database
+        print(f"DEBUG: Trying to connect to MySQL with new variables. host: {os.getenv('MYSQL_HOST_NEW')}, user: {os.getenv('MYSQL_USER_NEW')}, db: {os.getenv('MYSQL_DATABASE_NEW')}")
         
         connection = pymysql.connect(
-            host=os.getenv('MYSQL_HOST'),
-            port=int(os.getenv('MYSQL_PORT', 3306)),
-            user=os.getenv('MYSQL_USER'),
-            password=os.getenv('MYSQL_PASSWORD'),
-            database=os.getenv('MYSQL_DATABASE'),
+            host=os.getenv('MYSQL_HOST_NEW'),
+            port=int(os.getenv('MYSQL_PORT_NEW', 3306)),
+            user=os.getenv('MYSQL_USER_NEW'),
+            password=os.getenv('MYSQL_PASSWORD_NEW'),
+            database=os.getenv('MYSQL_DATABASE_NEW'),
             cursorclass=pymysql.cursors.DictCursor
         )
         print("Successfully connected to MySQL database!")
@@ -4538,7 +4547,7 @@ def ik_register():
         connection = get_ik_db_connection()
         with connection.cursor() as cursor:
             # Check if email already exists
-            cursor.execute("SELECT id FROM personel FROM personel WHERE email = %s", (data['email'],))
+            cursor.execute("SELECT id FROM personel WHERE email = %s", (data['email'],))
             if cursor.fetchone():
                 return jsonify({'success': False, 'message': 'Bu e-posta adresi zaten kullanılıyor'}), 409
             
