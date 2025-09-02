@@ -27,119 +27,206 @@
 
         .container {
             width: 100%;
-            max-width: 400px;
+            max-width: 900px;
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         .header {
             background: #1a56db;
             color: white;
-            padding: 30px 20px;
+            padding: 40px 25px 30px;
             text-align: center;
         }
+        .input-group .password-toggle {
+            top: 50%; /* Mevcut değer */
+            transform: translateY(-50%); /* Mevcut değer */
+            right: 15px; /* Mevcut değer */
+            /* Yeni eklenen veya güncellenen kısım */
+            margin-top: 0; /* Gerekirse üst boşluğu sıfırlar */
+            height: 100%; /* İkonun kapsayıcı yüksekliğini almasını sağlar */
+            display: flex; /* Flexbox kullanarak dikey ortalama */
+            align-items: center; /* Dikeyde ortalama */
+        }
+        .input-icon-container {
+            position: relative;
+            width: 100%;
+        }
 
+        .input-icon-container input {
+            width: 100%;
+            padding-right: 45px;
+        }
+
+        .input-icon-container .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #a0aec0;
+            font-size: 18px;
+            z-index: 2;
+        }
+
+        .input-icon-container .password-toggle:hover {
+            color: #4a5568;
+        }
         .header img {
-            height: 60px;
+            height: 70px;
             margin-bottom: 15px;
             object-fit: contain;
         }
 
         .header h1 {
-            font-size: 20px;
+            font-size: 24px;
             font-weight: 600;
+        }
+
+        .content {
+            display: flex;
+            flex-direction: column;
         }
 
         .form-container {
             padding: 30px;
+            position: relative;
+            overflow: hidden;
+            transition: height 0.5s ease-in-out;
         }
 
-        .form-group {
+        .toggle-container {
+            display: flex;
+            width: 100%;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .toggle-btn {
+            padding: 15px;
+            width: 50%;
+            background: #e6eef9;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            color: #4a5568;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn.active {
+            background: #1a56db;
+            color: white;
+        }
+
+        .form {
+            width: 100%;
+            padding: 0 30px;
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+            opacity: 0;
+            transform: translateX(20px);
+            position: absolute;
+            top: 90px;
+            left: 0;
+            pointer-events: none;
+        }
+
+        .form.active {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+            position: relative;
+            top: 0;
+        }
+
+        .form.inactive-left {
+            transform: translateX(-20px);
+            opacity: 0;
+        }
+
+        .form.inactive-right {
+            transform: translateX(20px);
+            opacity: 0;
+        }
+
+        .form h2 {
+            color: #1a56db;
+            margin-bottom: 25px;
+            text-align: center;
+            font-size: 22px;
+        }
+
+        .input-group {
             margin-bottom: 20px;
             position: relative;
         }
 
-        .form-group label {
+        .input-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .input-row .input-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        label {
             display: block;
             margin-bottom: 8px;
             font-weight: 500;
             color: #4a5568;
         }
 
-        .form-group {
-            position: relative;
-        }
-
-        .form-group input {
+        input {
             width: 100%;
-            padding: 12px 40px 12px 40px;
-            border: 1px solid #e2e8f0;
-            border-radius: 5px;
-            font-size: 14px;
-            transition: border-color 0.3s ease;
-        }
-        
-        .password-input-container {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-        
-        .input-icon {
-            position: absolute;
-            color: #a0aec0;
-            pointer-events: none;
-        }
-        
-        .lock-icon {
-            left: 15px;
-        }
-        
-        .eye-icon {
-            right: 15px;
-            cursor: pointer;
-            pointer-events: auto;
-            z-index: 2;
-        }
-        
-        .eye-icon:hover {
-            color: #4a5568;
-        }
-        
-        .password-input-container input {
-            padding-left: 40px !important;
-            padding-right: 40px !important;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border 0.3s ease;
         }
 
-        .form-group input:focus {
-            outline: none;
+        input:focus {
             border-color: #1a56db;
+            outline: none;
             box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.1);
+        }
+
+        .password-info {
+            font-size: 14px;
+            color: #718096;
+            margin-top: 5px;
         }
 
         .forgot-password {
             display: block;
             text-align: right;
-            margin-top: 10px;
-            color: #4a5568;
+            margin-top: 8px;
+            margin-bottom: 20px;
+            color: #1a56db;
             text-decoration: none;
             font-size: 14px;
         }
 
         .forgot-password:hover {
             text-decoration: underline;
-            color: #1a56db;
         }
 
         .btn {
             width: 100%;
-            padding: 12px;
+            padding: 15px;
             background: #1a56db;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
@@ -147,7 +234,7 @@
         }
 
         .btn:hover {
-            background: #1e4ed8;
+            background: #164cc5;
         }
 
         .password-toggle {
@@ -157,12 +244,144 @@
             transform: translateY(-50%);
             cursor: pointer;
             color: #a0aec0;
-            font-size: 16px;
+            font-size: 18px;
+            z-index: 2;
         }
         
         .password-toggle:hover {
             color: #4a5568;
         }
+
+        .separator {
+            display: flex;
+            align-items: center;
+            margin: 25px 0;
+            color: #718096;
+        }
+
+        .separator::before,
+        .separator::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #ddd;
+        }
+
+        .separator span {
+            padding: 0 15px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f5f7fa;
+            color: #718096;
+        }
+
+        .footer a {
+            color: #1a56db;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                flex-direction: row;
+                min-height: 600px;
+            }
+
+            .header {
+                width: 40%;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                padding: 40px;
+            }
+
+            .content {
+                width: 60%;
+            }
+
+            .form-container {
+                padding: 40px;
+            }
+            
+            .form {
+                position: absolute;
+                top: 90px;
+            }
+            
+            .form.active {
+                position: relative;
+                top: 0;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .input-row {
+                flex-direction: column;
+                gap: 0;
+            }
+
+            .toggle-btn {
+                padding: 12px;
+                font-size: 14px;
+            }
+            
+            .form {
+                padding: 0 15px;
+            }
+        }
+
+        #toast {
+            visibility: hidden;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 250px;
+            max-width: 90vw;
+            background-color: #1a56db;
+            color: white;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 9999;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        
+        #toast.error {
+            background-color: #e53e3e;
+        }
+
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .toast-icon {
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            font-size: 20px;
+            color: white;
+        }
+        
+        #toast.success .toast-icon::before {
+            content: "\f058";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+        }
+        
         #toast.error .toast-icon::before {
             content: "\f057";
             font-family: "Font Awesome 6 Free";
@@ -198,7 +417,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="{{ url_for('static', filename='serlogobeyaz.png') }}">
+            <img src="logobeyaz.png" alt="SER Elektrik Otomasyon Logo" />
             <h1>Personel Yönetim Sistemi</h1>
             <p style="margin-top: 20px;">
                 Personel kayıt ve yönetim işlemlerinizi kolayca yapabilirsiniz.
@@ -212,14 +431,13 @@
                     <button class="toggle-btn" id="registerToggle">Kayıt Ol</button>
                 </div>
 
-                <form class="form active" id="loginForm" method="POST" action="{{ url_for('management.login') }}">
+                <form class="form active" id="loginForm">
                     <h2>Hesabınıza Giriş Yapın</h2>
 
                     <div class="input-group">
                         <label for="loginEmail">E-posta</label>
                         <input
                             type="email"
-                            name="email"
                             id="loginEmail"
                             placeholder="E-posta adresinizi girin"
                             required
@@ -230,13 +448,12 @@
                         <label for="loginPassword">Şifre</label>
                         <input
                             type="password"
-                            name="password"
                             id="loginPassword"
                             placeholder="Şifrenizi girin"
                             required
                         />
                         <i class="fas fa-eye password-toggle" data-target="loginPassword"></i>
-                        <a href="{{ url_for('management.change_password') }}" class="forgot-password">Şifremi unuttum</a>
+                        <a href="change_password.html" class="forgot-password">Şifremi unuttum</a>
                     </div>
 
                     <button type="submit" class="btn">Giriş Yap</button>
@@ -294,38 +511,34 @@
                         </p>
                     </div>
 
-                    <div class="input-group">
-                        <label for="registerPassword">Şifre</label>
-                        <div class="password-input-container">
-                            <i class="fas fa-lock input-icon lock-icon"></i>
-                            <input
-                                type="password"
-                                id="registerPassword"
-                                placeholder="En az 8 karakter"
-                                required
-                                style="width: 100%"
-                            />
-                            <i class="fas fa-eye input-icon eye-icon toggle-password" data-target="registerPassword"></i>
-                        </div>
-                        <p class="password-info">
-                            Şifreniz en az 8 karakter uzunluğunda olmalıdır.
-                        </p>
+                   <div class="input-group">
+                    <label for="registerPassword">Şifre</label>
+                    <div class="input-icon-container">
+                        <input
+                            type="password"
+                            id="registerPassword"
+                            placeholder="En az 8 karakter"
+                            required
+                        />
+                        <i class="fas fa-eye password-toggle" data-target="registerPassword"></i>
                     </div>
+                    <p class="password-info">
+                        Şifreniz en az 8 karakter uzunluğunda olmalıdır.
+                    </p>
+                </div>
 
-                    <div class="input-group">
-                        <label for="registerPasswordConfirm">Şifre Tekrar</label>
-                        <div class="password-input-container">
-                            <i class="fas fa-lock input-icon lock-icon"></i>
-                            <input
-                                type="password"
-                                id="registerPasswordConfirm"
-                                placeholder="Şifrenizi tekrar girin"
-                                required
-                                style="width: 100%"
-                            />
-                            <i class="fas fa-eye input-icon eye-icon toggle-password" data-target="registerPasswordConfirm"></i>
-                        </div>
+                <div class="input-group">
+                    <label for="registerPasswordConfirm">Şifre Tekrar</label>
+                    <div class="input-icon-container">
+                        <input
+                            type="password"
+                            id="registerPasswordConfirm"
+                            placeholder="Şifrenizi tekrar girin"
+                            required
+                        />
+                        <i class="fas fa-eye password-toggle" data-target="registerPasswordConfirm"></i>
                     </div>
+                </div>
 
                     <button type="submit" class="btn">Kayıt Ol</button>
                 </form>
@@ -427,20 +640,6 @@
                 }
             });
 
-            // Toggle password visibility for all password fields
-            document.querySelectorAll('.toggle-password').forEach(icon => {
-                icon.addEventListener('click', function() {
-                    const targetId = this.getAttribute('data-target');
-                    const passwordInput = document.getElementById(targetId);
-                    if (passwordInput) {
-                        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-                        passwordInput.setAttribute('type', type);
-                        this.classList.toggle('fa-eye');
-                        this.classList.toggle('fa-eye-slash');
-                    }
-                });
-            });
-
             // Şifre gösterme/gizleme
             passwordToggles.forEach(toggle => {
                 toggle.addEventListener('click', function () {
@@ -494,77 +693,11 @@
             }
 
             // Form submission handlers
-            loginForm.addEventListener('submit', async function (e) {
+            loginForm.addEventListener('submit', function (e) {
                 e.preventDefault();
-                
-                const submitBtn = loginForm.querySelector('button[type="submit"]');
-                const originalBtnText = submitBtn.innerHTML;
-                
-                try {
-                    // Disable submit button and show loading state
-                    submitBtn.disabled = true;
-                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Giriş Yapılıyor...';
-                    
-                    console.log("Backend'e giriş isteği gönderiliyor...");
-                    
-                    const formData = {
-                        email: loginForm.querySelector('input[name="email"]').value.trim(),
-                        password: loginForm.querySelector('input[name="password"]').value
-                    };
-                    
-                    // Input validation
-                    if (!formData.email || !formData.password) {
-                        throw new Error('Lütfen tüm alanları doldurunuz.');
-                    }
-                    
-                    console.log("Gönderilen veri:", formData);
-                    
-                    const response = await fetch(loginForm.action, {
-                        method: 'POST',
-                        body: JSON.stringify(formData),
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        credentials: 'same-origin'  // Include cookies for session
-                    });
-                    
-                    console.log("Sunucu yanıtı:", response);
-                    
-                    if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({}));
-                        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-                    }
-                    
-                    const data = await response.json();
-                    console.log("İşlenen yanıt:", data);
-                    
-                    if (data.success && data.redirect) {
-                        showToast('Giriş başarılı! Yönlendiriliyorsunuz...', 'success');
-                        window.location.href = data.redirect;
-                    } else {
-                        throw new Error(data.message || 'Giriş başarısız!');
-                    }
-                    
-                } catch (error) {
-                    console.error('Hata oluştu:', error);
-                    let errorMessage = 'Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.';
-                    
-                    if (error.message) {
-                        errorMessage = error.message;
-                    } else if (error.response && error.response.data && error.response.data.message) {
-                        errorMessage = error.response.data.message;
-                    }
-                    
-                    showToast(errorMessage, 'error');
-                    
-                } finally {
-                    // Re-enable submit button
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalBtnText;
-                }
+                showToast('Giriş işlemi başarılı! Yönlendiriliyorsunuz...', 'success');
             });
+
             registerForm.addEventListener('submit', function (e) {
                 e.preventDefault();
                 const password = document.getElementById('registerPassword').value;
@@ -590,6 +723,5 @@
             });
         });
     </script>
-    
 </body>
 </html>
