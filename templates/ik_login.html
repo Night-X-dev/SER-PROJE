@@ -662,24 +662,83 @@
             window.addEventListener('resize', updateFormHeights);
 
             // Set initial container height
-            formContainer.style.height = `${loginFormHeight + 120}px`;
+            if (formContainer) {
+                formContainer.style.height = `${loginFormHeight + 120}px`;
+            }
             
             // Check if user is already logged in
             checkAuthStatus();
             
-            // Form submission handlers
-            loginForm.addEventListener('submit', handleLogin);
-            registerForm.addEventListener('submit', handleRegister);
-
-            function showToast(message, type = 'success') {
-                const toast = document.getElementById('toast');
-                const messageSpan = toast.querySelector('.toast-message');
-                messageSpan.textContent = message;
-                toast.className = '';
-                toast.classList.add(type, 'show');
-                setTimeout(() => {
-                    toast.classList.remove('show');
-                }, 3000);
+            // Function to show login form
+            function showLoginForm(e) {
+                if (e) e.preventDefault();
+                if (loginToggle) loginToggle.classList.add('active');
+                if (registerToggle) registerToggle.classList.remove('active');
+                if (loginForm) loginForm.classList.add('active');
+                if (registerForm) registerForm.classList.remove('active');
+                updateFormHeights();
+            }
+            
+            // Function to show register form
+            function showRegisterForm(e) {
+                if (e) e.preventDefault();
+                if (registerToggle) registerToggle.classList.add('active');
+                if (loginToggle) loginToggle.classList.remove('active');
+                if (registerForm) registerForm.classList.add('active');
+                if (loginForm) loginForm.classList.remove('active');
+                updateFormHeights();
+            }
+            
+            // Add event listeners
+            if (loginToggle) loginToggle.addEventListener('click', showLoginForm);
+            if (registerToggle) registerToggle.addEventListener('click', showRegisterForm);
+            
+            if (loginForm) {
+                loginForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const submitButton = this.querySelector('button[type="submit"]');
+                    if (submitButton) submitButton.disabled = true;
+                    
+                    const email = loginEmail ? loginEmail.value.trim() : '';
+                    const password = loginPassword ? loginPassword.value : '';
+                    
+                    if (!email || !password) {
+                        showToast('Lütfen tüm alanları doldurun', 'error');
+                        if (submitButton) submitButton.disabled = false;
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch(API_ENDPOINTS.LOGIN, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCSRFToken()
+                            },
+                            body: JSON.stringify({
+                                email: email,
+                                password: password
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            showToast('Giriş başarılı! Yönlendiriliyorsunuz...', 'success');
+                            setTimeout(() => {
+                                window.location.href = '/ik_dashboard';
+                            }, 1500);
+                        } else {
+                            showToast(data.message || 'Giriş başarısız. Lütfen bilgilerinizi kontrol edin.', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Login error:', error);
+                        showToast('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
+                    } finally {
+                        if (submitButton) submitButton.disabled = false;
+                    }
+                });
             }
 
             function switchForm(activeForm, inactiveForm, direction) {
