@@ -1,7 +1,6 @@
-from flask import Blueprint, render_template, redirect, url_for, session, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, session, request, jsonify
 import pymysql.cursors
 import os
-import bcrypt
 import re
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -86,8 +85,40 @@ def get_user_by_email(email):
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # Check session first
         if 'personel_logged_in' not in session:
+            # If no session, check for JWT token in Authorization header
+            auth_header = request.headers.get('Authorization')
+            if auth_header:
+                try:
+                    token = auth_header.split(" ")[1]  # Bearer <token>
+                    payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+                    
+                    # Get user from database
+                    user = get_user_by_email(payload['email'])
+                    if not user or user['id'] != payload['user_id']:
+                        return jsonify({"success": False, "message": "Geçersiz token!"}), 401
+                    
+                    # Set session variables
+                    session['personel_logged_in'] = True
+                    session['personel_id'] = user['id']
+                    session['personel_email'] = user['email']
+                    session['personel_adi'] = f"{user['ad']} {user['soyad']}"
+                    session['personel_departman'] = user.get('departman', '')
+                    session['personel_pozisyon'] = user.get('pozisyon', '')
+                    
+                    return f(*args, **kwargs)
+                    
+                except jwt.ExpiredSignatureError:
+                    return jsonify({"success": False, "message": "Token süresi dolmuş!"}), 401
+                except (jwt.InvalidTokenError, IndexError):
+                    return jsonify({"success": False, "message": "Geçersiz token!"}), 401
+            
+            # If no valid session or token, redirect to login
+            if request.path.startswith('/api/'):
+                return jsonify({"success": False, "message": "Yetkisiz erişim!"}), 401
             return redirect(url_for('management.login'))
+            
         return f(*args, **kwargs)
     return decorated_function
 
@@ -112,10 +143,12 @@ def register():
             telefon = data.get('telefon', '').strip()
             sifre = data.get('password', '')
             sifre_tekrar = data.get('password_confirm', '')
+            departman = data.get('departman', 'Genel').strip()
+            pozisyon = data.get('pozisyon', 'Personel').strip()
             
             # Zorunlu alan kontrolü
             if not all([ad, soyad, email, sifre, sifre_tekrar]):
-                return jsonify({"success": False, "message": "Tüm alanları doldurunuz!"}), 400
+                return jsonify({"success": False, "message": "Tüm zorunlu alanları doldurunuz!"}), 400
                 
             # Email format kontrolü
             if not validate_email(email):
@@ -145,33 +178,40 @@ def register():
             try:
                 with connection.cursor() as cursor:
                     sql = """
-                        INSERT INTO personel (ad, soyad, email, telefon, sifre, departman, pozisyon, ise_baslama_tarihi, durum)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        INSERT INTO personel (
+                            ad, soyad, email, telefon, sifre, 
+                            departman, pozisyon, ise_baslama_tarihi, durum
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'aktif')
                     """
                     cursor.execute(sql, (
                         ad,
                         soyad,
                         email,
-                        telefon,
+                        telefon if telefon else None,
                         hash_password(sifre),
-                        'Genel',  # Varsayılan departman
-                        'Personel',  # Varsayılan pozisyon
-                        datetime.now().date(),  # İşe başlama tarihi
-                        'aktif'  # Varsayılan durum
+                        departman,
+                        pozisyon,
+                        datetime.now().date()
                     ))
                     
                     # Yeni oluşturulan kullanıcıyı al
                     user_id = cursor.lastrowid
                     
-                    # Kullanıcıyı oturum açık olarak işaretle
+                    # Kullanıcı bilgilerini oturumda sakla
                     session['personel_logged_in'] = True
                     session['personel_id'] = user_id
                     session['personel_email'] = email
                     session['personel_adi'] = f"{ad} {soyad}"
+                    session['personel_departman'] = departman
+                    session['personel_pozisyon'] = pozisyon
+                    
+                    # JWT token oluştur
+                    token = create_jwt_token(user_id, email)
                     
                     return jsonify({
                         "success": True,
                         "message": "Kayıt başarılı! Yönlendiriliyorsunuz...",
+                        "token": token,
                         "redirect": url_for('management.dashboard')
                     })
                     
@@ -186,11 +226,9 @@ def register():
             print(f"Beklenmeyen hata: {e}")
             return jsonify({"success": False, "message": "Beklenmeyen bir hata oluştu!"}), 500
     
-    # GET isteği için giriş sayfasını göster (register formu login.html'de)
-    return redirect(url_for('management.login'))
+    return jsonify({"success": False, "message": "Geçersiz istek metodu"}), 405
 
-@management_bp.route('/login', methods=['GET', 'POST'])
-@management_bp.route('/login.html', methods=['GET', 'POST'])
+@management_bp.route('/login', methods=['POST'])
 def login():
     if request.method == 'POST':
         try:
@@ -198,6 +236,58 @@ def login():
             data = request.get_json() if request.is_json else request.form
             email = data.get('email', '').strip().lower()
             password = data.get('password', '')
+            
+            # Validate required fields
+            if not email or not password:
+                return jsonify({"success": False, "message": "Email ve şifre zorunludur!"}), 400
+            
+            # Get user from database
+            user = get_user_by_email(email)
+            if not user:
+                return jsonify({"success": False, "message": "Geçersiz email veya şifre!"}), 401
+            
+            # Check if account is active
+            if user.get('durum') != 'aktif':
+                return jsonify({"success": False, "message": "Hesabınız aktif değil. Lütfen yöneticinizle iletişime geçin."}), 403
+            
+            # Verify password
+            if not check_password(user.get('sifre'), password):
+                return jsonify({"success": False, "message": "Geçersiz email veya şifre!"}), 401
+            
+            # Update last login time
+            connection = get_db_connection()
+            try:
+                with connection.cursor() as cursor:
+                    sql = "UPDATE personel SET son_giris_tarihi = %s WHERE id = %s"
+                    cursor.execute(sql, (datetime.now(), user['id']))
+            except Exception as e:
+                print(f"Son giriş tarihi güncellenirken hata: {e}")
+            finally:
+                connection.close()
+            
+            # Set session variables
+            session['personel_logged_in'] = True
+            session['personel_id'] = user['id']
+            session['personel_email'] = user['email']
+            session['personel_adi'] = f"{user['ad']} {user['soyad']}"
+            session['personel_departman'] = user.get('departman', '')
+            session['personel_pozisyon'] = user.get('pozisyon', '')
+            
+            # Create JWT token
+            token = create_jwt_token(user['id'], user['email'])
+            
+            return jsonify({
+                "success": True,
+                "message": "Giriş başarılı! Yönlendiriliyorsunuz...",
+                "token": token,
+                "redirect": url_for('management.dashboard')
+            })
+            
+        except Exception as e:
+            print(f"Giriş sırasında hata: {e}")
+            return jsonify({"success": False, "message": "Giriş işlemi sırasında bir hata oluştu!"}), 500
+    
+    return jsonify({"success": False, "message": "Geçersiz istek metodu"}), 405
             
             # Required field validation
             if not email or not password:
