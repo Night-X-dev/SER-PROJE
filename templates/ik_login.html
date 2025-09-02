@@ -539,42 +539,6 @@
     <div id="toast"><span class="toast-icon"></span><span class="toast-message"></span></div>
 
     <script>
-        // Add CSRF token to all fetch requests
-        function getCSRFToken() {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]');
-            return csrfToken ? csrfToken.getAttribute('content') : '';
-        }
-        
-        // Set up fetch defaults
-        const originalFetch = window.fetch;
-        window.fetch = function(resource, options = {}) {
-            // Set default headers
-            options.headers = {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                ...options.headers
-            };
-            
-            // Add CSRF token if available
-            const csrfToken = getCSRFToken();
-            if (csrfToken) {
-                options.headers['X-CSRF-Token'] = csrfToken;
-            }
-            
-            // Add auth token if available
-            const authToken = localStorage.getItem('auth_token');
-            if (authToken) {
-                options.headers['Authorization'] = `Bearer ${authToken}`;
-            }
-            
-            // Convert body to JSON if it's an object and content type is JSON
-            if (options.body && typeof options.body === 'object' && 
-                (!options.headers['Content-Type'] || options.headers['Content-Type'].includes('application/json'))) {
-                options.body = JSON.stringify(options.body);
-            }
-            
-            return originalFetch(resource, options);
-        };
         document.addEventListener('DOMContentLoaded', function () {
             const loginToggle = document.getElementById('loginToggle');
             const registerToggle = document.getElementById('registerToggle');
@@ -583,6 +547,11 @@
             const formContainer = document.getElementById('formContainer');
             const passwordToggles = document.querySelectorAll('.password-toggle');
             const phoneInput = document.getElementById('registerPhone');
+            const registerFirstName = document.getElementById('registerFirstName');
+            const registerLastName = document.getElementById('registerLastName');
+            const registerEmail = document.getElementById('registerEmail');
+            const registerPassword = document.getElementById('registerPassword');
+            const registerPasswordConfirm = document.getElementById('registerPasswordConfirm');
             
             // Calculate initial form heights after the page loads
             let loginFormHeight = 0;
@@ -643,8 +612,8 @@
                     const submitButton = this.querySelector('button[type="submit"]');
                     if (submitButton) submitButton.disabled = true;
                     
-                    const email = this.querySelector('input[name="email"]').value.trim();
-                    const password = this.querySelector('input[name="password"]').value;
+                    const email = document.getElementById('loginEmail').value.trim();
+                    const password = document.getElementById('loginPassword').value;
                     
                     if (!email || !password) {
                         showToast('Lütfen tüm alanları doldurun', 'error');
@@ -656,12 +625,11 @@
                         const response = await fetch('/api/ik_login', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-Token': getCSRFToken()
+                                'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
                                 email: email,
-                                sifre: password
+                                password: password
                             })
                         });
                         
@@ -693,36 +661,42 @@
                     if (submitButton) submitButton.disabled = true;
                     
                     const formData = {
-                        ad: this.querySelector('input[name="ad"]').value.trim(),
-                        soyad: this.querySelector('input[name="soyad"]').value.trim(),
-                        email: this.querySelector('input[name="email"]').value.trim(),
-                        telefon: this.querySelector('input[name="telefon"]').value.replace(/\D/g, ''),
-                        sifre: this.querySelector('input[name="sifre"]').value,
-                        sifre_tekrar: this.querySelector('input[name="sifre_tekrar"]').value
+                        ad: registerFirstName.value.trim(),
+                        soyad: registerLastName.value.trim(),
+                        email: registerEmail.value.trim(),
+                        telefon: phoneInput.value.replace(/\D/g, ''),
+                        password: registerPassword.value,
+                        confirm_password: registerPasswordConfirm.value
                     };
                     
                     // Validation
-                    if (Object.values(formData).some(field => !field)) {
+                    if (!formData.ad || !formData.soyad || !formData.email || !formData.telefon || !formData.password || !formData.confirm_password) {
                         showToast('Lütfen tüm alanları doldurun', 'error');
                         if (submitButton) submitButton.disabled = false;
                         return;
                     }
                     
-                    if (formData.sifre !== formData.sifre_tekrar) {
+                    if (formData.password !== formData.confirm_password) {
                         showToast('Şifreler eşleşmiyor', 'error');
                         if (submitButton) submitButton.disabled = false;
                         return;
                     }
                     
-                    if (formData.sifre.length < 8) {
+                    if (formData.password.length < 8) {
                         showToast('Şifre en az 8 karakter olmalıdır', 'error');
                         if (submitButton) submitButton.disabled = false;
                         return;
                     }
                     
-                    if (!formData.telefon.match(/^5[0-9]{9}$/)) {
-                        showToast('Lütfen geçerli bir telefon numarası girin (5xxxxxxxxx)', 'error');
+                    if (!formData.telefon.match(/^\d{10}$/)) {
+                        showToast('Lütfen geçerli bir telefon numarası girin (10 haneli)', 'error');
                         if (submitButton) submitButton.disabled = false;
+                        return;
+                    }
+
+                    if (!formData.email.match(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)) {
+                        showToast('Lütfen geçerli bir e-posta formatı girin', 'error');
+                        if(submitButton) submitButton.disabled = false;
                         return;
                     }
                     
@@ -730,24 +704,17 @@
                         const response = await fetch('/api/ik_register', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-Token': getCSRFToken()
+                                'Content-Type': 'application/json'
                             },
-                            body: JSON.stringify({
-                                ad: formData.ad,
-                                soyad: formData.soyad,
-                                email: formData.email,
-                                telefon: formData.telefon,
-                                sifre: formData.sifre
-                            })
+                            body: JSON.stringify(formData)
                         });
                         
                         const data = await response.json();
                         
                         if (data.success) {
-                            showToast('Kayıt başarılı! Giriş yapabilirsiniz.', 'success');
+                            showToast('Kayıt başarılı! Hesabınız yönetici onayından sonra aktif olacaktır.', 'success');
                             // Switch to login form
-                            if (loginToggle) loginToggle.click();
+                            loginToggle.click();
                             // Reset form
                             this.reset();
                         } else {
@@ -764,27 +731,15 @@
             
             // Form toggle functionality
             if (loginToggle && registerToggle && loginForm && registerForm) {
-                function switchForm(activeForm, inactiveForm, direction) {
-                    inactiveForm.classList.remove('active');
-                    if (direction === 'left') {
-                        inactiveForm.classList.add('inactive-left');
-                    } else {
-                        inactiveForm.classList.add('inactive-right');
-                    }
-                    
-                    activeForm.classList.remove('inactive-left', 'inactive-right');
-                    activeForm.classList.add('active');
-                    
-                    updateFormHeights();
-                }
-                
                 loginToggle.addEventListener('click', function(e) {
                     e.preventDefault();
                     if (!this.classList.contains('active')) {
                         this.classList.add('active');
-                        if (registerToggle) registerToggle.classList.remove('active');
-                        if (loginForm) loginForm.classList.add('active');
-                        if (registerForm) registerForm.classList.remove('active');
+                        registerToggle.classList.remove('active');
+                        loginForm.classList.remove('inactive-left', 'inactive-right');
+                        loginForm.classList.add('active');
+                        registerForm.classList.remove('active');
+                        registerForm.classList.add('inactive-right');
                         updateFormHeights();
                     }
                 });
@@ -793,9 +748,11 @@
                     e.preventDefault();
                     if (!this.classList.contains('active')) {
                         this.classList.add('active');
-                        if (loginToggle) loginToggle.classList.remove('active');
-                        if (registerForm) registerForm.classList.add('active');
-                        if (loginForm) loginForm.classList.remove('active');
+                        loginToggle.classList.remove('active');
+                        registerForm.classList.remove('inactive-left', 'inactive-right');
+                        registerForm.classList.add('active');
+                        loginForm.classList.remove('active');
+                        loginForm.classList.add('inactive-left');
                         updateFormHeights();
                     }
                 });
