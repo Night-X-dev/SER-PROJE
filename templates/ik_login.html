@@ -591,10 +591,8 @@
                     messageSpan.textContent = message;
                     
                     if (type === 'success') {
-                        toastIcon.className = 'fas fa-check-circle';
                         toast.className = 'show success';
                     } else {
-                        toastIcon.className = 'fas fa-exclamation-circle';
                         toast.className = 'show error';
                     }
                     
@@ -671,31 +669,33 @@
                     
                     // Validation
                     if (!formData.ad || !formData.soyad || !formData.email || !formData.telefon || !formData.password || !formData.confirm_password) {
-                        showToast('Lütfen tüm alanları doldurun', 'error');
+                        showToast('Lütfen tüm alanları doldurun.', 'error');
                         if (submitButton) submitButton.disabled = false;
                         return;
                     }
                     
                     if (formData.password !== formData.confirm_password) {
-                        showToast('Şifreler eşleşmiyor', 'error');
+                        showToast('Şifreler eşleşmiyor.', 'error');
                         if (submitButton) submitButton.disabled = false;
                         return;
                     }
                     
                     if (formData.password.length < 8) {
-                        showToast('Şifre en az 8 karakter olmalıdır', 'error');
+                        showToast('Şifre en az 8 karakter olmalıdır.', 'error');
                         if (submitButton) submitButton.disabled = false;
                         return;
                     }
                     
+                    // Telefon numarası 10 haneli kontrolü
                     if (!formData.telefon.match(/^\d{10}$/)) {
-                        showToast('Lütfen geçerli bir telefon numarası girin (10 haneli)', 'error');
+                        showToast('Lütfen geçerli bir telefon numarası girin (10 haneli).', 'error');
                         if (submitButton) submitButton.disabled = false;
                         return;
                     }
 
+                    // E-posta formatı kontrolü
                     if (!formData.email.match(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)) {
-                        showToast('Lütfen geçerli bir e-posta formatı girin', 'error');
+                        showToast('Lütfen geçerli bir e-posta formatı girin.', 'error');
                         if(submitButton) submitButton.disabled = false;
                         return;
                     }
