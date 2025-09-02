@@ -4439,24 +4439,72 @@ def get_reports():
             connection.close()
 
 #------------------------------------------------------------------ İşçi Yönetimi Bölümü ------------------------------------------------------------------
-
 def get_ik_db_connection():
-    """Establishes and returns a database connection for IK module."""
+    """Establishes and returns a database connection."""
+    connection = None
     try:
-        # Load environment variables from .env file
-        load_dotenv()
-        
-        connection = mysql.connector.connect(
-            host=os.getenv('MYSQL_HOST_NEW'),
-            port=os.getenv('MYSQL_PORT_NEW'),
-            user=os.getenv('MYSQL_USER_NEW'),
-            password=os.getenv('MYSQL_PASSWORD_NEW'),
-            database=os.getenv('MYSQL_DATABASE_NEW')
+        # MYSQL_PUBLIC_URL ortam değişkenini kontrol et
+        public_url = os.getenv("MYSQL_PUBLIC_URL")
+        host = None
+        port = None
+        user = None
+        password = None
+        database = None
+
+        if public_url:
+            try:
+                # Eğer public URL varsa, onu ayrıştır
+                parsed_url = urllib.parse.urlparse(public_url)
+                host = parsed_url.hostname
+                port = parsed_url.port if parsed_url.port else 3306
+                user = parsed_url.username
+                password = parsed_url.password
+                database = parsed_url.path.lstrip('/')
+                print(f"DEBUG: Parsed public URL used. Host={host}, Port={port}, User={user}, DB={database}")
+            except Exception as url_parse_e:
+                print(f"ERROR: Could not parse MYSQL_PUBLIC_URL: {url_parse_e}. Falling back to individual environment variables.")
+
+        # Eğer public_url kullanılmadıysa veya ayrıştırma başarısız olduysa,
+        # ayrı ayrı ortam değişkenlerini kullanmayı dene
+        if not host: # Eğer host hala None ise (yani public_url başarılı olmadıysa)
+            host = os.getenv("MYSQL_HOST_NEW")
+            port = int(os.getenv("MYSQL_PORT_NEW", 3306)) # Port için varsayılan değer tutulabilir
+            user = os.getenv("MYSQL_USER_NEW")
+            password = os.getenv("MYSQL_PASSWORD_NEW")
+            database = os.getenv("MYSQL_DATABASE_NEW")
+            print(f"DEBUG: Individual environment variables used. Host={host}, Port={port}, User={user}, DB={database}")
+
+        # Gerekli tüm bağlantı bilgilerinin ayarlandığından emin ol
+        if not all([host, user, password, database]):
+            raise ValueError(
+                "Veritabanı bağlantı bilgileri (.env dosyasında veya ortam değişkenlerinde) eksik. "
+                "Lütfen MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE değişkenlerini ayarlayın."
+            )
+
+        connection = pymysql.connect(
+            host=host,
+            user=user,
+            password=password,
+            database=database,
+            port=port,
+            cursorclass=pymysql.cursors.DictCursor
         )
+        print("Successfully connected to MySQL database!")
         return connection
-    except mysql.connector.Error as e:
-        print(f"IK veritabanı bağlantı hatası: {e}")
-        raise
+    except pymysql.Error as e:
+        print(f"MySQL connection error: {e}")
+        if connection:
+            connection.close()
+        raise # Hatanın yukarıya iletilmesini sağla
+    except ValueError as e: # Özel ValueError'ı yakala
+        print(f"Configuration error: {e}")
+        raise # Hatanın yukarıya iletilmesini sağla
+    except Exception as e:
+        print(f"General connection error: {e}")
+        if connection:
+            connection.close()
+        raise # Hatanın yukarıya iletilmesini sağla
+
 
 @app.route('/api/ik_login', methods=['POST'])
 def ik_login():
