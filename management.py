@@ -110,6 +110,7 @@ def login():
                 cursor.execute(sql, (email,))
                 user = cursor.fetchone()
 
+            # ...existing code...
             if user and check_password_hash(user['sifre'], password):
                 # Session
                 session['user_id'] = user['id']
@@ -132,10 +133,10 @@ def login():
                         "success": True,
                         "message": "Giriş başarılı!",
                         "token": token,
-                        "redirect": url_for('management.dashboard')
+                        "redirect": url_for('index')  # index.html'e yönlendir
                     })
                 else:
-                    return redirect(url_for('management.dashboard'))
+                    return redirect(url_for('index'))  # index.html'e yönlendir
 
             else:
                 message = "Geçersiz e-posta veya şifre."
