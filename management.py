@@ -1,7 +1,11 @@
 from flask import Blueprint, render_template, redirect, url_for, session, flash, request, jsonify
 import pymysql.cursors
 import os
+import re
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
+from werkzeug.security import generate_password_hash, check_password_hash
+import jwt
 
 # Load environment variables
 load_dotenv()
@@ -61,6 +65,10 @@ def create_jwt_token(user_id, email):
 @management_bp.route('/')
 def index():
     return redirect(url_for('management.dashboard'))
+
+@management_bp.route('/login', methods=['GET'])
+def login():
+    return render_template('personel/login.html')
 
 @management_bp.route('/dashboard')
 def dashboard():
