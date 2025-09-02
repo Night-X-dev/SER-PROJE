@@ -41,7 +41,10 @@ def index():
 def login():
     if request.method == 'POST':
         try:
-            data = request.get_json()
+            data = request.get_json(silent=True)
+            if not data:  # fallback form data
+                data = request.form
+
             email = data.get('email')
             password = data.get('password')
 
@@ -50,14 +53,11 @@ def login():
 
             conn = get_db_connection()
             with conn.cursor() as cursor:
-                # 'personel' tablosunu ve 'email' sütununu kullan
                 sql = "SELECT * FROM personel WHERE email = %s"
                 cursor.execute(sql, (email,))
                 user = cursor.fetchone()
 
-                # Şifre kontrolü için 'sifre' sütununu kullan
-                if user and check_password_hash(user['sifre'], password):
-                    # JWT Token oluşturma
+                if user and 'sifre' in user and check_password_hash(user['sifre'], password):
                     secret_key = os.getenv("SECRET_KEY", "gizli_anahtar")
                     token_payload = {
                         'user_id': user['id'],
@@ -69,11 +69,16 @@ def login():
                 else:
                     return jsonify({"success": False, "message": "Geçersiz e-posta veya şifre."})
         except Exception as e:
+            # Hata detayını terminale yazdır
+            import traceback
+            traceback.print_exc()
             return jsonify({"success": False, "message": f"Bir hata oluştu: {str(e)}"}), 500
         finally:
             if 'conn' in locals():
                 conn.close()
+
     return render_template('personel/login.html')
+
 
 @management_bp.route('/register', methods=['POST'])
 def register():
