@@ -4439,14 +4439,6 @@ def get_reports():
             connection.close()
 
 #------------------------------------------------------------------ İşçi Yönetimi Bölümü ------------------------------------------------------------------
-import pymysql
-import os
-from dotenv import load_dotenv
-from flask import Flask, jsonify, request, session, redirect, url_for, render_template
-import bcrypt
-import re
-
-app = Flask(__name__)
 
 def get_ik_db_connection():
     """Establishes and returns a database connection for IK module."""
