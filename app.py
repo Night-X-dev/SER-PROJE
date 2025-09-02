@@ -4488,13 +4488,16 @@ def ik_login():
                 return jsonify({'success': False, 'message': 'Geçersiz e-posta veya şifre.'}), 401
 
             # Check if password is correct
-            # Explicitly encode the database password to bytes before comparison
             if not bcrypt.checkpw(password.encode('utf-8'), user['sifre'].encode('utf-8')):
                 return jsonify({'success': False, 'message': 'Geçersiz e-posta veya şifre.'}), 401
             
             # Check if account is active
             if user['durum'] == 'pasif':
-                 return jsonify({'success': False, 'message': 'Hesabınız henüz yönetici onayı bekliyor. Lütfen daha sonra tekrar deneyin.'}), 403
+                return jsonify({'success': False, 'message': 'Hesabınız henüz yönetici onayı bekliyor. Lütfen daha sonra tekrar deneyin.'}), 403
+
+            # Update the last login date in the database
+            cursor.execute("UPDATE personel SET son_giris_tarihi = NOW() WHERE id = %s", (user['id'],))
+            connection.commit()
 
             # Set session variables
             session['ik_user_id'] = user['id']
