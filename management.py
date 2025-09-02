@@ -23,11 +23,11 @@ management_bp = Blueprint(
 # Database connection
 def get_db_connection():
     return pymysql.connect(
-        host=os.getenv("MYSQL_HOST_NEW", "localhost"),
-        user=os.getenv("MYSQL_USER_NEW", "serik"),
-        password=os.getenv("MYSQL_PASSWORD_NEW", "Ser.1712_"),
-        database=os.getenv("MYSQL_DATABASE_NEW", "ser_ik"),
-        port=int(os.getenv("MYSQL_PORT_NEW", 3306)),
+        host=os.getenv("MYSQL_HOST_NEW"),
+        user=os.getenv("MYSQL_USER_NEW"),
+        password=os.getenv("MYSQL_PASSWORD_NEW"),
+        database=os.getenv("MYSQL_DATABASE_NEW"),
+        port=int(os.getenv("MYSQL_PORT_NEW")),
         cursorclass=pymysql.cursors.DictCursor,
         charset='utf8mb4',
         autocommit=True
