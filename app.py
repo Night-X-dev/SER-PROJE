@@ -4603,6 +4603,10 @@ def ik_check_auth():
         })
     return jsonify({'authenticated': False})
 
+@app.route('/ik_izin_talep.html')
+def ik_izin_talep_page():
+    """Directs /ik_izin_talep.html requests to the ik_izin_talep.html page."""
+    return render_template('ik_izin_talep.html')
 # IK Dashboard
 @app.route('/ik_dashboard')
 def ik_dashboard():
