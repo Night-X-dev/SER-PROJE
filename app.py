@@ -4439,7 +4439,6 @@ def get_reports():
             connection.close()
 
 #------------------------------------------------------------------ İşçi Yönetimi Bölümü ------------------------------------------------------------------
-
 def get_ik_db_connection():
     """Establishes and returns a database connection for IK module."""
     try:
@@ -4486,12 +4485,9 @@ def ik_login():
                 return jsonify({'success': False, 'message': 'Geçersiz e-posta veya şifre.'}), 401
 
             # Check if password is correct
-            try:
-                if not bcrypt.checkpw(password.encode('utf-8'), user['sifre'].encode('utf-8')):
-                    return jsonify({'success': False, 'message': 'Geçersiz e-posta veya şifre.'}), 401
-            except ValueError:
-                print(f"Password check failed for user {email}: Invalid hash format.")
-                return jsonify({'success': False, 'message': 'Şifre doğrulama hatası. Lütfen yönetici ile iletişime geçin.'}), 500
+            # Explicitly encode the database password to bytes before comparison
+            if not bcrypt.checkpw(password.encode('utf-8'), user['sifre'].encode('utf-8')):
+                return jsonify({'success': False, 'message': 'Geçersiz e-posta veya şifre.'}), 401
             
             # Check if account is active
             if user['durum'] == 'pasif':
