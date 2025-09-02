@@ -73,10 +73,11 @@ def login():
                     token = jwt.encode(token_payload, secret_key, algorithm='HS256')
                     session['jwt_token'] = token
                     
-                    # Return success response
+                    # Return success response with token
                     return jsonify({
                         "success": True, 
-                        "message": "Giriş başarılı!", 
+                        "message": "Giriş başarılı!",
+                        "token": token, 
                         "redirect": url_for('management.dashboard')
                     })
                 else:
