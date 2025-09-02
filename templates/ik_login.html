@@ -530,7 +530,7 @@
                     </div>
                 </div>
 
-                    <button type="submit" class="btn">Kayıt Ol</button>
+                    <button type="submit" class="btn" id="registerBtn">Kayıt Ol</button>
                 </form>
             </div>
         </div>
@@ -541,48 +541,73 @@
     <script>
         // Add CSRF token to all fetch requests
         function getCSRFToken() {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]');
-            return csrfToken ? csrfToken.getAttribute('content') : '';
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            return csrfMeta ? csrfMeta.getAttribute('content') : '';
         }
         
         // Set up fetch defaults
         const originalFetch = window.fetch;
         window.fetch = function(resource, options = {}) {
-            // Set default headers
-            options.headers = {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                ...options.headers
-            };
+            // Make sure headers exist
+            options.headers = options.headers || {};
             
-            // Add CSRF token if available
-            const csrfToken = getCSRFToken();
-            if (csrfToken) {
-                options.headers['X-CSRF-Token'] = csrfToken;
+            // For POST, PUT, PATCH, DELETE requests, set content-type
+            const method = (options.method || 'GET').toUpperCase();
+            if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+                if (!(options.body instanceof FormData)) {
+                    options.headers['Content-Type'] = 'application/json';
+                    if (options.body && typeof options.body === 'object') {
+                        options.body = JSON.stringify(options.body);
+                    }
+                }
+                
+                // Add CSRF token for non-GET requests
+                const csrfToken = getCSRFToken();
+                if (csrfToken) {
+                    options.headers['X-CSRFToken'] = csrfToken;
+                }
             }
             
-            // Add auth token if available
-            const authToken = localStorage.getItem('auth_token');
-            if (authToken) {
-                options.headers['Authorization'] = `Bearer ${authToken}`;
-            }
+            // Add credentials to include cookies
+            options.credentials = 'same-origin';
             
-            // Convert body to JSON if it's an object and content type is JSON
-            if (options.body && typeof options.body === 'object' && 
-                (!options.headers['Content-Type'] || options.headers['Content-Type'].includes('application/json'))) {
-                options.body = JSON.stringify(options.body);
-            }
-            
-            return originalFetch(resource, options);
+            return originalFetch.call(window, resource, options);
         };
+        
+        // Show toast message
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.querySelector('.toast-message');
+            const toastIcon = document.querySelector('.toast-icon');
+            
+            // Set message and icon based on type
+            toastMessage.textContent = message;
+            
+            if (type === 'success') {
+                toastIcon.className = 'fas fa-check-circle';
+                toast.className = 'show success';
+            } else {
+                toastIcon.className = 'fas fa-exclamation-circle';
+                toast.className = 'show error';
+            }
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                toast.className = toast.className.replace('show', '');
+            }, 5000);
+        }
+        
         document.addEventListener('DOMContentLoaded', function () {
             const loginToggle = document.getElementById('loginToggle');
             const registerToggle = document.getElementById('registerToggle');
             const loginForm = document.getElementById('loginForm');
             const registerForm = document.getElementById('registerForm');
             const formContainer = document.getElementById('formContainer');
-            const passwordToggles = document.querySelectorAll('.password-toggle');
-            const phoneInput = document.getElementById('registerPhone');
+            const loginBtn = document.getElementById('loginBtn');
+            const registerBtn = document.getElementById('registerBtn');
+            const toast = document.getElementById('toast');
+            const toastMessage = document.querySelector('.toast-message');
+            const toastIcon = document.querySelector('.toast-icon');
             
             // Calculate initial form heights after the page loads
             let loginFormHeight = loginForm.scrollHeight;
