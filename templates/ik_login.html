@@ -545,6 +545,14 @@
             return csrfMeta ? csrfMeta.getAttribute('content') : '';
         }
         
+        // API endpoints
+        const API_ENDPOINTS = {
+            LOGIN: '/api/ik_login',
+            REGISTER: '/api/ik_register',
+            LOGOUT: '/api/ik_logout',
+            CHECK_AUTH: '/api/ik_check_auth'
+        };
+        
         // Set up fetch defaults
         const originalFetch = window.fetch;
         window.fetch = function(resource, options = {}) {
@@ -598,6 +606,7 @@
         }
         
         document.addEventListener('DOMContentLoaded', function () {
+            // Form elements
             const loginToggle = document.getElementById('loginToggle');
             const registerToggle = document.getElementById('registerToggle');
             const loginForm = document.getElementById('loginForm');
@@ -608,6 +617,20 @@
             const toast = document.getElementById('toast');
             const toastMessage = document.querySelector('.toast-message');
             const toastIcon = document.querySelector('.toast-icon');
+            
+            // Input fields
+            const loginEmail = document.getElementById('loginEmail');
+            const loginPassword = document.getElementById('loginPassword');
+            const registerName = document.getElementById('registerFirstName');
+            const registerSurname = document.getElementById('registerLastName');
+            const registerEmail = document.getElementById('registerEmail');
+            const registerPhone = document.getElementById('registerPhone');
+            const registerPassword = document.getElementById('registerPassword');
+            const registerPasswordConfirm = document.getElementById('registerPasswordConfirm');
+            
+            // Password toggle buttons
+            const passwordToggles = document.querySelectorAll('.password-toggle');
+            const phoneInput = document.getElementById('registerPhone');
             
             // Calculate initial form heights after the page loads
             let loginFormHeight = loginForm.scrollHeight;
@@ -640,6 +663,13 @@
 
             // Set initial container height
             formContainer.style.height = `${loginFormHeight + 120}px`;
+            
+            // Check if user is already logged in
+            checkAuthStatus();
+            
+            // Form submission handlers
+            loginForm.addEventListener('submit', handleLogin);
+            registerForm.addEventListener('submit', handleRegister);
 
             function showToast(message, type = 'success') {
                 const toast = document.getElementById('toast');
@@ -742,8 +772,137 @@
                 // 10 haneli mi ve 5 ile mi başlıyor kontrol et
                 return digits.length === 10 && digits.startsWith('5');
             }
-
             
+            // Check authentication status
+            async function checkAuthStatus() {
+                try {
+                    const response = await fetch(API_ENDPOINTS.CHECK_AUTH);
+                    const data = await response.json();
+                    
+                    if (data.authenticated) {
+                        // Redirect to dashboard if already logged in
+                        window.location.href = '/ik_dashboard';
+                    }
+                } catch (error) {
+                    console.error('Authentication check failed:', error);
+                }
+            }
+            
+            // Handle login form submission
+            async function handleLogin(e) {
+                e.preventDefault();
+                
+                const email = loginEmail.value.trim();
+                const password = loginPassword.value;
+                
+                if (!email || !password) {
+                    showToast('Lütfen tüm alanları doldurun', 'error');
+                    return;
+                }
+                
+                try {
+                    loginBtn.disabled = true;
+                    loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Giriş Yapılıyor...';
+                    
+                    const response = await fetch(API_ENDPOINTS.LOGIN, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCSRFToken()
+                        },
+                        body: JSON.stringify({ email, password })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        showToast('Giriş başarılı! Yönlendiriliyorsunuz...', 'success');
+                        setTimeout(() => {
+                            window.location.href = '/ik_dashboard';
+                        }, 1500);
+                    } else {
+                        showToast(data.message || 'Giriş başarısız. Lütfen bilgilerinizi kontrol edin.', 'error');
+                    }
+                } catch (error) {
+                    console.error('Login error:', error);
+                    showToast('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
+                } finally {
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Giriş Yap';
+                }
+            }
+            
+            // Handle register form submission
+            async function handleRegister(e) {
+                e.preventDefault();
+                
+                const name = registerName.value.trim();
+                const surname = registerSurname.value.trim();
+                const email = registerEmail.value.trim();
+                const phone = registerPhone.value.trim();
+                const password = registerPassword.value;
+                const confirmPassword = registerPasswordConfirm.value;
+                
+                // Form validation
+                if (!name || !surname || !email || !phone || !password || !confirmPassword) {
+                    showToast('Lütfen tüm alanları doldurun', 'error');
+                    return;
+                }
+                
+                if (password !== confirmPassword) {
+                    showToast('Şifreler eşleşmiyor', 'error');
+                    return;
+                }
+                
+                if (password.length < 8) {
+                    showToast('Şifre en az 8 karakter uzunluğunda olmalıdır', 'error');
+                    return;
+                }
+                
+                if (!validatePhoneNumber(phone)) {
+                    showToast('Geçerli bir telefon numarası giriniz', 'error');
+                    return;
+                }
+                
+                try {
+                    registerBtn.disabled = true;
+                    registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Kayıt Olunuyor...';
+                    
+                    const response = await fetch(API_ENDPOINTS.REGISTER, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCSRFToken()
+                        },
+                        body: JSON.stringify({
+                            ad: name,
+                            soyad: surname,
+                            email: email,
+                            telefon: phone,
+                            password: password,
+                            confirm_password: confirmPassword
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        showToast(data.message || 'Kayıt başarılı! Giriş yapabilirsiniz.', 'success');
+                        // Switch to login form after successful registration
+                        loginToggle.click();
+                        // Clear form
+                        registerForm.reset();
+                    } else {
+                        showToast(data.message || 'Kayıt sırasında bir hata oluştu.', 'error');
+                    }
+                } catch (error) {
+                    console.error('Registration error:', error);
+                    showToast('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
+                } finally {
+                    registerBtn.disabled = false;
+                    registerBtn.textContent = 'Kayıt Ol';
+                }
+            }
         });
     </script>
 </body>

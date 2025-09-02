@@ -4598,3 +4598,27 @@ def ik_check_auth():
         })
     return jsonify({'authenticated': False})
 
+# IK Dashboard
+@app.route('/ik_dashboard')
+def ik_dashboard():
+    # Check if user is logged in
+    if 'ik_user_id' not in session:
+        return redirect(url_for('ik_login_page'))
+    
+    # Get user info from session
+    user_info = {
+        'id': session.get('ik_user_id'),
+        'email': session.get('ik_email'),
+        'ad_soyad': session.get('ik_ad', '')
+    }
+    
+    return render_template('ik_dashboard.html', user=user_info)
+
+# IK Login Page
+@app.route('/ik_giris')
+def ik_login_page():
+    # If user is already logged in, redirect to dashboard
+    if 'ik_user_id' in session:
+        return redirect(url_for('ik_dashboard'))
+    return render_template('ik_login.html')
+
