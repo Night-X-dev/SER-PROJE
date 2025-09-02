@@ -4445,17 +4445,22 @@ def get_ik_db_connection():
         # Load environment variables from .env file
         load_dotenv()
         
+        # Log the connection parameters for debugging
+        # Using old variables as per user request
+        print(f"DEBUG: Trying to connect to MySQL with old variables. host: {os.getenv('MYSQL_HOST')}, user: {os.getenv('MYSQL_USER')}, db: {os.getenv('MYSQL_DATABASE')}")
+        
         connection = mysql.connector.connect(
-            host=os.getenv('MYSQL_HOST_NEW'),
-            port=os.getenv('MYSQL_PORT_NEW'),
-            user=os.getenv('MYSQL_USER_NEW'),
-            password=os.getenv('MYSQL_PASSWORD_NEW'),
-            database=os.getenv('MYSQL_DATABASE_NEW')
+            host=os.getenv('MYSQL_HOST'),
+            port=os.getenv('MYSQL_PORT'),
+            user=os.getenv('MYSQL_USER'),
+            password=os.getenv('MYSQL_PASSWORD'),
+            database=os.getenv('MYSQL_DATABASE')
         )
         print("Successfully connected to MySQL database!")
         return connection
     except mysql.connector.Error as e:
         print(f"IK veritabanı bağlantı hatası: {e}")
+        # Re-raise the exception to be caught by the calling function's try-except block
         raise
 
 @app.route('/api/ik_login', methods=['POST'])
@@ -4480,11 +4485,9 @@ def ik_login():
 
             # Check if password is correct
             try:
-                # bcrypt, MySQL ile de uyumludur
                 if not bcrypt.checkpw(password.encode('utf-8'), user['sifre'].encode('utf-8')):
                     return jsonify({'success': False, 'message': 'Geçersiz e-posta veya şifre.'}), 401
             except ValueError:
-                # This could happen if the hash format in the database is incorrect or not a bcrypt hash.
                 print(f"Password check failed for user {email}: Invalid hash format.")
                 return jsonify({'success': False, 'message': 'Şifre doğrulama hatası. Lütfen yönetici ile iletişime geçin.'}), 500
             
@@ -4502,9 +4505,8 @@ def ik_login():
 
     except Exception as e:
         print(f"Error in ik_login: {str(e)}")
-        if connection:
-            connection.rollback()
-        return jsonify({'success': False, 'message': 'Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.'}), 500
+        # Return the specific error message to the client for debugging
+        return jsonify({'success': False, 'message': f'Giriş sırasında bir hata oluştu: {str(e)}'}), 500
     finally:
         if connection:
             connection.close()
