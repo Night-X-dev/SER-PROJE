@@ -585,28 +585,25 @@
             const phoneInput = document.getElementById('registerPhone');
             
             // Calculate initial form heights after the page loads
-            let loginFormHeight = loginForm.scrollHeight;
-            let registerFormHeight = registerForm.scrollHeight;
+            let loginFormHeight = 0;
+            let registerFormHeight = 0;
             
             function updateFormHeights() {
                 // To get correct heights, ensure forms are visible but not affecting layout
-                loginForm.style.position = 'absolute';
                 loginForm.style.visibility = 'hidden';
                 loginForm.style.display = 'block';
-                registerForm.style.position = 'absolute';
+                loginFormHeight = loginForm.offsetHeight;
+                loginForm.style.visibility = '';
+                loginForm.style.display = '';
+                
                 registerForm.style.visibility = 'hidden';
                 registerForm.style.display = 'block';
-                
-                loginFormHeight = loginForm.scrollHeight;
-                registerFormHeight = registerForm.scrollHeight;
-                
-                // Reset form styles
-                loginForm.style.position = '';
-                loginForm.style.visibility = '';
-                registerForm.style.position = '';
+                registerFormHeight = registerForm.offsetHeight;
                 registerForm.style.visibility = '';
                 registerForm.style.display = '';
-                loginForm.style.display = 'block'; // Make sure the active form is displayed
+                
+                // Reset form styles
+                formContainer.style.height = `${Math.max(loginFormHeight, registerFormHeight) + 120}px`;
             }
 
             // Call it initially and on window resize
@@ -614,111 +611,236 @@
             window.addEventListener('resize', updateFormHeights);
 
             // Set initial container height
-            formContainer.style.height = `${loginFormHeight + 120}px`;
+            formContainer.style.height = `${Math.max(loginFormHeight, registerFormHeight) + 120}px`;
 
             function showToast(message, type = 'success') {
                 const toast = document.getElementById('toast');
                 const messageSpan = toast.querySelector('.toast-message');
-                messageSpan.textContent = message;
-                toast.className = '';
-                toast.classList.add(type, 'show');
-                setTimeout(() => {
-                    toast.classList.remove('show');
-                }, 3000);
+                const toastIcon = toast.querySelector('.toast-icon');
+                
+                if (toast && messageSpan && toastIcon) {
+                    messageSpan.textContent = message;
+                    
+                    if (type === 'success') {
+                        toastIcon.className = 'fas fa-check-circle';
+                        toast.className = 'show success';
+                    } else {
+                        toastIcon.className = 'fas fa-exclamation-circle';
+                        toast.className = 'show error';
+                    }
+                    
+                    setTimeout(() => {
+                        toast.className = toast.className.replace('show', '');
+                    }, 5000);
+                }
             }
 
-            function switchForm(activeForm, inactiveForm, direction) {
-                // Mevcut aktif formu gizle ve yeni formu göster
-                inactiveForm.classList.remove('active');
-                if (direction === 'left') {
-                    inactiveForm.classList.add('inactive-left');
-                } else {
-                    inactiveForm.classList.add('inactive-right');
+            // Handle login form submission
+            if (loginForm) {
+                loginForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const submitButton = this.querySelector('button[type="submit"]');
+                    if (submitButton) submitButton.disabled = true;
+                    
+                    const email = this.querySelector('input[name="email"]').value.trim();
+                    const password = this.querySelector('input[name="password"]').value;
+                    
+                    if (!email || !password) {
+                        showToast('Lütfen tüm alanları doldurun', 'error');
+                        if (submitButton) submitButton.disabled = false;
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch('/api/ik_login', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': getCSRFToken()
+                            },
+                            body: JSON.stringify({
+                                email: email,
+                                sifre: password
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            showToast('Giriş başarılı! Yönlendiriliyorsunuz...', 'success');
+                            setTimeout(() => {
+                                window.location.href = '/ik_dashboard';
+                            }, 1500);
+                        } else {
+                            showToast(data.message || 'Giriş başarısız. Lütfen bilgilerinizi kontrol edin.', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Login error:', error);
+                        showToast('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
+                    } finally {
+                        if (submitButton) submitButton.disabled = false;
+                    }
+                });
+            }
+            
+            // Handle register form submission
+            if (registerForm) {
+                registerForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const submitButton = this.querySelector('button[type="submit"]');
+                    if (submitButton) submitButton.disabled = true;
+                    
+                    const formData = {
+                        ad: this.querySelector('input[name="ad"]').value.trim(),
+                        soyad: this.querySelector('input[name="soyad"]').value.trim(),
+                        email: this.querySelector('input[name="email"]').value.trim(),
+                        telefon: this.querySelector('input[name="telefon"]').value.replace(/\D/g, ''),
+                        sifre: this.querySelector('input[name="sifre"]').value,
+                        sifre_tekrar: this.querySelector('input[name="sifre_tekrar"]').value
+                    };
+                    
+                    // Validation
+                    if (Object.values(formData).some(field => !field)) {
+                        showToast('Lütfen tüm alanları doldurun', 'error');
+                        if (submitButton) submitButton.disabled = false;
+                        return;
+                    }
+                    
+                    if (formData.sifre !== formData.sifre_tekrar) {
+                        showToast('Şifreler eşleşmiyor', 'error');
+                        if (submitButton) submitButton.disabled = false;
+                        return;
+                    }
+                    
+                    if (formData.sifre.length < 8) {
+                        showToast('Şifre en az 8 karakter olmalıdır', 'error');
+                        if (submitButton) submitButton.disabled = false;
+                        return;
+                    }
+                    
+                    if (!formData.telefon.match(/^5[0-9]{9}$/)) {
+                        showToast('Lütfen geçerli bir telefon numarası girin (5xxxxxxxxx)', 'error');
+                        if (submitButton) submitButton.disabled = false;
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch('/api/ik_register', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': getCSRFToken()
+                            },
+                            body: JSON.stringify({
+                                ad: formData.ad,
+                                soyad: formData.soyad,
+                                email: formData.email,
+                                telefon: formData.telefon,
+                                sifre: formData.sifre
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            showToast('Kayıt başarılı! Giriş yapabilirsiniz.', 'success');
+                            // Switch to login form
+                            if (loginToggle) loginToggle.click();
+                            // Reset form
+                            this.reset();
+                        } else {
+                            showToast(data.message || 'Kayıt sırasında bir hata oluştu', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Registration error:', error);
+                        showToast('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.', 'error');
+                    } finally {
+                        if (submitButton) submitButton.disabled = false;
+                    }
+                });
+            }
+            
+            // Form toggle functionality
+            if (loginToggle && registerToggle && loginForm && registerForm) {
+                function switchForm(activeForm, inactiveForm, direction) {
+                    inactiveForm.classList.remove('active');
+                    if (direction === 'left') {
+                        inactiveForm.classList.add('inactive-left');
+                    } else {
+                        inactiveForm.classList.add('inactive-right');
+                    }
+                    
+                    activeForm.classList.remove('inactive-left', 'inactive-right');
+                    activeForm.classList.add('active');
+                    
+                    updateFormHeights();
                 }
                 
-                // Form Container yüksekliğini güncelle
-                const newHeight = activeForm === loginForm ? loginFormHeight : registerFormHeight;
-                formContainer.style.height = `${newHeight + 120}px`;
-
-                // Yeni formu aktif hale getir
-                activeForm.classList.remove('inactive-left', 'inactive-right');
-                activeForm.classList.add('active');
-
-                // Animasyon bittikten sonra inactive sınıflarını kaldır
-                setTimeout(() => {
-                    inactiveForm.classList.remove('inactive-left', 'inactive-right');
-                }, 500);
+                loginToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (!this.classList.contains('active')) {
+                        this.classList.add('active');
+                        if (registerToggle) registerToggle.classList.remove('active');
+                        if (loginForm) loginForm.classList.add('active');
+                        if (registerForm) registerForm.classList.remove('active');
+                        updateFormHeights();
+                    }
+                });
+                
+                registerToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (!this.classList.contains('active')) {
+                        this.classList.add('active');
+                        if (loginToggle) loginToggle.classList.remove('active');
+                        if (registerForm) registerForm.classList.add('active');
+                        if (loginForm) loginForm.classList.remove('active');
+                        updateFormHeights();
+                    }
+                });
             }
-
-            loginToggle.addEventListener('click', function () {
-                if (!loginToggle.classList.contains('active')) {
-                    loginToggle.classList.add('active');
-                    registerToggle.classList.remove('active');
-                    switchForm(loginForm, registerForm, 'right');
-                }
-            });
-
-            registerToggle.addEventListener('click', function () {
-                if (!registerToggle.classList.contains('active')) {
-                    registerToggle.classList.add('active');
-                    loginToggle.classList.remove('active');
-                    switchForm(registerForm, loginForm, 'left');
-                }
-            });
-
-            // Şifre gösterme/gizleme
+            
+            // Initialize form heights
+            updateFormHeights();
+            window.addEventListener('resize', updateFormHeights);
+            
+            // Telefon numarası formatlama
+            if (phoneInput) {
+                phoneInput.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, '');
+                    let formattedValue = '';
+                    
+                    if (value.length > 0) {
+                        formattedValue = value.substring(0, 3);
+                    }
+                    if (value.length > 3) {
+                        formattedValue += ' ' + value.substring(3, 6);
+                    }
+                    if (value.length > 6) {
+                        formattedValue += ' ' + value.substring(6, 8);
+                    }
+                    if (value.length > 8) {
+                        formattedValue += ' ' + value.substring(8, 10);
+                    }
+                    
+                    e.target.value = formattedValue;
+                });
+            }
+            
+            // Toggle password visibility
             passwordToggles.forEach(toggle => {
-                toggle.addEventListener('click', function () {
-                    const targetId = this.dataset.target;
-                    const passwordInput = document.getElementById(targetId);
-                    if (passwordInput.type === 'password') {
-                        passwordInput.type = 'text';
-                        this.classList.remove('fa-eye');
-                        this.classList.add('fa-eye-slash');
-                    } else {
-                        passwordInput.type = 'password';
-                        this.classList.remove('fa-eye-slash');
-                        this.classList.add('fa-eye');
+                toggle.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-target');
+                    const targetInput = document.getElementById(targetId);
+                    if (targetInput) {
+                        const type = targetInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                        targetInput.setAttribute('type', type);
+                        this.classList.toggle('fa-eye');
+                        this.classList.toggle('fa-eye-slash');
                     }
                 });
             });
-            
-            // Telefon numarası formatlama
-            phoneInput.addEventListener('input', function (e) {
-                let value = e.target.value.replace(/\D/g, '');
-                
-                // Sadece rakamları al ve 10 haneyle sınırla
-                if (value.length > 10) {
-                    value = value.substring(0, 10);
-                }
-                
-                // Formatı uygula: (5xx) xxx xx xx
-                let formattedValue = '';
-                if (value.length > 0) {
-                    formattedValue = '(' + value.substring(0, 3) + ')';
-                }
-                if (value.length > 3) {
-                    formattedValue += ' ' + value.substring(3, 6);
-                }
-                if (value.length > 6) {
-                    formattedValue += ' ' + value.substring(6, 8);
-                }
-                if (value.length > 8) {
-                    formattedValue += ' ' + value.substring(8, 10);
-                }
-                
-                e.target.value = formattedValue;
-            });
-            
-            // Telefon numarası doğrulama
-            function validatePhoneNumber(phone) {
-                // Tüm boşlukları ve parantezleri kaldır
-                const digits = phone.replace(/\D/g, '');
-                // 10 haneli mi ve 5 ile mi başlıyor kontrol et
-                return digits.length === 10 && digits.startsWith('5');
-            }
-
-            
         });
     </script>
 </body>
