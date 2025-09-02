@@ -491,40 +491,55 @@
         }
 
         /* Toast bildirimi */
-        .toast-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
-        }
-
-        .toast {
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
-            padding: 15px;
+        #toast {
+            visibility: hidden;
             display: flex;
             align-items: center;
-            gap: 12px;
-            animation: slideIn 0.3s ease-out;
+            gap: 10px;
+            min-width: 250px;
+            max-width: 90vw;
+            background-color: #1a56db;
+            color: white;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 9999;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        
+        #toast.error {
+            background-color: #e53e3e;
         }
 
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+        }
+        
         .toast-icon {
-            font-size: 24px;
-            color: var(--danger);
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            font-size: 20px;
+            color: white;
         }
-
-        .toast-message {
-            flex: 1;
-            font-weight: 500;
+        
+        #toast.success .toast-icon::before {
+            content: "\f058";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
         }
-
-        .toast-close {
-            background: none;
-            border: none;
-            font-size: 18px;
-            cursor: pointer;
-            color: var(--secondary);
+        
+        #toast.error .toast-icon::before {
+            content: "\f057";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
         }
 
         @keyframes slideIn {
@@ -992,6 +1007,8 @@
         </div>
     </div>
 
+    <div id="toast"><span class="toast-icon"></span><span class="toast-message"></span></div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -1040,7 +1057,7 @@
                     
                     // Tarih karşılaştırması
                     if (endDate < startDate) {
-                        showToast("Bitiş tarihi, başlangıç tarihinden önce olamaz!");
+                        showToast('Bitiş tarihi, başlangıç tarihinden önce olamaz!', 'error');
                         endDateInput.value = "";
                         durationDisplay.textContent = '0 Gün';
                         return;
@@ -1059,39 +1076,24 @@
             }
             
             // Toast bildirimi göster
-            function showToast(message) {
-                // Toast container oluştur veya bul
-                let toastContainer = document.querySelector('.toast-container');
-                if (!toastContainer) {
-                    toastContainer = document.createElement('div');
-                    toastContainer.className = 'toast-container';
-                    document.body.appendChild(toastContainer);
+            function showToast(message, type = 'success') {
+                const toast = document.getElementById('toast');
+                const messageSpan = toast.querySelector('.toast-message');
+                const toastIcon = toast.querySelector('.toast-icon');
+                
+                if (toast && messageSpan && toastIcon) {
+                    messageSpan.textContent = message;
+                    
+                    if (type === 'success') {
+                        toast.className = 'show success';
+                    } else {
+                        toast.className = 'show error';
+                    }
+                    
+                    setTimeout(() => {
+                        toast.className = toast.className.replace('show', '');
+                    }, 5000);
                 }
-                
-                // Toast oluştur
-                const toast = document.createElement('div');
-                toast.className = 'toast';
-                toast.innerHTML = `
-                    <div class="toast-icon">
-                        <i class="fas fa-exclamation-circle"></i>
-                    </div>
-                    <div class="toast-message">${message}</div>
-                    <button class="toast-close">
-                        <i class="fas fa-times"></i>
-                    </button>
-                `;
-                
-                toastContainer.appendChild(toast);
-                
-                // 5 saniye sonra toast'ı kaldır
-                setTimeout(() => {
-                    toast.remove();
-                }, 5000);
-                
-                // Kapat butonuna tıklama
-                toast.querySelector('.toast-close').addEventListener('click', () => {
-                    toast.remove();
-                });
             }
             
             startDateInput.addEventListener('change', function() {
@@ -1130,7 +1132,7 @@
                 const form = document.getElementById('leaveRequestForm');
                 if (form.checkValidity()) {
                     // Burada form verilerini sunucuya gönderme işlemi yapılacak
-                    alert('İzin talebiniz başarıyla gönderildi!');
+                      showToast('İzin talebiniz başarıyla gönderildi!', 'success');
                     
                     // Modal'ı kapat
                     const modal = bootstrap.Modal.getInstance(document.getElementById('newLeaveRequestModal'));
