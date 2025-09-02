@@ -164,7 +164,7 @@ def login():
 def dashboard():
     if not session.get('logged_in'):
         return redirect(url_for('management.login'))
-    return render_template('personel/dashboard.html', 
+    return render_template('personel/login.html', 
                            user_id=session.get('user_id'),
                            email=session.get('email'))
 
