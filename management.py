@@ -135,6 +135,7 @@ def login():
                         "redirect": url_for('management.dashboard')
                     })
                 else:
+                    # Başarılı girişte dashboard'a (index.html'e) yönlendirme
                     return redirect(url_for('management.dashboard'))
 
             else:
@@ -164,7 +165,7 @@ def login():
 def dashboard():
     if not session.get('logged_in'):
         return redirect(url_for('management.login'))
-    # Başarılı girişte açılacak sayfa
+    # Bu rota, başarılı girişten sonra templates/personel/index.html dosyasını açar.
     return render_template('index.html', 
                            user_id=session.get('user_id'),
                            email=session.get('email'))
