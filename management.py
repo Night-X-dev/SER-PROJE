@@ -40,6 +40,155 @@ def get_db_connection():
         autocommit=True
     )
 
+# Utility functions
+def validate_email(email):
+    """Email adresi doğrulama"""
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, email) is not None
+
+def validate_phone(phone):
+    """Telefon numarası doğrulama (05XX XXX XX XX formatında)"""
+    phone = ''.join(filter(str.isdigit, phone))
+    return len(phone) == 10 and phone.startswith('5')
+
+def hash_password(password):
+    """Şifre hashleme"""
+    return generate_password_hash(password)
+
+def check_password(hashed_password, password):
+    """Hash'li şifreyi doğrulama"""
+    return check_password_hash(hashed_password, password)
+
+def create_jwt_token(user_id, email):
+    """JWT token oluşturma"""
+    payload = {
+        'user_id': user_id,
+        'email': email,
+        'exp': datetime.utcnow() + timedelta(seconds=JWT_EXPIRATION)
+    }
+    return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+def get_user_by_email(email):
+    """Email ile kullanıcı bilgilerini getir"""
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            sql = "SELECT * FROM personel WHERE email = %s"
+            cursor.execute(sql, (email,))
+            return cursor.fetchone()
+    except Exception as e:
+        print(f"Kullanıcı getirilirken hata oluştu: {e}")
+        return None
+    finally:
+        connection.close()
+
+# Login required decorator
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'personel_logged_in' not in session:
+            return redirect(url_for('management.login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Routes
+@management_bp.route('/')
+def index():
+    if 'personel_logged_in' in session:
+        return redirect(url_for('management.dashboard'))
+    return redirect(url_for('management.login'))
+
+@management_bp.route('/register', methods=['GET', 'POST'])
+@management_bp.route('/register.html', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        try:
+            data = request.get_json() if request.is_json else request.form
+            
+            # Form verilerini al
+            ad = data.get('ad', '').strip()
+            soyad = data.get('soyad', '').strip()
+            email = data.get('email', '').strip().lower()
+            telefon = data.get('telefon', '').strip()
+            sifre = data.get('password', '')
+            sifre_tekrar = data.get('password_confirm', '')
+            
+            # Zorunlu alan kontrolü
+            if not all([ad, soyad, email, sifre, sifre_tekrar]):
+                return jsonify({"success": False, "message": "Tüm alanları doldurunuz!"}), 400
+                
+            # Email format kontrolü
+            if not validate_email(email):
+                return jsonify({"success": False, "message": "Geçerli bir email adresi giriniz!"}), 400
+                
+            # Şifre eşleşme kontrolü
+            if sifre != sifre_tekrar:
+                return jsonify({"success": False, "message": "Şifreler eşleşmiyor!"}), 400
+                
+            # Şifre güvenlik kontrolü
+            if len(sifre) < 8:
+                return jsonify({"success": False, "message": "Şifre en az 8 karakter olmalıdır!"}), 400
+                
+            # Telefon numarası kontrolü
+            if telefon and not validate_phone(telefon):
+                return jsonify({"success": False, "message": "Geçerli bir telefon numarası giriniz! (05XX XXX XX XX)"}), 400
+            
+            # Telefon numarasını temizle (sadece rakamlar)
+            telefon = ''.join(filter(str.isdigit, telefon))
+            
+            # Email kontrolü
+            if get_user_by_email(email):
+                return jsonify({"success": False, "message": "Bu email adresi zaten kayıtlı!"}), 400
+                
+            # Veritabanına kaydet
+            connection = get_db_connection()
+            try:
+                with connection.cursor() as cursor:
+                    sql = """
+                        INSERT INTO personel (ad, soyad, email, telefon, sifre, departman, pozisyon, ise_baslama_tarihi, durum)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """
+                    cursor.execute(sql, (
+                        ad,
+                        soyad,
+                        email,
+                        telefon,
+                        hash_password(sifre),
+                        'Genel',  # Varsayılan departman
+                        'Personel',  # Varsayılan pozisyon
+                        datetime.now().date(),  # İşe başlama tarihi
+                        'aktif'  # Varsayılan durum
+                    ))
+                    
+                    # Yeni oluşturulan kullanıcıyı al
+                    user_id = cursor.lastrowid
+                    
+                    # Kullanıcıyı oturum açık olarak işaretle
+                    session['personel_logged_in'] = True
+                    session['personel_id'] = user_id
+                    session['personel_email'] = email
+                    session['personel_adi'] = f"{ad} {soyad}"
+                    
+                    return jsonify({
+                        "success": True,
+                        "message": "Kayıt başarılı! Yönlendiriliyorsunuz...",
+                        "redirect": url_for('management.dashboard')
+                    })
+                    
+            except Exception as e:
+                print(f"Kayıt sırasında hata oluştu: {e}")
+                return jsonify({"success": False, "message": "Kayıt sırasında bir hata oluştu!"}), 500
+                
+            finally:
+                connection.close()
+                
+        except Exception as e:
+            print(f"Beklenmeyen hata: {e}")
+            return jsonify({"success": False, "message": "Beklenmeyen bir hata oluştu!"}), 500
+    
+    # GET isteği için giriş sayfasını göster (register formu login.html'de)
+    return redirect(url_for('management.login'))
+
 @management_bp.route('/login', methods=['GET', 'POST'])
 @management_bp.route('/login.html', methods=['GET', 'POST'])
 def login():
@@ -124,7 +273,21 @@ def login():
             flash(error_message, 'danger')
             return redirect(url_for('management.login'))
     
+    # For GET request, check if user is already logged in
+    if 'personel_logged_in' in session:
+        return redirect(url_for('management.dashboard'))
+    
+    # Show login page for non-logged in users
+    return render_template('personel/login.html')
+
+@management_bp.route('/logout')
+def logout():
+    session.pop('personel_logged_in', None)
+    session.pop('personel_email', None)
+    return redirect(url_for('management.login'))
+
 @management_bp.route('/dashboard')
+@login_required
 def dashboard():
     return render_template('personel/dashboard.html')
 
