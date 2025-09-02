@@ -4439,3 +4439,162 @@ def get_reports():
             connection.close()
 
 #------------------------------------------------------------------ İşçi Yönetimi Bölümü ------------------------------------------------------------------
+
+def get_ik_db_connection():
+    """Establishes and returns a database connection for IK module."""
+    try:
+        # Use the same connection details as the main database
+        return get_db_connection()
+    except Exception as e:
+        print(f"IK veritabanı bağlantı hatası: {e}")
+        raise
+
+# IK (İnsan Kaynakları) Login API
+@app.route('/api/ik_login', methods=['POST'])
+def ik_login():
+    connection = None
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+
+        if not email or not password:
+            return jsonify({'success': False, 'message': 'E-posta ve şifre zorunludur'}), 400
+
+        connection = get_ik_db_connection()
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute(
+                """
+                SELECT id, ad, soyad, email, sifre, durum 
+                FROM personel 
+                WHERE email = %s
+                """, 
+                (email,)
+            )
+            user = cursor.fetchone()
+
+            if not user:
+                return jsonify({'success': False, 'message': 'Geçersiz e-posta veya şifre'}), 401
+
+            if user['durum'] != 'aktif':
+                return jsonify({'success': False, 'message': 'Hesabınız aktif değil. Lütfen yöneticinizle iletişime geçin.'}), 403
+
+            if bcrypt.checkpw(password.encode('utf-8'), user['sifre'].encode('utf-8')):
+                # Update last login time
+                cursor.execute(
+                    "UPDATE personel SET son_giris_tarihi = NOW() WHERE id = %s",
+                    (user['id'],)
+                )
+                connection.commit()
+
+                # Create session
+                session['ik_user_id'] = user['id']
+                session['ik_email'] = user['email']
+                session['ik_ad'] = f"{user['ad']} {user['soyad']}"
+                session['ik_soyad'] = user['soyad']
+                
+                return jsonify({
+                    'success': True, 
+                    'message': 'Giriş başarılı',
+                    'user': {
+                        'id': user['id'],
+                        'ad': user['ad'],
+                        'soyad': user['soyad'],
+                        'email': user['email']
+                    }
+                })
+            else:
+                return jsonify({'success': False, 'message': 'Geçersiz e-posta veya şifre'}), 401
+
+    except Exception as e:
+        print(f"Error in ik_login: {str(e)}")
+        return jsonify({'success': False, 'message': 'Bir hata oluştu. Lütfen daha sonra tekrar deneyin.'}), 500
+    finally:
+        if connection:
+            connection.close()
+
+# IK (İnsan Kaynakları) Register API
+@app.route('/api/ik_register', methods=['POST'])
+def ik_register():
+    connection = None
+    try:
+        data = request.get_json()
+        
+        required_fields = ['ad', 'soyad', 'email', 'password', 'confirm_password', 'telefon']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'message': f'{field} alanı zorunludur'}), 400
+        
+        if data['password'] != data['confirm_password']:
+            return jsonify({'success': False, 'message': 'Şifreler eşleşmiyor'}), 400
+        
+        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', data['email']):
+            return jsonify({'success': False, 'message': 'Geçersiz e-posta formatı'}), 400
+        
+        if not re.match(r'^\+?[0-9\s-]{10,15}$', data['telefon']):
+            return jsonify({'success': False, 'message': 'Geçersiz telefon numarası formatı'}), 400
+        
+        hashed_password = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt())
+        
+        connection = get_ik_db_connection()
+        with connection.cursor() as cursor:
+            # Check if email already exists
+            cursor.execute("SELECT id FROM personel WHERE email = %s", (data['email'],))
+            if cursor.fetchone():
+                return jsonify({'success': False, 'message': 'Bu e-posta adresi zaten kullanılıyor'}), 409
+            
+            # Insert new user
+            cursor.execute(
+                """
+                INSERT INTO personel 
+                (ad, soyad, email, sifre, telefon, durum) 
+                VALUES (%s, %s, %s, %s, %s, 'pasif')
+                """,
+                (
+                    data['ad'],
+                    data['soyad'],
+                    data['email'],
+                    hashed_password.decode('utf-8'),
+                    data['telefon']
+                )
+            )
+            connection.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Kayıt başarılı. Hesabınız yönetici onayından sonra aktif olacaktır.'
+            })
+            
+    except Exception as e:
+        print(f"Error in ik_register: {str(e)}")
+        if connection:
+            connection.rollback()
+        return jsonify({'success': False, 'message': 'Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.'}), 500
+    finally:
+        if connection:
+            connection.close()
+
+# IK (İnsan Kaynakları) Logout API
+@app.route('/api/ik_logout', methods=['POST'])
+def ik_logout():
+    session.pop('ik_user_id', None)
+    session.pop('ik_email', None)
+    session.pop('ik_ad', None)
+    session.pop('ik_soyad', None)
+    return jsonify({'success': True, 'message': 'Çıkış başarılı'})
+
+# IK (İnsan Kaynakları) Check Authentication API
+@app.route('/api/ik_check_auth', methods=['GET'])
+def ik_check_auth():
+    if 'ik_user_id' in session:
+        return jsonify({
+            'authenticated': True,
+            'user': {
+                'id': session.get('ik_user_id'),
+                'email': session.get('ik_email'),
+                'ad': session.get('ik_ad', '').split(' ')[0] if session.get('ik_ad') else '',
+                'soyad': session.get('ik_soyad', '')
+            }
+        })
+    return jsonify({'authenticated': False})
+
