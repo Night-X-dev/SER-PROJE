@@ -132,8 +132,7 @@ def register():
 
 @management_bp.route('/dashboard')
 def dashboard():
-    return "Giriş başarılı! Bu bir ana sayfa (dashboard) örneğidir."
-
+    return render_template('personel/dashboard.html')
 # API Endpoints
 @management_bp.route('/api/test-db')
 def test_db():
