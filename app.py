@@ -24,8 +24,6 @@ import time
 # Load environment variables
 load_dotenv()
 
-# Import blueprints
-from management import management_bp
 
 app = Flask(__name__)
 # Session management secret key
