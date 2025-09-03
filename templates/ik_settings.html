@@ -1036,47 +1036,39 @@
             });
             
             // Telefon numarası formatlama
+            
+            function formatPhoneNumber(inputElement) {
+                inputElement.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, '');
+                    let formattedValue = '';
+                    
+                    if (value.length > 0) {
+                        formattedValue = value.substring(0, 3);
+                    }
+                    if (value.length > 3) {
+                        formattedValue += ' ' + value.substring(3, 6);
+                    }
+                    if (value.length > 6) {
+                        formattedValue += ' ' + value.substring(6, 8);
+                    }
+                    if (value.length > 8) {
+                        formattedValue += ' ' + value.substring(8, 10);
+                    }
+                    
+                    e.target.value = formattedValue;
+                });
+            }
+
+            // Telefon numarası inputlarını bul ve formatlama fonksiyonunu uygula
             const phoneInput = document.getElementById('phone');
             const phoneYakinInput = document.getElementById('phone_yakin');
-            if (phoneInput && phoneYakinInput) {
-                phoneInput.addEventListener('input', function(e) {
-                    let value = e.target.value.replace(/\D/g, '');
-                    let formattedValue = '';
-                    
-                    if (value.length > 0) {
-                        formattedValue = value.substring(0, 3);
-                    }
-                    if (value.length > 3) {
-                        formattedValue += ' ' + value.substring(3, 6);
-                    }
-                    if (value.length > 6) {
-                        formattedValue += ' ' + value.substring(6, 8);
-                    }
-                    if (value.length > 8) {
-                        formattedValue += ' ' + value.substring(8, 10);
-                    }
-                    
-                    e.target.value = formattedValue;
-                });
-                phoneYakinInput.addEventListener('input', function(e) {
-                    let value = e.target.value.replace(/\D/g, '');
-                    let formattedValue = '';
-
-                    if (value.length > 0) {
-                        formattedValue = value.substring(0, 3);
-                    }
-                    if (value.length > 3) {
-                        formattedValue += ' ' + value.substring(3, 6);
-                    }
-                    if (value.length > 6) {
-                        formattedValue += ' ' + value.substring(6, 8);
-                    }
-                    if (value.length > 8) {
-                        formattedValue += ' ' + value.substring(8, 10);
-                    }
-
-                    e.target.value = formattedValue;
-                });
+            
+            if (phoneInput) {
+                formatPhoneNumber(phoneInput);
+            }
+            
+            if (phoneYakinInput) {
+                formatPhoneNumber(phoneYakinInput);
             }
         });
     </script>
