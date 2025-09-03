@@ -4608,6 +4608,10 @@ def ik_izin_talep_page():
     """Directs /ik_izin_talep.html requests to the ik_izin_talep.html page."""
     return render_template('ik_izin_talep.html')
     
+@app.route('/ik_personeller')
+def ik_personeller_page():
+    """Directs /ik_personeller.html requests to the ik_personeller.html page."""
+    return render_template('ik_personeller.html')
 # IK Dashboard
 @app.route('/ik_dashboard')
 def ik_dashboard():
