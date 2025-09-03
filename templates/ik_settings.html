@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SER Elektrik Otomasyon - Ayarlar</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a56db;
+            --primary-light: #3f75e6;
+            --primary-dark: #0e40a0;
+            --secondary: #6c757d;
+            --success: #2ed573;
+            --info: #0980d3;
+            --warning: #ffc107;
+            --danger: #ff4757;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --white: #ffffff;
+            --gray-100: #f8f9fa;
+            --gray-200: #e9ecef;
+            --gray-300: #dee2e6;
+            --gray-800: #343a40;
+            --border-color: #e1e5e9;
+            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --sidebar-width: 280px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: #333333;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--white);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            box-shadow: var(--card-shadow);
+            z-index: 1000;
+            padding: 20px 0;
+            transition: all 0.3s ease;
+        }
+
+        .logo-container {
+            padding: 0 25px 25px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .logo-container img {
+            height: 60px;
+            max-width: 100%;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .nav-item {
+            padding: 12px 25px;
+            display: flex;
+            align-items: center;
+            color: #4a5568;
+            text-decoration: none;
+            border-left: 3px solid transparent;
+            margin-bottom: 5px;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background-color: rgba(26, 86, 219, 0.08);
+            border-left-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .nav-item i {
+            font-size: 18px;
+            margin-right: 15px;
+            width: 24px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        /* Topbar */
+        .topbar {
+            background-color: var(--white);
+            border-radius: 12px;
+            padding: 15px 25px;
+            margin-bottom: 25px;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .notification-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--gray-100);
+            color: var(--secondary);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .notification-btn::after {
+            content: attr(data-count);
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: var(--danger);
+            color: white;
+            font-size: 10px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+
+        .user-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: 600;
+            font-size: 16px;
+            text-transform: uppercase;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .user-role {
+            font-size: 13px;
+            color: var(--secondary);
+        }
+
+        .logout-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: var(--gray-100);
+            color: var(--secondary);
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .logout-btn:hover {
+            background-color: var(--primary);
+            color: var(--white);
+        }
+
+        /* Dashboard Content */
+        .welcome-banner {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border-radius: 16px;
+            padding: 25px;
+            color: white;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--card-shadow);
+        }
+
+        .welcome-text h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .welcome-text p {
+            opacity: 0.9;
+            max-width: 600px;
+        }
+
+        .welcome-icon {
+            font-size: 48px;
+            opacity: 0.8;
+        }
+
+        /* Settings Content */
+        .settings-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .settings-card {
+            background-color: var(--white);
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            border: none;
+        }
+
+        .card-header {
+            padding: 18px 25px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--white);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary-dark);
+            margin: 0;
+        }
+
+        .card-body {
+            padding: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            /* position: relative; Bu artık input-icon-container'da olacak */
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .form-control, .form-select {
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            width: 100%;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 0.25rem rgba(26, 86, 219, 0.15);
+        }
+
+        /* input-icon-container stilleri */
+        .input-icon-container {
+            position: relative;
+            width: 100%;
+            /* display: flex; Bu, input'u ve ikonu aynı satırda tutar, ancak ikonun absolute konumlandırmasıyla çakışabilir. */
+            /* align-items: center; Bu da absolute konumlandırma ile gereksiz olabilir. */
+        }
+
+        .input-icon-container input {
+            width: 100%;
+            padding-right: 45px; /* İkon için boşluk bırak */
+        }
+
+        .input-icon-container .password-toggle {
+            position: absolute;
+            right: 15px; /* Sağdan 15px boşluk */
+            top: 50%; /* Üstten %50 */
+            transform: translateY(-50%); /* Kendi yüksekliğinin yarısı kadar yukarı kaydır */
+            cursor: pointer;
+            color: var(--secondary); /* Mevcut renk değişkenini kullan */
+            font-size: 18px; /* İkon boyutu */
+            z-index: 2; /* Diğer elementlerin üzerinde olması için */
+        }
+
+        .input-icon-container .password-toggle:hover {
+            color: var(--primary); /* Hover rengi */
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: var(--dark);
+            flex-basis: 30%;
+            text-align: left;
+        }
+
+        .info-value {
+            color: var(--secondary);
+            flex-basis: 40%;
+            text-align: left;
+        }
+
+        .btn-edit {
+            background-color: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-left: auto;
+        }
+
+        .btn-edit:hover {
+            background-color: var(--primary);
+            color: var(--white);
+        }
+
+        .btn-save {
+            background-color: var(--primary);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .btn-save:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        /* Modal Styles */
+        .modal-content {
+            border-radius: 16px;
+            border: none;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .modal-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--white);
+        }
+
+        .modal-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .modal-footer {
+            padding: 20px 25px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* Toast bildirimi */
+        #toast {
+            visibility: hidden;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 250px;
+            max-width: 90vw;
+            background-color: #1a56db;
+            color: white;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 9999;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        
+        #toast.error {
+            background-color: #e53e3e;
+        }
+
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .toast-icon {
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            font-size: 20px;
+            color: white;
+        }
+        
+        #toast.success .toast-icon::before {
+            content: "\f058";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+        }
+        
+        #toast.error .toast-icon::before {
+            content: "\f057";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--secondary);
+            font-size: 14px;
+            border-top: 1px solid var(--border-color);
+            margin-top: 30px;
+        }
+
+        /* Responsive */
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-100%);
+                width: 280px;
+                box-shadow: 0 0 20px rgba(0,0,0,0.15);
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+            
+            .hamburger-menu {
+                display: block;
+                background-color: var(--primary);
+                color: var(--white);
+                border: none;
+                border-radius: 8px;
+                padding: 10px 12px;
+                cursor: pointer;
+                font-size: 20px;
+                margin-right: 15px;
+            }
+            
+            .welcome-banner {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+            }
+            
+            .welcome-icon {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .topbar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .topbar-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .user-info {
+                display: none;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .main-content {
+                padding: 15px;
+            }
+            
+            .card-body {
+                padding: 15px;
+            }
+            
+            .logout-btn span {
+                display: none;
+            }
+            
+            .logout-btn {
+                padding: 8px;
+            }
+            
+            .info-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            
+            .btn-edit {
+                align-self: flex-end;
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="logo-container">
+            <img src="{{ url_for('static', filename='serlogoorj.png') }}" alt="SER Elektrik Otomasyon">
+        </div>
+
+        <a href="/ik_dashboard" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="izinlerim.html" class="nav-item">
+            <i class="fas fa-calendar-check"></i>
+            <span>İzinlerim</span>
+        </a>
+        <a href="/ik_personeller" class="nav-item">
+            <i class="fas fa-users"></i>
+            <span>Personeller</span>
+        </a>
+        <a href="/ik_izin_talep" class="nav-item">
+            <i class="fas fa-clipboard-list"></i>
+            <span>İzin Talepleri</span>
+        </a>
+        <a href="/ik_settings" class="nav-item active">
+            <i class="fas fa-cog"></i>
+            <span>Ayarlar</span>
+        </a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <!-- Topbar -->
+        <div class="topbar">
+            <div class="page-title">
+                <i class="fas fa-cog"></i>
+                <span>Ayarlar</span>
+            </div>
+            
+            <div class="topbar-actions">
+                <div class="user-profile">
+                    <div class="user-avatar" id="userAvatar">MA</div>
+                    <div class="user-info">
+                        <div class="user-name">Mustafa Öztürk</div>
+                        <div class="user-role">İK Yöneticisi</div>
+                    </div>
+                </div>
+                
+                <button class="logout-btn" id="logoutButton">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Çıkış Yap</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Welcome Banner -->
+        <div class="welcome-banner">
+            <div class="welcome-text">
+                <h2>Hesap Ayarları</h2>
+                <p>Kişisel bilgilerinizi görüntüleyebilir ve güncelleyebilirsiniz. Şifre değişikliği yapabilirsiniz.</p>
+            </div>
+            <div class="welcome-icon">
+                <i class="fas fa-user-cog"></i>
+            </div>
+        </div>
+        
+        <!-- Settings Content -->
+        <div class="settings-container">
+            <!-- Kişisel Bilgiler -->
+            <div class="settings-card">
+                <div class="card-header">
+                    <h5 class="card-title">Kişisel Bilgiler</h5>
+                </div>
+                <div class="card-body">
+                    <form id="personalInfoForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="firstName" class="form-label">Ad</label>
+                                    <input type="text" class="form-control" id="firstName" value="Mustafa">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="lastName" class="form-label">Soyad</label>
+                                    <input type="text" class="form-control" id="lastName" value="Öztürk">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="email" class="form-label">E-posta</label>
+                                    <input type="email" class="form-control" id="email" value="mustafa.ozturk@ser.com">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="phone" class="form-label">Telefon</label>
+                                    <input type="tel" class="form-control" id="phone" value="532 123 45 67">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="address" class="form-label">Adres</label>
+                            <textarea class="form-control" id="address" rows="3">Örnek Mah. Örnek Cad. No:123 İstanbul</textarea>
+                        </div>
+                        
+                        <button type="button" class="btn-save" id="savePersonalInfo">
+                            <i class="fas fa-save"></i>
+                            Bilgileri Güncelle
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Şifre Değiştirme -->
+            <div class="settings-card">
+                <div class="card-header">
+                    <h5 class="card-title">Şifre Değiştirme</h5>
+                </div>
+                <div class="card-body">
+                    <form id="passwordChangeForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="newPassword" class="form-label">Yeni Şifre</label>
+                                    <div class="input-icon-container"> <!-- Yeni eklenen div -->
+                                        <input type="password" class="form-control" id="newPassword" placeholder="Yeni şifre girin">
+                                        <i class="fas fa-eye password-toggle" id="newPasswordToggle"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="confirmNewPassword" class="form-label">Yeni Şifre Tekrar</label>
+                                    <div class="input-icon-container"> <!-- Yeni eklenen div -->
+                                        <input type="password" class="form-control" id="confirmNewPassword" placeholder="Yeni şifreyi tekrar girin">
+                                        <i class="fas fa-eye password-toggle" id="confirmNewPasswordToggle"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-save" id="savePassword">
+                            <i class="fas fa-save"></i>
+                            Şifreyi Güncelle
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Resmi Bilgiler -->
+            <div class="settings-card">
+                <div class="card-header">
+                    <h5 class="card-title">Resmi Bilgiler</h5>
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <span class="info-label">TC Kimlik No</span>
+                        <span class="info-value">12345678901</span>
+                        <button class="btn-edit" data-field="tcIdentity" data-current="12345678901">
+                            <i class="fas fa-edit"></i> Değişiklik İste
+                        </button>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">SGK Sicil No</span>
+                        <span class="info-value">98765432109</span>
+                        <button class="btn-edit" data-field="sgkNumber" data-current="98765432109">
+                            <i class="fas fa-edit"></i> Değişiklik İste
+                        </button>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Departman</span>
+                        <span class="info-value">İnsan Kaynakları</span>
+                        <button class="btn-edit" data-field="department" data-current="İnsan Kaynakları">
+                            <i class="fas fa-edit"></i> Değişiklik İste
+                        </button>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Pozisyon</span>
+                        <span class="info-value">İK Yöneticisi</span>
+                        <button class="btn-edit" data-field="position" data-current="İK Yöneticisi">
+                            <i class="fas fa-edit"></i> Değişiklik İste
+                        </button>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">İşe Giriş Tarihi</span>
+                        <span class="info-value">15.03.2020</span>
+                        <button class="btn-edit" data-field="startDate" data-current="15.03.2020">
+                            <i class="fas fa-edit"></i> Değişiklik İste
+                        </button>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Durum</span>
+                        <span class="info-value">Aktif</span>
+                        <button class="btn-edit" data-field="status" data-current="Aktif">
+                            <i class="fas fa-edit"></i> Değişiklik İste
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Banka Bilgileri -->
+            <div class="settings-card">
+                <div class="card-header">
+                    <h5 class="card-title">Banka Bilgileri</h5>
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <span class="info-label">Banka Adı</span>
+                        <span class="info-value">Ziraat Bankası</span>
+                        <button class="btn-edit" data-field="bankName" data-current="Ziraat Bankası">
+                            <i class="fas fa-edit"></i> Değişiklik İste
+                        </button>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Şube Kodu</span>
+                        <span class="info-value">1234</span>
+                        <button class="btn-edit" data-field="branchCode" data-current="1234">
+                            <i class="fas fa-edit"></i> Değişiklik İste
+                        </button>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Hesap No</span>
+                        <span class="info-value">1234567890</span>
+                        <button class="btn-edit" data-field="accountNumber" data-current="1234567890">
+                            <i class="fas fa-edit"></i> Değişiklik İste
+                        </button>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">IBAN</span>
+                        <span class="info-value">TR12 3456 7890 1234 5678 9012 34</span>
+                        <button class="btn-edit" data-field="iban" data-current="TR12 3456 7890 1234 5678 9012 34">
+                            <i class="fas fa-edit"></i> Değişiklik İste
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            &copy; 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır. | Mustafa Öztürk
+        </div>
+    </div>
+
+    <!-- Değişiklik İsteği Modal -->
+    <div class="modal fade" id="changeRequestModal" tabindex="-1" aria-labelledby="changeRequestModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="changeRequestModalLabel">Değişiklik İsteği Gönder</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3"><strong>Alan:</strong> <span id="modalFieldName"></span></p>
+                    <p class="mb-3"><strong>Mevcut Değer:</strong> <span id="modalCurrentValue"></span></p>
+                    
+                    <div class="form-group">
+                        <label for="newValue" class="form-label">Yeni Değer</label>
+                        <input type="text" class="form-control" id="newValue" placeholder="Yeni değeri girin">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="changeReason" class="form-label">Değişiklik Sebebi</label>
+                        <textarea class="form-control" id="changeReason" rows="3" placeholder="Değişiklik için sebebinizi belirtin"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary" id="submitChangeRequest">Değişiklik İsteği Gönder</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Bildirimi -->
+    <div id="toast">
+        <span class="toast-icon"></span>
+        <span class="toast-message"></span>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Hamburger menü için (mobil görünüm)
+            const hamburgerMenu = document.createElement('button');
+            hamburgerMenu.className = 'hamburger-menu';
+            hamburgerMenu.innerHTML = '<i class="fas fa-bars"></i>';
+            hamburgerMenu.style.display = 'none';
+            document.querySelector('.topbar').prepend(hamburgerMenu);
+            
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            
+            hamburgerMenu.addEventListener('click', () => {
+                sidebar.classList.toggle('show');
+            });
+            
+            // Pencere boyutu değiştiğinde hamburger menüyü göster/gizle
+            function checkWidth() {
+                if (window.innerWidth <= 992) {
+                    hamburgerMenu.style.display = 'block';
+                } else {
+                    hamburgerMenu.style.display = 'none';
+                    sidebar.classList.remove('show');
+                }
+            }
+            
+            window.addEventListener('resize', checkWidth);
+            checkWidth();
+            
+            // Çıkış butonu
+            document.getElementById('logoutButton').addEventListener('click', function() {
+                localStorage.removeItem('currentUser');
+                window.location.href = '/ik_login';
+            });
+            
+            // Kullanıcı bilgilerini yükle
+            const storedUser = localStorage.getItem('currentUser');
+            if (storedUser) {
+                const user = JSON.parse(storedUser);
+                document.querySelector('.user-name').textContent = user.fullname;
+                document.querySelector('.user-role').textContent = user.role;
+                
+                // Avatar için isim ve soyisim ilk harfleri
+                const nameParts = user.fullname.split(' ');
+                let initials = '';
+                if (nameParts.length > 0) {
+                    initials += nameParts[0].charAt(0);
+                    if (nameParts.length > 1) {
+                        initials += nameParts[nameParts.length - 1].charAt(0);
+                    }
+                }
+                document.getElementById('userAvatar').textContent = initials.toUpperCase();
+            }
+            
+            // Şifre göster/gizle
+            function setupPasswordToggle(passwordFieldId, toggleIconId) {
+                const passwordField = document.getElementById(passwordFieldId);
+                const toggleIcon = document.getElementById(toggleIconId);
+                
+                if (passwordField && toggleIcon) {
+                    toggleIcon.addEventListener('click', function() {
+                        if (passwordField.type === 'password') {
+                            passwordField.type = 'text';
+                            toggleIcon.classList.remove('fa-eye');
+                            toggleIcon.classList.add('fa-eye-slash');
+                        } else {
+                            passwordField.type = 'password';
+                            toggleIcon.classList.remove('fa-eye-slash');
+                            toggleIcon.classList.add('fa-eye');
+                        }
+                    });
+                }
+            }
+            
+            setupPasswordToggle('newPassword', 'newPasswordToggle');
+            setupPasswordToggle('confirmNewPassword', 'confirmNewPasswordToggle');
+            
+            // Toast bildirimi göster
+            function showToast(message, type = 'success') {
+                const toast = document.getElementById('toast');
+                const messageSpan = toast.querySelector('.toast-message');
+                const toastIcon = toast.querySelector('.toast-icon');
+                
+                if (toast && messageSpan && toastIcon) {
+                    messageSpan.textContent = message;
+                    
+                    if (type === 'success') {
+                        toast.className = 'show success';
+                    } else {
+                        toast.className = 'show error';
+                    }
+                    
+                    setTimeout(() => {
+                        toast.className = toast.className.replace('show', '');
+                    }, 5000);
+                }
+            }
+            
+            // Kişisel bilgileri güncelleme
+            document.getElementById('savePersonalInfo').addEventListener('click', function() {
+                // Burada form verilerini sunucuya gönderme işlemi yapılacak
+                showToast('Kişisel bilgileriniz başarıyla güncellendi!', 'success');
+            });
+
+            // Şifre güncelleme
+            document.getElementById('savePassword').addEventListener('click', function() {
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+
+                if (!newPassword || !confirmNewPassword) {
+                    showToast('Lütfen tüm şifre alanlarını doldurun!', 'error');
+                    return;
+                }
+
+                if (newPassword.length < 6) {
+                    showToast('Yeni şifre en az 6 karakter olmalıdır!', 'error');
+                    return;
+                }
+
+                if (newPassword !== confirmNewPassword) {
+                    showToast('Yeni şifreler eşleşmiyor!', 'error');
+                    return;
+                }
+
+                // Burada şifre güncelleme işlemini sunucuya gönderme yapılacak
+                showToast('Şifreniz başarıyla güncellendi!', 'success');
+
+                // Alanları temizle
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmNewPassword').value = '';
+            });
+            
+            // Değişiklik isteği modalını aç
+            const changeRequestModal = new bootstrap.Modal(document.getElementById('changeRequestModal'));
+            let currentField = '';
+            
+            document.querySelectorAll('.btn-edit').forEach(button => {
+                button.addEventListener('click', function() {
+                    currentField = this.getAttribute('data-field');
+                    const currentValue = this.getAttribute('data-current');
+                    
+                    document.getElementById('modalFieldName').textContent = this.parentElement.querySelector('.info-label').textContent;
+                    document.getElementById('modalCurrentValue').textContent = currentValue;
+                    document.getElementById('newValue').value = '';
+                    document.getElementById('changeReason').value = '';
+                    
+                    changeRequestModal.show();
+                });
+            });
+            
+            // Değişiklik isteği gönder
+            document.getElementById('submitChangeRequest').addEventListener('click', function() {
+                const newValue = document.getElementById('newValue').value;
+                const changeReason = document.getElementById('changeReason').value;
+                
+                if (!newValue || !changeReason) {
+                    showToast('Lütfen tüm alanları doldurun!', 'error');
+                    return;
+                }
+                
+                // Burada değişiklik isteğini sunucuya gönderme işlemi yapılacak
+                showToast('Değişiklik isteğiniz başarıyla gönderildi!', 'success');
+                
+                // Modal'ı kapat
+                changeRequestModal.hide();
+            });
+            
+            // Telefon numarası formatlama
+            const phoneInput = document.getElementById('phone');
+            if (phoneInput) {
+                phoneInput.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, '');
+                    let formattedValue = '';
+                    
+                    if (value.length > 0) {
+                        formattedValue = value.substring(0, 3);
+                    }
+                    if (value.length > 3) {
+                        formattedValue += ' ' + value.substring(3, 6);
+                    }
+                    if (value.length > 6) {
+                        formattedValue += ' ' + value.substring(6, 8);
+                    }
+                    if (value.length > 8) {
+                        formattedValue += ' ' + value.substring(8, 10);
+                    }
+                    
+                    e.target.value = formattedValue;
+                });
+            }
+        });
+    </script>
+</body>
+</html>
