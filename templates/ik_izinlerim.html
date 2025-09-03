@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SER Elektrik Otomasyon - İzin Talepleri</title>
+    <title>SER Elektrik Otomasyon - İzinlerim</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --primary: #1a56db;
@@ -312,17 +311,35 @@
             align-items: center;
             gap: 10px;
             transition: all 0.3s;
-            color: white; /* Buton metnini beyaz yap */
+            color: white;
         }
 
         .btn-primary-custom:hover {
             background-color: var(--primary-dark);
             transform: translateY(-2px);
-            color: white; /* Hover durumunda da beyaz kalsın */
+            color: white;
         }
 
         .btn-primary-custom i {
-            color: white; /* İkon rengini beyaz yap */
+            color: white;
+        }
+
+        .btn-danger-custom {
+            background-color: var(--danger);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            color: white;
+        }
+
+        .btn-danger-custom:hover {
+            background-color: #e23343;
+            color: white;
         }
 
         /* Table Styles */
@@ -398,6 +415,57 @@
             color: var(--danger);
         }
 
+        /* Toast Styles */
+         #toast {
+            visibility: hidden;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 250px;
+            max-width: 90vw;
+            background-color: #1a56db;
+            color: white;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 9999;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        
+        #toast.error {
+            background-color: #e53e3e;
+        }
+
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .toast-icon {
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            font-size: 20px;
+            color: white;
+        }
+        
+        #toast.success .toast-icon::before {
+            content: "\f058";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+        }
+        
+        #toast.error .toast-icon::before {
+            content: "\f057";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+        }
         /* Modal Styles */
         .modal-content {
             border-radius: 16px;
@@ -453,104 +521,51 @@
             margin-top: 30px;
         }
 
-        /* Tarih seçici stilleri */
-        input[type="date"] {
-            appearance: none;
-            -webkit-appearance: none;
-            padding: 12px 16px;
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-            background-color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 16px;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%231a56db' viewBox='0 0 16 16'%3E%3Cpath d='M14 0H2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zM1 3.857C1 3.384 1.448 3 2 3h12c.552 0 1 .384 1 .857v10.286c0 .473-.448.857-1 .857H2c-.552 0-1-.384-1-.857V3.857z'/%3E%3Cpath d='M6.5 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-9 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-9 3a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 16px center;
-            background-size: 20px;
-            padding-right: 50px;
-            position: relative; /* Ekledik */
+        /* Tabs */
+        .nav-tabs {
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
         }
 
-        input[type="date"]:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 0.25rem rgba(26, 86, 219, 0.15);
-            outline: none;
+        .nav-tabs .nav-link {
+            border: none;
+            color: var(--secondary);
+            font-weight: 500;
+            padding: 12px 20px;
+            border-radius: 8px 8px 0 0;
         }
 
-        /* Yeni tarih seçici stili */
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            background: transparent;
-            color: transparent;
-            cursor: pointer;
-            /* Kaldırılan ve güncellenen özellikler */
-            position: absolute; /* Ekledik */
-            right: 0; /* Ekledik */
-            width: 40px; /* Ekledik */
-            height: 100%; /* Ekledik */
-            opacity: 0; /* Ekledik */
+        .nav-tabs .nav-link.active {
+            color: var(--primary);
+            background-color: transparent;
+            border-bottom: 3px solid var(--primary);
         }
 
-        /* Toast bildirimi */
-        #toast {
-            visibility: hidden;
+        /* Action buttons */
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-action {
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 13px;
             display: flex;
             align-items: center;
-            gap: 10px;
-            min-width: 250px;
-            max-width: 90vw;
-            background-color: #1a56db;
-            color: white;
-            text-align: center;
-            border-radius: 8px;
-            padding: 16px;
-            position: fixed;
-            z-index: 9999;
-            left: 50%;
-            bottom: 30px;
-            transform: translateX(-50%);
-            font-size: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            opacity: 0;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
-        }
-        
-        #toast.error {
-            background-color: #e53e3e;
+            gap: 5px;
         }
 
-        #toast.show {
-            visibility: visible;
-            opacity: 1;
-        }
-        
-        .toast-icon {
-            font-family: "Font Awesome 6 Free";
-            font-weight: 900;
-            font-size: 20px;
-            color: white;
-        }
-        
-        #toast.success .toast-icon::before {
-            content: "\f058";
-            font-family: "Font Awesome 6 Free";
-            font-weight: 900;
-        }
-        
-        #toast.error .toast-icon::before {
-            content: "\f057";
-            font-family: "Font Awesome 6 Free";
-            font-weight: 900;
+        /* Progress bar */
+        .progress {
+            height: 10px;
+            border-radius: 5px;
+            background-color: var(--gray-200);
+            margin: 10px 0;
         }
 
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
+        .progress-bar {
+            border-radius: 5px;
         }
 
         /* Responsive */
@@ -618,6 +633,10 @@
                 align-items: flex-start;
                 gap: 15px;
             }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
         }
 
         @media (max-width: 576px) {
@@ -642,9 +661,9 @@
                 overflow-x: auto;
             }
             
-            input[type="date"] {
-                padding-right: 45px;
-                background-size: 18px;
+            .nav-tabs .nav-link {
+                padding: 8px 12px;
+                font-size: 14px;
             }
         }
     </style>
@@ -660,7 +679,7 @@
             <i class="fas fa-home"></i>
             <span>Dashboard</span>
         </a>
-        <a href="/ik_izinlerim" class="nav-item">
+        <a href="/ik_izinlerim" class="nav-item active">
             <i class="fas fa-calendar-check"></i>
             <span>İzinlerim</span>
         </a>
@@ -668,11 +687,11 @@
             <i class="fas fa-users"></i>
             <span>Personeller</span>
         </a>
-        <a href="/ik_izin_talep" class="nav-item active">
+        <a href="/ik_izin_talep" class="nav-item">
             <i class="fas fa-clipboard-list"></i>
             <span>İzin Talepleri</span>
         </a>
-        <a href="/ik_settings" class="nav-item">
+        <a href="/ik_ayarlar" class="nav-item">
             <i class="fas fa-cog"></i>
             <span>Ayarlar</span>
         </a>
@@ -683,8 +702,8 @@
         <!-- Topbar -->
         <div class="topbar">
             <div class="page-title">
-                <i class="fas fa-clipboard-list"></i>
-                <span>İzin Talepleri</span>
+                <i class="fas fa-calendar-check"></i>
+                <span>İzinlerim</span>
             </div>
             
             <div class="topbar-actions">
@@ -706,8 +725,8 @@
         <!-- Welcome Banner -->
         <div class="welcome-banner">
             <div class="welcome-text">
-                <h2>İzin Talepleri Yönetimi</h2>
-                <p>İzin taleplerinizi görüntüleyebilir, yeni izin talebi oluşturabilir ve izin durumunuzu takip edebilirsiniz.</p>
+                <h2>İzin Yönetimi</h2>
+                <p>İzin durumunuzu görüntüleyebilir, yeni izin talebi oluşturabilir ve mevcut izinlerinizi yönetebilirsiniz.</p>
             </div>
             <div class="welcome-icon">
                 <i class="fas fa-calendar-alt"></i>
@@ -738,9 +757,12 @@
                     </div>
                 </div>
                 <div class="stat-card-value">7 Gün</div>
+                <div class="progress">
+                    <div class="progress-bar bg-primary" style="width: 35%"></div>
+                </div>
                 <div class="stat-card-change">
                     <i class="fas fa-percentage"></i>
-                    Toplamın %35'i
+                    Toplamın %35'i kullanıldı
                 </div>
             </div>
 
@@ -752,6 +774,9 @@
                     </div>
                 </div>
                 <div class="stat-card-value">13 Gün</div>
+                <div class="progress">
+                    <div class="progress-bar bg-success" style="width: 65%"></div>
+                </div>
                 <div class="stat-card-change">
                     <i class="fas fa-calendar-check"></i>
                     Kullanılabilir izin
@@ -781,99 +806,174 @@
             </button>
         </div>
         
-        <!-- Previous Requests Table -->
-        <div class="table-container">
-            <div class="table-header">
-                <h3 class="table-title">Önceki İzin Taleplerim</h3>
-                <div class="input-group" style="max-width: 300px;">
-                    <input type="text" class="form-control" id="searchInput" placeholder="Arama...">
-                    <button class="btn btn-outline-secondary" type="button" id="searchButton">
-                        <i class="fas fa-search"></i>
-                    </button>
+        <!-- Tabs -->
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab" aria-controls="active" aria-selected="true">Aktif İzinler</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab" aria-controls="history" aria-selected="false">Geçmiş İzinler</button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="myTabContent">
+            <!-- Aktif İzinler Tab -->
+            <div class="tab-pane fade show active" id="active" role="tabpanel" aria-labelledby="active-tab">
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3 class="table-title">Aktif İzin Taleplerim</h3>
+                        <div class="input-group" style="max-width: 300px;">
+                            <input type="text" class="form-control" placeholder="Arama..." id="activeSearchInput">
+                            <button class="btn btn-outline-secondary" type="button" id="activeSearchButton">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="custom-table" id="activeLeaveTable">
+                            <thead>
+                                <tr>
+                                    <th>İzin Türü</th>
+                                    <th>Başlangıç Tarihi</th>
+                                    <th>Bitiş Tarihi</th>
+                                    <th>Süre</th>
+                                    <th>Durum</th>
+                                    <th>Talep Tarihi</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr data-id="3">
+                                    <td>Yıllık İzin</td>
+                                    <td>12.09.2023</td>
+                                    <td>15.09.2023</td>
+                                    <td>3 Gün</td>
+                                    <td><span class="status-badge status-pending">Beklemede</span></td>
+                                    <td>05.09.2023</td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm btn-outline-primary btn-action view-details" data-id="3">
+                                                <i class="fas fa-eye"></i> Detay
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger btn-action cancel-leave" data-id="3">
+                                                <i class="fas fa-times"></i> İptal Et
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr data-id="5">
+                                    <td>Yıllık İzin</td>
+                                    <td>05.11.2023</td>
+                                    <td>10.11.2023</td>
+                                    <td>5 Gün</td>
+                                    <td><span class="status-badge status-pending">Beklemede</span></td>
+                                    <td>01.11.2023</td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm btn-outline-primary btn-action view-details" data-id="5">
+                                                <i class="fas fa-eye"></i> Detay
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger btn-action cancel-leave" data-id="5">
+                                                <i class="fas fa-times"></i> İptal Et
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr data-id="6">
+                                    <td>Hastalık İzni</td>
+                                    <td>20.11.2023</td>
+                                    <td>21.11.2023</td>
+                                    <td>1 Gün</td>
+                                    <td><span class="status-badge status-approved">Onaylandı</span></td>
+                                    <td>18.11.2023</td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm btn-outline-primary btn-action view-details" data-id="6">
+                                                <i class="fas fa-eye"></i> Detay
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger btn-action cancel-leave" data-id="6">
+                                                <i class="fas fa-times"></i> İptal Et
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             
-            <div class="table-responsive">
-                <table class="custom-table" id="leaveRequestsTable">
-                    <thead>
-                        <tr>
-                            <th>İzin Türü</th>
-                            <th>Başlangıç Tarihi</th>
-                            <th>Bitiş Tarihi</th>
-                            <th>Süre</th>
-                            <th>Durum</th>
-                            <th>Talep Tarihi</th>
-                            <th>İşlemler</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr data-description="Tatil için yıllık izin kullanmak istiyorum." data-reason="">
-                            <td>Yıllık İzin</td>
-                            <td>15.07.2023</td>
-                            <td>20.07.2023</td>
-                            <td>5 Gün</td>
-                            <td><span class="status-badge status-approved">Onaylandı</span></td>
-                            <td>10.07.2023</td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-primary view-details">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        <tr data-description="Hastalık nedeniyle izin kullanıyorum." data-reason="">
-                            <td>Hastalık İzni</td>
-                            <td>05.08.2023</td>
-                            <td>07.08.2023</td>
-                            <td>2 Gün</td>
-                            <td><span class="status-badge status-approved">Onaylandı</span></td>
-                            <td>04.08.2023</td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-primary view-details">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        <tr data-description="Ailemi ziyaret için izin talebi." data-reason="">
-                            <td>Yıllık İzin</td>
-                            <td>12.09.2023</td>
-                            <td>15.09.2023</td>
-                            <td>3 Gün</td>
-                            <td><span class="status-badge status-pending">Beklemede</span></td>
-                            <td>05.09.2023</td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-primary view-details">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        <tr data-description="Ücretsiz izin talebi" data-reason="İş yükü nedeniyle uygun değil.">
-                            <td>Ücretsiz İzin</td>
-                            <td>20.10.2023</td>
-                            <td>21.10.2023</td>
-                            <td>1 Gün</td>
-                            <td><span class="status-badge status-rejected">Reddedildi</span></td>
-                            <td>15.10.2023</td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-primary view-details">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        <tr data-description="Yıllık izin kullanmak istiyorum." data-reason="">
-                            <td>Yıllık İzin</td>
-                            <td>05.11.2023</td>
-                            <td>10.11.2023</td>
-                            <td>5 Gün</td>
-                            <td><span class="status-badge status-pending">Beklemede</span></td>
-                            <td>01.11.2023</td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-primary view-details">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- Geçmiş İzinler Tab -->
+            <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3 class="table-title">Geçmiş İzin Taleplerim</h3>
+                        <div class="input-group" style="max-width: 300px;">
+                            <input type="text" class="form-control" placeholder="Arama..." id="historySearchInput">
+                            <button class="btn btn-outline-secondary" type="button" id="historySearchButton">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="custom-table" id="historyLeaveTable">
+                            <thead>
+                                <tr>
+                                    <th>İzin Türü</th>
+                                    <th>Başlangıç Tarihi</th>
+                                    <th>Bitiş Tarihi</th>
+                                    <th>Süre</th>
+                                    <th>Durum</th>
+                                    <th>Talep Tarihi</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr data-id="1">
+                                    <td>Yıllık İzin</td>
+                                    <td>15.07.2023</td>
+                                    <td>20.07.2023</td>
+                                    <td>5 Gün</td>
+                                    <td><span class="status-badge status-approved">Onaylandı</span></td>
+                                    <td>10.07.2023</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary btn-action view-details" data-id="1">
+                                            <i class="fas fa-eye"></i> Detay
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr data-id="2">
+                                    <td>Hastalık İzni</td>
+                                    <td>05.08.2023</td>
+                                    <td>07.08.2023</td>
+                                    <td>2 Gün</td>
+                                    <td><span class="status-badge status-approved">Onaylandı</span></td>
+                                    <td>04.08.2023</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary btn-action view-details" data-id="2">
+                                            <i class="fas fa-eye"></i> Detay
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr data-id="4">
+                                    <td>Ücretsiz İzin</td>
+                                    <td>20.10.2023</td>
+                                    <td>21.10.2023</td>
+                                    <td>1 Gün</td>
+                                    <td><span class="status-badge status-rejected">Reddedildi</span></td>
+                                    <td>15.10.2023</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary btn-action view-details" data-id="4">
+                                            <i class="fas fa-eye"></i> Detay
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -936,23 +1036,6 @@
                             <label for="description" class="form-label">Açıklama</label>
                             <textarea class="form-control" id="description" rows="4" placeholder="İzin talebinizle ilgili açıklama ekleyin..."></textarea>
                         </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="emergencyContactName" class="form-label">Acil Durum Kişisi Adı Soyadı</label>
-                                <input type="text" class="form-control" id="emergencyContactName" placeholder="Adı Soyadı" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="emergencyContactNumber" class="form-label">Acil Durum Kişisi Telefon Numarası</label>
-                                <input type="tel" class="form-control" id="emergencyContactNumber" placeholder="(5xx) xxx xx xx" maxlength="15" required>
-                            </div>
-                        </div>
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="emergencyContactConfirm" required>
-                            <label class="form-check-label" for="emergencyContactConfirm">
-                                Acil durumlarda ulaşılabilecek kişi bilgilerimin doğru olduğunu ve ilettiğimi onaylıyorum.
-                            </label>
-                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -966,38 +1049,67 @@
         </div>
     </div>
 
-    <!-- Leave Detail Modal -->
-    <div class="modal fade" id="leaveDetailModal" tabindex="-1" aria-labelledby="leaveDetailModalLabel" aria-hidden="true">
+    <!-- Cancel Leave Modal -->
+    <div class="modal fade" id="cancelLeaveModal" tabindex="-1" aria-labelledby="cancelLeaveModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="leaveDetailModalLabel">İzin Talebi Detayları</h5>
+                    <h5 class="modal-title" id="cancelLeaveModalLabel">İzin Talebini İptal Et</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <strong>İzin Türü:</strong> <span id="detail-type"></span>
+                    <p class="mb-4">Aşağıdaki izin talebini iptal etmek istediğinize emin misiniz?</p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong id="cancelLeaveInfo"></strong>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                    <button type="button" class="btn btn-danger-custom" id="confirmCancel">
+                        <i class="fas fa-times me-2"></i>
+                        İptal Et
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leave Details Modal -->
+    <div class="modal fade" id="leaveDetailsModal" tabindex="-1" aria-labelledby="leaveDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="leaveDetailsModalLabel">İzin Detayları</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>İzin Türü:</strong> <span id="detailLeaveType"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Durum:</strong> <span id="detailStatus"></span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Başlangıç Tarihi:</strong> <span id="detailStartDate"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Bitiş Tarihi:</strong> <span id="detailEndDate"></span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Süre:</strong> <span id="detailDuration"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Talep Tarihi:</strong> <span id="detailRequestDate"></span>
+                        </div>
                     </div>
                     <div class="mb-3">
-                        <strong>Başlangıç Tarihi:</strong> <span id="detail-start"></span>
-                    </div>
-                    <div class="mb-3">
-                        <strong>Bitiş Tarihi:</strong> <span id="detail-end"></span>
-                    </div>
-                    <div class="mb-3">
-                        <strong>Süre:</strong> <span id="detail-duration"></span>
-                    </div>
-                    <div class="mb-3">
-                        <strong>Durum:</strong> <span id="detail-status"></span>
-                    </div>
-                    <div class="mb-3">
-                        <strong>Talep Tarihi:</strong> <span id="detail-request-date"></span>
-                    </div>
-                    <div class="mb-3">
-                        <strong>Açıklama:</strong> <span id="detail-description"></span>
-                    </div>
-                    <div class="mb-3" id="detail-reason-container" style="display: none;">
-                        <strong>Reddetme Sebebi:</strong> <span id="detail-reason"></span>
+                        <strong>Açıklama:</strong> <p id="detailDescription" class="mt-2"></p>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -1006,11 +1118,31 @@
             </div>
         </div>
     </div>
-
-    <div id="toast"><span class="toast-icon"></span><span class="toast-message"></span></div>
-
+    <div id="toast">
+        <span class="toast-icon"></span>
+        <span class="toast-message"></span>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+          function showToast(message, type = 'success') {
+                const toast = document.getElementById('toast');
+                const messageSpan = toast.querySelector('.toast-message');
+                const toastIcon = toast.querySelector('.toast-icon');
+                
+                if (toast && messageSpan && toastIcon) {
+                    messageSpan.textContent = message;
+                    
+                    if (type === 'success') {
+                        toast.className = 'show success';
+                    } else {
+                        toast.className = 'show error';
+                    }
+                    
+                    setTimeout(() => {
+                        toast.className = toast.className.replace('show', '');
+                    }, 5000);
+                }
+            }
         document.addEventListener('DOMContentLoaded', function() {
             // Hamburger menü için (mobil görünüm)
             const hamburgerMenu = document.createElement('button');
@@ -1057,7 +1189,7 @@
                     
                     // Tarih karşılaştırması
                     if (endDate < startDate) {
-                        showToast('Bitiş tarihi, başlangıç tarihinden önce olamaz!', 'error');
+                        alert('Bitiş tarihi, başlangıç tarihinden önce olamaz!');
                         endDateInput.value = "";
                         durationDisplay.textContent = '0 Gün';
                         return;
@@ -1075,27 +1207,6 @@
                 }
             }
             
-            // Toast bildirimi göster
-            function showToast(message, type = 'success') {
-                const toast = document.getElementById('toast');
-                const messageSpan = toast.querySelector('.toast-message');
-                const toastIcon = toast.querySelector('.toast-icon');
-                
-                if (toast && messageSpan && toastIcon) {
-                    messageSpan.textContent = message;
-                    
-                    if (type === 'success') {
-                        toast.className = 'show success';
-                    } else {
-                        toast.className = 'show error';
-                    }
-                    
-                    setTimeout(() => {
-                        toast.className = toast.className.replace('show', '');
-                    }, 5000);
-                }
-            }
-            
             startDateInput.addEventListener('change', function() {
                 // Başlangıç tarihi değiştiğinde bitiş tarihinin min değerini ayarla
                 if (this.value) {
@@ -1105,38 +1216,23 @@
             });
             
             endDateInput.addEventListener('change', calculateDuration);
-
-            // Telefon numarası formatlama
-            const emergencyContactNumber = document.getElementById('emergencyContactNumber');
-            emergencyContactNumber.addEventListener('input', function(e) {
-                let value = e.target.value.replace(/\D/g, ''); // Sadece rakamları al
-                let formattedValue = '';
-
-                if (value.length > 0) {
-                    formattedValue += '(' + value.substring(0, 3);
-                }
-                if (value.length >= 4) {
-                    formattedValue += ') ' + value.substring(3, 6);
-                }
-                if (value.length >= 7) {
-                    formattedValue += ' ' + value.substring(6, 8);
-                }
-                if (value.length >= 9) {
-                    formattedValue += ' ' + value.substring(8, 10);
-                }
-                e.target.value = formattedValue;
-            });
             
             // Form gönderme
             document.getElementById('submitLeaveRequest').addEventListener('click', function() {
                 const form = document.getElementById('leaveRequestForm');
                 if (form.checkValidity()) {
                     // Burada form verilerini sunucuya gönderme işlemi yapılacak
-                      showToast('İzin talebiniz başarıyla gönderildi!', 'success');
+                     showToast('İzin talebiniz başarıyla gönderildi!', 'success');
+
                     
                     // Modal'ı kapat
                     const modal = bootstrap.Modal.getInstance(document.getElementById('newLeaveRequestModal'));
                     modal.hide();
+                    
+                    // Sayfayı yenile veya tabloyu güncelle
+                    setTimeout(() => {
+                        location.reload();
+                    }, 500);
                 } else {
                     form.reportValidity();
                 }
@@ -1161,61 +1257,58 @@
                 document.getElementById('userAvatar').textContent = initials.toUpperCase();
             }
             
-            // İzin detaylarını göster
+            // İzin iptal modalını aç
+            const cancelLeaveModal = new bootstrap.Modal(document.getElementById('cancelLeaveModal'));
+            let currentLeaveId = '';
+            
+            document.querySelectorAll('.cancel-leave').forEach(button => {
+                button.addEventListener('click', function() {
+                    currentLeaveId = this.getAttribute('data-id');
+                    const row = this.closest('tr');
+                    const cells = row.querySelectorAll('td');
+                    
+                    const leaveInfo = `${cells[0].textContent} - ${cells[1].textContent} - ${cells[2].textContent} (${cells[3].textContent})`;
+                    document.getElementById('cancelLeaveInfo').textContent = leaveInfo;
+                    
+                    cancelLeaveModal.show();
+                });
+            });
+            
+            // İzin iptalini onayla
+            document.getElementById('confirmCancel').addEventListener('click', function() {
+                // Burada izin iptal işlemini sunucuya gönderme işlemi yapılacak
+                 showToast('İzin talebiniz başarıyla iptal edildi.', 'success');
+
+                
+                // Modal'ı kapat
+                cancelLeaveModal.hide();
+                
+                // Sayfayı yenile (gerçek uygulamada AJAX ile yapılır)
+                setTimeout(() => {
+                    location.reload();
+                }, 500);
+            });
+
+            // İzin Detayları Modalını Aç
+            const leaveDetailsModal = new bootstrap.Modal(document.getElementById('leaveDetailsModal'));
+
             document.querySelectorAll('.view-details').forEach(button => {
                 button.addEventListener('click', function() {
                     const row = this.closest('tr');
                     const cells = row.querySelectorAll('td');
-                    
-                    // Modal içeriğini doldur
-                    document.getElementById('detail-type').textContent = cells[0].textContent;
-                    document.getElementById('detail-start').textContent = cells[1].textContent;
-                    document.getElementById('detail-end').textContent = cells[2].textContent;
-                    document.getElementById('detail-duration').textContent = cells[3].textContent;
-                    document.getElementById('detail-status').textContent = cells[4].textContent;
-                    document.getElementById('detail-request-date').textContent = cells[5].textContent;
-                    
-                    // Açıklama ve reddetme sebebi
-                    document.getElementById('detail-description').textContent = row.dataset.description;
-                    
-                    const reasonContainer = document.getElementById('detail-reason-container');
-                    if (row.dataset.reason) {
-                        document.getElementById('detail-reason').textContent = row.dataset.reason;
-                        reasonContainer.style.display = 'block';
-                    } else {
-                        reasonContainer.style.display = 'none';
-                    }
-                    
-                    // Modal'ı göster
-                    const modal = new bootstrap.Modal(document.getElementById('leaveDetailModal'));
-                    modal.show();
+
+                    document.getElementById('detailLeaveType').textContent = cells[0].textContent;
+                    document.getElementById('detailStartDate').textContent = cells[1].textContent;
+                    document.getElementById('detailEndDate').textContent = cells[2].textContent;
+                    document.getElementById('detailDuration').textContent = cells[3].textContent;
+                    document.getElementById('detailStatus').innerHTML = cells[4].innerHTML; // HTML içeriğini koru
+                    document.getElementById('detailRequestDate').textContent = cells[5].textContent;
+                    // Açıklama alanı için örnek veri, gerçekte veritabanından çekilmeli
+                    document.getElementById('detailDescription').textContent = "Bu bir örnek açıklamadır. Gerçek uygulamada bu alan veritabanından çekilecektir.";
+
+                    leaveDetailsModal.show();
                 });
             });
-            
-            // Arama işlevselliği
-            const searchInput = document.getElementById('searchInput');
-            const searchButton = document.getElementById('searchButton');
-            const tableRows = document.querySelectorAll('#leaveRequestsTable tbody tr');
-            
-            function performSearch() {
-                const searchText = searchInput.value.toLowerCase();
-                
-                tableRows.forEach(row => {
-                    const cells = row.querySelectorAll('td');
-                    let found = false;
-                    
-                    cells.forEach(cell => {
-                        if (cell.textContent.toLowerCase().includes(searchText)) {
-                            found = true;
-                        }
-                    });
-                    
-                    row.style.display = found ? '' : 'none';
-                });
-            }
-            
-            searchInput.addEventListener('input', performSearch);
-            searchButton.addEventListener('click', performSearch);
             
             // Bugünün tarihini başlangıç için min değer olarak ayarla
             const today = new Date();
@@ -1226,6 +1319,28 @@
             
             document.getElementById('startDate').min = todayStr;
             document.getElementById('endDate').min = todayStr;
+
+            // Arama fonksiyonu
+            function setupSearch(inputId, tableId) {
+                const searchInput = document.getElementById(inputId);
+                const table = document.getElementById(tableId);
+                const rows = table.querySelectorAll('tbody tr');
+
+                searchInput.addEventListener('keyup', function() {
+                    const filter = searchInput.value.toLowerCase();
+                    rows.forEach(row => {
+                        let textContent = row.textContent || row.innerText;
+                        if (textContent.toLowerCase().indexOf(filter) > -1) {
+                            row.style.display = "";
+                        } else {
+                            row.style.display = "none";
+                        }
+                    });
+                });
+            }
+
+            setupSearch('activeSearchInput', 'activeLeaveTable');
+            setupSearch('historySearchInput', 'historyLeaveTable');
         });
     </script>
 </body>

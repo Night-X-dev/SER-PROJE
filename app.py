@@ -4616,6 +4616,10 @@ def ik_personeller_page():
 def ik_settings_page():
     """Directs /ik_settings.html requests to the ik_settings.html page."""
     return render_template('ik_settings.html')
+@app.route('/ik_izinlerim')
+def ik_izinlerim_page():
+    """Directs /ik_izinlerim.html requests to the ik_izinlerim.html page."""
+    return render_template('ik_izinlerim.html')
 # IK Dashboard
 @app.route('/ik_dashboard')
 def ik_dashboard():
