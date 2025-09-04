@@ -4620,6 +4620,10 @@ def ik_settings_page():
 def ik_izinlerim_page():
     """Directs /ik_izinlerim.html requests to the ik_izinlerim.html page."""
     return render_template('ik_izinlerim.html')
+@app.route('/ik_santiye')
+def ik_santiye_page():
+    """Directs /ik_santiye.html requests to the ik_santiye.html page."""
+    return render_template('ik_santiye.html')
 # IK Dashboard
 @app.route('/ik_dashboard')
 def ik_dashboard():
