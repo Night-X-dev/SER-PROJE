@@ -559,6 +559,51 @@
             margin-right: 15px;
         }
 
+        /* Tabs */
+        .nav-tabs {
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            padding: 0 25px;
+        }
+
+        .nav-tabs .nav-link {
+            border: none;
+            color: var(--secondary);
+            font-weight: 500;
+            padding: 12px 20px;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: var(--primary);
+            background-color: transparent;
+            border-bottom: 3px solid var(--primary);
+        }
+
+        /* Filter Section */
+        .filter-section {
+            padding: 15px 25px;
+            background-color: var(--gray-100);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--dark);
+            white-space: nowrap;
+        }
+
         /* Responsive */
         @media (max-width: 992px) {
             .sidebar {
@@ -592,6 +637,11 @@
 
             .overlay.show {
                 display: block;
+            }
+
+            .filter-section {
+                flex-direction: column;
+                align-items: flex-start;
             }
         }
 
@@ -632,6 +682,12 @@
                 padding: 6px 10px;
                 font-size: 13px;
             }
+
+            .filter-group {
+                flex-direction: column;
+                align-items: flex-start;
+                width: 100%;
+            }
         }
        @media (max-width: 576px) {
             .main-content {
@@ -663,6 +719,24 @@
             .action-buttons {
                 flex-direction: column;
             }
+
+            .nav-tabs {
+                flex-direction: column;
+            }
+
+            .nav-tabs .nav-item {
+                width: 100%;
+            }
+
+            .nav-tabs .nav-link {
+                border-radius: 8px;
+                text-align: center;
+            }
+
+            .nav-tabs .nav-link.active {
+                border-bottom: 3px solid var(--primary);
+                border-radius: 8px 8px 0 0;
+            }
         }
     </style>
 </head>
@@ -692,7 +766,7 @@
             <i class="fas fa-clipboard-list"></i>
             <span>İzin Talepleri</span>
         </a>
-        <a href="/ik_santiye" class="nav-item active">
+        <a href="/santiye_kayitlari" class="nav-item active">
             <i class="fas fa-hard-hat"></i>
             <span>Şantiye Kayıtları</span>
         </a>
@@ -745,14 +819,18 @@
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-card-header">
-                    <div class="stat-card-title">Aktif Şantiye Personeli</div>
+                    <div class="stat-card-title">Toplam Şantiye Personeli</div>
                     <div class="stat-card-icon">
                         <i class="fas fa-users"></i>
                     </div>
                 </div>
                 <div class="stat-card-value">42</div>
+              <!--  <div class="stat-card-change">
+                    <i class="fas fa-arrow-up"></i>
+                    Geçen aya göre %8 artış
+                </div>-->
             </div>
-        <!--
+<!--
             <div class="stat-card">
                 <div class="stat-card-header">
                     <div class="stat-card-title">Aktif Projeler</div>
@@ -769,33 +847,34 @@
 
             <div class="stat-card">
                 <div class="stat-card-header">
-                    <div class="stat-card-title">Bu Ay Eklenenler</div>
+                    <div class="stat-card-title">Aktif Personeller</div>
                     <div class="stat-card-icon">
-                        <i class="fas fa-user-plus"></i>
+                        <i class="fas fa-user-check"></i>
                     </div>
                 </div>
-                <div class="stat-card-value">5</div>
+                <div class="stat-card-value">32</div>
                 <div class="stat-card-change">
-                    <i class="fas fa-user-check"></i>
-                    Yeni personel atamaları
+                    <i class="fas fa-info-circle"></i>
+                    Şu an şantiyede çalışanlar
                 </div>
             </div>
 
             <div class="stat-card">
                 <div class="stat-card-header">
-                    <div class="stat-card-title">Ortalama Süre</div>
+                    <div class="stat-card-title">Tamamlanan Projeler</div>
                     <div class="stat-card-icon">
-                        <i class="fas fa-clock"></i>
+                        <i class="fas fa-clipboard-check"></i>
                     </div>
                 </div>
-                <div class="stat-card-value">68 Gün</div>
+                <div class="stat-card-value">15</div>
                 <div class="stat-card-change">
-                    <i class="fas fa-info-circle"></i>
-                    Proje başına ortalama süre
+                    <i class="fas fa-calendar"></i>
+                    Bu yıl tamamlanan projeler
                 </div>
             </div>
-        -->
+            -->
         </div>
+        
         <!-- Action Button -->
         <div class="d-flex justify-content-end mb-4">
             <button type="button" class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#newSiteRecordModal">
@@ -804,130 +883,294 @@
             </button>
         </div>
         
-        <!-- Table Container -->
-        <div class="table-container">
-            <div class="table-header">
-                <h3 class="table-title">Şantiye Personel Listesi</h3>
-                <div class="input-group" style="max-width: 300px;">
-                    <input type="text" class="form-control" placeholder="Arama..." id="siteSearchInput">
-                    <button class="btn btn-outline-secondary" type="button" id="siteSearchButton">
-                        <i class="fas fa-search"></i>
-                    </button>
+        <!-- Tabs -->
+        <ul class="nav nav-tabs" id="siteTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab" aria-controls="active" aria-selected="true">
+                    <i class="fas fa-hard-hat me-2"></i>Aktif Şantiye Kayıtları
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab" aria-controls="history" aria-selected="false">
+                    <i class="fas fa-history me-2"></i>Tüm Şantiye Geçmişi
+                </button>
+            </li>
+        </ul>
+        
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <div class="filter-group">
+                <span class="filter-label">Durum:</span>
+                <select class="form-select" id="statusFilter" style="width: 150px;">
+                    <option value="all">Tümü</option>
+                    <option value="active">Aktif</option>
+                    <option value="completed">Tamamlandı</option>
+                </select>
+            </div>
+            
+            <button class="btn btn-outline-secondary" id="resetFilters">
+                <i class="fas fa-redo me-2"></i>Filtreleri Sıfırla
+            </button>
+        </div>
+        
+        <!-- Tab Content -->
+        <div class="tab-content" id="siteTabContent">
+            <!-- Aktif Şantiye Kayıtları Tab -->
+            <div class="tab-pane fade show active" id="active" role="tabpanel" aria-labelledby="active-tab">
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3 class="table-title">Aktif Şantiye Personel Listesi</h3>
+                        <div class="input-group" style="max-width: 300px;">
+                            <input type="text" class="form-control" placeholder="Arama..." id="activeSearchInput">
+                            <button class="btn btn-outline-secondary" type="button" id="activeSearchButton">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="custom-table" id="activeSiteTable">
+                            <thead>
+                                <tr>
+                                    <th>Personel</th>
+                                    <th>Proje Kodu</th>
+                                    <th>Proje Adı</th>
+                                    <th>Başlangıç Tarihi</th>
+                                    <th>Bitiş Tarihi</th>
+                                    <th>Görev</th>
+                                    <th>Durum</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr data-id="1" data-status="active" data-project="PRJ-001" data-date="2023-09">
+                                    <td>Ahmet Yılmaz</td>
+                                    <td>PRJ-001</td>
+                                    <td>Mega Center AVM</td>
+                                    <td>01.09.2023</td>
+                                    <td>15.12.2023</td>
+                                    <td>Elektrik Tesisatı</td>
+                                    <td><span class="status-badge status-active">Aktif</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm btn-outline-primary btn-action edit-record" data-id="1">
+                                                <i class="fas fa-edit"></i> Düzenle
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger btn-action delete-record" data-id="1">
+                                                <i class="fas fa-trash"></i> Sil
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr data-id="2" data-status="active" data-project="PRJ-002" data-date="2023-08">
+                                    <td>Mehmet Kaya</td>
+                                    <td>PRJ-002</td>
+                                    <td>Teknoloji Parkı</td>
+                                    <td>10.08.2023</td>
+                                    <td>30.11.2023</td>
+                                    <td>Aydınlatma Sistemi</td>
+                                    <td><span class="status-badge status-active">Aktif</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm btn-outline-primary btn-action edit-record" data-id="2">
+                                                <i class="fas fa-edit"></i> Düzenle
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger btn-action delete-record" data-id="2">
+                                                <i class="fas fa-trash"></i> Sil
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr data-id="4" data-status="active" data-project="PRJ-001" data-date="2023-09">
+                                    <td>Zeynep Çelik</td>
+                                    <td>PRJ-001</td>
+                                    <td>Mega Center AVM</td>
+                                    <td>15.09.2023</td>
+                                    <td>30.12.2023</td>
+                                    <td>Kontrol Paneli</td>
+                                    <td><span class="status-badge status-active">Aktif</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm btn-outline-primary btn-action edit-record" data-id="4">
+                                                <i class="fas fa-edit"></i> Düzenle
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger btn-action delete-record" data-id="4">
+                                                <i class="fas fa-trash"></i> Sil
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr data-id="5" data-status="active" data-project="PRJ-004" data-date="2023-10">
+                                    <td>Ali Yıldız</td>
+                                    <td>PRJ-004</td>
+                                    <td>Ofis Binası</td>
+                                    <td>01.10.2023</td>
+                                    <td>15.01.2024</td>
+                                    <td>Data Kablolama</td>
+                                    <td><span class="status-badge status-active">Aktif</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm btn-outline-primary btn-action edit-record" data-id="5">
+                                                <i class="fas fa-edit"></i> Düzenle
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger btn-action delete-record" data-id="5">
+                                                <i class="fas fa-trash"></i> Sil
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             
-            <div class="table-responsive">
-                <table class="custom-table" id="siteRecordsTable">
-                    <thead>
-                        <tr>
-                            <th>Personel</th>
-                            <th>Proje Kodu</th>
-                            <th>Proje Adı</th>
-                            <th>Başlangıç Tarihi</th>
-                            <th>Bitiş Tarihi</th>
-                            <th>Görev</th>
-                            <th>Durum</th>
-                            <th>İşlemler</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr data-id="1">
-                            <td>Ahmet Yılmaz</td>
-                            <td>PRJ-001</td>
-                            <td>Mega Center AVM</td>
-                            <td>01.09.2023</td>
-                            <td>15.12.2023</td>
-                            <td>Elektrik Tesisatı</td>
-                            <td><span class="status-badge status-active">Aktif</span></td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-sm btn-outline-primary btn-action edit-record" data-id="1">
-                                        <i class="fas fa-edit"></i> Düzenle
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger btn-action delete-record" data-id="1">
-                                        <i class="fas fa-trash"></i> Sil
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr data-id="2">
-                            <td>Mehmet Kaya</td>
-                            <td>PRJ-002</td>
-                            <td>Teknoloji Parkı</td>
-                            <td>10.08.2023</td>
-                            <td>30.11.2023</td>
-                            <td>Aydınlatma Sistemi</td>
-                            <td><span class="status-badge status-active">Aktif</span></td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-sm btn-outline-primary btn-action edit-record" data-id="2">
-                                        <i class="fas fa-edit"></i> Düzenle
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger btn-action delete-record" data-id="2">
-                                        <i class="fas fa-trash"></i> Sil
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr data-id="3">
-                            <td>Ayşe Demir</td>
-                            <td>PRJ-003</td>
-                            <td>Rezidans Projesi</td>
-                            <td>05.07.2023</td>
-                            <td>20.10.2023</td>
-                            <td>Güvenlik Sistemi</td>
-                            <td><span class="status-badge status-inactive">Tamamlandı</span></td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-sm btn-outline-primary btn-action edit-record" data-id="3">
-                                        <i class="fas fa-edit"></i> Düzenle
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger btn-action delete-record" data-id="3">
-                                        <i class="fas fa-trash"></i> Sil
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr data-id="4">
-                            <td>Zeynep Çelik</td>
-                            <td>PRJ-001</td>
-                            <td>Mega Center AVM</td>
-                            <td>15.09.2023</td>
-                            <td>30.12.2023</td>
-                            <td>Kontrol Paneli</td>
-                            <td><span class="status-badge status-active">Aktif</span></td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-sm btn-outline-primary btn-action edit-record" data-id="4">
-                                        <i class="fas fa-edit"></i> Düzenle
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger btn-action delete-record" data-id="4">
-                                        <i class="fas fa-trash"></i> Sil
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr data-id="5">
-                            <td>Ali Yıldız</td>
-                            <td>PRJ-004</td>
-                            <td>Ofis Binası</td>
-                            <td>01.10.2023</td>
-                            <td>15.01.2024</td>
-                            <td>Data Kablolama</td>
-                            <td><span class="status-badge status-active">Aktif</span></td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="btn btn-sm btn-outline-primary btn-action edit-record" data-id="5">
-                                        <i class="fas fa-edit"></i> Düzenle
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger btn-action delete-record" data-id="5">
-                                        <i class="fas fa-trash"></i> Sil
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- Tüm Şantiye Geçmişi Tab -->
+            <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3 class="table-title">Tüm Şantiye Kayıt Geçmişi</h3>
+                        <div class="input-group" style="max-width: 300px;">
+                            <input type="text" class="form-control" placeholder="Arama..." id="historySearchInput">
+                            <button class="btn btn-outline-secondary" type="button" id="historySearchButton">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="custom-table" id="historySiteTable">
+                            <thead>
+                                <tr>
+                                    <th>Personel</th>
+                                    <th>Proje Kodu</th>
+                                    <th>Proje Adı</th>
+                                    <th>Başlangıç Tarihi</th>
+                                    <th>Bitiş Tarihi</th>
+                                    <th>Görev</th>
+                                    <th>Durum</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr data-id="1" data-status="active" data-project="PRJ-001" data-date="2023-09">
+                                    <td>Ahmet Yılmaz</td>
+                                    <td>PRJ-001</td>
+                                    <td>Mega Center AVM</td>
+                                    <td>01.09.2023</td>
+                                    <td>15.12.2023</td>
+                                    <td>Elektrik Tesisatı</td>
+                                    <td><span class="status-badge status-active">Aktif</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm btn-outline-primary btn-action edit-record" data-id="1">
+                                                <i class="fas fa-edit"></i> Düzenle
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger btn-action delete-record" data-id="1">
+                                                <i class="fas fa-trash"></i> Sil
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr data-id="2" data-status="active" data-project="PRJ-002" data-date="2023-08">
+                                    <td>Mehmet Kaya</td>
+                                    <td>PRJ-002</td>
+                                    <td>Teknoloji Parkı</td>
+                                    <td>10.08.2023</td>
+                                    <td>30.11.2023</td>
+                                    <td>Aydınlatma Sistemi</td>
+                                    <td><span class="status-badge status-active">Aktif</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm btn-outline-primary btn-action edit-record" data-id="2">
+                                                <i class="fas fa-edit"></i> Düzenle
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger btn-action delete-record" data-id="2">
+                                                <i class="fas fa-trash"></i> Sil
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr data-id="3" data-status="completed" data-project="PRJ-003" data-date="2023-07">
+                                    <td>Ayşe Demir</td>
+                                    <td>PRJ-003</td>
+                                    <td>Rezidans Projesi</td>
+                                    <td>05.07.2023</td>
+                                    <td>20.10.2023</td>
+                                    <td>Güvenlik Sistemi</td>
+                                    <td><span class="status-badge status-inactive">Tamamlandı</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm btn-outline-primary btn-action edit-record" data-id="3">
+                                                <i class="fas fa-edit"></i> Düzenle
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger btn-action delete-record" data-id="3">
+                                                <i class="fas fa-trash"></i> Sil
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr data-id="4" data-status="active" data-project="PRJ-001" data-date="2023-09">
+                                    <td>Zeynep Çelik</td>
+                                    <td>PRJ-001</td>
+                                    <td>Mega Center AVM</td>
+                                    <td>15.09.2023</td>
+                                    <td>30.12.2023</td>
+                                    <td>Kontrol Paneli</td>
+                                    <td><span class="status-badge status-active">Aktif</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm btn-outline-primary btn-action edit-record" data-id="4">
+                                                <i class="fas fa-edit"></i> Düzenle
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger btn-action delete-record" data-id="4">
+                                                <i class="fas fa-trash"></i> Sil
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr data-id="5" data-status="active" data-project="PRJ-004" data-date="2023-10">
+                                    <td>Ali Yıldız</td>
+                                    <td>PRJ-004</td>
+                                    <td>Ofis Binası</td>
+                                    <td>01.10.2023</td>
+                                    <td>15.01.2024</td>
+                                    <td>Data Kablolama</td>
+                                    <td><span class="status-badge status-active">Aktif</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm btn-outline-primary btn-action edit-record" data-id="5">
+                                                <i class="fas fa-edit"></i> Düzenle
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger btn-action delete-record" data-id="5">
+                                                <i class="fas fa-trash"></i> Sil
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr data-id="6" data-status="completed" data-project="PRJ-005" data-date="2023-06">
+                                    <td>Fatma Şahin</td>
+                                    <td>PRJ-005</td>
+                                    <td>Alışveriş Merkezi</td>
+                                    <td>01.06.2023</td>
+                                    <td>31.08.2023</td>
+                                    <td>Enerji Nakil Hattı</td>
+                                    <td><span class="status-badge status-inactive">Tamamlandı</span></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-sm btn-outline-primary btn-action edit-record" data-id="6">
+                                                <i class="fas fa-edit"></i> Düzenle
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger btn-action delete-record" data-id="6">
+                                                <i class="fas fa-trash"></i> Sil
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -1301,19 +1544,71 @@
             });
             
             // Arama fonksiyonu
-            const searchInput = document.getElementById('siteSearchInput');
-            const table = document.getElementById('siteRecordsTable');
-            const rows = table.querySelectorAll('tbody tr');
+            function setupSearch(inputId, tableId) {
+                const searchInput = document.getElementById(inputId);
+                const table = document.getElementById(tableId);
+                const rows = table.querySelectorAll('tbody tr');
 
-            searchInput.addEventListener('keyup', function() {
-                const filter = searchInput.value.toLowerCase();
+                searchInput.addEventListener('keyup', function() {
+                    const filter = searchInput.value.toLowerCase();
+                    rows.forEach(row => {
+                        let textContent = row.textContent || row.innerText;
+                        if (textContent.toLowerCase().indexOf(filter) > -1) {
+                            row.style.display = "";
+                        } else {
+                            row.style.display = "none";
+                        }
+                    });
+                });
+            }
+
+            setupSearch('activeSearchInput', 'activeSiteTable');
+            setupSearch('historySearchInput', 'historySiteTable');
+            
+            // Filtreleme fonksiyonu
+            function applyFilters() {
+                const statusFilter = document.getElementById('statusFilter').value;
+                const projectFilter = document.getElementById('projectFilter').value;
+                const dateFilter = document.getElementById('dateFilter').value;
+                
+                const activeTab = document.querySelector('.nav-link.active').getAttribute('aria-controls');
+                const tableId = activeTab === 'active' ? 'activeSiteTable' : 'historySiteTable';
+                const rows = document.getElementById(tableId).querySelectorAll('tbody tr');
+                
                 rows.forEach(row => {
-                    let textContent = row.textContent || row.innerText;
-                    if (textContent.toLowerCase().indexOf(filter) > -1) {
-                        row.style.display = "";
+                    const status = row.getAttribute('data-status');
+                    const project = row.getAttribute('data-project');
+                    const date = row.getAttribute('data-date');
+                    
+                    let statusMatch = statusFilter === 'all' || status === statusFilter;
+                    let projectMatch = projectFilter === 'all' || project === projectFilter;
+                    let dateMatch = !dateFilter || date === dateFilter.replace('-', '');
+                    
+                    if (statusMatch && projectMatch && dateMatch) {
+                        row.style.display = '';
                     } else {
-                        row.style.display = "none";
+                        row.style.display = 'none';
                     }
+                });
+            }
+            
+            // Filtre değişikliklerini dinle
+            document.getElementById('statusFilter').addEventListener('change', applyFilters);
+            document.getElementById('projectFilter').addEventListener('change', applyFilters);
+            document.getElementById('dateFilter').addEventListener('change', applyFilters);
+            
+            // Filtreleri sıfırla
+            document.getElementById('resetFilters').addEventListener('click', function() {
+                document.getElementById('statusFilter').value = 'all';
+                document.getElementById('projectFilter').value = 'all';
+                document.getElementById('dateFilter').value = '';
+                applyFilters();
+            });
+            
+            // Tab değiştiğinde filtreleri uygula
+            document.querySelectorAll('.nav-link').forEach(tab => {
+                tab.addEventListener('shown.bs.tab', function() {
+                    applyFilters();
                 });
             });
             
