@@ -312,17 +312,17 @@
             align-items: center;
             gap: 10px;
             transition: all 0.3s;
-            color: white; /* Buton metnini beyaz yap */
+            color: white;
         }
 
         .btn-primary-custom:hover {
             background-color: var(--primary-dark);
             transform: translateY(-2px);
-            color: white; /* Hover durumunda da beyaz kalsın */
+            color: white;
         }
 
         .btn-primary-custom i {
-            color: white; /* İkon rengini beyaz yap */
+            color: white;
         }
 
         /* Table Styles */
@@ -468,7 +468,7 @@
             background-position: right 16px center;
             background-size: 20px;
             padding-right: 50px;
-            position: relative; /* Ekledik */
+            position: relative;
         }
 
         input[type="date"]:focus {
@@ -482,12 +482,11 @@
             background: transparent;
             color: transparent;
             cursor: pointer;
-            /* Kaldırılan ve güncellenen özellikler */
-            position: absolute; /* Ekledik */
-            right: 0; /* Ekledik */
-            width: 40px; /* Ekledik */
-            height: 100%; /* Ekledik */
-            opacity: 0; /* Ekledik */
+            position: absolute;
+            right: 0;
+            width: 40px;
+            height: 100%;
+            opacity: 0;
         }
 
         /* Toast bildirimi */
@@ -553,6 +552,52 @@
             }
         }
 
+        /* Hamburger Menu */
+        .hamburger-menu {
+            display: none;
+            background-color: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            font-size: 20px;
+            margin-right: 15px;
+            z-index: 1001;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar.show ~ .main-content .hamburger-menu {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Overlay for mobile */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        /* Close button inside sidebar */
+        .sidebar-close {
+            display: none;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1002;
+        }
+
         /* Responsive */
         @media (max-width: 992px) {
             .sidebar {
@@ -572,14 +617,14 @@
             
             .hamburger-menu {
                 display: block;
-                background-color: var(--primary);
-                color: var(--white);
-                border: none;
-                border-radius: 8px;
-                padding: 10px 12px;
-                cursor: pointer;
-                font-size: 20px;
-                margin-right: 15px;
+            }
+            
+            .overlay.show {
+                display: block;
+            }
+            
+            .sidebar-close {
+                display: block;
             }
             
             .welcome-banner {
@@ -599,36 +644,35 @@
             }
             
             .topbar {
-                flex-direction: row; /* Topbar'ı tek satırda tutmak için */
-                align-items: center; /* Öğeleri dikeyde ortala */
-                justify-content: space-between; /* Öğeler arasında boşluk bırak */
-                padding: 10px 15px; /* Daha az padding */
-                gap: 10px; /* Öğeler arası boşluğu azalt */
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                padding: 10px 15px;
+                gap: 10px;
             }
             
             .page-title {
-                font-size: 20px; /* Başlık font boyutunu küçült */
+                font-size: 20px;
                 gap: 8px;
             }
             .page-title i {
                 font-size: 20px;
             }
             .topbar-actions {
-                /* width: 100%; */ /* Bu satırı kaldırın veya yorumlayın */
-                justify-content: flex-end; /* Aksiyonları sağa hizala */
-                gap: 10px; /* Aksiyonlar arası boşluğu azalt */
+                justify-content: flex-end;
+                gap: 10px;
             }
             
             .user-info {
-                display: none; /* Kullanıcı bilgisini gizle, yer kazanmak için */
+                display: none;
             }
             .user-avatar {
-                width: 36px; /* Avatar boyutunu küçült */
+                width: 36px;
                 height: 36px;
                 font-size: 14px;
             }
              .logout-btn {
-                padding: 6px 10px; /* Çıkış butonu paddingini küçült */
+                padding: 6px 10px;
                 font-size: 13px;
             }
         }
@@ -642,31 +686,29 @@
             }
             
             .logout-btn span {
-                display: none; /* Çıkış butonu yazısını gizle */
+                display: none;
             }
             
             .logout-btn {
-                padding: 8px; /* Sadece ikon kalacağı için paddingi ayarla */
+                padding: 8px;
             }
             
-            .pending-leave-alert {
-                flex-direction: column;
-                text-align: center;
-                gap: 10px;
-            }
-            
-            .pending-leave-alert i {
-                margin-right: 0;
-            }
             .hamburger-menu {
-                margin-right: 10px; /* Hamburger menü ile başlık arasına boşluk */
+                margin-right: 10px;
             }
         }
     </style>
 </head>
 <body>
+    <!-- Overlay for mobile -->
+    <div class="overlay" id="overlay"></div>
+    
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
+        <button class="sidebar-close" id="sidebarClose">
+            <i class="fas fa-times"></i>
+        </button>
+        
         <div class="logo-container">
             <img src="{{ url_for('static', filename='serlogoorj.png') }}" alt="SER Elektrik Otomasyon">
         </div>
@@ -701,6 +743,10 @@
     <div class="main-content" id="mainContent">
         <!-- Topbar -->
         <div class="topbar">
+            <button class="hamburger-menu" id="hamburgerMenu">
+                <i class="fas fa-bars"></i>
+            </button>
+            
             <div class="page-title">
                 <i class="fas fa-clipboard-list"></i>
                 <span>İzin Talepleri</span>
@@ -1031,27 +1077,65 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Hamburger menü için (mobil görünüm)
-            const hamburgerMenu = document.createElement('button');
-            hamburgerMenu.className = 'hamburger-menu';
-            hamburgerMenu.innerHTML = '<i class="fas fa-bars"></i>';
-            hamburgerMenu.style.display = 'none';
-            document.querySelector('.topbar').prepend(hamburgerMenu);
-            
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
+            const hamburgerMenu = document.getElementById('hamburgerMenu');
+            const overlay = document.getElementById('overlay');
+            const sidebarClose = document.getElementById('sidebarClose');
             
-            hamburgerMenu.addEventListener('click', () => {
-                sidebar.classList.toggle('show');
+            // Hamburger menü tıklama olayı
+            hamburgerMenu.addEventListener('click', (e) => {
+                e.stopPropagation();
+                sidebar.classList.add('show');
+                overlay.classList.add('show');
             });
             
-            // Pencere boyutu değiştiğinde hamburger menüyü göster/gizle
+            // Overlay tıklama olayı (menüyü kapat)
+            overlay.addEventListener('click', () => {
+                sidebar.classList.remove('show');
+                overlay.classList.remove('show');
+            });
+            
+            // Sidebar kapatma butonu
+            sidebarClose.addEventListener('click', () => {
+                sidebar.classList.remove('show');
+                overlay.classList.remove('show');
+            });
+            
+            // Sidebar dışına tıklama olayı (menüyü kapat)
+            document.addEventListener('click', (e) => {
+                const isClickInsideSidebar = sidebar.contains(e.target);
+                const isClickInsideHamburger = hamburgerMenu.contains(e.target);
+                
+                if (!isClickInsideSidebar && !isClickInsideHamburger && window.innerWidth <= 992) {
+                    sidebar.classList.remove('show');
+                    overlay.classList.remove('show');
+                }
+            });
+            
+            // Sidebar içindeki öğelere tıklanınca kapanmasını engelle
+            sidebar.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+            
+            // Sidebar içindeki linklere tıklandığında menüyü kapat
+            document.querySelectorAll('.sidebar .nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    if (window.innerWidth <= 992) {
+                        sidebar.classList.remove('show');
+                        overlay.classList.remove('show');
+                    }
+                });
+            });
+            
+            // Pencere boyutu değiştiğinde kontrol et
             function checkWidth() {
                 if (window.innerWidth <= 992) {
                     hamburgerMenu.style.display = 'block';
                 } else {
                     hamburgerMenu.style.display = 'none';
                     sidebar.classList.remove('show');
+                    overlay.classList.remove('show');
                 }
             }
             
@@ -1194,7 +1278,7 @@
                     document.getElementById('detail-status').textContent = cells[4].textContent;
                     document.getElementById('detail-request-date').textContent = cells[5].textContent;
                     
-                    // Açıklama ve reddetme sebebi
+                    // Açıklama và reddetme sebebi
                     document.getElementById('detail-description').textContent = row.dataset.description;
                     
                     const reasonContainer = document.getElementById('detail-reason-container');
