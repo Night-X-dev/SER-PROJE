@@ -60,6 +60,7 @@
             border-bottom: 1px solid var(--border-color);
             margin-bottom: 25px;
             text-align: center;
+            position: relative;
         }
 
         .logo-container img {
@@ -568,6 +569,49 @@
             border-radius: 5px;
         }
 
+        /* Hamburger Menu */
+        .hamburger-menu {
+            display: none;
+            background-color: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            font-size: 20px;
+            margin-right: 15px;
+            z-index: 1001;
+        }
+
+        /* Sidebar close button */
+        .close-sidebar {
+            display: none;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--secondary);
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        /* Overlay for mobile */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        .sidebar-overlay.active {
+            display: block;
+        }
+
         /* Responsive */
         @media (max-width: 992px) {
             .sidebar {
@@ -587,14 +631,10 @@
             
             .hamburger-menu {
                 display: block;
-                background-color: var(--primary);
-                color: var(--white);
-                border: none;
-                border-radius: 8px;
-                padding: 10px 12px;
-                cursor: pointer;
-                font-size: 20px;
-                margin-right: 15px;
+            }
+            
+            .close-sidebar {
+                display: block;
             }
             
             .welcome-banner {
@@ -606,6 +646,11 @@
             .welcome-icon {
                 display: none;
             }
+            
+            /* Hide hamburger when sidebar is open */
+            .sidebar-showing .hamburger-menu {
+                display: none;
+            }
         }
 
         @media (max-width: 768px) {
@@ -614,36 +659,35 @@
             }
             
             .topbar {
-                flex-direction: row; /* Topbar'ı tek satırda tutmak için */
-                align-items: center; /* Öğeleri dikeyde ortala */
-                justify-content: space-between; /* Öğeler arasında boşluk bırak */
-                padding: 10px 15px; /* Daha az padding */
-                gap: 10px; /* Öğeler arası boşluğu azalt */
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                padding: 10px 15px;
+                gap: 10px;
             }
             
             .page-title {
-                font-size: 20px; /* Başlık font boyutunu küçült */
+                font-size: 20px;
                 gap: 8px;
             }
             .page-title i {
                 font-size: 20px;
             }
             .topbar-actions {
-                /* width: 100%; */ /* Bu satırı kaldırın veya yorumlayın */
-                justify-content: flex-end; /* Aksiyonları sağa hizala */
-                gap: 10px; /* Aksiyonlar arası boşluğu azalt */
+                justify-content: flex-end;
+                gap: 10px;
             }
             
             .user-info {
-                display: none; /* Kullanıcı bilgisini gizle, yer kazanmak için */
+                display: none;
             }
             .user-avatar {
-                width: 36px; /* Avatar boyutunu küçült */
+                width: 36px;
                 height: 36px;
                 font-size: 14px;
             }
              .logout-btn {
-                padding: 6px 10px; /* Çıkış butonu paddingini küçült */
+                padding: 6px 10px;
                 font-size: 13px;
             }
         }
@@ -657,11 +701,11 @@
             }
             
             .logout-btn span {
-                display: none; /* Çıkış butonu yazısını gizle */
+                display: none;
             }
             
             .logout-btn {
-                padding: 8px; /* Sadece ikon kalacağı için paddingi ayarla */
+                padding: 8px;
             }
             
             .pending-leave-alert {
@@ -674,16 +718,22 @@
                 margin-right: 0;
             }
             .hamburger-menu {
-                margin-right: 10px; /* Hamburger menü ile başlık arasına boşluk */
+                margin-right: 10px;
             }
         }
     </style>
 </head>
 <body>
+    <!-- Sidebar Overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="logo-container">
             <img src="{{ url_for('static', filename='serlogoorj.png') }}" alt="SER Elektrik Otomasyon">
+            <button class="close-sidebar" id="closeSidebar">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
         <a href="/ik_dashboard" class="nav-item">
             <i class="fas fa-home"></i>
@@ -715,6 +765,9 @@
     <div class="main-content" id="mainContent">
         <!-- Topbar -->
         <div class="topbar">
+            <button class="hamburger-menu" id="hamburgerMenu">
+                <i class="fas fa-bars"></i>
+            </button>
             <div class="page-title">
                 <i class="fas fa-calendar-check"></i>
                 <span>İzinlerim</span>
@@ -740,7 +793,7 @@
         <div class="welcome-banner">
             <div class="welcome-text">
                 <h2>İzin Yönetimi</h2>
-                <p>İzin durumunuzu görüntüleyebilir, yeni izin talebi oluşturabilir ve mevcut izinlerinizi yönetebilirsiniz.</p>
+                <p>İzin durumunuzu görüntüleyebilir, yeni izin talebi oluşturabilir and mevcut izinlerinizi yönetebilirsiniz.</p>
             </div>
             <div class="welcome-icon">
                 <i class="fas fa-calendar-alt"></i>
@@ -1138,52 +1191,81 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-          function showToast(message, type = 'success') {
-                const toast = document.getElementById('toast');
-                const messageSpan = toast.querySelector('.toast-message');
-                const toastIcon = toast.querySelector('.toast-icon');
-                
-                if (toast && messageSpan && toastIcon) {
-                    messageSpan.textContent = message;
-                    
-                    if (type === 'success') {
-                        toast.className = 'show success';
-                    } else {
-                        toast.className = 'show error';
-                    }
-                    
-                    setTimeout(() => {
-                        toast.className = toast.className.replace('show', '');
-                    }, 5000);
-                }
-            }
-        document.addEventListener('DOMContentLoaded', function() {
-            // Hamburger menü için (mobil görünüm)
-            const hamburgerMenu = document.createElement('button');
-            hamburgerMenu.className = 'hamburger-menu';
-            hamburgerMenu.innerHTML = '<i class="fas fa-bars"></i>';
-            hamburgerMenu.style.display = 'none';
-            document.querySelector('.topbar').prepend(hamburgerMenu);
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const messageSpan = toast.querySelector('.toast-message');
+            const toastIcon = toast.querySelector('.toast-icon');
             
+            if (toast && messageSpan && toastIcon) {
+                messageSpan.textContent = message;
+                
+                if (type === 'success') {
+                    toast.className = 'show success';
+                } else {
+                    toast.className = 'show error';
+                }
+                
+                setTimeout(() => {
+                    toast.className = toast.className.replace('show', '');
+                }, 5000);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const hamburgerMenu = document.getElementById('hamburgerMenu');
             const sidebar = document.getElementById('sidebar');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+            const closeSidebarBtn = document.getElementById('closeSidebar');
             const mainContent = document.getElementById('mainContent');
             
-            hamburgerMenu.addEventListener('click', () => {
+            // Hamburger menü ve overlay için tıklama olayları
+            function toggleSidebar() {
                 sidebar.classList.toggle('show');
+                sidebarOverlay.classList.toggle('active');
+                
+                // Ana içeriğe sidebar gösteriliyorsa class ekle
+                if (sidebar.classList.contains('show')) {
+                    document.body.classList.add('sidebar-showing');
+                } else {
+                    document.body.classList.remove('sidebar-showing');
+                }
+            }
+            
+            function closeSidebar() {
+                sidebar.classList.remove('show');
+                sidebarOverlay.classList.remove('active');
+                document.body.classList.remove('sidebar-showing');
+            }
+            
+            hamburgerMenu.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleSidebar();
             });
             
-            // Pencere boyutu değiştiğinde hamburger menüyü göster/gizle
+            closeSidebarBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                closeSidebar();
+            });
+            
+            sidebarOverlay.addEventListener('click', function() {
+                closeSidebar();
+            });
+            
+            // Ana içerik alanına tıklandığında sidebar'ı kapat
+            mainContent.addEventListener('click', function() {
+                if (window.innerWidth <= 992 && sidebar.classList.contains('show')) {
+                    closeSidebar();
+                }
+            });
+            
+            // Pencere boyutu değiştiğinde sidebar'ı kapat
             function checkWidth() {
-                if (window.innerWidth <= 992) {
-                    hamburgerMenu.style.display = 'block';
-                } else {
-                    hamburgerMenu.style.display = 'none';
-                    sidebar.classList.remove('show');
+                if (window.innerWidth > 992) {
+                    closeSidebar();
                 }
             }
             
             window.addEventListener('resize', checkWidth);
-            checkWidth();
             
             // Çıkış butonu
             document.getElementById('logoutButton').addEventListener('click', function() {
@@ -1236,8 +1318,7 @@
                 const form = document.getElementById('leaveRequestForm');
                 if (form.checkValidity()) {
                     // Burada form verilerini sunucuya gönderme işlemi yapılacak
-                     showToast('İzin talebiniz başarıyla gönderildi!', 'success');
-
+                    showToast('İzin talebiniz başarıyla gönderildi!', 'success');
                     
                     // Modal'ı kapat
                     const modal = bootstrap.Modal.getInstance(document.getElementById('newLeaveRequestModal'));
@@ -1291,8 +1372,7 @@
             // İzin iptalini onayla
             document.getElementById('confirmCancel').addEventListener('click', function() {
                 // Burada izin iptal işlemini sunucuya gönderme işlemi yapılacak
-                 showToast('İzin talebiniz başarıyla iptal edildi.', 'success');
-
+                showToast('İzin talebiniz başarıyla iptal edildi.', 'success');
                 
                 // Modal'ı kapat
                 cancelLeaveModal.hide();
