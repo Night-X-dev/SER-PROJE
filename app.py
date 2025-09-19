@@ -1285,12 +1285,20 @@ def get_customers():
         connection = get_db_connection()
         with connection.cursor() as cursor:
             sql = """
-            SELECT c.customer_id, c.customer_name, c.contact_person, c.phone, c.email, c.status, c.country, c.city,
-                    COUNT(p.project_id) AS project_count
-            FROM customers c
-            LEFT JOIN projects p ON c.customer_id = c.customer_id
-            GROUP BY c.customer_id
-            ORDER BY c.customer_name
+            SELECT 
+            c.customer_id, 
+            c.customer_name, 
+            c.contact_person, 
+            c.phone, 
+            c.email, 
+            c.status, 
+            c.country, 
+            c.city,
+            COUNT(p.project_id) AS project_count
+        FROM customers c
+        LEFT JOIN projects p ON c.customer_id = p.customer_id  -- Changed this line
+        GROUP BY c.customer_id
+        ORDER BY c.customer_name
             """
             cursor.execute(sql)
             customers = cursor.fetchall()
