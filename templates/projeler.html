@@ -4070,10 +4070,22 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
 
     // Proje durumu için HTML çıktısı üreten yardımcı fonksiyon
     const getProjectStatusHtml = (isDelayed) => {
-        const color = isDelayed ? 'red' : '#4CAF50';
-        const text = isDelayed ? 'Gecikmeli devam ediyor' : 'Gecikmesiz devam ediyor';
-        return `<span style="color: ${color}; font-weight: bold; margin: 0;">${text}</span>`;
-    };
+    // Tüm adımların tamamlanıp tamamlanmadığını kontrol et
+    const allStepsCompleted = progressSteps.length > 0 && 
+                            progressSteps.every(step => step.is_completed);
+    
+    // Son adımın bitiş tarihi var mı kontrol et
+    const lastStep = progressSteps[progressSteps.length - 1];
+    const hasEndDate = lastStep && lastStep.end_date;
+    
+    if (allStepsCompleted || hasEndDate) {
+        return '<span style="color: #4CAF50; font-weight: bold; margin: 0;">Tamamlandı</span>';
+    }
+    
+    const color = isDelayed ? 'red' : '#4CAF50';
+    const text = isDelayed ? 'Gecikmeli devam ediyor' : 'Gecikmesiz devam ediyor';
+    return `<span style="color: ${color}; font-weight: bold; margin: 0;">${text}</span>`;
+};
 
     // GÜNCELLEME: Projenin genel durumunu belirlemek için herhangi bir adımda gecikme süresi olup olmadığını kontrol eder.
     const isProjectDelayed = progressSteps.some(step => {
