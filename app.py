@@ -3007,7 +3007,7 @@ def update_user(user_id):
 
 @app.route('/api/yetkitable')
 def get_yetkitable():
-    """Retrieves all roles except 'Admin' from the yetki table."""
+    """Retrieves all roles except 'Admin' from the yetki table with user counts."""
     if 'user_id' not in session:
         return jsonify({"error": "Oturum açık değil."}), 401
 
@@ -3018,8 +3018,15 @@ def get_yetkitable():
             return jsonify({"error": "Veritabanı bağlantısı kurulamadı."}), 500
 
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            # Admin rolünü hariç tutarak tüm rolleri getir
-            sql = "SELECT * FROM yetki WHERE role_name != 'Admin' ORDER BY id"
+            # Admin rolünü hariç tutarak tüm rolleri ve kullanıcı sayılarını getir
+            sql = """
+            SELECT 
+                y.*,
+                (SELECT COUNT(*) FROM users u WHERE u.role = y.role_name) as user_count
+            FROM yetki y 
+            WHERE y.role_name != 'Admin' 
+            ORDER BY y.id
+            """
             cursor.execute(sql)
             roles = cursor.fetchall()
             return jsonify(roles)
