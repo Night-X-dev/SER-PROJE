@@ -2021,27 +2021,19 @@
 
             // --- Müşterileri Backend'den Çekme ---
             async function fetchCustomers() {
-            customersTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Müşteriler yükleniyor...</td></tr>';
-            try {
-                console.log('API isteği gönderiliyor...', `${API_BASE_URL}/api/customers`);
-                const response = await fetch(`${API_BASE_URL}/api/customers`);
-                console.log('API yanıt durumu:', response.status, response.statusText);
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('API hatası:', errorText);
-                    throw new Error(`Müşteriler çekilemedi: ${response.status} ${response.statusText}`);
+                customersTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Müşteriler yükleniyor...</td></tr>';
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/customers`);
+                    if (!response.ok) throw new Error('Müşteriler çekilemedi.');
+                    allCustomersData = await response.json();
+                    applyFiltersAndRenderTable(); // Filtreleri uygula ve tabloyu render et
+                } catch (error) {
+                    console.error('Müşterileri çekerken hata:', error);
+                    customersTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger);">Müşteriler yüklenemedi. Sunucuya bağlanılamadı veya bir hata oluştu.</td></tr>';
+                    showToast('Müşteri listesi yüklenemedi. Lütfen backend sunucusunun çalıştığından emin olun.', true);
                 }
-                const data = await response.json();
-                console.log('API yanıtı (ham):', data);
-                allCustomersData = data;
-                console.log('allCustomersData:', allCustomersData);
-                applyFiltersAndRenderTable();
-            } catch (error) {
-                console.error('Müşterileri çekerken hata:', error);
-                customersTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger);">Müşteriler yüklenemedi. Sunucuya bağlanılamadı veya bir hata oluştu.</td></tr>';
-                showToast('Müşteri listesi yüklenemedi. Lütfen backend sunucusunun çalıştığından emin olun.', true);
             }
-        }
+
             // --- Tabloyu Render Etme ---
             function renderTable(customersToRender) {
                 customersTableBody.innerHTML = ''; // Mevcut satırları temizle
