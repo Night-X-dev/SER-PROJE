@@ -2021,18 +2021,19 @@
 
             // --- Müşterileri Backend'den Çekme ---
             async function fetchCustomers() {
-                customersTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Müşteriler yükleniyor...</td></tr>';
-                try {
-                    const response = await fetch(`${API_BASE_URL}/api/customers`);
-                    if (!response.ok) throw new Error('Müşteriler çekilemedi.');
-                    allCustomersData = await response.json();
-                    applyFiltersAndRenderTable(); // Filtreleri uygula ve tabloyu render et
-                } catch (error) {
-                    console.error('Müşterileri çekerken hata:', error);
-                    customersTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger);">Müşteriler yüklenemedi. Sunucuya bağlanılamadı veya bir hata oluştu.</td></tr>';
-                    showToast('Müşteri listesi yüklenemedi. Lütfen backend sunucusunun çalıştığından emin olun.', true);
-                }
+            customersTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Müşteriler yükleniyor...</td></tr>';
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/customers`);
+                if (!response.ok) throw new Error('Müşteriler çekilemedi.');
+                allCustomersData = await response.json();
+                console.log('API yanıtı:', allCustomersData); // API'den gelen verileri konsola yazdır
+                applyFiltersAndRenderTable(); // Filtreleri uygula ve tabloyu render et
+            } catch (error) {
+                console.error('Müşterileri çekerken hata:', error);
+                customersTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger);">Müşteriler yüklenemedi. Sunucuya bağlanılamadı veya bir hata oluştu.</td></tr>';
+                showToast('Müşteri listesi yüklenemedi. Lütfen backend sunucusunun çalıştığından emin olun.', true);
             }
+        }
 
             // --- Tabloyu Render Etme ---
             function renderTable(customersToRender) {
