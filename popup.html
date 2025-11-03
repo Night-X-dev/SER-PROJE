@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ser Elektrik Otomasyon - Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* --- anasayfa.html'den alınan tüm CSS buraya gelecek --- */
+        :root {
+            --primary: #005c9d;
+            --primary-light: #0980d3;
+            --white: #ffffff;
+            --light-gray: #97a1aa;
+            --dark-gray: #5e6870;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --input...
+            /* Kalan özel CSS'inizi buraya eklemeye devam edebilirsiniz. */
+        }
+        .bg-primary-custom { background-color: var(--primary); }
+        .text-primary-custom { color: var(--primary); }
+        .modal-header-custom { background-color: #dc3545; color: white; border-radius: 0.3rem 0.3rem 0 0; }
+        .modal-body-custom { background-color: #fff3cd; border-left: 5px solid #ffc107; }
+        /* Mevcut CSS yapınıza uygun minimal eklemeler */
+    </style>
+</head>
+<body class="bg-light">
+
+    <!-- Navbar ve diğer ana bileşenleriniz burada devam ediyor... -->
+
+    <div class="container-fluid py-4">
+        <h1 class="text-primary-custom">Dashboard</h1>
+        
+        <!-- YENİ EKLENEN TEST BUTONU -->
+        <button id="openMaintenanceModalTestBtn" class="btn btn-outline-warning btn-sm mb-3">
+            <i class="fas fa-hammer me-1"></i> Bakım Pop-up'ını Test Et
+        </button>
+        <!-- /YENİ EKLENEN TEST BUTONU -->
+        
+        <!-- Dashboard içeriğiniz burada -->
+        <p>Bakım duyurusu, belirlenen tarih aralığı ve saatlerde otomatik olarak açılacaktır.</p>
+    </div>
+
+    <!-- 
+        *** Yeni Eklenen Bakım Duyurusu Modalı (Pop-up) ***
+        Bootstrap Modal yapısı kullanılmıştır.
+    -->
+    <div class="modal fade" id="maintenanceModal" tabindex="-1" aria-labelledby="maintenanceModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                
+                <div class="modal-header modal-header-custom">
+                    <h5 class="modal-title" id="maintenanceModalLabel">
+                        <i class="fas fa-exclamation-triangle me-2"></i> Önemli Duyuru: Planlı Bakım
+                    </h5>
+                    <!-- Modal kapatma butonu kaldırıldı, sadece aşağıdaki butonlarla kontrol edilecek -->
+                </div>
+
+                <div class="modal-body">
+                    <div class="modal-body-custom p-3 mb-3 rounded">
+                        <p class="mb-1 text-dark">
+                            Değerli Kullanıcımız, sistemimiz daha iyi performans için planlı bakıma alınacaktır.
+                        </p>
+                    </div>
+
+                    <ul class="list-group list-group-flush mb-3">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-bold"><i class="far fa-calendar-alt me-2 text-danger"></i> Bakım Tarih Aralığı:</span>
+                            <span class="text-end">6 Ekim 2025 - 12 Ekim 2025</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="fw-bold"><i class="far fa-clock me-2 text-danger"></i> Günlük Bakım Saatleri:</span>
+                            <span class="text-end">21:00 (Akşam) - 01:00 (Gece)</span>
+                        </li>
+                    </ul>
+
+                    <p class="text-muted small">
+                        Bu saatler arasında uygulamaya erişim kısıtlanabilir veya kesintiler yaşanabilir. Anlayışınız için teşekkür ederiz.
+                    </p>
+                </div>
+
+                <div class="modal-footer d-flex justify-content-between align-items-center">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="" id="dontShowAgainCheck">
+                        <label class="form-check-label" for="dontShowAgainCheck">
+                            Bu uyarıyı kalıcı olarak bir daha gösterme
+                        </label>
+                    </div>
+                    <button type="button" class="btn btn-danger" id="closeMaintenanceModalBtn">
+                        <i class="fas fa-check me-1"></i> Tamam, Kapat
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- *** Bakım Duyurusu Modalı Sonu *** -->
+
+
+    <!-- Mevcut JavaScript kodunuz (izinler vb.) -->
+    <script>
+        // Mevcut izin ve diğer global JS kodlarınız burada...
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        // ... Mevcut diğer değişkenler ve fonksiyonlar ...
+
+        // ÖRNEK KOD: Lütfen bu örnek kodun yerine kendi orijinal JS kodunuzu koruyun.
+        // function fetchUserPermissions() { ... }
+        // ...
+
+
+        // 
+        // *** YENİ EKLENEN BAKIM KONTROL VE POP-UP GÖSTERME KODU ***
+        //
+        const MAINTENANCE_SHOWN_KEY = appId + '-maintenance-modal-closed-2025'; // Versiyonlu key
+        const MAINTENANCE_START_DATE = new Date(2025, 9, 6); // Ay 0'dan başlar (Ekim = 9)
+        const MAINTENANCE_END_DATE = new Date(2025, 9, 13); // 13 Ekim'e kadar kontrol etmek için
+
+        /**
+         * Bakım tarih aralığında olup olmadığını kontrol eder (6 Ekim - 12 Ekim 2025).
+         */
+        function isDateInMaintenanceRange(now) {
+            // 6 Ekim 00:00:00 ile 13 Ekim 00:00:00 arasındaki zaman dilimini kapsar (yani 12 Ekim dahil).
+            return now.getTime() >= MAINTENANCE_START_DATE.getTime() && now.getTime() < MAINTENANCE_END_DATE.getTime();
+        }
+
+        /**
+         * Bakım saat aralığında (21:00 - 01:00) olup olmadığını kontrol eder.
+         * Gece yarısı geçişini dikkate alır.
+         */
+        function isTimeInMaintenanceRange(now) {
+            const currentHour = now.getHours();
+            
+            // Kontrol 1: Akşam (21:00, 22:00, 23:00)
+            const isEveningMaintenance = currentHour >= 21; 
+
+            // Kontrol 2: Sabah (00:00)
+            const isMorningMaintenance = currentHour < 1; 
+
+            // Saat tam 01:00:00 ise bakım bitmiştir.
+            if (currentHour === 1 && now.getMinutes() === 0 && now.getSeconds() === 0) {
+                return false; 
+            }
+
+            return isEveningMaintenance || isMorningMaintenance;
+        }
+
+        /**
+         * Modal'ı doğrudan açar.
+         */
+        function openMaintenanceModal() {
+            const maintenanceModalElement = document.getElementById('maintenanceModal');
+             if (maintenanceModalElement && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                 const maintenanceModal = new bootstrap.Modal(maintenanceModalElement);
+                 maintenanceModal.show();
+             } else {
+                 console.error("Modal açılamadı, Bootstrap yüklenmemiş olabilir.");
+             }
+        }
+        
+        /**
+         * Ana kontrol fonksiyonu: Bakım zamanıysa ve daha önce kapatılmadıysa pop-up'ı gösterir.
+         */
+        function checkAndDisplayMaintenance() {
+            const now = new Date();
+            const maintenanceModalElement = document.getElementById('maintenanceModal');
+            
+            // Eğer modal elementi yoksa (ki olmamalı) veya Bootstrap yüklenmemişse çık
+            if (!maintenanceModalElement || typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+                 console.warn("Bootstrap Modal veya modal elementi bulunamadı. Bakım kontrolü atlandı.");
+                 return;
+            }
+            
+            const isDateValid = isDateInMaintenanceRange(now);
+            const isTimeValid = isTimeInMaintenanceRange(now);
+            
+            // 'Bir Daha Gösterme' seçeneği işaretlenmiş mi kontrol et (localStorage)
+            const isDontShowAgainSet = localStorage.getItem(MAINTENANCE_SHOWN_KEY) === 'true';
+
+            // Bakım zamanı ve tarih aralığındayız VE kullanıcı 'Bir Daha Gösterme' dememiş.
+            if (isDateValid && isTimeValid && !isDontShowAgainSet) {
+                console.log("Planlı bakım zamanı. Pop-up gösteriliyor.");
+                openMaintenanceModal();
+            } else {
+                console.log("Bakım zamanı değil, dışında veya kullanıcı kapatmayı seçmiş.");
+                // Modalı açmak için bir Bootstrap örneği oluşturmaya gerek yok, sadece otomatik açılmasını engelliyoruz.
+            }
+        }
+
+        /**
+         * Kapatma düğmesine ve 'Bir Daha Gösterme' seçeneğine olay dinleyicisi ekler.
+         */
+        function setupModalListeners() {
+            const closeModalBtn = document.getElementById('closeMaintenanceModalBtn');
+            const dontShowAgainCheck = document.getElementById('dontShowAgainCheck');
+            const maintenanceModalElement = document.getElementById('maintenanceModal');
+            const testBtn = document.getElementById('openMaintenanceModalTestBtn'); // Test butonu
+
+            if (!closeModalBtn || !dontShowAgainCheck || !maintenanceModalElement || !testBtn) {
+                console.error("Modal veya Test Butonu bileşenleri bulunamadı. Listenerlar kurulamadı.");
+                return;
+            }
+
+            // Kapatma butonu listener'ı
+            closeModalBtn.addEventListener('click', () => {
+                if (dontShowAgainCheck.checked) {
+                    console.log("'Bir Daha Gösterme' seçeneği işaretlendi. LocalStorage'a kaydediliyor.");
+                    // localStorage kullandığımız için bu kalıcı bir tercihtir.
+                    localStorage.setItem(MAINTENANCE_SHOWN_KEY, 'true');
+                }
+                const maintenanceModal = bootstrap.Modal.getInstance(maintenanceModalElement);
+                if (maintenanceModal) {
+                    maintenanceModal.hide();
+                }
+            });
+            
+            // YENİ: Test butonu listener'ı
+            testBtn.addEventListener('click', openMaintenanceModal);
+        }
+        
+        // window.onload olayını mevcut kodunuzun sonunda çağırın
+        window.onload = function () {
+            // Önce mevcut fonksiyonlarınızın çağrıları (varsa)
+
+            // Modalı kur ve kontrol et
+            setupModalListeners();
+            checkAndDisplayMaintenance(); // Sayfa yüklendiğinde hemen kontrol et ve göster
+
+            // Opsiyonel: Saatin değiştiği anları yakalamak için periyodik kontrol
+            setInterval(checkAndDisplayMaintenance, 60000); // Her 60 saniyede bir kontrol et
+
+            // ... diğer onload işlemleri ...
+        }
+
+        // ... Mevcut orijinal JS kodunuzun kalanı ...
+        
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- bildirim.js dosyasını en sona ekleyin ki DOM tamamen yüklendikten sonra çalışsın -->
+    <script src="static/bildirim.js"></script>
+    <!-- user-avatar.js dosyasını buraya dahil ediyoruz -->
+    <script src="static/user-avatar.js"></script>
+</body>
+</html>

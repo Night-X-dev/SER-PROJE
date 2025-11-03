@@ -373,12 +373,155 @@
                 font-size: 3rem;
             }
         }
+        
+        /* BAKIM POPUP STİLLERİ (SADELEŞTİRİLMİŞ) */
+        .maintenance-modal {
+            display: none; /* JS ile görünür yapılacak */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: #111111; /* Düz koyu arka plan */
+            border: 1px solid rgba(255, 255, 255, 0.1); /* İnce beyaz kenarlık */
+            border-radius: 10px;
+            padding: 25px;
+            width: 90%;
+            max-width: 450px; /* Biraz daha daraltıldı */
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5); /* Daha sade gölge */
+            position: relative;
+            animation: fadeIn 0.3s ease-out;
+            color: #e0e0e0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Daha sade ayırıcı */
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .modal-header i {
+            font-size: 2rem; /* İkon boyutu küçültüldü */
+            color: #ff8c00;
+            margin-right: 10px;
+            text-shadow: none; /* Gölge kaldırıldı */
+        }
+
+        .modal-header h3 {
+            font-size: 1.5rem; /* Başlık boyutu küçültüldü */
+            font-weight: 600;
+            color: #fff;
+            letter-spacing: 0.5px;
+        }
+        
+        .modal-body p {
+            margin-bottom: 10px;
+            line-height: 1.5;
+            font-size: 0.95rem;
+            color: #ccc;
+        }
+
+        .maintenance-info {
+            background-color: #1f1f1f; /* Koyu gri arka plan */
+            border-left: 3px solid #ff8c00; /* İnce turuncu çizgi */
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .maintenance-info strong {
+            display: block;
+            margin-bottom: 3px;
+            color: #fff;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .maintenance-info ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .maintenance-info li {
+            font-size: 0.9rem;
+            margin-bottom: 3px;
+        }
+        
+        .close-button {
+            background: #ff8c00;
+            color: #111111;
+            border: none;
+            padding: 8px 18px; /* Daha küçük düğme */
+            border-radius: 4px; /* Köşeler daha az yuvarlak */
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .close-button:hover {
+            background: #ffa500;
+            transform: none; /* Hafif transform da kaldırıldı */
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        .checkbox-container input[type="checkbox"] {
+            margin-right: 8px;
+            accent-color: #ff8c00;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Mobil için düzenlemeler */
+        @media (max-width: 600px) {
+            .modal-content {
+                padding: 15px;
+                max-width: 95%;
+            }
+            
+            .modal-header h3 {
+                font-size: 1.3rem;
+            }
+
+            .modal-header i {
+                font-size: 1.8rem;
+            }
+            
+            .modal-body p {
+                font-size: 0.9rem;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="electricity"></div>
     
     <div class="logo">
+        <!-- SER Elektrik Otomasyon Logosunu Göster -->
         <img src="{{ url_for('static', filename='serlogo.png') }}" alt="SER Elektrik Logo">
     </div>
     
@@ -387,6 +530,7 @@
     </div>
     
     <div class="container">
+        <!-- KABLO HESAPLAMA PANELİ -->
         <a href="kablo_hesap.html" class="split split-left">
             <div class="content">
                 <div class="icon">
@@ -398,6 +542,7 @@
             </div>
         </a>
         
+        <!-- PROJE TAKİP PANELİ -->
         <a href="login.html" class="split split-middle">
             <div class="content">
                 <div class="icon">
@@ -409,6 +554,7 @@
             </div>
         </a>
         
+        <!-- PERSONEL YÖNETİM PANELİ -->
         <a href="ik_login.html" class="split split-right">
             <div class="content">
                 <div class="icon">
@@ -425,7 +571,41 @@
         <p>© 2023 SER Elektrik Tüm hakları saklıdır | Mustafa Öztürk</p>
     </div>
 
+    <!-- BAKIM UYARISI POP-UP'I -->
+    <div id="maintenanceModal" class="maintenance-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Önemli Duyuru: Planlı Bakım</h3>
+            </div>
+            <div class="modal-body">
+                <p>Değerli Kullanıcımız, sistemimiz daha iyi performans için planlı bakıma alınacaktır.</p>
+                
+                <div class="maintenance-info">
+                    <ul>
+                        <li><strong>Bakım Tarih Aralığı:</strong> 10 Kasım 2025 - 16 Kasım 2025</li>
+                        <li><strong>Günlük Bakım Saatleri:</strong> 21:00 (Akşam) - 01:00 (Gece)</li>
+                    </ul>
+                </div>
+
+               <p>Bu saatler arasında uygulamaya erişim kısıtlanabilir veya kesintiler yaşanabilir.<br>
+<strong>Önemli:</strong> Bu süre zarfında verilerinize erişememe ihtimaline karşı, gerekli yedekleme veya kayıt işlemlerini önceden yapmanızı tavsiye ederiz.
+</p>
+
+
+                <div class="checkbox-container">
+                    <input type="checkbox" id="doNotShowAgain">
+                    <label for="doNotShowAgain">Bu uyarıyı kalıcı olarak bir daha gösterme</label>
+                </div>
+            </div>
+            <div class="modal-footer" style="text-align: right; margin-top: 20px;">
+                <button id="closeModalBtn" class="close-button">Kapat</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // Sayfa Paneli Tıklama Olayları
         document.querySelectorAll('.split').forEach(panel => {
             panel.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -466,6 +646,42 @@
             panel.addEventListener('mouseleave', () => {
                 // Işık efekti küçülerek kaybolur
                 light.style.transition = 'all 1s cubic-bezier(0.165, 0.84, 0.44, 1)';
+            });
+        });
+
+        // BAKIM POPUP LOGİĞİ
+        document.addEventListener('DOMContentLoaded', () => {
+            const modal = document.getElementById('maintenanceModal');
+            const closeBtn = document.getElementById('closeModalBtn');
+            const checkbox = document.getElementById('doNotShowAgain');
+            const maintenanceKey = 'showMaintenancePopup';
+
+            // Bakım uyarısının daha önce kapatılıp kapatılmadığını kontrol et
+            const shouldShowPopup = localStorage.getItem(maintenanceKey) !== 'false';
+
+            if (shouldShowPopup) {
+                modal.style.display = 'flex';
+            }
+
+            // Kapat butonuna tıklandığında
+            closeBtn.addEventListener('click', () => {
+                // Eğer checkbox işaretliyse, localStorage'a kaydet
+                if (checkbox.checked) {
+                    localStorage.setItem(maintenanceKey, 'false');
+                }
+                // Modal'ı gizle
+                modal.style.display = 'none';
+            });
+            
+            // Kullanıcı modal dışına tıklarsa kapat
+            window.addEventListener('click', (event) => {
+                if (event.target === modal) {
+                    // Modal dışına tıklandığında bile kapatma butonunun işlevini kullan
+                    if (checkbox.checked) {
+                        localStorage.setItem(maintenanceKey, 'false');
+                    }
+                    modal.style.display = 'none';
+                }
             });
         });
     </script>
