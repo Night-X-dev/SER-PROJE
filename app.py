@@ -296,6 +296,15 @@ def update_user_profile():
                     hashed_password = bcrypt.hashpw(data['newPassword'].encode('utf-8'), bcrypt.gensalt())
                     update_fields.append("password = %s")
                     update_values.append(hashed_password)
+                    
+                # Handle privacy settings
+                if 'hide_email' in data:
+                    update_fields.append("hide_email = %s")
+                    update_values.append(1 if data['hide_email'] == 1 else 0)
+                    
+                if 'hide_phone' in data:
+                    update_fields.append("hide_phone = %s")
+                    update_values.append(1 if data['hide_phone'] == 1 else 0)
                 
                 if not update_fields:
                     return jsonify({"error": "Güncellenecek alan bulunamadı"}), 400
