@@ -1860,7 +1860,7 @@
     <div id="notification-panel-placeholder"></div>
 
     <!-- Profil Düzenleme Modalı -->
-    <div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true" style="display: none;" inert>
+    <div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
@@ -2200,12 +2200,7 @@
             // Bildirim panelini yükle
             loadNotificationPanel();
             // Bildirim butonuna tıklama olayı
-            document.getElementById('notificationButton').addEventListener('click', function() {
-                const panel = document.getElementById('notification-panel');
-                if (panel) {
-                    panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
-                }
-            });
+            document.getElementById('notificationButton').addEventListener('click', toggleNotificationPanel);
         });
         
         // Cropper zoom değerini güncelleme
@@ -2597,94 +2592,37 @@
         }
         
         // Profil değişikliklerini kaydetme (Genel bilgiler)
-async function saveProfileChanges() {
-    const updateData = {
-        user_id: currentUser.id,  // Changed from userId to user_id to match backend expectations
-        profile_picture: currentCroppedImage || currentUser.profile_picture,
-        // Add other fields that might be needed by the backend
-        fullname: document.getElementById('editFullName')?.value || currentUser.fullname,
-        email: document.getElementById('editEmail')?.value || currentUser.email,
-        phone: document.getElementById('editPhone')?.value || currentUser.phone
-    };
-    
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/update_user_profile`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken() // Add CSRF token if needed
-            },
-            body: JSON.stringify(updateData)
-        });
+        async function saveProfileChanges() {
+            const updateData = {
+                userId: currentUser.id,
+                profile_picture: currentCroppedImage, 
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/update_user_profile`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData)
+                });
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Profil güncellenirken bir hata oluştu');
+                const result = await response.json();
+
+                if (response.ok) {
+                    showToast(result.message, 'success');
+                    currentUser.profile_picture = currentCroppedImage;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+                    updateCurrentUserProfile(currentUser); 
+                    fetchUsers(); 
+                    editProfileModalInstance.hide(); 
+                } else {
+                    showToast(result.message || 'Profil güncellenirken bir hata oluştu.', 'error');
+                }
+            } catch (error) {
+                console.error('Profil güncelleme sırasında hata:', error);
+                showToast('Sunucuya bağlanılamadı veya yanıt işlenirken bir hata oluştu.', 'error');
+            }
         }
-
-        const result = await response.json();
-        showToast(result.message || 'Profil başarıyla güncellendi', 'success');
-        
-        // Update local user data
-        currentUser = { ...currentUser, ...updateData };
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-        updateCurrentUserProfile(currentUser);
-        fetchUsers();
-        
-        // Close modal if open
-        if (editProfileModalInstance) {
-            editProfileModalInstance.hide();
-        }
-    } catch (error) {
-        console.error('Profil güncelleme hatası:', error);
-        showToast(error.message || 'Profil güncellenirken bir hata oluştu', 'error');
-    }
-}
-
-// Gizlilik ayarlarını kaydetme
-async function savePrivacySettings() {
-    const hidePhone = document.getElementById('hidePhoneNumber')?.checked ? 1 : 0;
-    const hideEmail = document.getElementById('hideEmail')?.checked ? 1 : 0;
-
-    const updateData = {
-        user_id: currentUser.id,  // Changed from userId to user_id
-        hide_email: hideEmail,
-        hide_phone: hidePhone
-    };
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/update_user_profile`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken() // Add CSRF token if needed
-            },
-            body: JSON.stringify(updateData)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Gizlilik ayarları güncellenirken bir hata oluştu');
-        }
-
-        const result = await response.json();
-        showToast(result.message || 'Gizlilik ayarlarınız güncellendi', 'success');
-        
-        // Update local user data
-        currentUser.hide_email = hideEmail;
-        currentUser.hide_phone = hidePhone;
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-        updateCurrentUserProfileDisplay(currentUser);
-    } catch (error) {
-        console.error('Gizlilik ayarları güncelleme hatası:', error);
-        showToast(error.message || 'Gizlilik ayarları güncellenirken bir hata oluştu', 'error');
-    }
-}
-
-// Add this helper function to get CSRF token if your backend requires it
-function getCSRFToken() {
-    return document.querySelector('meta[name="csrf-token"]')?.content || '';
-}
 
         // Gizlilik ayarlarını kaydetme (Sadece gizlilik ayarları)
         async function savePrivacySettings() {
