@@ -41,7 +41,10 @@ def serve_welcome_page():
 def serve_login_page():
     """Directs /login.html requests to the login.html page."""
     return render_template('login.html')
-
+@app.route('/update.html')
+def serve_update_page():
+    """Directs /update.html requests to the update.html page."""
+    return render_template('update.html')
 @app.route('/ik_login.html')
 def serve_ik_login_page():
     """Directs /ik_login.html requests to the ik_login.html page."""
