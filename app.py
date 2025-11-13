@@ -3040,6 +3040,160 @@ def get_yetkitable():
     finally:
         if connection:
             connection.close()
+# API to get users list for assignment dropdown
+@app.route('/api/users/list', methods=['GET'])
+def get_users_list():
+    """Retrieves a list of active users for assignment dropdown."""
+    if 'user_id' not in session:
+        return jsonify({"error": "Oturum açık değil."}), 401
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT id, fullname, email, role 
+                FROM users 
+                WHERE is_approved = 1 
+                ORDER BY fullname
+            """)
+            users = cursor.fetchall()
+            return jsonify(users), 200
+    except Exception as e:
+        print(f"Error fetching users list: {str(e)}")
+        return jsonify({'message': 'Kullanıcı listesi alınamadı'}), 500
+    finally:
+        if connection:
+            connection.close()
+
+# API to assign user to a project step
+@app.route('/api/progress/<int:progress_id>/assign', methods=['POST'])
+def assign_user_to_step(progress_id):
+    """Assigns a user to a project progress step."""
+    if 'user_id' not in session:
+        return jsonify({"error": "Oturum açık değil."}), 401
+
+    data = request.get_json()
+    user_id = data.get('user_id')
+    
+    if not user_id:
+        return jsonify({'message': 'Kullanıcı ID\'si gerekli'}), 400
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Check if assignment already exists
+            cursor.execute("""
+                SELECT * FROM project_step_assignments 
+                WHERE progress_id = %s AND user_id = %s
+            """, (progress_id, user_id))
+            if cursor.fetchone():
+                return jsonify({'message': 'Bu kullanıcı zaten bu adıma atanmış'}), 200
+
+            # Add new assignment
+            cursor.execute("""
+                INSERT INTO project_step_assignments (progress_id, user_id)
+                VALUES (%s, %s)
+            """, (progress_id, user_id))
+            
+            # Update main assignee
+            cursor.execute("""
+                UPDATE project_progress 
+                SET assigned_to = %s 
+                WHERE progress_id = %s
+                AND (assigned_to IS NULL OR assigned_to = 0)
+            """, (user_id, progress_id))
+            
+            connection.commit()
+            
+            # Log the assignment
+            cursor.execute("""
+                SELECT p.project_id, p.title 
+                FROM project_progress pp
+                JOIN projects p ON pp.project_id = p.project_id
+                WHERE pp.progress_id = %s
+            """, (progress_id,))
+            project = cursor.fetchone()
+            
+            if project:
+                cursor.execute("""
+                    INSERT INTO notifications (user_id, title, message, is_read, created_at)
+                    VALUES (%s, 'Yeni Görev Ataması', %s, 0, NOW())
+                """, (user_id, f'"{project["title"]}" projesinde size yeni bir görev atandı.'))
+                connection.commit()
+            
+            return jsonify({'message': 'Kullanıcı başarıyla atandı'}), 200
+    except Exception as e:
+        if connection:
+            connection.rollback()
+        print(f"Error assigning user to step: {str(e)}")
+        return jsonify({'message': 'Atama yapılırken bir hata oluştu'}), 500
+    finally:
+        if connection:
+            connection.close()
+
+# API to get assigned users for a step
+@app.route('/api/progress/<int:progress_id>/assignments', methods=['GET'])
+def get_step_assignments(progress_id):
+    """Retrieves all users assigned to a project progress step."""
+    if 'user_id' not in session:
+        return jsonify({"error": "Oturum açık değil."}), 401
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT u.id, u.fullname, u.email, u.role, psa.assigned_at
+                FROM project_step_assignments psa
+                JOIN users u ON psa.user_id = u.id
+                WHERE psa.progress_id = %s
+                ORDER BY psa.assigned_at DESC
+            """, (progress_id,))
+            assignments = cursor.fetchall()
+            return jsonify(assignments), 200
+    except Exception as e:
+        print(f"Error fetching step assignments: {str(e)}")
+        return jsonify({'message': 'Atamalar alınırken bir hata oluştu'}), 500
+    finally:
+        if connection:
+            connection.close()
+
+# API to remove user assignment
+@app.route('/api/progress/<int:progress_id>/unassign/<int:user_id>', methods=['DELETE'])
+def unassign_user_from_step(progress_id, user_id):
+    """Removes a user assignment from a project progress step."""
+    if 'user_id' not in session:
+        return jsonify({"error": "Oturum açık değil."}), 401
+
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # Remove the assignment
+            cursor.execute("""
+                DELETE FROM project_step_assignments 
+                WHERE progress_id = %s AND user_id = %s
+            """, (progress_id, user_id))
+            
+            # If this was the main assignee, clear the assigned_to field
+            cursor.execute("""
+                UPDATE project_progress 
+                SET assigned_to = NULL 
+                WHERE progress_id = %s AND assigned_to = %s
+            """, (progress_id, user_id))
+            
+            connection.commit()
+            return jsonify({'message': 'Atama kaldırıldı'}), 200
+    except Exception as e:
+        if connection:
+            connection.rollback()
+        print(f"Error unassigning user from step: {str(e)}")
+        return jsonify({'message': 'Atama kaldırılırken bir hata oluştu'}), 500
+    finally:
+        if connection:
+            connection.close()
 @app.route('/api/update-role', methods=['POST'])
 def update_role():
     if 'user_id' not in session:

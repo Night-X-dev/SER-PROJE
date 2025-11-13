@@ -551,7 +551,67 @@
           box-shadow: 0 2px 5px rgba(0,0,0,0.05);
           cursor: pointer;
       }
+      .assignment-section {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: var(--card-bg, #f8f9fa);
+            border-radius: 8px;
+            border: 1px solid var(--border-color, #dee2e6);
+        }
 
+        .assigned-users {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 10px 0;
+            min-height: 30px;
+        }
+
+        .assigned-user {
+            background-color: var(--primary-light, #e3f2fd);
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            border: 1px solid var(--primary, #007bff);
+        }
+
+        .assignment-time {
+            font-size: 0.75rem;
+            color: var(--text-muted, #6c757d);
+            margin-left: 5px;
+        }
+
+        .assignment-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            align-items: center;
+        }
+
+        .unassign-btn {
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+
+        .unassign-btn:hover {
+            opacity: 1;
+        }
+
+        /* Make sure the select fits well with other form controls */
+        .form-control-sm {
+            height: calc(1.5em + 0.5rem + 2px);
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            border-radius: 0.2rem;
+        }
       .action-btn:hover {
           background-color: var(--primary-light); /* Hover'da daha belirgin renk */
           color: var(--white); /* Yazı rengi beyaz olsun */
@@ -1886,7 +1946,22 @@
               </div>
           </div>
         </div>
-
+        <div class="assignment-section">
+    <label>Atanan Kişiler:</label>
+    <div class="assigned-users" id="assigned-users-${step.progress_id}">
+        <!-- Will be populated by JavaScript -->
+    </div>
+    <div class="assignment-controls">
+        <select id="assign-user-${step.progress_id}" class="form-control form-control-sm d-inline-block w-auto">
+            <option value="">Kişi Seçin...</option>
+            <!-- Will be populated by JavaScript -->
+        </select>
+        <button type="button" class="btn btn-sm btn-primary assign-btn" 
+                data-progress-id="${step.progress_id}">
+            <i class="fas fa-user-plus"></i> Ata
+        </button>
+    </div>
+</div>
         <div class="footer">
           &copy; 2025 Ser Elektrik Otomasyon. Tüm hakları saklıdır. | Mustafa Öztürk
         </div>
@@ -3341,7 +3416,158 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
         return null;
     }
 }
+    // Add this to your existing JavaScript code
+async function loadUsersForAssignment() {
+    try {
+        const response = await fetch('/api/users/list');
+        if (!response.ok) throw new Error('Kullanıcılar yüklenemedi');
+        return await response.json();
+    } catch (error) {
+        console.error('Kullanıcılar yüklenirken hata:', error);
+        showToast('Hata', 'Kullanıcılar yüklenirken bir hata oluştu', 'error');
+        return [];
+    }
+}
 
+async function loadAssignments(progressId) {
+    try {
+        const response = await fetch(`/api/progress/${progressId}/assignments`);
+        if (!response.ok) throw new Error('Atamalar yüklenemedi');
+        return await response.json();
+    } catch (error) {
+        console.error('Atamalar yüklenirken hata:', error);
+        return [];
+    }
+}
+
+function renderAssignments(assignments, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (assignments.length === 0) {
+        container.innerHTML = '<span class="text-muted">Atanmış kullanıcı yok</span>';
+        return;
+    }
+
+    container.innerHTML = assignments.map(user => `
+        <span class="assigned-user" data-user-id="${user.id}">
+            ${user.fullname} (${user.role})
+            <span class="assignment-time">${new Date(user.assigned_at).toLocaleDateString()}</span>
+            <button class="btn btn-sm btn-link p-0 ml-2 unassign-btn" 
+                    data-progress-id="${progressId}" 
+                    data-user-id="${user.id}">
+                <i class="fas fa-times text-danger"></i>
+            </button>
+        </span>
+    `).join('');
+
+    // Add event listeners to unassign buttons
+    document.querySelectorAll(`#${containerId} .unassign-btn`).forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const progressId = btn.dataset.progressId;
+            const userId = btn.dataset.userId;
+            
+            if (confirm('Bu kullanıcının atamasını kaldırmak istediğinize emin misiniz?')) {
+                try {
+                    const response = await fetch(`/api/progress/${progressId}/unassign/${userId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    const result = await response.json();
+                    if (response.ok) {
+                        showToast('Başarılı', result.message, 'success');
+                        // Refresh assignments
+                        const assignments = await loadAssignments(progressId);
+                        renderAssignments(assignments, containerId);
+                    } else {
+                        throw new Error(result.message || 'Atama kaldırılamadı');
+                    }
+                } catch (error) {
+                    console.error('Atama kaldırma hatası:', error);
+                    showToast('Hata', error.message, 'error');
+                }
+            }
+        });
+    });
+}
+
+async function handleAssignUser(progressId, userId) {
+    try {
+        const response = await fetch(`/api/progress/${progressId}/assign`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            showToast('Başarılı', result.message, 'success');
+            // Refresh assignments
+            const assignments = await loadAssignments(progressId);
+            renderAssignments(assignments, `assigned-users-${progressId}`);
+            return true;
+        } else {
+            throw new Error(result.message || 'Atama yapılamadı');
+        }
+    } catch (error) {
+        console.error('Atama hatası:', error);
+        showToast('Hata', error.message, 'error');
+        return false;
+    }
+}
+
+function initAssignment(progressId) {
+    // Load users and assignments
+    Promise.all([
+        loadUsersForAssignment(),
+        loadAssignments(progressId)
+    ]).then(([users, assignments]) => {
+        // Render assignments
+        renderAssignments(assignments, `assigned-users-${progressId}`);
+        
+        // Populate user dropdown
+        const select = document.getElementById(`assign-user-${progressId}`);
+        if (select) {
+            select.innerHTML = `
+                <option value="">Kişi Seçin...</option>
+                ${users.map(user => 
+                    `<option value="${user.id}">${user.fullname} (${user.role})</option>`
+                ).join('')}
+            `;
+            
+            // Add event listener for assign button
+            const assignBtn = document.querySelector(`.assign-btn[data-progress-id="${progressId}"]`);
+            if (assignBtn) {
+                assignBtn.addEventListener('click', async () => {
+                    const userId = select.value;
+                    if (userId) {
+                        const success = await handleAssignUser(progressId, parseInt(userId));
+                        if (success) {
+                            select.value = ''; // Reset selection
+                        }
+                    } else {
+                        showToast('Uyarı', 'Lütfen bir kullanıcı seçin', 'warning');
+                    }
+                });
+            }
+        }
+    }).catch(error => {
+        console.error('Atama başlatılırken hata:', error);
+        showToast('Hata', 'Atama bilgileri yüklenirken bir hata oluştu', 'error');
+    });
+}
+
+// Initialize assignments when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize for existing progress steps
+    document.querySelectorAll('.progress-detail-item').forEach(item => {
+        const progressId = item.dataset.progressId;
+        if (progressId) {
+            initAssignment(progressId);
+        }
+    });
+});
     function renderProgressSteps(steps, projectId, isEditable = false) {
         if (!steps || !Array.isArray(steps)) {
             console.error("Geçersiz steps parametresi:", steps);
