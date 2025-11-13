@@ -305,6 +305,12 @@ def update_user_profile():
                 if 'hide_phone' in data:
                     update_fields.append("hide_phone = %s")
                     update_values.append(1 if data['hide_phone'] == 1 else 0)
+                    
+                # Handle profile picture
+                if 'profile_picture' in data:
+                    update_fields.append("profile_picture = %s")
+                    # If profile_picture is 'null' string, set it to None (NULL in database)
+                    update_values.append(None if data['profile_picture'] === 'null' else data['profile_picture'])
                 
                 if not update_fields:
                     return jsonify({"error": "Güncellenecek alan bulunamadı"}), 400
