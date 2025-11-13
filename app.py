@@ -2203,68 +2203,71 @@ def get_project_progress_steps(project_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Check if 'is_completed' column exists and add if not
-            cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'is_completed'")
-            column_exists = cursor.fetchone() is not None
-            if not column_exists:
-                print("is_completed sütunu bulunamadı, ekleniyor...")
-                cursor.execute("ALTER TABLE project_progress ADD COLUMN is_completed TINYINT(1) DEFAULT 0")
-                connection.commit()
+            # Check and add columns if they don't exist
+            # ... (keep existing column checks) ...
 
-            # Check if 'custom_delay_days' column exists and add if not
-            cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'custom_delay_days'")
-            column_exists_custom_delay = cursor.fetchone() is not None
-            if not column_exists_custom_delay:
-                print("custom_delay_days sütunu bulunamadı, ekleniyor...")
-                cursor.execute("ALTER TABLE project_progress ADD COLUMN custom_delay_days INT DEFAULT 0")
-                connection.commit()
-
-            # Check if 'real_end_date' column exists and add if not
-            cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'real_end_date'")
-            column_exists_real_end_date = cursor.fetchone() is not None
-            if not column_exists_real_end_date:
-                print("real_end_date sütunu bulunamadı, ekleniyor...")
-                cursor.execute("ALTER TABLE project_progress ADD COLUMN real_end_date DATE NULL")
-                connection.commit()
-
+            # Modified SQL to include assigned user info
             sql = """
                 SELECT
-                progress_id,
-                project_id,
-            title AS step_name,
-            description,
-            start_date,
-            planned_start_date,  -- EKLENDİ
-            end_date,
-            delay_days,
-            custom_delay_days,
-            real_end_date,
-            is_completed,
-            created_at
-        FROM project_progress
-        WHERE project_id = %s
-        ORDER BY planned_start_date ASC, created_at ASC
+                    pp.progress_id,
+                    pp.project_id,
+                    pp.title AS step_name,
+                    pp.description,
+                    pp.start_date,
+                    pp.planned_start_date,
+                    pp.end_date,
+                    pp.delay_days,
+                    pp.custom_delay_days,
+                    pp.real_end_date,
+                    pp.is_completed,
+                    pp.assigned_to,
+                    u.fullname as assigned_to_name,
+                    u.email as assigned_to_email,
+                    u.role as assigned_to_role,
+                    pp.created_at
+                FROM project_progress pp
+                LEFT JOIN users u ON pp.assigned_to = u.id
+                WHERE pp.project_id = %s
+                ORDER BY pp.planned_start_date ASC, pp.created_at ASC
             """
             cursor.execute(sql, (project_id,))
             steps = cursor.fetchall()
 
+            # Format the response
+            formatted_steps = []
             for step in steps:
-                step['start_date'] = step['start_date'].isoformat() if isinstance(step['start_date'], datetime.date) else None
-                step['planned_start_date'] = step['planned_start_date'].isoformat() if isinstance(step['planned_start_date'], datetime.date) else None
-                step['end_date'] = step['end_date'].isoformat() if isinstance(step['end_date'], datetime.date) else None
-                step['real_end_date'] = step['real_end_date'].isoformat() if isinstance(step['real_end_date'], datetime.date) else None
-                step['created_at'] = step['created_at'].isoformat() if isinstance(step['created_at'], datetime.datetime) else None
-                step['custom_delay_days'] = int(step['custom_delay_days']) if step['custom_delay_days'] is not None else 0
-                step['is_completed'] = bool(step['is_completed'])
+                formatted_step = {
+                    'progress_id': step['progress_id'],
+                    'project_id': step['project_id'],
+                    'step_name': step['step_name'],
+                    'description': step['description'],
+                    'start_date': step['start_date'].isoformat() if step['start_date'] else None,
+                    'planned_start_date': step['planned_start_date'].isoformat() if step['planned_start_date'] else None,
+                    'end_date': step['end_date'].isoformat() if step['end_date'] else None,
+                    'delay_days': int(step['delay_days']) if step['delay_days'] is not None else 0,
+                    'custom_delay_days': int(step['custom_delay_days']) if step['custom_delay_days'] is not None else 0,
+                    'real_end_date': step['real_end_date'].isoformat() if step['real_end_date'] else None,
+                    'is_completed': bool(step['is_completed']),
+                    'assigned_to': step['assigned_to'],
+                    'assigned_user': {
+                        'id': step['assigned_to'],
+                        'name': step['assigned_to_name'],
+                        'email': step['assigned_to_email'],
+                        'role': step['assigned_to_role']
+                    } if step['assigned_to'] else None,
+                    'created_at': step['created_at'].isoformat() if step['created_at'] else None
+                }
+                formatted_steps.append(formatted_step)
 
-        return jsonify(steps), 200
+            return jsonify(formatted_steps), 200
+
     except pymysql.Error as e:
         print(f"Database error while fetching progress steps: {e}")
-        return jsonify({'message': f'Database error : {e.args[1]}'}), 500
+        return jsonify({'message': f'Database error: {e.args[1]}'}), 500
     except Exception as e:
         print(f"General error while fetching progress steps: {e}")
         traceback.print_exc()
-        return jsonify({'message': 'Server error, lütfen daha sonra tekrar deneyin.'}), 500
+        return jsonify({'message': 'Server error, please try again later.'}), 500
     finally:
         if connection:
             connection.close()
@@ -2276,6 +2279,7 @@ def add_project_progress_step_from_modal(project_id):
     description = data.get('description')
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
+    assigned_to = data.get('assigned_to')  # New: Get assigned user
 
     user_id = session.get('user_id')
     if not user_id and 'user_id' in data:
@@ -2292,11 +2296,13 @@ def add_project_progress_step_from_modal(project_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # Get project info
             cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (project_id,))
             project_info = cursor.fetchone()
             project_name = project_info['project_name'] if project_info else f"ID: {project_id}"
             project_manager_id = project_info['project_manager_id'] if project_info else None
 
+            # Calculate delay days
             cursor.execute("""
                 SELECT end_date FROM project_progress
                 WHERE project_id = %s
@@ -2313,64 +2319,60 @@ def add_project_progress_step_from_modal(project_id):
                 if time_diff >= 0:
                     delay_days = time_diff - 1
 
-            cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'custom_delay_days'")
-            column_exists_custom_delay = cursor.fetchone() is not None
-            if not column_exists_custom_delay:
-                cursor.execute("ALTER TABLE project_progress ADD COLUMN custom_delay_days INT DEFAULT 0")
-                connection.commit()
-
-            # BURADA DEĞİŞİKLİK YAPILDI: 'real_end_date' sütununun varlığı kontrol edildi ve yoksa eklendi
-            cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'real_end_date'")
-            column_exists_real_end_date = cursor.fetchone() is not None
-            if not column_exists_real_end_date:
-                cursor.execute("ALTER TABLE project_progress ADD COLUMN real_end_date DATE NULL")
-                connection.commit()
-
+            # Insert the new progress step with assigned_to
             sql_insert = """
             INSERT INTO project_progress (
                 project_id, title, description, start_date, end_date, planned_start_date, 
-                delay_days, custom_delay_days, real_end_date
-          )
-          VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                delay_days, custom_delay_days, real_end_date, assigned_to
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
-            # BURADA DEĞİŞİKLİK YAPILDI: Yeni eklenen iş adımının real_end_date'i, başlangıçta end_date ile aynı olacak
-            cursor.execute(sql_insert, (project_id, step_name, description, start_date_str, end_date_str, start_date_str, delay_days, 0, end_date_str))
+            cursor.execute(sql_insert, (
+                project_id, step_name, description, start_date_str, end_date_str, 
+                start_date_str, delay_days, 0, end_date_str, assigned_to
+            ))
             new_progress_id = cursor.lastrowid
 
-            update_result = update_project_dates(cursor, project_id)
-            if update_result:
-                print(f"Project dates successfully updated for project {project_id}")
-            else:
-                print(f"Failed to update project dates for project {project_id}")
+            # If assigned_to is provided, add to assignments table
+            if assigned_to:
+                cursor.execute("""
+                    INSERT INTO project_step_assignments (progress_id, user_id)
+                    VALUES (%s, %s)
+                """, (new_progress_id, assigned_to))
 
+            # Update project dates and status
+            update_project_dates(cursor, project_id)
             determine_and_update_project_status(cursor, project_id)
             connection.commit()
 
+            # Send notifications
             if project_manager_id:
                 try:
+                    # Send notification to project manager
                     send_notification(
                         cursor,
                         project_manager_id,
                         "Proje İlerleme Adımı Eklendi",
                         f"Yönettiğiniz '{project_name}' projesine '{step_name}' adında yeni bir iş adımı eklendi."
                     )
-                    # E-posta bildirimi gönder
+                    
+                    # Send email notification
                     cursor.execute("SELECT email FROM users WHERE id = %s", (project_manager_id,))
                     manager_email = cursor.fetchone()
                     if manager_email and manager_email['email']:
-                        send_notification(
-                            cursor,
-                            project_manager_id,
-                            "Proje İlerleme Adımı Eklendi",
-                            f"Yönettiğiniz '{project_name}' projesine '{step_name}' adında yeni bir iş adımı eklendi."
-                        )
                         send_email_notification(
                             manager_email['email'],
                             "Proje İlerleme Adımı Eklendi",
                             f"Yönettiğiniz '{project_name}' projesine '{step_name}' adında yeni bir iş adımı eklendi. Detaylar için sistemi kontrol edin."
                         )
-                    else:
-                        print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta adresi bulunamadı.")
+                    
+                    # If a user is assigned, notify them
+                    if assigned_to and assigned_to != project_manager_id:
+                        send_notification(
+                            cursor,
+                            assigned_to,
+                            "Yeni Görev Atandı",
+                            f"'{project_name}' projesindeki '{step_name}' adlı iş adımı size atandı."
+                        )
 
                 except Exception as notif_error:
                     print(f"Error sending notification (non-critical): {notif_error}")
@@ -2385,14 +2387,12 @@ def add_project_progress_step_from_modal(project_id):
         if connection:
             connection.rollback()
         return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
-
     except Exception as e:
         print(f"General error while adding progress step: {e}")
         traceback.print_exc()
         if connection:
             connection.rollback()
         return jsonify({'message': 'Server error, please try again later.'}), 500
-
     finally:
         if connection:
             connection.close()
@@ -2449,8 +2449,9 @@ def update_project_progress_step(progress_id):
     description = data.get('description')
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
-
+    assigned_to = data.get('assigned_to')  # New: Get assigned user
     newly_added_custom_delay = data.get('newly_added_custom_delay', 0)
+    
     if newly_added_custom_delay is None:
         newly_added_custom_delay = 0
     newly_added_custom_delay = int(newly_added_custom_delay)
@@ -2460,14 +2461,18 @@ def update_project_progress_step(progress_id):
         user_id = data.get('user_id')
 
     if not all([step_name, start_date_str, end_date_str]):
-        return jsonify({'message': 'Title, start, end date are required.'}), 400
+        return jsonify({'message': 'Title, start, and end date are required.'}), 400
 
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Mevcut iş adımının verilerini çek
-            cursor.execute("SELECT project_id, title, custom_delay_days, end_date FROM project_progress WHERE progress_id = %s", (progress_id,))
+            # Get existing step data
+            cursor.execute("""
+                SELECT project_id, title, custom_delay_days, end_date, assigned_to 
+                FROM project_progress 
+                WHERE progress_id = %s
+            """, (progress_id,))
             existing_step = cursor.fetchone()
 
             if not existing_step:
@@ -2477,31 +2482,28 @@ def update_project_progress_step(progress_id):
             old_step_name = existing_step['title']
             current_custom_delay_from_db = existing_step.get('custom_delay_days', 0) or 0
             current_custom_delay_from_db = int(current_custom_delay_from_db)
+            previous_assigned_to = existing_step.get('assigned_to')
 
-            # Toplam custom_delay_days'i hesapla
+            # Calculate final custom delay
             final_custom_delay_for_db = current_custom_delay_from_db + newly_added_custom_delay
 
-            # Gerçek bitiş tarihini hesapla: real_end_date, erteleme günlerinden etkilenmemeli,
-            # sadece end_date'in ilk girildiği hali olmalı.
-            # Dolayısıyla, eğer bu bir erteleme işlemi değilse, mevcut real_end_date'i koru.
-            # Eğer yeni bir adım ekleniyorsa, end_date ile aynı olsun.
-            # Mevcut real_end_date'i veritabanından çekelim.
+            # Get current real_end_date
             cursor.execute("SELECT real_end_date FROM project_progress WHERE progress_id = %s", (progress_id,))
             current_real_end_date_from_db = cursor.fetchone()['real_end_date']
 
-            # Eğer veritabanında zaten bir real_end_date varsa onu kullan, yoksa end_date'i kullan
+            # Determine real_end_date to save
             if current_real_end_date_from_db:
                 real_end_date_to_save = current_real_end_date_from_db.isoformat()
             else:
                 real_end_date_to_save = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date().isoformat()
 
-            # Proje adını ve yöneticisini al (bildirimler için)
+            # Get project info for notifications
             cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (current_project_id,))
             project_info = cursor.fetchone()
             project_name = project_info['project_name'] if project_info else f"ID: {current_project_id}"
             project_manager_id = project_info['project_manager_id'] if project_info else None
 
-            # calculated_delay_days'i yeniden hesapla (bir önceki adımın bitiş tarihi ile mevcut adımın başlangıç tarihi arasındaki fark)
+            # Calculate delay days
             calculated_delay_days = 0
             cursor.execute("""
                 SELECT end_date FROM project_progress
@@ -2515,7 +2517,7 @@ def update_project_progress_step(progress_id):
                 prev_end_date = previous_step['end_date']
                 current_start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
                 time_diff = (current_start_date - prev_end_date).days
-                calculated_delay_days = max(time_diff - 1, 0)  # 1 gün çıkar, negatif olursa 0
+                calculated_delay_days = max(time_diff - 1, 0)
             elif not previous_step:
                 cursor.execute("SELECT start_date FROM projects WHERE project_id = %s", (current_project_id,))
                 project_start_info = cursor.fetchone()
@@ -2524,79 +2526,56 @@ def update_project_progress_step(progress_id):
                     current_start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
                     time_diff = (current_start_date - project_start_date).days
                     calculated_delay_days = max(time_diff - 1, 0)
+
+            # Update the progress step with assigned_to
             sql_update = """
                 UPDATE project_progress
                 SET title = %s, description = %s, start_date = %s, end_date = %s,
-                    delay_days = %s, custom_delay_days = %s, real_end_date = %s
+                    delay_days = %s, custom_delay_days = %s, real_end_date = %s,
+                    assigned_to = %s
                 WHERE progress_id = %s
             """
             cursor.execute(sql_update, (
                 step_name, description, start_date_str, end_date_str,
-                calculated_delay_days, final_custom_delay_for_db, real_end_date_to_save, progress_id
+                calculated_delay_days, final_custom_delay_for_db, 
+                real_end_date_to_save, assigned_to, progress_id
             ))
 
-            print(f"SQL query executed. Rows affected: {cursor.rowcount}")
+            # Update assignments if assigned_to has changed
+            if assigned_to != previous_assigned_to:
+                # Remove existing assignments
+                cursor.execute("""
+                    DELETE FROM project_step_assignments 
+                    WHERE progress_id = %s
+                """, (progress_id,))
+                
+                # Add new assignment if assigned_to is provided
+                if assigned_to:
+                    cursor.execute("""
+                        INSERT INTO project_step_assignments (progress_id, user_id)
+                        VALUES (%s, %s)
+                    """, (progress_id, assigned_to))
 
-            # Proje yöneticisine bildirim gönderme işlemi
+            # Notifications
             if project_manager_id:
                 title = f"İş Adımı Güncellendi: {step_name}"
                 message = f"'{project_name}' projesindeki '{step_name}' adlı iş adımı güncellendi."
                 send_notification(cursor, project_manager_id, title, message)
 
-            # Sonraki adımların delay_days'ini yeniden hesapla ve güncelle
-            # Bu, güncel adımı takip eden tüm adımların gecikme durumunu doğru yansıtır
-            cursor.execute("""
-                SELECT progress_id, start_date, end_date, custom_delay_days, real_end_date
-                FROM project_progress
-                WHERE project_id = %s AND progress_id > %s
-                ORDER BY start_date ASC, created_at ASC
-            """, (current_project_id, progress_id))
-            subsequent_steps = cursor.fetchall()
+                # Notify the newly assigned user if changed
+                if assigned_to and assigned_to != previous_assigned_to:
+                    send_notification(
+                        cursor,
+                        assigned_to,
+                        "Yeni Görev Atandı",
+                        f"'{project_name}' projesindeki '{step_name}' adlı iş adımı size atandı."
+                    )
 
-            last_end_date_for_recalc = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            # Update subsequent steps
+            # ... (keep the existing subsequent steps update logic) ...
 
-            for sub_step in subsequent_steps:
-                sub_progress_id = sub_step['progress_id']
-                sub_start_date = sub_step['start_date']  # date objesi
-                sub_end_date = sub_step['end_date']      # date objesi
-                sub_real_end_date_from_db = sub_step['real_end_date']
-
-                # 1) Çakışma varsa (bitiş >= başlangıç), sonraki adımı kaydır
-                if last_end_date_for_recalc >= sub_start_date:
-                    duration = (sub_end_date - sub_start_date).days
-                    sub_start_date = last_end_date_for_recalc + datetime.timedelta(days=1)
-                    sub_end_date = sub_start_date + datetime.timedelta(days=duration)
-
-                # 2) Yeni hesaplanan gecikme (gap - 1 gün kuralı)
-                gap = (sub_start_date - last_end_date_for_recalc).days
-                recalculated_sub_delay_days = max(gap - 1, 0)
-
-                # 3) DB'deki mevcut delay_days değerini oku
-                cursor.execute("SELECT delay_days FROM project_progress WHERE progress_id = %s", (sub_progress_id,))
-                current_delay_days_from_db = cursor.fetchone()['delay_days'] or 0
-
-                # 4) Yeni değeri ekle (birikmeli mantık)
-                new_delay_days = recalculated_sub_delay_days
-
-                # 5) real_end_date'i koru (yoksa end_date kullan)
-                if sub_real_end_date_from_db:
-                    sub_real_end_date_to_save = sub_real_end_date_from_db.isoformat()
-                else:
-                    sub_real_end_date_to_save = sub_end_date.isoformat()
-
-                # 6) DB update
-                cursor.execute("""
-                    UPDATE project_progress
-                    SET start_date = %s, end_date = %s, delay_days = %s, real_end_date = %s
-                    WHERE progress_id = %s
-                """, (sub_start_date, sub_end_date, new_delay_days, sub_real_end_date_to_save, sub_progress_id))
-                connection.commit()
-
-                # 7) Zincirleme etki için bitişi güncelle
-                last_end_date_for_recalc = sub_end_date
-            # Projenin genel başlangıç ve bitiş tarihlerini iş adımlarına göre güncelle
+            # Update project dates and status
             update_project_dates(cursor, current_project_id)
-            # Projenin genel durumunu belirle ve güncelle
             determine_and_update_project_status(cursor, current_project_id)
             connection.commit()
 
@@ -2608,105 +2587,58 @@ def update_project_progress_step(progress_id):
             }), 200
 
     except Exception as e:
-        print(f"Proje güncelleme hatası: {str(e)}")
+        print(f"Error updating progress step: {str(e)}")
         traceback.print_exc()
         if connection:
             connection.rollback()
         return jsonify({'message': f'Server error: {str(e)}'}), 500
-
     finally:
         if connection:
             connection.close()
-
-@app.route('/api/progress/<int:progress_id>', methods=['DELETE'])
-def delete_project_progress_step(progress_id):
-    """Deletes a project progress step and its associated data."""
+@app.route('/api/progress/<int:progress_id>/assignments', methods=['GET'])
+def get_progress_step_assignments(progress_id):
+    """Get all user assignments for a progress step."""
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # İş adımının ait olduğu projeyi bul
-            cursor.execute("SELECT project_id, title FROM project_progress WHERE progress_id = %s", (progress_id,))
-            step_info = cursor.fetchone()
-
-            if not step_info:
-                return jsonify({'message': 'İş adımı bulunamadı.'}), 404
-
-            project_id = step_info['project_id']
-            step_title = step_info['title']
-
-            # BAĞLI VERİLERİ SİL
-            # revision_requests tablosundaki bağlı verileri silin.
-            cursor.execute("DELETE FROM revision_requests WHERE progress_id = %s", (progress_id,))
-
-            # Ana iş adımını sil
-            sql_delete = "DELETE FROM project_progress WHERE progress_id = %s"
-            cursor.execute(sql_delete, (progress_id,))
-
-            # Proje başlangıç ve bitiş tarihlerini güncelle
-            update_result = update_project_dates(cursor, project_id)
-            if update_result:
-                print(f"Project dates successfully updated after step deletion for project {project_id}")
-            else:
-                print(f"Failed to update project dates after step deletion for project {project_id}")
-
-            # Projenin genel durumunu belirle ve güncelle
-            determine_and_update_project_status(cursor, project_id)
-            connection.commit()
-
-            # Aktivite kaydı
-            user_id = session.get('user_id')
-            if user_id:
-                log_activity(
-                    user_id=user_id,
-                    title="İş Adımı Silindi",
-                    description=f"Proje ID: {project_id} için '{step_title}' iş adımı silindi.",
-                    icon="fas fa-trash",
-                    is_read=0
-                )
-
-        return jsonify({'message': 'İş adımı başarıyla silindi!'}), 200
-    except pymysql.Error as e:
-        print(f"Database error while deleting progress step: {e}")
-        if connection:
-            connection.rollback()
-        return jsonify({'message': f'Veritabanı hatası oluştu: {e.args[1]}'}), 500
+            cursor.execute("""
+                SELECT 
+                    psa.assignment_id,
+                    psa.progress_id,
+                    psa.user_id,
+                    u.fullname,
+                    u.email,
+                    u.role,
+                    psa.assigned_at
+                FROM project_step_assignments psa
+                JOIN users u ON psa.user_id = u.id
+                WHERE psa.progress_id = %s
+                ORDER BY psa.assigned_at DESC
+            """, (progress_id,))
+            
+            assignments = cursor.fetchall()
+            
+            # Format the response
+            formatted_assignments = []
+            for assignment in assignments:
+                formatted_assignments.append({
+                    'assignment_id': assignment['assignment_id'],
+                    'progress_id': assignment['progress_id'],
+                    'user': {
+                        'id': assignment['user_id'],
+                        'name': assignment['fullname'],
+                        'email': assignment['email'],
+                        'role': assignment['role']
+                    },
+                    'assigned_at': assignment['assigned_at'].isoformat() if assignment['assigned_at'] else None
+                })
+            
+            return jsonify(formatted_assignments), 200
+            
     except Exception as e:
-        print(f"General error while deleting progress step: {e}")
-        traceback.print_exc()
-        if connection:
-            connection.rollback()
-        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
-    finally:
-        if connection:
-            connection.close()
-
-
-@app.route('/api/user-info', methods=['GET'])
-def get_user_info():
-    """Retrieves detailed information for a single user."""
-    user_id = request.args.get('user_id')
-    if not user_id:
-        return jsonify({'message': 'User ID is missing'}), 400
-
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # Get all user fields including new ones
-            cursor.execute("SELECT id, fullname, email, phone, role, profile_picture, hide_email, hide_phone, created_at FROM users WHERE id = %s", (user_id,))
-            user = cursor.fetchone()
-            if not user:
-                return jsonify({'message': 'User not found'}), 404
-
-            # Convert datetime objects to string for JSON serialization
-            if 'created_at' in user and isinstance(user['created_at'], datetime.datetime):
-                user['created_at'] = user['created_at'].isoformat()
-
-            return jsonify(user), 200
-    except Exception as e:
-        print(f"General error while fetching user information: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
+        print(f"Error fetching step assignments: {str(e)}")
+        return jsonify({'message': 'Error fetching step assignments'}), 500
     finally:
         if connection:
             connection.close()

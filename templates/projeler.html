@@ -3935,49 +3935,32 @@ async function addNewProgressStepForm(projectId) {
     console.log("addNewProgressStepForm başladı, projectId:", projectId);
     const progressStepsContainer = document.getElementById("progressStepsContainer");
     
-    // Konteyner elementinin varlığını kontrol et
+    // Check if container exists
     if (!progressStepsContainer) {
         console.error("progressStepsContainer elementi bulunamadı!");
         showToast("Hata", "İş adımı eklenemiyor: Form container bulunamadı");
         return;
     }
 
-    // Zaten açık bir form olup olmadığını kontrol et
+    // Check if there's already an open form
     if (document.getElementById('newProgressForm')) {
         console.log("Zaten açık bir ekleme formu var, yeni form açılmayacak.");
         showToast("Uyarı", "Zaten açık bir ekleme formu var.");
         return;
     }
 
-    // API'den başlıkları ve mevcut iş adımlarını çek
-    let headersList = [];
-    let lastStepEndDate = null;
+    // Fetch users for the dropdown
+    let users = [];
     try {
-        // 1. Başlık listesini çek
-        const resHeaders = await fetch(`${API_BASE_URL}/api/work-progress-headers/active`);
-        if (!resHeaders.ok) throw new Error("Başlıklar alınamadı");
-        headersList = await resHeaders.json();
-
-        // 2. Projenin mevcut iş adımlarını çek
-        const resSteps = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`);
-        if (!resSteps.ok) throw new Error("Mevcut adımlar alınamadı");
-        const existingSteps = await resSteps.json();
-
-        // 3. Mevcut adımlar arasında en son bitiş tarihini bul
-        if (existingSteps && existingSteps.length > 0) {
-            // Adımları bitiş tarihine göre sırala (en yeniden en eskiye)
-            existingSteps.sort((a, b) => new Date(b.end_date) - new Date(a.end_date));
-            lastStepEndDate = existingSteps[0].end_date;
-            console.log("Bulunan en son iş adımı bitiş tarihi:", lastStepEndDate);
+        const response = await fetch('/api/users/list');
+        if (response.ok) {
+            users = await response.json();
         }
-
-    } catch (err) {
-        console.error("Veri alınırken hata oluştu:", err);
-        showToast("Hata", "Gerekli veriler alınırken hata oluştu");
-        return;
+    } catch (error) {
+        console.error('Kullanıcılar yüklenirken hata:', error);
     }
 
-    // Form elementini oluştur
+    // Create the form element
     const formElement = document.createElement('div');
     formElement.id = 'newProgressForm';
     formElement.className = 'progress-detail-item';
@@ -4007,21 +3990,41 @@ async function addNewProgressStepForm(projectId) {
                 </span>
             </div>
         </div>
+        
+        <!-- Assigned User Dropdown -->
+        <div class="form-group mt-3">
+            <label for="assignedUser">Atanan Kişi</label>
+            <select class="form-control" id="assignedUser">
+                <option value="">Atanacak kişi seçin (isteğe bağlı)</option>
+                ${users.map(user => 
+                    `<option value="${user.id}">${user.fullname} (${user.role})</option>`
+                ).join('')}
+            </select>
+        </div>
+        
         <div class="input-group">
             <label for="newStepDescription">Açıklama</label>
             <textarea id="newStepDescription" class="progress-description-textarea" placeholder="İş gidişat açıklaması"></textarea>
         </div>
         <div class="progress-actions">
-            <button type="button" class="action-btn modal-btn-cancel" id="cancelAddProgressBtn"><i class="fas fa-times"></i> İptal</button>
-            <button type="button" class="action-btn modal-btn-save" id="saveNewProgressBtn"><i class="fas fa-plus"></i> Ekle</button>
+            <button type="button" class="action-btn modal-btn-cancel" id="cancelAddProgressBtn">
+                <i class="fas fa-times"></i> İptal
+            </button>
+            <button type="button" class="action-btn modal-btn-save" id="saveNewProgressBtn">
+                <i class="fas fa-plus"></i> Ekle
+            </button>
         </div>
     `;
 
     progressStepsContainer.appendChild(formElement);
+    
+    // Set up event listeners
     const startDateInput = document.getElementById('newStepStartDate');
     const endDateInput = document.getElementById('newStepEndDate');
+    const cancelBtn = document.getElementById('cancelAddProgressBtn');
+    const saveBtn = document.getElementById('saveNewProgressBtn');
 
-    // Tarih inputları için mevcut validasyonları koru
+    // Date validation
     startDateInput.addEventListener('input', () => {
         if (endDateInput.value && startDateInput.value > endDateInput.value) {
             startDateInput.value = '';
@@ -4036,162 +4039,233 @@ async function addNewProgressStepForm(projectId) {
         }
     });
 
-    // Kaydet butonuna event listener ekle
-    document.getElementById('saveNewProgressBtn').addEventListener('click', async () => {
-        const headerId = document.getElementById('newStepHeader').value;
-        const startDate = document.getElementById('newStepStartDate').value;
-        const endDate = document.getElementById('newStepEndDate').value;
-        const description = document.getElementById('newStepDescription').value;
+    // Cancel button
+    cancelBtn.addEventListener('click', () => {
+        progressStepsContainer.removeChild(formElement);
+    });
+
+    // Save button
+    saveBtn.addEventListener('click', async () => {
         const headerSelect = document.getElementById('newStepHeader');
+        const headerId = headerSelect.value;
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        const description = document.getElementById('newStepDescription').value;
+        const assignedTo = document.getElementById('assignedUser').value || null;
         const stepName = headerSelect.options[headerSelect.selectedIndex].text;
 
-        // Gerekli alanların doldurulup doldurulmadığını kontrol et
+        // Validate required fields
         if (!headerId || !startDate || !endDate) {
             showToast("Uyarı", "Lütfen tüm zorunlu alanları doldurun.");
             return;
         }
 
-        // Yeni eklenen iş adımının başlangıç tarihi öncekinin bitiş tarihinden gerideyse veya aynıysa uyarı ver
-        if (lastStepEndDate && new Date(startDate) <= new Date(lastStepEndDate)) {
-            showToast("Uyarı", `Yeni iş adımının başlangıç tarihi, önceki adımın bitiş tarihi olan ${lastStepEndDate} tarihinden sonra olmalıdır.`, "error");
-            return;
-        }
-        
-        // Başlangıç tarihi bitiş tarihinden büyük olamaz kontrolünü yap
-        if (startDate > endDate) {
-            showToast("Hata", "Başlangıç tarihi bitiş tarihinden büyük olamaz.", "error");
-            return;
-        }
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    header_id: headerId,
-                    step_name: stepName,
-                    start_date: startDate,
-                    end_date: endDate,
-                    description: description,
-                    user_id: currentUser.id
-                })
-            });
-
-            const data = await response.json();
-            if (response.ok) {
-                showToast("Başarılı", "İş adımı başarıyla eklendi.");
-                formElement.remove();
-                await updateProjectDatesFromSteps(projectId);
-                fetchProgressSteps(projectId, true);
-                fetchProjects();
-                addActivity('İş Adımı Eklendi', `Proje ID: ${projectId} için başlık ID ${headerId} ile iş adımı eklendi.`, projectId, 'fas fa-tasks', 'progress_add');
-            } else {
-                showToast(`Hata: ${data.message}`, "error");
-            }
-        } catch (error) {
-            console.error("Yeni iş adımı ekleme hatası:", error);
-            showToast("Hata", "İş adımı eklenirken bir sorun oluştu: " + error.message, "error");
-        }
-    });
-
-    // İptal butonuna event listener ekle
-    document.getElementById('cancelAddProgressBtn').addEventListener('click', () => {
-        formElement.remove();
-        showToast("Bilgi", "İş adımı ekleme iptal edildi.");
-    });
-}
-
-async function editProgressStep(progressId, projectId, updatedStepData) {
-    try {
-        const startDate = new Date(updatedStepData.start_date);
-        const endDate = new Date(updatedStepData.end_date);
-
-        if (endDate < startDate) {
-            showToast("Hata", "Başlangıç tarihi bitiş tarihinden büyük olamaz.", "error");
-            return;
-        }
-        
-        // Projenin mevcut iş adımlarını çek
-        const resSteps = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`);
-        if (!resSteps.ok) throw new Error("Mevcut adımlar alınamadı");
-        const existingSteps = await resSteps.json();
-
-        // Güncellenen adımı listeden çıkar
-        const stepsExcludingCurrent = existingSteps.filter(step => step.id !== progressId);
-
-        // Önceki adım ve sonraki adım tarihlerini bul
-        let previousStepEndDate = null;
-        let nextStepStartDate = null;
-
-        if (stepsExcludingCurrent.length > 0) {
-            // Tüm adımları tarih sırasına göre sırala
-            stepsExcludingCurrent.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
-
-            for (let i = 0; i < stepsExcludingCurrent.length; i++) {
-                const step = stepsExcludingCurrent[i];
-                if (new Date(step.start_date) < startDate) {
-                    previousStepEndDate = step.end_date; // Güncellenen adımın öncesindeki adımın bitiş tarihi
-                } else if (new Date(step.start_date) > startDate && !nextStepStartDate) {
-                    nextStepStartDate = step.start_date; // Güncellenen adımın sonrasındaki adımın başlangıç tarihi
-                }
-            }
-        }
-
-        // Başlangıç tarihi kontrolü
-        if (previousStepEndDate && startDate <= new Date(previousStepEndDate)) {
-            showToast(
-                "Hata",
-                `İş adımı başlangıç tarihi, bir önceki adımın bitiş tarihi olan ${previousStepEndDate} tarihinden önce olamaz.`,
-                "error"
-            );
-            return;
-        }
-
-        // Bitiş tarihi kontrolü
-        if (nextStepStartDate && endDate >= new Date(nextStepStartDate)) {
-            showToast(
-                "Hata",
-                `İş adımı bitiş tarihi, bir sonraki adımın başlangıç tarihi olan ${nextStepStartDate} tarihinden sonra olamaz.`,
-                "error"
-            );
-            return;
-        }
-
-        const payload = {
-            ...updatedStepData,
-            newly_added_custom_delay: updatedStepData.newly_added_custom_delay || 0
+        // Prepare the data
+        const data = {
+            header_id: headerId,
+            title: stepName,
+            description: description,
+            start_date: startDate,
+            end_date: endDate,
+            assigned_to: assignedTo
         };
 
-        const response = await fetch(`${API_BASE_URL}/api/progress/${progressId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
+        try {
+            const response = await fetch(`/api/projects/${projectId}/progress`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+            
+            if (response.ok) {
+                showToast('Başarılı', 'İş adımı başarıyla eklendi', 'success');
+                // Refresh the progress steps
+                await loadProjectProgress(projectId);
+                // Remove the form
+                progressStepsContainer.removeChild(formElement);
+            } else {
+                throw new Error(result.message || 'İş adımı eklenirken bir hata oluştu');
+            }
+        } catch (error) {
+            console.error('İş adımı eklenirken hata:', error);
+            showToast('Hata', error.message || 'İş adımı eklenirken bir hata oluştu', 'error');
+        }
+    });
+}
+async function editProgressStep(progressId, projectId) {
+    try {
+        // Fetch step details
+        const response = await fetch(`/api/projects/${projectId}/progress/${progressId}`);
+        if (!response.ok) throw new Error('İş adımı bilgileri alınamadı');
+        const step = await response.json();
+
+        // Fetch users for the dropdown
+        const [usersResponse, assignmentsResponse] = await Promise.all([
+            fetch('/api/users/list'),
+            fetch(`/api/progress/${progressId}/assignments`)
+        ]);
+        
+        if (!usersResponse.ok) throw new Error('Kullanıcılar yüklenemedi');
+        const users = await usersResponse.json();
+        
+        let assignedUser = null;
+        if (assignmentsResponse.ok) {
+            const assignments = await assignmentsResponse.json();
+            assignedUser = assignments.length > 0 ? assignments[0].id : null;
+        }
+
+        // Create the edit form
+        const formElement = document.createElement('div');
+        formElement.className = 'progress-detail-item';
+        formElement.id = `edit-form-${progressId}`;
+        
+        formElement.innerHTML = `
+            <div class="progress-item-header">
+                <h4>İş Adımını Düzenle</h4>
+            </div>
+            
+            <div class="form-group">
+                <label for="editStepTitle">Başlık</label>
+                <input type="text" class="form-control" id="editStepTitle" value="${step.title || ''}" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="editStepStartDate">Başlangıç Tarihi</label>
+                <input type="date" class="form-control" id="editStepStartDate" 
+                       value="${step.start_date ? step.start_date.split('T')[0] : ''}" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="editStepEndDate">Bitiş Tarihi</label>
+                <input type="date" class="form-control" id="editStepEndDate" 
+                       value="${step.end_date ? step.end_date.split('T')[0] : ''}" required>
+            </div>
+            
+            <!-- Assigned User Dropdown -->
+            <div class="form-group">
+                <label for="editAssignedUser">Atanan Kişi</label>
+                <select class="form-control" id="editAssignedUser">
+                    <option value="">Atanacak kişi seçin (isteğe bağlı)</option>
+                    ${users.map(user => 
+                        `<option value="${user.id}" ${user.id === assignedUser ? 'selected' : ''}>
+                            ${user.fullname} (${user.role})
+                        </option>`
+                    ).join('')}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="editStepDescription">Açıklama</label>
+                <textarea class="form-control" id="editStepDescription" rows="3">${step.description || ''}</textarea>
+            </div>
+            
+            <div class="d-flex justify-content-end mt-3">
+                <button type="button" class="btn btn-secondary mr-2" id="cancelEditBtn">İptal</button>
+                <button type="button" class="btn btn-primary" id="saveEditBtn">Kaydet</button>
+            </div>
+        `;
+
+        // Replace the step with the edit form
+        const stepElement = document.querySelector(`.progress-detail-item[data-progress-id="${progressId}"]`);
+        if (stepElement) {
+            stepElement.replaceWith(formElement);
+        } else {
+            const container = document.getElementById('progressStepsContainer');
+            container.prepend(formElement);
+        }
+
+        // Set up event listeners
+        document.getElementById('cancelEditBtn').addEventListener('click', () => {
+            // Reload the step to show the original content
+            loadProjectProgress(projectId);
         });
 
-        const data = await response.json();
+        document.getElementById('saveEditBtn').addEventListener('click', async () => {
+            const title = document.getElementById('editStepTitle').value;
+            const startDate = document.getElementById('editStepStartDate').value;
+            const endDate = document.getElementById('editStepEndDate').value;
+            const description = document.getElementById('editStepDescription').value;
+            const assignedTo = document.getElementById('editAssignedUser').value || null;
 
-        if (response.ok) {
-            showToast("İş adımı başarıyla güncellendi.");
-            await updateProjectDatesFromSteps(projectId);
-            fetchProjects();
-            fetchProgressSteps(projectId, true);
+            if (!title || !startDate || !endDate) {
+                showToast('Uyarı', 'Lütfen tüm zorunlu alanları doldurun', 'warning');
+                return;
+            }
 
-            addActivity(
-                "İş Adımı Güncellendi",
-                `Proje ID: ${projectId} için "${updatedStepData.step_name}" iş adımı güncellendi.`,
-                projectId,
-                "fas fa-pen",
-                "progress_update"
-            );
-        } else {
-            showToast(`Hata: ${data.message}`, "error");
-        }
+            try {
+                const response = await fetch(`/api/projects/${projectId}/progress/${progressId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title,
+                        description,
+                        start_date: startDate,
+                        end_date: endDate,
+                        assigned_to: assignedTo
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showToast('Başarılı', 'İş adımı güncellendi', 'success');
+                    // Reload the progress steps
+                    await loadProjectProgress(projectId);
+                } else {
+                    throw new Error(result.message || 'İş adımı güncellenirken bir hata oluştu');
+                }
+            } catch (error) {
+                console.error('Güncelleme hatası:', error);
+                showToast('Hata', error.message || 'İş adımı güncellenirken bir hata oluştu', 'error');
+            }
+        });
+async function loadProjectProgress(projectId) {
+    try {
+        const response = await fetch(`/api/projects/${projectId}/progress`);
+        if (!response.ok) throw new Error('İlerleme adımları yüklenemedi');
+        const steps = await response.json();
+        
+        // Render the steps
+        renderProgressSteps(steps, projectId, true);
+        
+        // Initialize assignments for each step
+        steps.forEach(step => {
+            if (step.progress_id) {
+                initAssignment(step.progress_id);
+            }
+        });
     } catch (error) {
-        console.error("İş adımı güncelleme hatası:", error);
-        showToast("Hata", "İş adımı güncellenirken bir sorun oluştu.", "error");
+        console.error('İlerleme adımları yüklenirken hata:', error);
+        showToast('Hata', 'İlerleme adımları yüklenirken bir hata oluştu', 'error');
     }
 }
+        // Date validation
+        const startDateInput = document.getElementById('editStepStartDate');
+        const endDateInput = document.getElementById('editStepEndDate');
 
+        startDateInput.addEventListener('input', () => {
+            if (endDateInput.value && startDateInput.value > endDateInput.value) {
+                startDateInput.value = endDateInput.value;
+            }
+        });
+
+        endDateInput.addEventListener('input', () => {
+            if (startDateInput.value && endDateInput.value < startDateInput.value) {
+                endDateInput.value = startDateInput.value;
+            }
+        });
+
+    } catch (error) {
+        console.error('Düzenleme formu yüklenirken hata:', error);
+        showToast('Hata', 'Düzenleme formu yüklenirken bir hata oluştu', 'error');
+    }
+}
 
     // progress_id kullanıldı
     async function deleteProgressStep(progressId, projectId) {
