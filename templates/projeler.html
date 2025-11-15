@@ -3398,6 +3398,17 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                                     <option value="">Başlık seçiniz...</option>
                                     <!-- Headers will be loaded dynamically -->
                                 </select>
+                                <label for="step-${step.progress_id}-responsible" class="form-label">Sorumlu</label>
+                                <div class="select-container">
+                                    <select id="step-${step.progress_id}-responsible" class="header-dropdown ${readonlyClass}" ${disabledAttr}>
+                                        <option value="">Sorumlu seçiniz...</option>
+                                        <!-- Responsible users will be loaded dynamically -->
+                                    </select>
+                                    ${isCompleted ? '' : `
+                                    <div class="select-arrow">
+                                        <i class="fas fa-chevron-down"></i>
+                                    </div>`}
+                                </div>
                                 ${isCompleted ? '' : `
                                 <div class="select-arrow">
                                     <i class="fas fa-chevron-down"></i>
@@ -3409,6 +3420,23 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 } else {
                     titleContent = `<span class="progress-detail-title">${step.step_name || step.title || ''}</span>`;
                 }
+
+                // Add responsible selection dropdown
+                const responsibleContent = isEditable ?
+                    `<div class="responsible-selector" style="margin-top: 8px;">
+                        <label for="step-${step.progress_id}-responsible" class="form-label">Sorumlu:</label>
+                        <div class="select-container">
+                            <select id="step-${step.progress_id}-responsible" class="header-dropdown ${readonlyClass}" ${disabledAttr}>
+                                <option value="">Sorumlu seçiniz...</option>
+                                <!-- Responsible users will be loaded dynamically -->
+                            </select>
+                            ${isCompleted ? '' : `
+                            <div class="select-arrow">
+                                <i class="fas fa-chevron-down"></i>
+                            </div>`}
+                        </div>
+                    </div>` :
+                    `<div>Sorumlu: ${step.responsible_name || 'Belirtilmemiş'}</div>`;
 
                 const startDateContent = isEditable ?
                     `<label for="step-${step.progress_id}-start">Başlangıç:</label>
@@ -3660,6 +3688,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                         const startDate = document.getElementById(`step-${progressId}-start`).value;
                         const endDate = document.getElementById(`step-${progressId}-end`).value;
                         const description = document.getElementById(`step-${progressId}-desc`).value;
+                        const responsibleId = document.getElementById(`step-${progressId}-responsible`).value;
 
                         await editProgressStep(progressId, projId, {
                             step_name: stepName,
@@ -3667,6 +3696,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                             start_date: startDate,
                             end_date: endDate,
                             description: description,
+                            responsible_id: responsibleId,
                             newly_added_custom_delay: 0 // Kaydet butonuna basıldığında ek bir erteleme olmamalı
                         });
                     });
