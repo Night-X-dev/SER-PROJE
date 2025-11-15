@@ -2168,8 +2168,8 @@ def add_project():
                 send_notification(
                     cursor,
                     user_id,
-                    "Yeni Bir Görev Atandı",
-                    f"Bir projede size görev atandı: '{project_name}'"
+                    "Yeni Bir İş Adımı Atandı",
+                    f"Bir projede size iş adımı atandı: '{project_name}'"
                 )
 
                 # Mail adresini al
@@ -2180,8 +2180,8 @@ def add_project():
                 if user_email:
                     send_email_notification(
                         user_email,
-                        "Yeni Bir Görev Atandı",
-                        f"'{project_name}' projesinde size bir görev atandı."
+                        "Yeni Bir İş Adımı Atandı",
+                        f"'{project_name}' projesinde size bir iş adımı atandı."
                     )
                 else:
                     print(f"UYARI: Kullanıcı (id={user_id}) için e-posta bulunamadı.")
