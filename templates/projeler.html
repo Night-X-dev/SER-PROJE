@@ -868,8 +868,36 @@
       }
 
       /* Specific styles for different select types */
+      .header-dropdown,
+      #newStepHeader,
+      .user-dropdown,
+      .form-input[type="select"],
+      .form-input select,
+      select.form-input {
+        /* Inherit all base styles */
+      }
+      
 
-     
+      .header-dropdown:focus, #newStepHeader:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
+        outline: none;
+      }
+
+      .header-dropdown:hover, #newStepHeader:hover {
+        border-color: var(--primary-hover);
+      }
+
+      .header-dropdown option, #newStepHeader option {
+        padding: 10px;
+        background: var(--card-bg);
+        color: var(--text-color);
+      }
+
+      .header-dropdown:focus + .select-arrow, #newStepHeader:focus + .select-arrow {
+        transform: translateY(-50%) rotate(180deg);
+        color: var(--primary-color);
+      }
 
       .form-label {
         display: block;
@@ -884,6 +912,33 @@
             width: 100%;
         }
 
+        /* User dropdown inherits from base select style */
+        .user-dropdown {
+            /* All styles inherited from base select */
+        }
+
+        /* Hover and focus states for all selects */
+        select:focus,
+        .user-dropdown:focus,
+        .header-dropdown:focus,
+        .form-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
+            outline: none;
+        }
+
+        select:hover,
+        .user-dropdown:hover,
+        .header-dropdown:hover {
+            border-color: var(--primary-hover);
+        }
+
+        /* Style for dropdown options */
+        select option {
+            padding: 10px;
+            background: var(--card-bg);
+            color: var(--text-color);
+        }
 
         /* Dark theme for all selects */
         [data-theme="dark"] select,
@@ -3470,11 +3525,11 @@ async function fetchNonAdminUsers() {
             // titleContent tanımından hemen sonra (yaklaşık satır 3500)
             let userSelectHtml = '';
 if (isEditable) {
-        userSelectHtml = `
+    userSelectHtml = `
         <div class="user-select-wrapper">
             <label for="step-${step.progress_id}-user" class="form-label">Sorumlu</label>
             <div class="select-container">
-                <select id="step-${step.progress_id}-user" class="user-dropdown ${readonlyClass}" ${disabledAttr}>
+                <select id="step-${step.progress_id}-user" class="form-control user-dropdown ${readonlyClass}" ${disabledAttr}>
                     <option value="">Sorumlu seçiniz...</option>
                 </select>
             </div>
