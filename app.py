@@ -2090,7 +2090,7 @@ def parse_date_safe(date_str):
 @app.route('/api/projects', methods=['POST'])
 def add_project():
     data = request.json
-    required_fields = ['projectName', 'customerId', 'projectManagerId', 'startDate', 'endDate', 'progressSteps']
+    required_fields = ['projectName', 'customerId', 'projectManagerId', 'startDate', 'endDate']
 
     # Eksik alan kontrolü
     for field in required_fields:
@@ -2109,7 +2109,6 @@ def add_project():
     end_date = parse_date_safe(data.get('endDate'))
     project_location = data.get('projectLocation')
     status = data.get('status', 'Planlama Aşamasında')
-    progress_steps = data.get('progressSteps', [])
 
     connection = None
     try:
@@ -2129,19 +2128,19 @@ def add_project():
             new_project_id = cursor.lastrowid
 
             # Progress steps ekleme
+            progress_steps = data.get('progressSteps', [])
             last_step_end_date = start_date
+
             for step in progress_steps:
                 step_title = step.get('title')
                 step_desc = step.get('description')
                 step_start = parse_date_safe(step.get('startDate'))
                 step_end = parse_date_safe(step.get('endDate'))
-                assigned_to = step.get('userId')  # Sorumlu kullanıcı ID'si
 
-                if not all([step_title, step_start, step_end, assigned_to]):
-                    print(f"UYARI: Eksik veya hatalı progress step, project_id={new_project_id}. Atlandı.")
+                if not step_title or not step_start or not step_end:
+                    print(f"WARNING: Eksik veya hatalı progress step, project_id={new_project_id}. Atlandı.")
                     continue
 
-                # Gecikme günlerini hesapla
                 delay_days = 0
                 if last_step_end_date:
                     diff = (step_start - last_step_end_date).days
@@ -2149,120 +2148,73 @@ def add_project():
                         delay_days = diff - 1
 
                 cursor.execute("""
-                    INSERT INTO project_progress 
-                    (project_id, title, description, start_date, end_date, 
-                     planned_start_date, delay_days, real_end_date, assigned_to)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (
-                    new_project_id, step_title, step_desc, step_start, step_end, 
-                    step_start, delay_days, step_end, assigned_to
-                ))
+                                    INSERT INTO project_progress (project_id, title, description, start_date, end_date, 
+                                            planned_start_date, delay_days, real_end_date, assigned_to)
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                """, (new_project_id, step_title, step_desc, step_start, step_end, 
+                                    step_start, delay_days, step_end, step.get('userId')))
 
                 last_step_end_date = step_end
+            # ---------- PROGRESS STEPLERDEKİ KULLANICILARA BİLDİRİM + MAIL ----------
+            assigned_users = set()   # Aynı kullanıcıya 2 kere mail gitmesin diye
 
-                # Sorumlu kullanıcıya bildirim gönder
-                if assigned_to:
-                    try:
-                        # Kullanıcı bilgilerini al
-                        cursor.execute("""
-                            SELECT u.email, u.fullname 
-                            FROM users u 
-                            WHERE u.id = %s AND u.is_active = 1
-                        """, (assigned_to,))
-                        user_data = cursor.fetchone()
-                        
-                        if user_data:
-                            user_email = user_data['email']
-                            user_name = user_data['fullname'] or 'Kullanıcı'
-                            
-                            # Bildirim oluştur
-                            cursor.execute("""
-                                INSERT INTO notifications 
-                                (user_id, title, message, notification_type, related_id, created_at)
-                                VALUES (%s, %s, %s, %s, %s, NOW())
-                            """, (
-                                assigned_to,
-                                'Yeni Görev Atandı',
-                                f'"{step_title}" adlı iş adımından siz sorumlusunuz. Proje: {project_name}',
-                                'task_assignment',
-                                new_project_id
-                            ))
-                            
-                            # E-posta gönder
-                            try:
-                                msg = Message(
-                                    subject=f'Yeni Görev Atandı - {project_name}',
-                                    sender=app.config['MAIL_USERNAME'],
-                                    recipients=[user_email],
-                                    body=f"""
-                                    Sayın {user_name},
-                                    
-                                    "{step_title}" adlı iş adımından siz sorumlusunuz.
-                                    
-                                    Proje Adı: {project_name}
-                                    Başlangıç Tarihi: {step_start.strftime('%d.%m.%Y')}
-                                    Bitiş Tarihi: {step_end.strftime('%d.%m.%Y')}
-                                    Açıklama: {step_desc or 'Açıklama yok'}
-                                    
-                                    İyi çalışmalar dileriz.
-                                    
-                                    {app.config['APP_NAME']} Ekibi
-                                    """
-                                )
-                                mail.send(msg)
-                            except Exception as mail_error:
-                                print(f"E-posta gönderilemedi: {mail_error}")
-                                # E-posta gönderilemezse işleme devam et
-                    
-                    except Exception as notify_error:
-                        print(f"Bildirim gönderilirken hata: {notify_error}")
-                        # Hata olsa bile işleme devam et
+            for step in progress_steps:
+                user_id = step.get('userId')
+                if user_id:
+                    assigned_users.add(user_id)
 
-            # Proje yöneticisine de bildirim gönder
-            try:
-                cursor.execute("""
-                    SELECT email FROM users WHERE id = %s
-                """, (project_manager_id,))
-                pm_email = cursor.fetchone()
-                
-                if pm_email:
-                    msg = Message(
-                        subject=f'Yeni Proje Oluşturuldu - {project_name}',
-                        sender=app.config['MAIL_USERNAME'],
-                        recipients=[pm_email['email']],
-                        body=f"""
-                        Yeni bir proje oluşturuldu ve size atandı.
-                        
-                        Proje Adı: {project_name}
-                        Başlangıç Tarihi: {start_date.strftime('%d.%m.%Y')}
-                        Bitiş Tarihi: {end_date.strftime('%d.%m.%Y')}
-                        Açıklama: {description or 'Açıklama yok'}
-                        
-                        İyi çalışmalar dileriz.
-                        
-                        {app.config['APP_NAME']} Ekibi
-                        """
+            for user_id in assigned_users:
+                # Bildirim gönder
+                send_notification(
+                    cursor,
+                    user_id,
+                    "Yeni Bir Görev Atandı",
+                    f"Bir projede size görev atandı: '{project_name}'"
+                )
+
+                # Mail adresini al
+                cursor.execute("SELECT email FROM users WHERE id=%s", (user_id,))
+                row = cursor.fetchone()
+                user_email = row.get('email') if row else None
+
+                if user_email:
+                    send_email_notification(
+                        user_email,
+                        "Yeni Bir Görev Atandı",
+                        f"'{project_name}' projesinde size bir görev atandı."
                     )
-                    mail.send(msg)
-            except Exception as pm_mail_error:
-                print(f"Proje yöneticisine e-posta gönderilemedi: {pm_mail_error}")
+                else:
+                    print(f"UYARI: Kullanıcı (id={user_id}) için e-posta bulunamadı.")
 
             connection.commit()
 
-            return jsonify({
-                'message': 'Proje başarıyla oluşturuldu!',
-                'projectId': new_project_id
-            }), 201
+            # Bildirim ve e-posta
+            if project_manager_id:
+                send_notification(cursor, project_manager_id,
+                                  "Yeni Bir Proje Atandı",
+                                  f"Size yeni bir proje atandı: '{project_name}'.")
+                cursor.execute("SELECT email FROM users WHERE id=%s", (project_manager_id,))
+                manager_email = cursor.fetchone()
+                if manager_email and manager_email['email']:
+                    send_email_notification(manager_email['email'],
+                                            "Yeni Bir Proje Atandı",
+                                            f"Size yeni bir proje atandı: '{project_name}'.")
+                else:
+                    print(f"UYARI: Proje yöneticisi {project_manager_id} için e-posta bulunamadı.")
+
+        return jsonify({"message": "Proje başarıyla eklendi!", "projectId": new_project_id}), 201
 
     except Exception as e:
         print("Hata backend:", e)
+        traceback.print_exc()
         if connection:
             connection.rollback()
-        return jsonify({'message': 'Sunucu hatası, lütfen daha sonra tekrar deneyin.'}), 500
+        return jsonify({'message': 'Server error, Lütfen daha sonra tekrar deneyin.'}), 500
 
     finally:
         if connection:
             connection.close()
+
 # API to log PDF Report Creation Activity (to be called from frontend)
 @app.route('/api/log_pdf_report', methods=['POST'])
 def log_pdf_report_api():
