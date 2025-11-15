@@ -1904,19 +1904,7 @@
     </div>
     <script src="{{ url_for('static', filename='config.js') }}"></script>
 <script>
-   // Sayfanın başında veya init fonksiyonunda:
-let currentUserRole = '';
-
-fetch(`${API_BASE_URL}/api/users/me`)
-    .then(response => response.json())
-    .then(user => {
-        currentUserRole = user.role;
-        // Eğer başka bir yerde kullanıyorsanız, global bir değişkene atayabilirsiniz
-        window.currentUser = user;
-    })
-    .catch(error => {
-        console.error('Kullanıcı bilgileri alınırken hata oluştu:', error);
-    });
+    
     let currentUser = null; // Mevcut kullanıcı bilgisi
     let allProjectsData = [];
     let filteredProjects = []; // Filtrelenmiş projeleri tutacak
@@ -3334,50 +3322,35 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
     }
 }
 function populateResponsibleUsers(stepId, assignedTo = '') {
-    fetch(`${API_BASE_URL}/api/users/me`)
-        .then(response => response.json())
-        .then(currentUser => {
-            const isAdmin = currentUser.role === 'Admin' || currentUser.role === 'Proje Yöneticisi';
-
+    fetch(`${API_BASE_URL}/api/users/non-admin`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Kullanıcılar yüklenirken hata oluştu');
+            }
+            return response.json();
+        })
+        .then(users => {
+            const select = document.getElementById(`step-${stepId}-responsible`);
+            if (!select) return;
             
-            fetch(`${API_BASE_URL}/api/users/non-admin`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Kullanıcılar yüklenirken hata oluştu');
-                    }
-                    return response.json();
-                })
-                .then(users => {
-                    const select = document.getElementById(`step-${stepId}-responsible`);
-                    if (!select) return;
-                    
-                    // Clear existing options except the first one
-                    while (select.options.length > 1) {
-                        select.remove(1);
-                    }
-                    
-                    // Add user options
-                    users.forEach(user => {
-                        const option = document.createElement('option');
-                        option.value = user.id;
-                        option.textContent = user.fullname || user.name;
-                        if (user.id == assignedTo) {
-                            option.selected = true;
-                        }
-                        select.appendChild(option);
-                    });
-                    
-                    // Disable the select if user is not admin
-                    if (!isAdmin) {
-                        select.disabled = true;
-                    }
-                })
-                .catch(error => {
-                    console.error('Sorumlu kullanıcılar yüklenirken hata:', error);
-                });
+            // Clear existing options except the first one
+            while (select.options.length > 1) {
+                select.remove(1);
+            }
+            
+            // Add user options
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = user.fullname || user.name;
+                if (user.id == assignedTo) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
         })
         .catch(error => {
-            console.error('Kullanıcı bilgileri alınırken hata oluştu:', error);
+            console.error('Sorumlu kullanıcılar yüklenirken hata:', error);
         });
 }
 
@@ -3464,21 +3437,18 @@ function populateResponsibleUsers(stepId, assignedTo = '') {
                 }
 
 
-// In the renderProgressSteps function, find the responsibleContent section and update it:
 const responsibleContent = isEditable ?
     `<div class="responsible-selector" style="margin-top: 8px;">
         <label for="step-${step.progress_id}-responsible" class="form-label">Sorumlu:</label>
         <div class="select-container">
-            <select id="step-${step.progress_id}-responsible" 
-                    class="header-dropdown ${readonlyClass}" 
-                    ${(isAdmin || isProjectManager || currentUser.role === 'Proje Yöneticisi') ? '' : 'disabled'}
+            <select id="step-${step.progress_id}-responsible" class="header-dropdown ${readonlyClass}" ${disabledAttr}>
                 <option value="">Sorumlu seçiniz...</option>
                 <!-- Responsible users will be loaded dynamically -->
             </select>
-            ${(isAdmin || isProjectManager) && !isCompleted ? `
+            ${isCompleted ? '' : `
             <div class="select-arrow">
                 <i class="fas fa-chevron-down"></i>
-            </div>` : ''}
+            </div>`}
         </div>
     </div>` :
     `<div>Sorumlu: ${step.assigned_user_name || 'Belirtilmemiş'}</div>`;
