@@ -3373,6 +3373,17 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
         return null;
     }
 }
+// Kullanıcıları getiren yardımcı fonksiyon
+async function fetchNonAdminUsers() {
+    try {
+        const response = await fetch('/api/users/non-admin');
+        if (!response.ok) throw new Error('Kullanıcılar yüklenirken hata oluştu');
+        return await response.json();
+    } catch (error) {
+        console.error('Kullanıcılar yüklenirken hata:', error);
+        return [];
+    }
+}
 
     function renderProgressSteps(steps, projectId, isEditable = false) {
         if (!steps || !Array.isArray(steps)) {
@@ -3440,7 +3451,30 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 } else {
                     titleContent = `<span class="progress-detail-title">${step.step_name || step.title || ''}</span>`;
                 }
-
+            // titleContent tanımından hemen sonra (yaklaşık satır 3500)
+            let userSelectHtml = '';
+            if (isEditable) {
+                userSelectHtml = `
+                    <div class="user-select-wrapper" style="margin-top: 10px;">
+                        <label for="step-${step.progress_id}-user" class="form-label">Sorumlu</label>
+                        <div class="select-container">
+                            <select id="step-${step.progress_id}-user" class="user-dropdown ${readonlyClass}" ${disabledAttr}>
+                                <option value="">Sorumlu seçiniz...</option>
+                            </select>
+                            ${isCompleted ? '' : `
+                            <div class="select-arrow">
+                                <i class="fas fa-chevron-down"></i>
+                            </div>`}
+                        </div>
+                    </div>
+                `;
+            } else {
+                const assignedUser = step.assigned_user ? 
+                    `<span class="assigned-user">Sorumlu: ${step.assigned_user.fullname || step.assigned_user.username || step.assigned_user}</span>` : 
+                    '<span class="text-muted">Sorumlu atanmamış</span>';
+                
+                userSelectHtml = `<div class="assigned-user-info">${assignedUser}</div>`;
+            }
                 const startDateContent = isEditable ?
                     `<label for="step-${step.progress_id}-start">Başlangıç:</label>
                     <input type="date" id="step-${step.progress_id}-start" 
@@ -3562,28 +3596,29 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     }
 
                 stepElement.innerHTML = `
-                    <div class="progress-item-header">
-                        <div class="input-group" style="flex: 1;">
-                            ${isEditable ? '<label for="step-' + step.progress_id + '-name">Adım Başlığı</label>' : ''}
-                            ${titleContent}
-                        </div>
-                        <div class="progress-dates" style="margin-left: ${isEditable ? '20px' : '0'};">
-                            <span>
-                                ${startDateContent}
-                            </span>
-                            <span>
-                                ${endDateContent}
-                            </span>
-                        </div>
-                    </div>
-                    ${delayInfoHtml}
-                    <div class="input-group">
-                        ${isEditable ? '<label for="step-' + step.progress_id + '-desc">Açıklama</label>' : ''}
-                        ${descriptionContent}
-                    </div>
-                    ${delayDaysContent}
-                    ${actionsContent}
-                `;
+    <div class="progress-item-header">
+        <div class="input-group" style="flex: 1;">
+            ${isEditable ? '<label for="step-' + step.progress_id + '-name">Adım Başlığı</label>' : ''}
+            ${titleContent}
+            ${userSelectHtml}  <!-- Bu satırı ekleyin -->
+        </div>
+        <div class="progress-dates" style="margin-left: ${isEditable ? '20px' : '0'};">
+            <span>
+                ${startDateContent}
+            </span>
+            <span>
+                ${endDateContent}
+            </span>
+        </div>
+    </div>
+    ${delayInfoHtml}
+    <div class="input-group">
+        ${isEditable ? '<label for="step-' + step.progress_id + '-desc">Açıklama</label>' : ''}
+        ${descriptionContent}
+    </div>
+    ${delayDaysContent}
+    ${actionsContent}
+`;
                 progressStepsContainer.appendChild(stepElement);
                 
                 // If step is completed, disable all form fields except the revision request button
@@ -3679,27 +3714,30 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 });
                 
                 document.querySelectorAll('.save-progress-btn').forEach(button => {
-                    button.addEventListener('click', async (e) => {
-                        const progressId = e.currentTarget.dataset.id;
-                        const projId = e.currentTarget.dataset.projectId;
-                        const headerSelect = document.getElementById(`step-${progressId}-header`);
-                        const selectedHeaderId = headerSelect.value;
-                        const selectedHeaderText = headerSelect.options[headerSelect.selectedIndex].text;
-                        const stepName = selectedHeaderText;
-                        const startDate = document.getElementById(`step-${progressId}-start`).value;
-                        const endDate = document.getElementById(`step-${progressId}-end`).value;
-                        const description = document.getElementById(`step-${progressId}-desc`).value;
+    button.addEventListener('click', async (e) => {
+        const progressId = e.currentTarget.dataset.id;
+        const projId = e.currentTarget.dataset.projectId;
+        const headerSelect = document.getElementById(`step-${progressId}-header`);
+        const userSelect = document.getElementById(`step-${progressId}-user`);  // Yeni satır
+        const selectedHeaderId = headerSelect.value;
+        const selectedHeaderText = headerSelect.options[headerSelect.selectedIndex].text;
+        const stepName = selectedHeaderText;
+        const startDate = document.getElementById(`step-${progressId}-start`).value;
+        const endDate = document.getElementById(`step-${progressId}-end`).value;
+        const description = document.getElementById(`step-${progressId}-desc`).value;
+        const assignedTo = userSelect ? userSelect.value : null;  // Yeni satır
 
-                        await editProgressStep(progressId, projId, {
-                            step_name: stepName,
-                            header_id: selectedHeaderId,
-                            start_date: startDate,
-                            end_date: endDate,
-                            description: description,
-                            newly_added_custom_delay: 0 // Kaydet butonuna basıldığında ek bir erteleme olmamalı
-                        });
-                    });
-                });
+        await editProgressStep(progressId, projId, {
+            step_name: stepName,
+            header_id: selectedHeaderId,
+            start_date: startDate,
+            end_date: endDate,
+            description: description,
+            assigned_to: assignedTo,  // Yeni satır
+            newly_added_custom_delay: 0
+        });
+    });
+});
 
                 document.querySelectorAll('.delete-progress-btn').forEach(button => {
                     button.addEventListener('click', (e) => {
@@ -3729,6 +3767,37 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                         }
                     });
                 });
+                (async () => {
+        try {
+            const users = await fetchNonAdminUsers();
+            document.querySelectorAll('.user-dropdown').forEach(select => {
+                const progressId = select.id.replace('step-', '').replace('-user', '');
+                const currentStep = steps.find(step => step.progress_id == progressId);
+                const currentValue = currentStep?.assigned_to || '';
+                
+                // Mevcut seçili değeri koru
+                const currentSelected = select.value;
+                
+                // Sadece boşsa veya sadece "Sorumlu seçiniz..." varsa doldur
+                if (select.options.length <= 1) {
+                    users.forEach(user => {
+                        const option = document.createElement('option');
+                        option.value = user.id;
+                        option.textContent = user.fullname || user.username;
+                        option.selected = (user.id == currentValue);
+                        select.appendChild(option);
+                    });
+                }
+                
+                // Eğer önceden seçili bir değer varsa onu koru
+                if (currentSelected) {
+                    select.value = currentSelected;
+                }
+            });
+        } catch (error) {
+            console.error('Kullanıcılar yüklenirken hata:', error);
+        }
+    })();
             }
         }
 // Remove any existing click handlers
