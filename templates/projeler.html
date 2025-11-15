@@ -819,7 +819,16 @@
         position: relative;
         width: 100%;
       }
-
+    .select-container:after {
+        content: "▼";
+        font-size: 0.6em;
+        top: 50%;
+        right: 12px;
+        position: absolute;
+        transform: translateY(-50%);
+        pointer-events: none;
+        color: var(--text-muted);
+    }
       .select-arrow {
         position: absolute;
         top: 50%;
@@ -876,38 +885,36 @@
         color: var(--text-muted);
         font-size: 13px;
       }
-      .user-select-wrapper {
-    margin-top: 10px;
+/* User Dropdown Styles */
+        .user-select-wrapper {
+            margin-top: 10px;
+            width: 100%;
         }
 
-        .user-select-wrapper label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
+        .user-dropdown {
+            width: 100%;
+            padding: 8px 35px 8px 12px !important;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--input-bg);
             color: var(--text-color);
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23333'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 16px;
         }
 
-   /* Remove default dropdown arrow from select */
-.user-dropdown {
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23333'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-    background-size: 16px;
-    padding-right: 35px !important;
-}
+        [data-theme="dark"] .user-dropdown {
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+        }
 
-/* For dark mode */
-[data-theme="dark"] .user-dropdown {
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
-}
-
-/* Remove any additional arrows that might be added by other styles */
-.select-container .select-arrow {
-    display: none !important;
-}
+        /* Hide any additional arrows */
+        .user-select-wrapper .select-arrow {
+            display: none !important;
+        }
 
         .assigned-user-info {
             margin-top: 8px;
@@ -3466,24 +3473,24 @@ async function fetchNonAdminUsers() {
                 }
             // titleContent tanımından hemen sonra (yaklaşık satır 3500)
             let userSelectHtml = '';
-                if (isEditable) {
-                    userSelectHtml = `
-                        <div class="user-select-wrapper" style="margin-top: 10px;">
-                            <label for="step-${step.progress_id}-user" class="form-label">Sorumlu</label>
-                            <div class="select-container">
-                                <select id="step-${step.progress_id}-user" class="form-select user-dropdown ${readonlyClass}" ${disabledAttr} style="padding-right: 30px;">
-                                    <option value="">Sorumlu seçiniz...</option>
-                                </select>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    const assignedUser = step.assigned_user ? 
-                        `<span class="assigned-user">Sorumlu: ${step.assigned_user.fullname || step.assigned_user.username || step.assigned_user}</span>` : 
-                        '<span class="text-muted">Sorumlu atanmamış</span>';
-                    
-                    userSelectHtml = `<div class="assigned-user-info">${assignedUser}</div>`;
-                }
+if (isEditable) {
+    userSelectHtml = `
+        <div class="user-select-wrapper">
+            <label for="step-${step.progress_id}-user" class="form-label">Sorumlu</label>
+            <div class="select-container">
+                <select id="step-${step.progress_id}-user" class="form-control user-dropdown ${readonlyClass}" ${disabledAttr}>
+                    <option value="">Sorumlu seçiniz...</option>
+                </select>
+            </div>
+        </div>
+    `;
+} else {
+    const assignedUser = step.assigned_user ? 
+        `<span class="assigned-user">Sorumlu: ${step.assigned_user.fullname || step.assigned_user.username || step.assigned_user}</span>` : 
+        '<span class="text-muted">Sorumlu atanmamış</span>';
+    
+    userSelectHtml = `<div class="assigned-user-info">${assignedUser}</div>`;
+}
                 const startDateContent = isEditable ?
                     `<label for="step-${step.progress_id}-start">Başlangıç:</label>
                     <input type="date" id="step-${step.progress_id}-start" 
@@ -3777,6 +3784,7 @@ async function fetchNonAdminUsers() {
                     });
                 });
                 // Kullanıcıları yükle ve seçim kutularını doldur
+// Kullanıcıları yükle ve seçim kutularını doldur
 (async () => {
     try {
         const users = await fetchNonAdminUsers();
@@ -3792,15 +3800,17 @@ async function fetchNonAdminUsers() {
             
             // Add users to dropdown
             users.forEach(user => {
-                const option = document.createElement('option');
-                option.value = user.id;
-                option.textContent = user.fullname || user.username;
-                option.selected = (user.id == currentValue);
+                const option = new Option(
+                    user.fullname || user.username,
+                    user.id,
+                    false,
+                    user.id == currentValue
+                );
                 select.add(option);
             });
             
-            // If no user is selected but there's a current value, select it
-            if (currentValue && !select.value) {
+            // Ensure the current value is selected
+            if (currentValue) {
                 select.value = currentValue;
             }
         });
@@ -5482,7 +5492,42 @@ const progressStepsContainer = document.querySelector('#progress-steps-container
             color: var(--text-color);
             margin-bottom: 0.5rem;
         }
-        
+        /* Ensure proper dropdown styling */
+.form-control {
+    display: block;
+    width: 100%;
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--text-color);
+    background-color: var(--input-bg);
+    background-clip: padding-box;
+    border: 1px solid var(--border-color);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border-radius: 0.25rem;
+    transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+}
+
+/* Make sure the dropdown has proper z-index */
+.select-container {
+    position: relative;
+    width: 100%;
+}
+
+/* Style for the dropdown arrow */
+.select-container:after {
+    content: "▼";
+    font-size: 0.6em;
+    top: 50%;
+    right: 12px;
+    position: absolute;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--text-muted);
+}
         #revisionRequestModal .form-control {
             border: 1px solid var(--border-color);
             border-radius: 8px;
