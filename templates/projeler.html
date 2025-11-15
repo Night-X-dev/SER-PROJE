@@ -840,8 +840,8 @@
         z-index: 2;
       }
 
-      /* Header dropdown style - keep the large arrow */
-      .header-dropdown, #newStepHeader {
+      /* Base style for all select elements */
+      select {
         -webkit-appearance: none;
         -moz-appearance: none;
         appearance: none;
@@ -858,9 +858,25 @@
         background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23333'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
         background-repeat: no-repeat;
         background-position: right 10px center;
-        background-size: 20px 20px; /* Larger arrow */
-        background-image: none;
+        background-size: 20px 20px;
+        cursor: pointer;
       }
+
+      /* Remove any additional arrows */
+      select::-ms-expand {
+        display: none;
+      }
+
+      /* Specific styles for different select types */
+      .header-dropdown,
+      #newStepHeader,
+      .user-dropdown,
+      .form-input[type="select"],
+      .form-input select,
+      select.form-input {
+        /* Inherit all base styles */
+      }
+      
 
       .header-dropdown:focus, #newStepHeader:focus {
         border-color: var(--primary-color);
@@ -896,59 +912,51 @@
             width: 100%;
         }
 
-        /* User dropdown style - match the header dropdown exactly */
+        /* User dropdown inherits from base select style */
         .user-dropdown {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            background-color: var(--input-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 10px 40px 10px 15px;
-            font-size: 14px;
-            color: var(--text-color);
-            width: 100%;
-            height: 42px;
-            transition: all 0.2s ease;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23333'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            background-size: 20px 20px;
-            /* Hide default arrow in IE/Edge */
-            &::-ms-expand {
-                display: none;
-            }
+            /* All styles inherited from base select */
         }
 
-        /* Hover and focus states for user dropdown */
-        .user-dropdown:focus {
+        /* Hover and focus states for all selects */
+        select:focus,
+        .user-dropdown:focus,
+        .header-dropdown:focus,
+        .form-input:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
             outline: none;
         }
 
-        .user-dropdown:hover {
+        select:hover,
+        .user-dropdown:hover,
+        .header-dropdown:hover {
             border-color: var(--primary-hover);
         }
 
-        .user-dropdown option {
+        /* Style for dropdown options */
+        select option {
             padding: 10px;
             background: var(--card-bg);
             color: var(--text-color);
         }
 
-        /* Dark theme for all dropdowns */
+        /* Dark theme for all selects */
+        [data-theme="dark"] select,
         [data-theme="dark"] .header-dropdown,
         [data-theme="dark"] #newStepHeader,
-        [data-theme="dark"] .user-dropdown {
+        [data-theme="dark"] .user-dropdown,
+        [data-theme="dark"] .form-input[type="select"],
+        [data-theme="dark"] .form-input select,
+        [data-theme="dark"] select.form-input {
             background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
             background-color: var(--input-bg);
             border-color: var(--border-color);
             color: var(--text-color);
         }
 
-        [data-theme="dark"] .user-dropdown:focus {
+        [data-theme="dark"] select:focus,
+        [data-theme="dark"] .user-dropdown:focus,
+        [data-theme="dark"] .header-dropdown:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
         }
