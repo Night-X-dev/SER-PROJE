@@ -860,11 +860,23 @@
         background-position: right 10px center;
         background-size: 20px 20px;
         cursor: pointer;
+        /* Ensure native dropdown arrow is hidden */
+        text-indent: 0.01px;
+        text-overflow: '';
+        /* Remove default arrow in IE10+ */
+        &::-ms-expand {
+          display: none;
+        }
       }
 
-      /* Remove any additional arrows */
-      select::-ms-expand {
-        display: none;
+      /* Hide any additional arrows */
+      .select-arrow,
+      .select-arrow:after,
+      .select-arrow:before,
+      .select-arrow i,
+      .select-arrow svg,
+      .select-arrow .arrow {
+        display: none !important;
       }
 
       /* Specific styles for different select types */
@@ -915,6 +927,11 @@
         /* User dropdown inherits from base select style */
         .user-dropdown {
             /* All styles inherited from base select */
+            /* Ensure no additional arrows are shown */
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23333'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 10px center !important;
+            background-size: 20px 20px !important;
         }
 
         /* Hover and focus states for all selects */
@@ -948,10 +965,14 @@
         [data-theme="dark"] .form-input[type="select"],
         [data-theme="dark"] .form-input select,
         [data-theme="dark"] select.form-input {
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e") !important;
             background-color: var(--input-bg);
             border-color: var(--border-color);
             color: var(--text-color);
+            /* Ensure no additional arrows in dark mode */
+            &::-ms-expand {
+                display: none !important;
+            }
         }
 
         [data-theme="dark"] select:focus,
