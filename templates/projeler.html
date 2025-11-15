@@ -3392,12 +3392,20 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     // We'll fetch the headers when the edit form is opened
                     titleContent = `
                         <div class="header-select-wrapper">
-                            <label for="step-${step.progress_id}-header" class="form-label">Başlık</label>
-                            <div class="select-container">
-                                <select id="step-${step.progress_id}-header" class="header-dropdown ${readonlyClass}" ${disabledAttr} required>
-                                    <option value="">Başlık seçiniz...</option>
-                                    <!-- Headers will be loaded dynamically -->
-                                </select>
+                            <div class="form-group" style="margin-bottom: 15px;">
+                                <label for="step-${step.progress_id}-header" class="form-label">Başlık</label>
+                                <div class="select-container">
+                                    <select id="step-${step.progress_id}-header" class="header-dropdown ${readonlyClass}" ${disabledAttr} required>
+                                        <option value="">Başlık seçiniz...</option>
+                                        <!-- Headers will be loaded dynamically -->
+                                    </select>
+                                    ${isCompleted ? '' : `
+                                    <div class="select-arrow">
+                                        <i class="fas fa-chevron-down"></i>
+                                    </div>`}
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 15px;">
                                 <label for="step-${step.progress_id}-responsible" class="form-label">Sorumlu</label>
                                 <div class="select-container">
                                     <select id="step-${step.progress_id}-responsible" class="header-dropdown ${readonlyClass}" ${disabledAttr}>
@@ -3409,10 +3417,6 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                                         <i class="fas fa-chevron-down"></i>
                                     </div>`}
                                 </div>
-                                ${isCompleted ? '' : `
-                                <div class="select-arrow">
-                                    <i class="fas fa-chevron-down"></i>
-                                </div>`}
                             </div>
                         </div>
                         <input type="hidden" id="step-${step.progress_id}-name" value="${step.step_name || step.title || ''}">
