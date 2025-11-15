@@ -887,14 +887,27 @@
             color: var(--text-color);
         }
 
-    .user-dropdown {
-        width: 100%;
-            padding: 8px 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            background-color: var(--input-bg);
-            color: var(--text-color);
-        }
+   /* Remove default dropdown arrow from select */
+.user-dropdown {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23333'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    padding-right: 35px !important;
+}
+
+/* For dark mode */
+[data-theme="dark"] .user-dropdown {
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+}
+
+/* Remove any additional arrows that might be added by other styles */
+.select-container .select-arrow {
+    display: none !important;
+}
 
         .assigned-user-info {
             margin-top: 8px;
@@ -3453,28 +3466,24 @@ async function fetchNonAdminUsers() {
                 }
             // titleContent tanımından hemen sonra (yaklaşık satır 3500)
             let userSelectHtml = '';
-            if (isEditable) {
-                userSelectHtml = `
-                    <div class="user-select-wrapper" style="margin-top: 10px;">
-                        <label for="step-${step.progress_id}-user" class="form-label">Sorumlu</label>
-                        <div class="select-container">
-                            <select id="step-${step.progress_id}-user" class="user-dropdown ${readonlyClass}" ${disabledAttr}>
-                                <option value="">Sorumlu seçiniz...</option>
-                            </select>
-                            ${isCompleted ? '' : `
-                            <div class="select-arrow">
-                                <i class="fas fa-chevron-down"></i>
-                            </div>`}
+                if (isEditable) {
+                    userSelectHtml = `
+                        <div class="user-select-wrapper" style="margin-top: 10px;">
+                            <label for="step-${step.progress_id}-user" class="form-label">Sorumlu</label>
+                            <div class="select-container">
+                                <select id="step-${step.progress_id}-user" class="form-select user-dropdown ${readonlyClass}" ${disabledAttr} style="padding-right: 30px;">
+                                    <option value="">Sorumlu seçiniz...</option>
+                                </select>
+                            </div>
                         </div>
-                    </div>
-                `;
-            } else {
-                const assignedUser = step.assigned_user ? 
-                    `<span class="assigned-user">Sorumlu: ${step.assigned_user.fullname || step.assigned_user.username || step.assigned_user}</span>` : 
-                    '<span class="text-muted">Sorumlu atanmamış</span>';
-                
-                userSelectHtml = `<div class="assigned-user-info">${assignedUser}</div>`;
-            }
+                    `;
+                } else {
+                    const assignedUser = step.assigned_user ? 
+                        `<span class="assigned-user">Sorumlu: ${step.assigned_user.fullname || step.assigned_user.username || step.assigned_user}</span>` : 
+                        '<span class="text-muted">Sorumlu atanmamış</span>';
+                    
+                    userSelectHtml = `<div class="assigned-user-info">${assignedUser}</div>`;
+                }
                 const startDateContent = isEditable ?
                     `<label for="step-${step.progress_id}-start">Başlangıç:</label>
                     <input type="date" id="step-${step.progress_id}-start" 
@@ -3767,37 +3776,38 @@ async function fetchNonAdminUsers() {
                         }
                     });
                 });
-                (async () => {
-        try {
-            const users = await fetchNonAdminUsers();
-            document.querySelectorAll('.user-dropdown').forEach(select => {
-                const progressId = select.id.replace('step-', '').replace('-user', '');
-                const currentStep = steps.find(step => step.progress_id == progressId);
-                const currentValue = currentStep?.assigned_to || '';
-                
-                // Mevcut seçili değeri koru
-                const currentSelected = select.value;
-                
-                // Sadece boşsa veya sadece "Sorumlu seçiniz..." varsa doldur
-                if (select.options.length <= 1) {
-                    users.forEach(user => {
-                        const option = document.createElement('option');
-                        option.value = user.id;
-                        option.textContent = user.fullname || user.username;
-                        option.selected = (user.id == currentValue);
-                        select.appendChild(option);
-                    });
-                }
-                
-                // Eğer önceden seçili bir değer varsa onu koru
-                if (currentSelected) {
-                    select.value = currentSelected;
-                }
+                // Kullanıcıları yükle ve seçim kutularını doldur
+(async () => {
+    try {
+        const users = await fetchNonAdminUsers();
+        document.querySelectorAll('.user-dropdown').forEach(select => {
+            const progressId = select.id.replace('step-', '').replace('-user', '');
+            const currentStep = steps.find(step => step.progress_id == progressId);
+            const currentValue = currentStep?.assigned_to || '';
+            
+            // Clear existing options except the first one
+            while (select.options.length > 1) {
+                select.remove(1);
+            }
+            
+            // Add users to dropdown
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = user.fullname || user.username;
+                option.selected = (user.id == currentValue);
+                select.add(option);
             });
-        } catch (error) {
-            console.error('Kullanıcılar yüklenirken hata:', error);
-        }
-    })();
+            
+            // If no user is selected but there's a current value, select it
+            if (currentValue && !select.value) {
+                select.value = currentValue;
+            }
+        });
+    } catch (error) {
+        console.error('Kullanıcılar yüklenirken hata:', error);
+    }
+})();
             }
         }
 // Remove any existing click handlers
