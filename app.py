@@ -2248,12 +2248,12 @@ def log_pdf_report_api():
 # API to get project progress steps
 @app.route('/api/projects/<int:project_id>/progress', methods=['GET'])
 def get_project_progress_steps(project_id):
-    """Retrieves all progress steps for a specific project."""
+    """Retrieves all progress steps for a specific project with assigned user information."""
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Check if 'is_completed' column exists and add if not
+            # Mevcut sütun kontrolleri aynı şekilde kalıyor
             cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'is_completed'")
             column_exists = cursor.fetchone() is not None
             if not column_exists:
@@ -2261,7 +2261,6 @@ def get_project_progress_steps(project_id):
                 cursor.execute("ALTER TABLE project_progress ADD COLUMN is_completed TINYINT(1) DEFAULT 0")
                 connection.commit()
 
-            # Check if 'custom_delay_days' column exists and add if not
             cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'custom_delay_days'")
             column_exists_custom_delay = cursor.fetchone() is not None
             if not column_exists_custom_delay:
@@ -2269,7 +2268,6 @@ def get_project_progress_steps(project_id):
                 cursor.execute("ALTER TABLE project_progress ADD COLUMN custom_delay_days INT DEFAULT 0")
                 connection.commit()
 
-            # Check if 'real_end_date' column exists and add if not
             cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'real_end_date'")
             column_exists_real_end_date = cursor.fetchone() is not None
             if not column_exists_real_end_date:
@@ -2277,40 +2275,50 @@ def get_project_progress_steps(project_id):
                 cursor.execute("ALTER TABLE project_progress ADD COLUMN real_end_date DATE NULL")
                 connection.commit()
 
+            # Sorguyu güncelliyoruz, kullanıcı bilgilerini de çekiyoruz
             sql = """
                 SELECT
-                progress_id,
-                project_id,
-            title AS step_name,
-            description,
-            start_date,
-            planned_start_date,  -- EKLENDİ
-            end_date,
-            delay_days,
-            custom_delay_days,
-            real_end_date,
-            is_completed,
-            created_at
-        FROM project_progress
-        WHERE project_id = %s
-        ORDER BY planned_start_date ASC, created_at ASC
+                    pp.progress_id,
+                    pp.project_id,
+                    pp.title AS step_name,
+                    pp.description,
+                    pp.start_date,
+                    pp.planned_start_date,
+                    pp.end_date,
+                    pp.delay_days,
+                    pp.custom_delay_days,
+                    pp.real_end_date,
+                    pp.is_completed,
+                    pp.created_at,
+                    pp.assigned_to,
+                    u.fullname as assigned_user_name,
+                    u.email as assigned_user_email
+                FROM project_progress pp
+                LEFT JOIN users u ON pp.assigned_to = u.id
+                WHERE project_id = %s
+                ORDER BY pp.planned_start_date ASC, pp.created_at ASC
             """
             cursor.execute(sql, (project_id,))
             steps = cursor.fetchall()
 
+            # Tarih formatlamaları
             for step in steps:
-                step['start_date'] = step['start_date'].isoformat() if isinstance(step['start_date'], datetime.date) else None
-                step['planned_start_date'] = step['planned_start_date'].isoformat() if isinstance(step['planned_start_date'], datetime.date) else None
-                step['end_date'] = step['end_date'].isoformat() if isinstance(step['end_date'], datetime.date) else None
-                step['real_end_date'] = step['real_end_date'].isoformat() if isinstance(step['real_end_date'], datetime.date) else None
-                step['created_at'] = step['created_at'].isoformat() if isinstance(step['created_at'], datetime.datetime) else None
+                step['start_date'] = step['start_date'].isoformat() if step['start_date'] else None
+                step['planned_start_date'] = step['planned_start_date'].isoformat() if step['planned_start_date'] else None
+                step['end_date'] = step['end_date'].isoformat() if step['end_date'] else None
+                step['real_end_date'] = step['real_end_date'].isoformat() if step['real_end_date'] else None
+                step['created_at'] = step['created_at'].isoformat() if step['created_at'] else None
                 step['custom_delay_days'] = int(step['custom_delay_days']) if step['custom_delay_days'] is not None else 0
                 step['is_completed'] = bool(step['is_completed'])
+                # Eğer assigned_to değeri varsa stringe çevir
+                if step['assigned_to'] is not None:
+                    step['assigned_to'] = str(step['assigned_to'])
 
         return jsonify(steps), 200
+
     except pymysql.Error as e:
         print(f"Database error while fetching progress steps: {e}")
-        return jsonify({'message': f'Database error : {e.args[1]}'}), 500
+        return jsonify({'message': f'Database error: {e.args[1]}'}), 500
     except Exception as e:
         print(f"General error while fetching progress steps: {e}")
         traceback.print_exc()
@@ -2318,7 +2326,6 @@ def get_project_progress_steps(project_id):
     finally:
         if connection:
             connection.close()
-
 @app.route('/api/projects/<int:project_id>/progress', methods=['POST'])
 def add_project_progress_step_from_modal(project_id):
     data = request.get_json()

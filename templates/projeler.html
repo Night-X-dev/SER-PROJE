@@ -3406,6 +3406,7 @@ async function fetchNonAdminUsers() {
 }
 
     function renderProgressSteps(steps, projectId, isEditable = false) {
+        
         if (!steps || !Array.isArray(steps)) {
             console.error("Geçersiz steps parametresi:", steps);
             const progressStepsContainer = document.getElementById("progressStepsContainer");
@@ -3785,6 +3786,7 @@ if (isEditable) {
                 });
                 // Kullanıcıları yükle ve seçim kutularını doldur
 // Kullanıcıları yükle ve seçim kutularını doldur
+// Kullanıcıları yükle ve seçim kutularını doldur
 (async () => {
     try {
         const users = await fetchNonAdminUsers();
@@ -3798,26 +3800,19 @@ if (isEditable) {
                 select.remove(1);
             }
             
-            // Add users to dropdown
+            // Add users to the dropdown
             users.forEach(user => {
-                const option = new Option(
-                    user.fullname || user.username,
-                    user.id,
-                    false,
-                    user.id == currentValue
-                );
-                select.add(option);
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = user.name || user.email;
+                option.selected = (user.id == currentValue);
+                select.appendChild(option);
             });
-            
-            // Ensure the current value is selected
-            if (currentValue) {
-                select.value = currentValue;
-            }
         });
     } catch (error) {
         console.error('Kullanıcılar yüklenirken hata:', error);
     }
-})();
+})();  // <-- Make sure to close the IIFE properly
             }
         }
 // Remove any existing click handlers
