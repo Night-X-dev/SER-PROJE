@@ -2507,7 +2507,7 @@ def update_project_progress_step(progress_id):
     description = data.get('description')
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
-    responsible_id = data.get('responsible_id')  # Get responsible_id from request
+    responsible_id = data.get('responsible_id')
 
     newly_added_custom_delay = data.get('newly_added_custom_delay', 0)
     if newly_added_custom_delay is None:
@@ -2525,7 +2525,7 @@ def update_project_progress_step(progress_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # Mevcut iş adımının verilerini çek
+            # Get existing step data
             cursor.execute("""
                 SELECT project_id, title, custom_delay_days, end_date, assigned_to 
                 FROM project_progress 
@@ -2542,6 +2542,48 @@ def update_project_progress_step(progress_id):
             current_custom_delay_from_db = int(current_custom_delay_from_db)
             current_assigned_to = existing_step.get('assigned_to')
 
+            # Calculate total custom_delay_days
+            final_custom_delay_for_db = current_custom_delay_from_db + newly_added_custom_delay
+
+            # Handle real_end_date
+            cursor.execute("SELECT real_end_date FROM project_progress WHERE progress_id = %s", (progress_id,))
+            current_real_end_date_from_db = cursor.fetchone()['real_end_date']
+
+            if current_real_end_date_from_db:
+                real_end_date_to_save = current_real_end_date_from_db.isoformat()
+            else:
+                real_end_date_to_save = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date().isoformat()
+
+            # Get project info for notifications
+            cursor.execute("SELECT project_name, project_manager_id FROM projects WHERE project_id = %s", (current_project_id,))
+            project_info = cursor.fetchone()
+            project_name = project_info['project_name'] if project_info else f"ID: {current_project_id}"
+            project_manager_id = project_info['project_manager_id'] if project_info else None
+
+            # Calculate delay days
+            calculated_delay_days = 0
+            cursor.execute("""
+                SELECT end_date FROM project_progress
+                WHERE project_id = %s AND progress_id < %s
+                ORDER BY end_date DESC
+                LIMIT 1
+            """, (current_project_id, progress_id))
+            previous_step = cursor.fetchone()
+
+            if previous_step and previous_step['end_date']:
+                prev_end_date = previous_step['end_date']
+                current_start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                time_diff = (current_start_date - prev_end_date).days
+                calculated_delay_days = max(time_diff - 1, 0)
+            elif not previous_step:
+                cursor.execute("SELECT start_date FROM projects WHERE project_id = %s", (current_project_id,))
+                project_start_info = cursor.fetchone()
+                if project_start_info and project_start_info['start_date']:
+                    project_start_date = project_start_info['start_date']
+                    current_start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    time_diff = (current_start_date - project_start_date).days
+                    calculated_delay_days = max(time_diff - 1, 0)
+
             # Check if responsible user is being changed
             is_responsible_changed = (responsible_id is not None and 
                                     str(responsible_id) != str(current_assigned_to))
@@ -2552,9 +2594,7 @@ def update_project_progress_step(progress_id):
                 cursor.execute("SELECT fullname, email FROM users WHERE id = %s", (responsible_id,))
                 responsible_user_info = cursor.fetchone()
 
-            # Rest of your existing code remains the same until the SQL update...
-
-            # Update the SQL to include assigned_to
+            # Update the progress step
             sql_update = """
                 UPDATE project_progress
                 SET title = %s, description = %s, start_date = %s, end_date = %s,
@@ -2567,6 +2607,12 @@ def update_project_progress_step(progress_id):
                 calculated_delay_days, final_custom_delay_for_db, 
                 real_end_date_to_save, responsible_id, progress_id
             ))
+
+            # Send notification to project manager
+            if project_manager_id:
+                title = f"İş Adımı Güncellendi: {step_name}"
+                message = f"'{project_name}' projesindeki '{step_name}' adlı iş adımı güncellendi."
+                send_notification(cursor, project_manager_id, title, message)
 
             # Send notification to new responsible user if changed
             if is_responsible_changed and responsible_user_info:
@@ -2587,7 +2633,7 @@ def update_project_progress_step(progress_id):
                 
                 send_notification(cursor, responsible_id, title, message)
 
-                # Optional: Send email notification
+                # Send email notification
                 try:
                     email_subject = f"Yeni Sorumluluk: {step_name}"
                     email_body = f"""
@@ -2607,14 +2653,65 @@ def update_project_progress_step(progress_id):
                 except Exception as email_error:
                     print(f"E-posta gönderilirken hata oluştu: {email_error}")
 
-            # Rest of your existing code remains the same...
+            # Update subsequent steps
+            cursor.execute("""
+                SELECT progress_id, start_date, end_date, custom_delay_days, real_end_date
+                FROM project_progress
+                WHERE project_id = %s AND progress_id > %s
+                ORDER BY start_date ASC, created_at ASC
+            """, (current_project_id, progress_id))
+            subsequent_steps = cursor.fetchall()
+
+            last_end_date_for_recalc = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
+            for sub_step in subsequent_steps:
+                sub_progress_id = sub_step['progress_id']
+                sub_start_date = sub_step['start_date']
+                sub_end_date = sub_step['end_date']
+                sub_real_end_date_from_db = sub_step['real_end_date']
+
+                # Handle overlapping dates
+                if last_end_date_for_recalc >= sub_start_date:
+                    duration = (sub_end_date - sub_start_date).days
+                    sub_start_date = last_end_date_for_recalc + datetime.timedelta(days=1)
+                    sub_end_date = sub_start_date + datetime.timedelta(days=duration)
+
+                # Calculate new delay
+                gap = (sub_start_date - last_end_date_for_recalc).days
+                recalculated_sub_delay_days = max(gap - 1, 0)
+
+                # Get current delay from DB
+                cursor.execute("SELECT delay_days FROM project_progress WHERE progress_id = %s", (sub_progress_id,))
+                current_delay_days_from_db = cursor.fetchone()['delay_days'] or 0
+
+                # Preserve real_end_date
+                if sub_real_end_date_from_db:
+                    sub_real_end_date_to_save = sub_real_end_date_from_db.isoformat()
+                else:
+                    sub_real_end_date_to_save = sub_end_date.isoformat()
+
+                # Update the subsequent step
+                cursor.execute("""
+                    UPDATE project_progress
+                    SET start_date = %s, end_date = %s, delay_days = %s, real_end_date = %s
+                    WHERE progress_id = %s
+                """, (sub_start_date, sub_end_date, recalculated_sub_delay_days, 
+                     sub_real_end_date_to_save, sub_progress_id))
+                connection.commit()
+
+                last_end_date_for_recalc = sub_end_date
+
+            # Update project dates and status
+            update_project_dates(cursor, current_project_id)
+            determine_and_update_project_status(cursor, current_project_id)
+            connection.commit()
 
             return jsonify({
                 'message': 'Progress step successfully updated!',
                 'custom_delay_days': final_custom_delay_for_db,
                 'delay_days': calculated_delay_days,
                 'real_end_date': real_end_date_to_save,
-                'assigned_to': responsible_id  # Include the new responsible ID in response
+                'assigned_to': responsible_id
             }), 200
 
     except Exception as e:
