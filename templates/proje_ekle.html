@@ -1466,6 +1466,12 @@
                                 <option value="">Başlık seçiniz...</option>
                             </select>
                         </div>
+                        <div class="input-group" style="flex: 1; margin-left: 15px;">
+                            <label for="${currentId}-user">Sorumlu</label>
+                            <select id="${currentId}-user" class="form-select" required>
+                                <option value="">Sorumlu seçiniz...</option>
+                            </select>
+                        </div>
                         <div class="progress-dates" style="margin-left: 20px;">
                             <span><i class="far fa-calendar-alt"></i> 
                                 <input type="text" id="${currentId}-start" class="datepicker progress-datepicker" placeholder="Başlangıç" value="${itemData.startDate || ''}" required autocomplete="off">
@@ -1537,26 +1543,50 @@
                     updateProjectDates();
                 });
 
-                // API'den başlıkları çek ve select'e ekle
+                // API'den başlıkları ve kullanıcıları çek
                 try {
-                    const res = await fetch('/api/work-progress-headers/active');
-                    if (!res.ok) throw new Error("Başlıklar alınamadı");
-                    const headers = await res.json();
+                    // Başlıkları çek
+                    const [headersRes, usersRes] = await Promise.all([
+                        fetch('/api/work-progress-headers/active'),
+                        fetch('/api/users/non-admin')
+                    ]);
 
-                    const selectEl = newItem.querySelector(`#${currentId}-title`);
-                    selectEl.innerHTML = '<option value="">Başlık seçiniz...</option>';
+                    if (!headersRes.ok) throw new Error("Başlıklar alınamadı");
+                    if (!usersRes.ok) throw new Error("Kullanıcılar alınamadı");
 
+                    const [headers, users] = await Promise.all([
+                        headersRes.json(),
+                        usersRes.json()
+                    ]);
+
+                    // Başlık seçimini doldur
+                    const titleSelect = newItem.querySelector(`#${currentId}-title`);
+                    titleSelect.innerHTML = '<option value="">Başlık seçiniz...</option>';
                     headers.forEach(h => {
                         const opt = document.createElement('option');
                         opt.value = h.id;
                         opt.textContent = h.title;
-                        selectEl.appendChild(opt);
+                        titleSelect.appendChild(opt);
                     });
                     if (itemData.headerId) {
-                        selectEl.value = itemData.headerId; 
+                        titleSelect.value = itemData.headerId; 
+                    }
+
+                    // Kullanıcı seçimini doldur
+                    const userSelect = newItem.querySelector(`#${currentId}-user`);
+                    userSelect.innerHTML = '<option value="">Sorumlu seçiniz...</option>';
+                    users.forEach(user => {
+                        const opt = document.createElement('option');
+                        opt.value = user.id;
+                        opt.textContent = user.fullname || user.username;
+                        userSelect.appendChild(opt);
+                    });
+                    if (itemData.userId) {
+                        userSelect.value = itemData.userId;
                     }
                 } catch (err) {
-                    console.error('Başlık listesi yüklenemedi:', err);
+                    console.error('Veri yüklenirken hata oluştu:', err);
+                    showToast('Veri yüklenirken bir hata oluştu: ' + err.message, 'Hata', 'error');
                 }
             }
 
@@ -1685,22 +1715,24 @@
 
   progressItems.forEach(item => {
     const titleSelect = item.querySelector('select[id$="-title"]'); 
+    const userSelect = item.querySelector('select[id$="-user"]');
     const descTextarea = item.querySelector('.progress-description-textarea');
     const startInput = item.querySelector('input.progress-datepicker[placeholder="Başlangıç"]');
     const endInput = item.querySelector('input.progress-datepicker[placeholder="Bitiş"]');
 
-    if (!titleSelect || !titleSelect.value || !startInput.value || !endInput.value) {
-      showToast('Lütfen tüm iş gidişatı adımlarının başlık ve tarihlerini doldurun.', true);
+    if (!titleSelect || !titleSelect.value || !userSelect || !userSelect.value || !startInput.value || !endInput.value) {
+      showToast('Lütfen tüm iş gidişatı adımlarının başlık, sorumlu ve tarih alanlarını doldurun.', true);
       progressValidationFailed = true;
       return;
     }
 
     progressSteps.push({
-    title: titleSelect.options[titleSelect.selectedIndex]?.text || '',
-    description: descTextarea?.value.trim() || '',
-    startDate: startInput.value,
-    endDate: endInput.value
-});
+      title: titleSelect.options[titleSelect.selectedIndex]?.text || '',
+      description: descTextarea?.value.trim() || '',
+      startDate: startInput.value,
+      endDate: endInput.value,
+      userId: parseInt(userSelect.value)  // Sorumlu kullanıcı ID'sini ekle
+    });
 
   });
 
