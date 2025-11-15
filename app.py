@@ -775,7 +775,29 @@ def add_role():
         return jsonify({"error": "Veritabanı hatası oluştu."}), 500
     finally:
         connection.close()
-
+def is_admin_or_manager(user_id):
+    """
+    Verilen user_id'nin 'Admin' veya 'Proje Yöneticisi' rolüne sahip olup olmadığını kontrol eder.
+    """
+    connection = get_db_connection()
+    if not connection:
+        return False
+    try:
+        with connection.cursor() as cursor:
+            sql = """
+                SELECT r.role_name
+                FROM users u
+                JOIN roles r ON u.role_id = r.role_id
+                WHERE u.user_id = %s AND r.role_name IN ('Admin', 'Proje Yöneticisi')
+            """
+            cursor.execute(sql, (user_id,))
+            result = cursor.fetchone()
+            return bool(result)
+    except pymysql.Error as e:
+        print(f"MySQL error in is_admin_or_manager: {e}")
+        return False
+    finally:
+        connection.close()
 # is_admin fonksiyonu (eğer yoksa ekleyin)
 def is_admin(user_id):
     """
