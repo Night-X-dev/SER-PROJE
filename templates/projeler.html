@@ -3420,10 +3420,11 @@ function populateResponsibleUsers(stepId, assignedTo = '') {
                             <div class="form-group" style="margin-bottom: 15px;">
                                 <label for="step-${step.progress_id}-responsible" class="form-label">Sorumlu</label>
                                 <div class="select-container">
-                                    <select id="step-${step.progress_id}-responsible" class="header-dropdown ${readonlyClass}" ${disabledAttr}>
+                                    <select id="step-${step.progress_id}-responsible" class="header-dropdown ${readonlyClass}" ${disabledAttr} ${getCurrentUserRole() !== 'admin' ? 'disabled' : ''}>
                                         <option value="">Sorumlu seçiniz...</option>
                                         <!-- Responsible users will be loaded dynamically -->
                                     </select>
+                                    ${getCurrentUserRole() !== 'admin' ? '<small class="text-muted">Sadece yöneticiler sorumlu kişiyi değiştirebilir</small>' : ''}
                                     ${isCompleted ? '' : `
                                     <div class="select-arrow">
                                         <i class="fas fa-chevron-down"></i>
