@@ -2148,9 +2148,11 @@ def add_project():
                         delay_days = diff - 1
 
                 cursor.execute("""
-                    INSERT INTO project_progress (project_id, title, description, start_date, end_date, planned_start_date, delay_days, real_end_date)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """, (new_project_id, step_title, step_desc, step_start, step_end, step_start, delay_days, step_end))
+                                    INSERT INTO project_progress (project_id, title, description, start_date, end_date, 
+                                            planned_start_date, delay_days, real_end_date, assigned_to)
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                """, (new_project_id, step_title, step_desc, step_start, step_end, 
+                                    step_start, delay_days, step_end, step.get('userId')))
 
                 last_step_end_date = step_end
 
