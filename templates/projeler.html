@@ -3404,19 +3404,6 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                                 </div>`}
                             </div>
                         </div>
-                        <div class="header-select-wrapper" style="margin-top: 10px;">
-                            <label for="step-${step.progress_id}-responsible" class="form-label">Sorumlu</label>
-                            <div class="select-container">
-                                <select id="step-${step.progress_id}-responsible" class="header-dropdown ${readonlyClass}" ${disabledAttr}>
-                                    <option value="">Sorumlu seçiniz...</option>
-                                    <!-- Responsible persons will be loaded dynamically -->
-                                </select>
-                                ${isCompleted ? '' : `
-                                <div class="select-arrow">
-                                    <i class="fas fa-chevron-down"></i>
-                                </div>`}
-                            </div>
-                        </div>
                         <input type="hidden" id="step-${step.progress_id}-name" value="${step.step_name || step.title || ''}">
                     `;
                 } else {
@@ -3484,22 +3471,12 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                     </div>`;
                 }
 
-                const responsiblePersonName = step.responsible_person_name || step.responsible || '';
                 const descriptionContent = isEditable ?
-                    `<div style="margin-bottom: 15px;">
-                        <label for="step-${step.progress_id}-desc" class="form-label">Açıklama</label>
-                        <textarea id="step-${step.progress_id}-desc" 
-                                class="progress-description-textarea ${readonlyClass}" 
-                                placeholder="Açıklama" 
-                                ${disabledAttr}>${step.description || ''}</textarea>
-                    </div>
-                    <div class="responsible-display" ${isEditable ? 'hidden' : ''}>
-                        <strong>Sorumlu:</strong> ${responsiblePersonName || 'Belirtilmemiş'}
-                    </div>` :
-                    `<div class="progress-detail-description">
-                        <div>Açıklama: ${step.description || 'Yok'}</div>
-                        <div style="margin-top: 5px;"><strong>Sorumlu:</strong> ${responsiblePersonName || 'Belirtilmemiş'}</div>
-                    </div>`;
+                    `<textarea id="step-${step.progress_id}-desc" 
+                              class="progress-description-textarea ${readonlyClass}" 
+                              placeholder="Açıklama" 
+                              ${disabledAttr}>${step.description || ''}</textarea>` :
+                    `<div class="progress-detail-description">Açıklama: ${step.description || 'Yok'}</div>`;
 
                     let actionsContent = '';
                     if (isEditable) {
@@ -3630,32 +3607,23 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
             });
 
             if (isEditable) {
-                // Load headers and responsible persons for each edit form
+                // Load headers for each edit form
                 document.querySelectorAll('.progress-detail-item').forEach(async (stepElement, index) => {
                     const progressId = stepElement.querySelector('button.save-progress-btn')?.dataset.id;
                     if (!progressId) return;
                     
                     const headerSelect = document.getElementById(`step-${progressId}-header`);
-                    const responsibleSelect = document.getElementById(`step-${progressId}-responsible`);
-                    if (!headerSelect || !responsibleSelect) return;
+                    if (!headerSelect) return;
                     
                     try {
-                        // Fetch headers and responsible persons in parallel
-                        const [headersRes, usersRes] = await Promise.all([
-                            fetch(`${API_BASE_URL}/api/work-progress-headers/active`),
-                            fetch(`${API_BASE_URL}/api/users/active`)
-                        ]);
+                        const res = await fetch(`${API_BASE_URL}/api/work-progress-headers/active`);
+                        if (!res.ok) throw new Error("Başlıklar alınamadı");
+                        const headersList = await res.json();
                         
-                        if (!headersRes.ok) throw new Error("Başlıklar alınamadı");
-                        if (!usersRes.ok) throw new Error("Kullanıcılar alınamadı");
-                        
-                        const [headersList, usersList] = await Promise.all([
-                            headersRes.json(),
-                            usersRes.json()
-                        ]);
-                        
-                        // Clear and populate headers dropdown
+                        // Clear existing options except the first one
                         headerSelect.innerHTML = '<option value="">Başlık seçiniz...</option>';
+                        
+                        // Add headers to the dropdown
                         headersList.forEach(header => {
                             const option = document.createElement('option');
                             option.value = header.id;
@@ -3663,49 +3631,17 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                             headerSelect.appendChild(option);
                         });
                         
-                        // Clear and populate responsible persons dropdown
-                        responsibleSelect.innerHTML = '<option value="">Sorumlu seçiniz...</option>';
-                        usersList.forEach(user => {
-                            const option = document.createElement('option');
-                            option.value = user.id;
-                            option.textContent = `${user.name} ${user.surname}`;
-                            option.setAttribute('data-name', `${user.name} ${user.surname}`);
-                            responsibleSelect.appendChild(option);
-                        });
-                        
-                        // Select the current header and responsible person if they exist
+                        // Select the current header if it exists
                         const currentStep = steps.find(s => s.progress_id == progressId);
-                        if (currentStep) {
-                            // Set header
-                            if (currentStep.header_id) {
-                                headerSelect.value = currentStep.header_id;
-                            } else if (currentStep.step_name) {
-                                const matchingHeader = headersList.find(h => 
-                                    h.title === currentStep.step_name
-                                );
-                                if (matchingHeader) {
-                                    headerSelect.value = matchingHeader.id;
-                                }
-                            }
-                            
-                            // Set responsible person
-                            if (currentStep.responsible_person_id) {
-                                responsibleSelect.value = currentStep.responsible_person_id;
-                            } else if (currentStep.responsible_person_name) {
-                                const matchingUser = usersList.find(u => 
-                                    `${u.name} ${u.surname}` === currentStep.responsible_person_name
-                                );
-                                if (matchingUser) {
-                                    responsibleSelect.value = matchingUser.id;
-                                }
-                            } else if (currentStep.responsible) {
-                                // Fallback for old format if needed
-                                const matchingUser = usersList.find(u => 
-                                    `${u.name} ${u.surname}` === currentStep.responsible
-                                );
-                                if (matchingUser) {
-                                    responsibleSelect.value = matchingUser.id;
-                                }
+                        if (currentStep?.header_id) {
+                            headerSelect.value = currentStep.header_id;
+                        } else if (currentStep?.step_name) {
+                            // Try to find a matching header by name if no header_id is set
+                            const matchingHeader = headersList.find(h => 
+                                h.title === currentStep.step_name
+                            );
+                            if (matchingHeader) {
+                                headerSelect.value = matchingHeader.id;
                             }
                         }
                     } catch (err) {
@@ -3718,13 +3654,8 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                         const progressId = e.currentTarget.dataset.id;
                         const projId = e.currentTarget.dataset.projectId;
                         const headerSelect = document.getElementById(`step-${progressId}-header`);
-                        const responsibleSelect = document.getElementById(`step-${progressId}-responsible`);
-                        
                         const selectedHeaderId = headerSelect.value;
                         const selectedHeaderText = headerSelect.options[headerSelect.selectedIndex].text;
-                        const selectedResponsibleId = responsibleSelect.value;
-                        const selectedResponsibleText = responsibleSelect.options[responsibleSelect.selectedIndex]?.text || '';
-                        
                         const stepName = selectedHeaderText;
                         const startDate = document.getElementById(`step-${progressId}-start`).value;
                         const endDate = document.getElementById(`step-${progressId}-end`).value;
@@ -3733,8 +3664,6 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                         await editProgressStep(progressId, projId, {
                             step_name: stepName,
                             header_id: selectedHeaderId,
-                            responsible_person_id: selectedResponsibleId || null,
-                            responsible_person_name: selectedResponsibleText,
                             start_date: startDate,
                             end_date: endDate,
                             description: description,
