@@ -819,12 +819,85 @@
         position: relative;
         width: 100%;
       }
-    
-      /* FIX: Çakışan ok stilleri kaldırıldı. 
-        .select-container:after ve .select-arrow kuralları
-        background-image ile çakışıyordu.
-      */
+    .select-container:after {
+        content: "▼";
+        font-size: 0.6em;
+        top: 50%;
+        right: 12px;
+        position: absolute;
+        transform: translateY(-50%);
+        pointer-events: none;
+        color: var(--text-muted);
+    }
+      .select-arrow {
+        position: absolute;
+        top: 50%;
+        right: 15px;
+        transform: translateY(-50%);
+        pointer-events: none;
+        color: #6c757d;
+        transition: transform 0.2s ease;
+        z-index: 2;
+      }
 
+      /* Base style for all select elements */
+      select {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background-color: var(--input-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 10px 40px 10px 15px;
+        font-size: 14px;
+        color: var(--text-color);
+        width: 100%;
+        height: 42px;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23333'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 20px 20px;
+        cursor: pointer;
+      }
+
+      /* Remove any additional arrows */
+      select::-ms-expand {
+        display: none;
+      }
+
+      /* Specific styles for different select types */
+      .header-dropdown,
+      #newStepHeader,
+      .user-dropdown,
+      .form-input[type="select"],
+      .form-input select,
+      select.form-input {
+        /* Inherit all base styles */
+      }
+      
+
+      .header-dropdown:focus, #newStepHeader:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
+        outline: none;
+      }
+
+      .header-dropdown:hover, #newStepHeader:hover {
+        border-color: var(--primary-hover);
+      }
+
+      .header-dropdown option, #newStepHeader option {
+        padding: 10px;
+        background: var(--card-bg);
+        color: var(--text-color);
+      }
+
+      .header-dropdown:focus + .select-arrow, #newStepHeader:focus + .select-arrow {
+        transform: translateY(-50%) rotate(180deg);
+        color: var(--primary-color);
+      }
 
       .form-label {
         display: block;
@@ -839,60 +912,59 @@
             width: 100%;
         }
 
-       
-        /* FIX: Tüm select kutularını birleştirmek için stiller birleştirildi.
-          Artık .header-dropdown, #newStepHeader ve .user-dropdown aynı görünecek.
-        */
-        .header-dropdown, 
-        #newStepHeader,
+        /* User dropdown inherits from base select style */
         .user-dropdown {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            background-color: var(--input-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 10px 40px 10px 15px;
-            font-size: 14px;
-            color: var(--text-color);
-            width: 100%;
-            transition: all 0.2s ease;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23333'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            background-size: 20px 20px; /* Large arrow */
-        }
-        
-        /* IE/Edge için varsayılan oku gizle */
-        .header-dropdown::-ms-expand, 
-        #newStepHeader::-ms-expand,
-        .user-dropdown::-ms-expand {
-            display: none;
+            /* All styles inherited from base select */
         }
 
-        .header-dropdown:focus, 
-        #newStepHeader:focus,
-        .user-dropdown:focus {
+        /* Hover and focus states for all selects */
+        select:focus,
+        .user-dropdown:focus,
+        .header-dropdown:focus,
+        .form-input:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
             outline: none;
         }
 
-        .header-dropdown:hover, 
-        #newStepHeader:hover,
-        .user-dropdown:hover {
+        select:hover,
+        .user-dropdown:hover,
+        .header-dropdown:hover {
             border-color: var(--primary-hover);
         }
 
-        .header-dropdown option, 
-        #newStepHeader option,
-        .user-dropdown option {
+        /* Style for dropdown options */
+        select option {
             padding: 10px;
             background: var(--card-bg);
             color: var(--text-color);
         }
 
+        /* Dark theme for all selects */
+        [data-theme="dark"] select,
+        [data-theme="dark"] .header-dropdown,
+        [data-theme="dark"] #newStepHeader,
+        [data-theme="dark"] .user-dropdown,
+        [data-theme="dark"] .form-input[type="select"],
+        [data-theme="dark"] .form-input select,
+        [data-theme="dark"] select.form-input {
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+            background-color: var(--input-bg);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] select:focus,
+        [data-theme="dark"] .user-dropdown:focus,
+        [data-theme="dark"] .header-dropdown:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
+        }
+
+        /* Hide any additional arrows */
+        .user-select-wrapper .select-arrow {
+            display: none !important;
+        }
 
         .assigned-user-info {
             margin-top: 8px;
@@ -908,23 +980,22 @@
         }
 
       /* Dark Mode Specific Styles */
-      /* FIX: Dark mode stilleri de birleştirildi */
       [data-theme="dark"] .header-dropdown,
-      [data-theme="dark"] #newStepHeader,
-      [data-theme="dark"] .user-dropdown {
+      [data-theme="dark"] #newStepHeader {
         background-color: var(--input-bg);
         border-color: var(--border-color);
         color: var(--text-color);
-        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
       }
 
       [data-theme="dark"] .header-dropdown:focus,
-      [data-theme="dark"] #newStepHeader:focus,
-      [data-theme="dark"] .user-dropdown:focus {
+      [data-theme="dark"] #newStepHeader:focus {
         border-color: var(--primary-color);
         box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
       }
 
+      [data-theme="dark"] .select-arrow {
+        color: var(--text-muted);
+      }
 
       /* Readonly field styling */
       .readonly-field {
@@ -1493,7 +1564,7 @@
 
           .action-btn {
               width: 38px; /* Sabit genişlik */
-              height: 38px; /* Sabit yüksekik */
+              height: 38px; /* Sabit yükseklik */
               padding: 0; /* Padding'i sıfırla */
               font-size: 16px;
           }
