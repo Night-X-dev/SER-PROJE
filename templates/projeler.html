@@ -3062,10 +3062,10 @@ function attachProjectTableEventListeners() {
         const steps = await response.json();
         renderProgressSteps(steps, projectId, isEditable);
         
-        // Populate responsible users for each step
+        // Populate responsible users for each step using assigned_to
         steps.forEach(step => {
             if (step.progress_id) {
-                populateResponsibleUsers(step.progress_id, step.responsible_id);
+                populateResponsibleUsers(step.progress_id, step.assigned_to);
             }
         });
     } catch (error) {
@@ -3321,8 +3321,7 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
         return null;
     }
 }
-// Add this function to fetch and populate responsible users
-function populateResponsibleUsers(stepId, selectedUserId = '') {
+function populateResponsibleUsers(stepId, assignedTo = '') {
     fetch(`${API_BASE_URL}/api/users/non-admin`)
         .then(response => {
             if (!response.ok) {
@@ -3344,7 +3343,7 @@ function populateResponsibleUsers(stepId, selectedUserId = '') {
                 const option = document.createElement('option');
                 option.value = user.id;
                 option.textContent = user.fullname || user.name;
-                if (user.id == selectedUserId) {
+                if (user.id == assignedTo) {
                     option.selected = true;
                 }
                 select.appendChild(option);
@@ -3437,8 +3436,7 @@ function populateResponsibleUsers(stepId, selectedUserId = '') {
                     titleContent = `<span class="progress-detail-title">${step.step_name || step.title || ''}</span>`;
                 }
 
-                // Add responsible selection dropdown
-                // In the renderProgressSteps function, update the responsible user dropdown section
+
 const responsibleContent = isEditable ?
     `<div class="responsible-selector" style="margin-top: 8px;">
         <label for="step-${step.progress_id}-responsible" class="form-label">Sorumlu:</label>
@@ -3453,7 +3451,7 @@ const responsibleContent = isEditable ?
             </div>`}
         </div>
     </div>` :
-    `<div>Sorumlu: ${step.responsible_user ? step.responsible_user.name : 'Belirtilmemiş'}</div>`;
+    `<div>Sorumlu: ${step.assigned_user_name || 'Belirtilmemiş'}</div>`;
 
                 const startDateContent = isEditable ?
                     `<label for="step-${step.progress_id}-start">Başlangıç:</label>
