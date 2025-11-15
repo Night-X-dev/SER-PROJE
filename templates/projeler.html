@@ -3054,46 +3054,25 @@ function attachProjectTableEventListeners() {
     // `isEditable` parametresi eklendi
  let successfulProgressEndpoint = null;
     async function fetchProgressSteps(projectId, isEditable = false) {
-        try {
-            console.log(`İş adımları getiriliyor: Proje ID ${projectId}`);
-            
-            let baseUrl = API_BASE_URL;
-            if (baseUrl.endsWith('/')) {
-                baseUrl = baseUrl.slice(0, -1);
-            }
-            
-            const apiUrl = `${baseUrl}/api/projects/${projectId}/progress`;
-            console.log(`İş adımları için API URL: ${apiUrl}`);
-            
-            const response = await fetch(apiUrl);
-            console.log("API yanıt durumu:", response.status, response.statusText);
-            
-            if (!response.ok) {
-                console.error(`API hatası: ${response.status} ${response.statusText}`);
-                renderProgressSteps([], projectId, isEditable);
-                return;
-            }
-            
-            const data = await response.json();
-            console.log("API'den gelen iş adımları verisi:", data);
-            
-            if (!data || (!Array.isArray(data) && !Array.isArray(data.steps))) {
-                console.error("API'den geçersiz veri formatı geldi:", data);
-                renderProgressSteps([], projectId, isEditable);
-                return;
-            }
-            
-            const steps = Array.isArray(data) ? data : data.steps;
-            renderProgressSteps(steps, projectId, isEditable);
-            
-        } catch (error) {
-            console.error("İş adımlarını getirme hatası:", error);
-            renderProgressSteps([], projectId, isEditable);
-        } finally {
-            document.getElementById("projectModal").dataset.loading = "false";
-            console.log("İş adımları yüklendi. Modal hazır.");
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/progress`);
+        if (!response.ok) {
+            throw new Error('İş adımları yüklenirken hata oluştu');
         }
+        const steps = await response.json();
+        renderProgressSteps(steps, projectId, isEditable);
+        
+        // Populate responsible users for each step
+        steps.forEach(step => {
+            if (step.progress_id) {
+                populateResponsibleUsers(step.progress_id, step.responsible_id);
+            }
+        });
+    } catch (error) {
+        console.error('İş adımları yüklenirken hata:', error);
+        showToast('İş adımları yüklenirken bir hata oluştu', 'error');
     }
+}
 async function updateProjectDatesFromSteps(projectId) {
   try {
     console.log(`updateProjectDatesFromSteps başladı, projectId: ${projectId}`);
@@ -3342,6 +3321,39 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
         return null;
     }
 }
+// Add this function to fetch and populate responsible users
+function populateResponsibleUsers(stepId, selectedUserId = '') {
+    fetch(`${API_BASE_URL}/api/users/non-admin`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Kullanıcılar yüklenirken hata oluştu');
+            }
+            return response.json();
+        })
+        .then(users => {
+            const select = document.getElementById(`step-${stepId}-responsible`);
+            if (!select) return;
+            
+            // Clear existing options except the first one
+            while (select.options.length > 1) {
+                select.remove(1);
+            }
+            
+            // Add user options
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = user.fullname || user.name;
+                if (user.id == selectedUserId) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Sorumlu kullanıcılar yüklenirken hata:', error);
+        });
+}
 
     function renderProgressSteps(steps, projectId, isEditable = false) {
         if (!steps || !Array.isArray(steps)) {
@@ -3426,21 +3438,22 @@ async function applyDelayToStep(stepIndex, newlyAddedDelayDays, allSteps, projec
                 }
 
                 // Add responsible selection dropdown
-                const responsibleContent = isEditable ?
-                    `<div class="responsible-selector" style="margin-top: 8px;">
-                        <label for="step-${step.progress_id}-responsible" class="form-label">Sorumlu:</label>
-                        <div class="select-container">
-                            <select id="step-${step.progress_id}-responsible" class="header-dropdown ${readonlyClass}" ${disabledAttr}>
-                                <option value="">Sorumlu seçiniz...</option>
-                                <!-- Responsible users will be loaded dynamically -->
-                            </select>
-                            ${isCompleted ? '' : `
-                            <div class="select-arrow">
-                                <i class="fas fa-chevron-down"></i>
-                            </div>`}
-                        </div>
-                    </div>` :
-                    `<div>Sorumlu: ${step.responsible_name || 'Belirtilmemiş'}</div>`;
+                // In the renderProgressSteps function, update the responsible user dropdown section
+const responsibleContent = isEditable ?
+    `<div class="responsible-selector" style="margin-top: 8px;">
+        <label for="step-${step.progress_id}-responsible" class="form-label">Sorumlu:</label>
+        <div class="select-container">
+            <select id="step-${step.progress_id}-responsible" class="header-dropdown ${readonlyClass}" ${disabledAttr}>
+                <option value="">Sorumlu seçiniz...</option>
+                <!-- Responsible users will be loaded dynamically -->
+            </select>
+            ${isCompleted ? '' : `
+            <div class="select-arrow">
+                <i class="fas fa-chevron-down"></i>
+            </div>`}
+        </div>
+    </div>` :
+    `<div>Sorumlu: ${step.responsible_user ? step.responsible_user.name : 'Belirtilmemiş'}</div>`;
 
                 const startDateContent = isEditable ?
                     `<label for="step-${step.progress_id}-start">Başlangıç:</label>
@@ -3930,6 +3943,12 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
         const startDate = new Date(updatedStepData.start_date);
         const endDate = new Date(updatedStepData.end_date);
 
+        // Add responsible_id to the request if available
+        const responsibleSelect = document.getElementById(`step-${progressId}-responsible`);
+        if (responsibleSelect) {
+            updatedStepData.responsible_id = responsibleSelect.value || null;
+        }
+
         if (endDate < startDate) {
             showToast("Hata", "Başlangıç tarihi bitiş tarihinden büyük olamaz.", "error");
             return;
@@ -4015,7 +4034,6 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
         showToast("Hata", "İş adımı güncellenirken bir sorun oluştu.", "error");
     }
 }
-
 
     // progress_id kullanıldı
     async function deleteProgressStep(progressId, projectId) {

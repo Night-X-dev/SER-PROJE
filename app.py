@@ -2275,14 +2275,6 @@ def get_project_progress_steps(project_id):
                 cursor.execute("ALTER TABLE project_progress ADD COLUMN real_end_date DATE NULL")
                 connection.commit()
 
-            # Check if responsible_id column exists, add if not
-            cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'responsible_id'")
-            column_exists_responsible = cursor.fetchone() is not None
-            if not column_exists_responsible:
-                print("responsible_id sütunu bulunamadı, ekleniyor...")
-                cursor.execute("ALTER TABLE project_progress ADD COLUMN responsible_id INT NULL")
-                connection.commit()
-
             # Sorguyu güncelliyoruz, kullanıcı bilgilerini de çekiyoruz
             sql = """
                 SELECT
@@ -2299,15 +2291,10 @@ def get_project_progress_steps(project_id):
                     pp.is_completed,
                     pp.created_at,
                     pp.assigned_to,
-                    pp.responsible_id,
                     u.fullname as assigned_user_name,
-                    u.email as assigned_user_email,
-                    ru.id as responsible_user_id,
-                    ru.fullname as responsible_user_name,
-                    ru.email as responsible_user_email
+                    u.email as assigned_user_email
                 FROM project_progress pp
                 LEFT JOIN users u ON pp.assigned_to = u.id
-                LEFT JOIN users ru ON pp.responsible_id = ru.id
                 WHERE project_id = %s
                 ORDER BY pp.planned_start_date ASC, pp.created_at ASC
             """
@@ -2323,20 +2310,9 @@ def get_project_progress_steps(project_id):
                 step['created_at'] = step['created_at'].isoformat() if step['created_at'] else None
                 step['custom_delay_days'] = int(step['custom_delay_days']) if step['custom_delay_days'] is not None else 0
                 step['is_completed'] = bool(step['is_completed'])
-                
-                # Convert IDs to strings for consistency
+                # Eğer assigned_to değeri varsa stringe çevir
                 if step['assigned_to'] is not None:
                     step['assigned_to'] = str(step['assigned_to'])
-                if step['responsible_id'] is not None:
-                    step['responsible_id'] = str(step['responsible_id'])
-                    step['responsible_user'] = {
-                        'id': step['responsible_id'],
-                        'name': step['responsible_user_name'],
-                        'email': step['responsible_user_email']
-                    }
-                else:
-                    step['responsible_id'] = ''
-                    step['responsible_user'] = None
 
         return jsonify(steps), 200
 
@@ -2408,22 +2384,15 @@ def add_project_progress_step_from_modal(project_id):
                 cursor.execute("ALTER TABLE project_progress ADD COLUMN real_end_date DATE NULL")
                 connection.commit()
 
-            # Check if responsible_id column exists, add if not
-            cursor.execute("SHOW COLUMNS FROM project_progress LIKE 'responsible_id'")
-            column_exists_responsible = cursor.fetchone() is not None
-            if not column_exists_responsible:
-                cursor.execute("ALTER TABLE project_progress ADD COLUMN responsible_id INT NULL")
-                connection.commit()
-
             sql_insert = """
             INSERT INTO project_progress (
                 project_id, title, description, start_date, end_date, planned_start_date, 
-                delay_days, custom_delay_days, real_end_date, responsible_id
+                delay_days, custom_delay_days, real_end_date
           )
-          VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+          VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             # BURADA DEĞİŞİKLİK YAPILDI: Yeni eklenen iş adımının real_end_date'i, başlangıçta end_date ile aynı olacak
-            cursor.execute(sql_insert, (project_id, step_name, description, start_date_str, end_date_str, start_date_str, delay_days, 0, end_date_str, user_id))
+            cursor.execute(sql_insert, (project_id, step_name, description, start_date_str, end_date_str, start_date_str, delay_days, 0, end_date_str))
             new_progress_id = cursor.lastrowid
 
             update_result = update_project_dates(cursor, project_id)
@@ -2799,282 +2768,6 @@ def get_user_info():
     finally:
         if connection:
             connection.close()
-
-@app.route('/api/users', methods=['GET'])
-def get_all_users():
-    """Retrieves a list of all users."""
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # Get all user fields including new ones
-            cursor.execute("SELECT id, fullname, email, phone, role, profile_picture, hide_email, hide_phone, created_at FROM users")
-            users = cursor.fetchall()
-
-            # Convert datetime objects to string for JSON serialization
-            for user in users:
-                if 'created_at' in user and isinstance(user['created_at'], datetime.datetime):
-                    user['created_at'] = user['created_at'].isoformat()
-
-            return jsonify(users), 200
-    except pymysql.Error as e:
-        print(f"Database error while fetching all users: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
-    except Exception as e:
-        print(f"General error while fetching all users: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
-    finally:
-        if connection:
-            connection.close()
-
-@app.route('/api/users/non-admin', methods=['GET'])
-def get_non_admin_users():
-    """Retrieves a list of all users excluding those with the 'Admin' role."""
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            sql = """
-                SELECT 
-                    id, 
-                    fullname as name, 
-                    email, 
-                    phone, 
-                    role, 
-                    profile_picture, 
-                    hide_email, 
-                    hide_phone, 
-                    created_at 
-                FROM users 
-                WHERE role != 'Admin' 
-                ORDER BY fullname
-            """
-            cursor.execute(sql)
-            users = cursor.fetchall()
-
-            # Format the response
-            result = []
-            for user in users:
-                user_data = {
-                    'id': str(user['id']),
-                    'name': user['name'],
-                    'email': user['email'],
-                    'phone': user['phone'],
-                    'role': user['role']
-                }
-                # Add additional fields if needed
-                if 'profile_picture' in user:
-                    user_data['profile_picture'] = user['profile_picture']
-                if 'created_at' in user and isinstance(user['created_at'], datetime.datetime):
-                    user_data['created_at'] = user['created_at'].isoformat()
-                
-                result.append(user_data)
-
-            return jsonify(result), 200
-    except pymysql.Error as e:
-        print(f"Database error while fetching non-admin users: {e}")
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
-    except Exception as e:
-        print(f"General error while fetching non-admin users: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
-    finally:
-        if connection:
-            connection.close()
-
-@app.route('/api/users', methods=['POST'])
-def add_user():
-    """Adds a new user to the database (usually by an administrator)."""
-    data = request.get_json()
-    fullname = data.get('fullname')
-    email = data.get('email')
-    phone = data.get('phone', '')
-    password = data.get('password')
-    role = data.get('role', 'Employee') # Default position if not provided
-    profile_picture = data.get('profile_picture')
-    hide_email = data.get('hide_email', 0)
-    hide_phone = data.get('hide_phone', 0)
-
-
-    if not fullname or not email or not password or not role:
-        return jsonify({'message': 'All fields are required!'}), 400
-
-    onay = 1 # Approved by default for users added by administrator
-    created_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-    try:
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            sql = """
-            INSERT INTO users (fullname, email, phone, password, role, created_at, onay, profile_picture, hide_email, hide_phone)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """
-            cursor.execute(sql, (fullname, email, phone, hashed_password, role, created_at, onay, profile_picture, hide_email, hide_phone))
-            connection.commit()
-        return jsonify({'message': 'User successfully added!'}), 201
-    except pymysql.Error as e:
-        print(f"Database user addition error: {e}")
-        if e.args[0] == 1062:
-            return jsonify({'message': 'This email address is already in use.'}), 409
-        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
-    except Exception as e:
-        print(f"General user addition error: {e}")
-        return jsonify({'message': 'Server error, please try again later.'}), 500
-    finally:
-        if connection:
-            connection.close()
-
-@app.route('/api/user/email', methods=['PUT'])
-def update_email():
-    """Kullanıcının e-posta adresini günceller."""
-    if 'user_id' not in session:
-        return jsonify({'message': 'Lütfen giriş yapın.'}), 401
-
-    data = request.get_json()
-    new_email = data.get('email')
-    user_id = session['user_id']
-
-    if not new_email or not re.match(r'[^@]+@[^@]+\.[^@]+', new_email):
-        return jsonify({'message': 'Geçerli bir e-posta adresi girin.'}), 400
-
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # Yeni e-postanın başka bir kullanıcı tarafından kullanılıp kullanılmadığını kontrol et
-            cursor.execute("SELECT id FROM users WHERE email = %s AND id != %s", (new_email, user_id))
-            if cursor.fetchone():
-                return jsonify({'message': 'Bu e-posta adresi zaten kullanılıyor.'}), 409
-
-            # E-postayı güncelle
-            cursor.execute("UPDATE users SET email = %s WHERE id = %s", (new_email, user_id))
-            connection.commit()
-        return jsonify({'message': 'E-posta adresiniz başarıyla güncellendi.'}), 200
-    except pymysql.Error as e:
-        print(f"E-posta güncellenirken veritabanı hatası: {e}")
-        return jsonify({'message': 'Veritabanı hatası oluştu.'}), 500
-    except Exception as e:
-        print(f"E-posta güncellenirken genel hata: {e}")
-        return jsonify({'message': 'Sunucu hatası oluştu.'}), 500
-    finally:
-        if connection:
-            connection.close()
-
-@app.route('/api/user/password', methods=['PUT'])
-def update_password():
-    """Kullanıcının şifresini günceller."""
-    if 'user_id' not in session:
-        return jsonify({'message': 'Lütfen giriş yapın.'}), 401
-
-    data = request.get_json()
-    current_password = data.get('current_password')
-    new_password = data.get('new_password')
-    user_id = session['user_id']
-
-    if not current_password or not new_password:
-        return jsonify({'message': 'Tüm alanları doldurun.'}), 400
-
-    connection = None
-    try:
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # Mevcut şifreyi doğrula
-            cursor.execute("SELECT password FROM users WHERE id = %s", (user_id,))
-            user = cursor.fetchone()
-            if not user or not bcrypt.checkpw(current_password.encode('utf-8'), user['password'].encode('utf-8')):
-                return jsonify({'message': 'Mevcut şifreniz yanlış.'}), 403
-
-            # Yeni şifreyi hash'le
-            hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
-
-            # Yeni şifreyi veritabanında güncelle
-            cursor.execute("UPDATE users SET password = %s WHERE id = %s", (hashed_password.decode('utf-8'), user_id))
-            connection.commit()
-
-        return jsonify({'message': 'Şifreniz başarıyla değiştirildi.'}), 200
-    except pymysql.Error as e:
-        print(f"Şifre güncellenirken veritabanı hatası: {e}")
-        return jsonify({'message': 'Veritabanı hatası oluştu.'}), 500
-    except Exception as e:
-        print(f"Şifre güncellenirken genel hata: {e}")
-        return jsonify({'message': 'Sunucu hatası oluştu.'}), 500
-    finally:
-        if connection:
-            connection.close()
-@app.route('/api/users/<int:user_id>', methods=['PUT'])
-def update_user(user_id):
-    """Update user information including role."""
-    if 'user_id' not in session:
-        return jsonify({"error": "Oturum açık değil."}), 401
-
-    # Debug: Temporarily allow all authenticated users for testing
-    # TODO: Restore admin-only access after testing
-    if 'user_id' not in session:
-        return jsonify({"error": "Oturum açık değil."}), 401
-
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Geçersiz veri."}), 400
-
-    connection = None
-    try:
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({"error": "Veritabanı bağlantısı kurulamadı."}), 500
-
-        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            # Check if user exists
-            cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
-            if not cursor.fetchone():
-                return jsonify({"error": "Kullanıcı bulunamadı."}), 404
-
-            # Update user fields
-            update_fields = []
-            update_values = []
-            
-            if 'fullname' in data:
-                update_fields.append("fullname = %s")
-                update_values.append(data['fullname'])
-                
-            if 'email' in data:
-                update_fields.append("email = %s")
-                update_values.append(data['email'])
-                
-            if 'role' in data:
-                # Verify the role exists
-                cursor.execute("SELECT id FROM yetki WHERE role_name = %s", (data['role'],))
-                if not cursor.fetchone():
-                    return jsonify({"error": "Geçersiz rol."}), 400
-                update_fields.append("role = %s")
-                update_values.append(data['role'])
-
-            if not update_fields:
-                return jsonify({"message": "Güncellenecek alan bulunamadı."}), 200
-
-            # Add user_id to the values list
-            update_values.append(user_id)
-            
-            # Build and execute the update query
-            update_query = f"UPDATE users SET {', '.join(update_fields)} WHERE id = %s"
-            cursor.execute(update_query, update_values)
-            connection.commit()
-
-            return jsonify({"message": "Kullanıcı başarıyla güncellendi."}), 200
-
-    except pymysql.Error as e:
-        connection.rollback()
-        print(f"Veritabanı hatası: {e}")
-        return jsonify({"error": "Veritabanı hatası oluştu."}), 500
-    except Exception as e:
-        if connection:
-            connection.rollback()
-        print(f"Beklenmeyen hata: {e}")
-        return jsonify({"error": "Beklenmeyen bir hata oluştu."}), 500
-    finally:
-        if connection:
-            connection.close()
-
 def update_project_dates(cursor, project_id):
     """Updates project start and end dates based on its progress steps."""
     try:
@@ -3156,6 +2849,21 @@ def get_non_admin_users():
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            sql = "SELECT id, fullname, email, phone, role, profile_picture, hide_email, hide_phone, created_at FROM users WHERE role != 'Admin' ORDER BY fullname"
+            cursor.execute(sql)
+            users = cursor.fetchall()
+
+            # Convert datetime objects to string for JSON serialization
+            for user in users:
+                if 'created_at' in user and isinstance(user['created_at'], datetime.datetime):
+                    user['created_at'] = user['created_at'].isoformat()
+
+            return jsonify(users), 200
+    except pymysql.Error as e:
+        print(f"Database error while fetching non-admin users: {e}")
+        return jsonify({'message': f'Database error occurred: {e.args[1]}'}), 500
+    except Exception as e:
+        print(f"General error while fetching non-admin users: {e}")
         return jsonify({'message': 'Server error, please try again later.'}), 500
     finally:
         if connection:
