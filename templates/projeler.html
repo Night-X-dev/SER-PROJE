@@ -4063,10 +4063,11 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
     }
 
 
-    async function generateProjectPdf(project) {
+async function generateProjectPdf(project) {
     // API'den çekilecek veriler için boş diziler ve nesneler tanımla.
     let progressSteps = [];
     let revisionCounts = {};
+    const API_BASE_URL = ""; // Gerçek API adresinizi buraya eklemelisiniz.
 
     try {
         // Proje ilerleme adımlarını API'den çekme
@@ -4126,14 +4127,14 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
     // Proje durumu için HTML çıktısı üreten yardımcı fonksiyon
     const getProjectStatusHtml = (isDelayed) => {
         // Tüm adımların tamamlanıp tamamlanmadığını kontrol et
-        const allStepsCompleted = progressSteps.length > 0 && 
-                                progressSteps.every(step => step.is_completed);
-        
+        const allStepsCompleted = progressSteps.length > 0 &&
+            progressSteps.every(step => step.is_completed);
+
         // Eğer hiç adım yoksa veya tüm adımlar tamamlanmışsa "Tamamlandı" döndür
         if (allStepsCompleted) {
             return '<span style="color: #4CAF50; font-weight: bold; margin: 0;">Tamamlandı</span>';
         }
-        
+
         // Aksi takdirde gecikme durumuna göre durumu belirle
         const color = isDelayed ? 'red' : '#4CAF50';
         const text = isDelayed ? 'Gecikmeli devam ediyor' : 'Gecikmesiz devam ediyor';
@@ -4162,11 +4163,11 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
         const today = new Date();
         const startDate = new Date(step.start_date);
         const plannedEndDate = new Date(step.real_end_date);
-        
+
         if (step.is_completed) {
             return `Tamamlandı <i class="fas fa-check-circle" style="color: green;"></i>`;
         }
-        
+
         // Adımın gerçek başlangıç tarihi gelecekteyse, 'Bekliyor' durumunu gösterir.
         if (today < startDate) {
             return `Bekliyor <i class="fas fa-hourglass-start" style="color: grey;"></i>`;
@@ -4229,8 +4230,8 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
         steps.forEach(step => {
             if (step.start_date) {
                 const startDate = new Date(step.start_date);
-                const endDate = step.is_completed && step.end_date 
-                    ? new Date(step.end_date) 
+                const endDate = step.is_completed && step.end_date
+                    ? new Date(step.end_date)
                     : new Date();
                 if (endDate) {
                     const diffTime = endDate.getTime() - startDate.getTime();
@@ -4250,16 +4251,19 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
      * @param {object} project - Proje ana bilgileri.
      * @returns {object} Yüzde ve gün değerlerini içeren bir nesne.
      */
-    const calculateProgressBarData = (progressSteps, project, actualProjectEndDate) => {
+    const calculateProgressBarData = (progressSteps, project) => {
         const today = new Date();
         const projectStartDate = new Date(project.start_date);
 
         // Kullanıcının isteği üzerine yeni hesaplama mantığı
         let completedDays = 0;
-        if (projectStartDate) {
+        if (projectStartDate && projectStartDate < today) {
             const diffTime = today.getTime() - projectStartDate.getTime();
             completedDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        } else if (projectStartDate >= today) {
+            completedDays = 0; // Proje henüz başlamadıysa
         }
+
 
         let postponedDays = 0;
         let delayedDays = 0;
@@ -4267,6 +4271,10 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
             postponedDays += step.delay_days || 0;
             delayedDays += step.custom_delay_days || 0;
         });
+        
+        // Tamamlanmış günlerden erteleme ve gecikmeleri çıkar (negatif olmasını önle)
+        completedDays = Math.max(0, completedDays - postponedDays - delayedDays);
+
 
         // Toplam planlanan süreyi hesapla
         const totalPlannedDuration = calculateTotalPlannedDuration(project, lastPlannedEndDate) || 0;
@@ -4280,21 +4288,21 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
         let postponementPercentage = totalDurationForPercentage > 0 ? (postponedDays / totalDurationForPercentage) * 100 : 0;
         let delayPercentage = totalDurationForPercentage > 0 ? (delayedDays / totalDurationForPercentage) * 100 : 0;
         let remainingPercentage = totalDurationForPercentage > 0 ? (remainingDays / totalDurationForPercentage) * 100 : 0;
-        
+
         // Yüzdelerin toplamının 100 olmasını sağla.
         const totalPercentage = completedPercentage + postponementPercentage + delayPercentage + remainingPercentage;
-        if (Math.round(totalPercentage) !== 100 && totalDurationForPercentage > 0) {
+        if (Math.round(totalPercentage) > 100 && totalDurationForPercentage > 0) {
+             // Eğer toplam 100'ü geçerse (genellikle tamamlanan gün > toplam gün ise),
+             // tamamlananı 100 yap, diğerlerini 0 yap.
+             completedPercentage = 100;
+             postponementPercentage = 0;
+             delayPercentage = 0;
+             remainingPercentage = 0;
+        }
+        else if (Math.round(totalPercentage) < 100 && totalDurationForPercentage > 0) {
             const diff = 100 - totalPercentage;
-            // Farkı en büyük pozitif yüzdeye ekle
-            if (completedPercentage >= 0 && completedPercentage > postponementPercentage && completedPercentage > delayPercentage && completedPercentage > remainingPercentage) {
-                completedPercentage += diff;
-            } else if (remainingPercentage >= 0) {
-                remainingPercentage += diff;
-            } else if (postponementPercentage >= 0) {
-                postponementPercentage += diff;
-            } else if (delayPercentage >= 0) {
-                delayPercentage += diff;
-            }
+            // Farkı kalan süreye ekle
+             remainingPercentage += diff;
         }
 
         return {
@@ -4309,19 +4317,33 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
         };
     };
 
-    const progressBarData = calculateProgressBarData(progressSteps, project, actualProjectEndDate);
+    const progressBarData = calculateProgressBarData(progressSteps, project);
 
 
     // Adımların HTML listesini oluşturan fonksiyon
     const generateStepHtml = (steps) => {
-        console.log("Step data:", step);
+        if (steps.length === 0) return '<p style="text-align: center; color: #777; margin-top: 30px;">Proje için tanımlanmış iş adımı bulunmamaktadır.</p>';
+        
+        // Hata ayıklama için konsol günlüğü
+        steps.forEach((step, index) => {
+            console.log(`Step ${index} data:`, step);
+        });
 
-        if (steps.length === 0) return '';
         return steps.map((step, index) => {
             const stepTitle = step.title || step.name || step.step_name || step.progress_title || 'Başlık bilgisi yok';
             const stepId = step.progress_id || step.id;
-            const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
+            
+            // Veri kontrolü: revisionCounts'un bir nesne olduğundan emin ol
+            let revisionCountForStep = 'Bulunamadı';
+            if (revisionCounts && typeof revisionCounts === 'object' && stepId) {
+                revisionCountForStep = revisionCounts[String(stepId)] || 0;
+            } else if (!stepId) {
+                revisionCountForStep = 'ID Yok';
+            }
+
             const responsiblePerson = step.assigned_user_name || 'Belirtilmemiş';
+            
+            console.log(`Step: "${stepTitle}", Responsible: "${responsiblePerson}" (from step.assigned_user_name)`);
 
 
             const postponementDays = step.delay_days || 0;
@@ -4333,25 +4355,26 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
 
             return `
                 <div class="progress-step-item ${pageBreakClass}" style="border-bottom: 1px solid #ddd; padding-bottom: 20px; margin-bottom: 20px;">
-                    <div style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0;">
-                        ${stepTitle} <span style="font-weight: normal; float: right;">${getStepStatusHtml(step)}</span>
+                    <div style="font-weight:bold; font-size:15px; margin-bottom: 5px; margin-top: 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                        <span style="margin-right: 10px;">${stepTitle}</span>
+                        <span style="font-weight: normal; white-space: nowrap;">${getStepStatusHtml(step)}</span>
                     </div>
-                    <div style="display:flex; justify-content:space-between; font-size:13px; color:#555;">
-                        <div style="width:50%;">
-                            <p><strong>Sorumlu:</strong> ${responsiblePerson}</p>
-                            <p><strong>Gerçek Başlangıç:</strong> ${formatDateForDisplay(step.start_date || '-')}</p>
-                            <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(step.real_end_date || '-')}</p>
-                            <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(step.end_date || '-')}</p>
-                            <p><strong>Revize Sayısı:</strong> ${revisionCountForStep}</p>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; color:#555; flex-wrap: wrap;">
+                        <div style="width: 50%; min-width: 250px; box-sizing: border-box; padding-right: 10px;">
+                            <p style="margin: 5px 0;"><strong>Sorumlu:</strong> ${responsiblePerson}</p>
+                            <p style="margin: 5px 0;"><strong>Gerçek Başlangıç:</strong> ${formatDateForDisplay(step.start_date || '-')}</p>
+                            <p style="margin: 5px 0;"><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(step.real_end_date || '-')}</p>
+                            <p style="margin: 5px 0;"><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(step.end_date || '-')}</p>
+                            <p style="margin: 5px 0;"><strong>Revize Sayısı:</strong> ${revisionCountForStep}</p>
                         </div>
-                        <div style="width:50%; text-align:right;">
-                            <p><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.planned_start_date, step.real_end_date)} gün</p>
-                            <p><strong>Erteleme Gün Sayısı</strong> <span style="color: ${postponementColor};">${postponementDays} gün</span></p>
-                            <p><strong>Gecikme Süresi:</strong> <span style="color: ${customDelayColor};">${customDelayDays} gün</span></p>
-                            <p><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.end_date)} gün</p>
+                        <div style="width: 50%; min-width: 250px; box-sizing: border-box; text-align: right;">
+                            <p style="margin: 5px 0;"><strong>Planlanan Toplam Süre:</strong> ${calculatePlannedDuration(step.planned_start_date, step.real_end_date)} gün</p>
+                            <p style="margin: 5px 0;"><strong>Erteleme Gün Sayısı:</strong> <span style="color: ${postponementColor};">${postponementDays} gün</span></p>
+                            <p style="margin: 5px 0;"><strong>Gecikme Süresi:</strong> <span style="color: ${customDelayColor};">${customDelayDays} gün</span></p>
+                            <p style="margin: 5px 0;"><strong>Gerçek Toplam Süre:</strong> ${calculateActualDuration(step.start_date, step.end_date)} gün</p>
                         </div>
                     </div>
-                    ${step.description ? `<div class="progress-step-description">Açıklama: ${step.description.replace(/\n/g, '<br>')}</div>` : ''}
+                    ${step.description ? `<div class="progress-step-description" style="margin-top: 10px; font-size: 13px; color: #333; white-space: pre-wrap; word-wrap: break-word;"><strong>Açıklama:</strong> ${step.description.replace(/\n/g, '<br>')}</div>` : ''}
                 </div>
             `;
         }).join('');
@@ -4362,6 +4385,8 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
     const newWindow = window.open('', '_blank', 'width=900,height=800,resizable=yes,scrollbars=yes');
     if (!newWindow) {
         // showToast fonksiyonu ana dosyanızda tanımlı olmalıdır.
+        // showToast('PDF penceresi açılamadı. Lütfen açılır pencere engelleyicinizi kontrol edin.', 'error');
+        console.error("Pop-up blocked?");
         return;
     }
 
@@ -4413,6 +4438,10 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
                     box-sizing: border-box;
                     padding: 0 20mm;
                 }
+                p {
+                   margin: 8px 0; /* Paragraflara standart bir dikey boşluk verelim */
+                }
+
                 /* PRINT STYLES */
                 @media print {
                     @page {
@@ -4433,6 +4462,8 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
                         padding-bottom: 20mm;
                         min-height: 100%;
                         position: relative;
+                        width: 100%; /* Yazdırma için genişliği A4'e ayarla */
+                        box-sizing: border-box;
                     }
                     .print-button-container, .screen-header, .screen-footer {
                         display: none;
@@ -4453,7 +4484,7 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
                         overflow-wrap: break-word;
                         word-wrap: break-word;
                         word-break: break-word;
-                        white-space: pre-wrap;
+                        white-space: pre-wrap; /* Açıklamaların düzgün kaymasını sağlar */
                         max-width: 100%;
                         margin-top: 5px;
                         font-size: 13px;
@@ -4498,9 +4529,15 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
                         page-break-inside: avoid;
                         break-inside: avoid;
                         margin-bottom: 20px;
-                        overflow: hidden; /* Taşmayı önler */
-                        text-overflow: ellipsis; /* Taşan metni üç nokta ile gösterir */
-                        white-space: nowrap; /* Metni tek satırda tutar */
+                        overflow: visible; /* *** DÜZELTME: İçeriğin görünür olmasını sağla *** */
+                        /* text-overflow: ellipsis; - Kaldırıldı */
+                        /* white-space: nowrap; - *** KALDIRILDI *** */
+                    }
+                    
+                    .progress-step-item p {
+                         /* Paragrafların satır atlamasına izin ver */
+                        white-space: normal; 
+                        word-wrap: break-word;
                     }
 
                     .progress-step-item:first-of-type {
@@ -4543,8 +4580,8 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
                 <div class="main-content">
                     <!-- Section 1: Project Basic Information -->
                     <div style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
-                        <div style="display: flex; justify-content: space-between; font-size: 14px;">
-                            <div style="width: 50%;">
+                        <div style="display: flex; justify-content: space-between; font-size: 14px; flex-wrap: wrap;">
+                            <div style="width: 50%; min-width: 300px;">
                                 <h3 style="margin: 0 0 10px 0; color: #005c9d; font-size: 16px;">
                                     ${project.reference_no || '-'}
                                 </h3>
@@ -4552,7 +4589,7 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
                                 <p><strong>İşin Adı:</strong> ${project.project_name ? project.project_name : '-'}</p>
                                 <p><strong>Müşteri Adı:</strong> ${project.customer_name || '-'}</p>
                             </div>
-                            <div style="width: 50%; text-align: right;">
+                            <div style="width: 50%; min-width: 300px; text-align: right;">
                                 <p style="margin: 0; font-weight: bold;">${getProjectStatusHtml(isProjectDelayed)}</p>
                                 <p style="margin-top: 10px;"><strong>Sözleşme imzalanalı:</strong> ${calculateDaysSinceContract(project.contract_date)} gün oldu</p>
                             </div>
@@ -4561,13 +4598,13 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
 
                     <!-- Section 2: Project Duration and Progress -->
                     <div style="border-top: 1px solid #ccc; margin-top: 20px; padding-top: 20px;">
-                        <div style="display: flex; justify-content: space-between; font-size: 14px;">
-                            <div style="width: 50%;">
+                        <div style="display: flex; justify-content: space-between; font-size: 14px; flex-wrap: wrap;">
+                            <div style="width: 50%; min-width: 300px;">
                                 <p><strong>Sözleşme Tarihi:</strong> ${formatDateForDisplay(project.contract_date || '-')}</p>
                                 <p><strong>Planlı Başlangıç:</strong> ${formatDateForDisplay(project.start_date || '-')}</p>
                                 <p><strong>Planlı Bitiş:</strong> ${formatDateForDisplay(lastPlannedEndDate || '-')}</p>
                             </div>
-                            <div style="width: 50%; text-align: right;">
+                            <div style="width: 50%; min-width: 300px; text-align: right;">
                                 <p><strong>Gerçek Bitiş:</strong> ${formatDateForDisplay(actualProjectEndDate || '-')}</p>
                                 <p><strong>Planlanan Toplam Süre:</strong> ${calculateTotalPlannedDuration(project, lastPlannedEndDate)} gün</p>
                                 <p><strong>Gerçek Toplam Süre:</strong> ${calculateTotalActualDuration(progressSteps)} gün</p>
@@ -4581,32 +4618,30 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
                         <div style="height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 15px;">
                             <div style="height: 100%; display: flex;">
                                 <!-- Tamamlanan süre çubuğu -->
-                                <div style="background-color: #4CAF50; width: ${progressBarData.completedPercentage}%;"></div>
+                                <div style="background-color: #4CAF50; width: ${progressBarData.completedPercentage}%;" title="Tamamlanan: ${progressBarData.completedDays} gün"></div>
                                 <!-- Erteleme süresi çubuğu -->
-                                <div style="background-color: #FFC107; width: ${progressBarData.postponementPercentage}%;"></div>
+                                <div style="background-color: #FFC107; width: ${progressBarData.postponementPercentage}%;" title="Erteleme: ${progressBarData.postponementDays} gün"></div>
                                 <!-- Gecikme süresi çubuğu -->
-                                <div style="background-color: #f44336; width: ${progressBarData.delayPercentage}%;"></div>
+                                <div style="background-color: #f44336; width: ${progressBarData.delayPercentage}%;" title="Gecikme: ${progressBarData.delayedDays} gün"></div>
                                 <!-- Kalan süre çubuğu -->
-                                <div style="background-color: #ccc; width: ${progressBarData.remainingPercentage}%;"></div>
+                                <div style="background-color: #ccc; width: ${progressBarData.remainingPercentage}%;" title="Kalan: ${progressBarData.remainingDays} gün"></div>
                             </div>
                         </div>
-                        <div style="font-size: 12px; margin-top: 5px; display: flex; justify-content: space-between;">
-                            <div style="text-align: left;"><span style="color: #4CAF50;">■</span> Tamamlanan Süre: ${progressBarData.completedDays} gün</div>
-                            <div style="text-align: center;"><span style="color: #FFC107;">■</span> Erteleme Süresi: ${progressBarData.postponementDays} gün</div>
-                            <div style="text-align: center;"><span style="color: #f44336;">■</span> Gecikme Süresi: ${progressBarData.delayedDays} gün</div>
-                            <div style="text-align: right;"><span style="color: #ccc;">■</span> Kalan Süre: ${progressBarData.remainingDays} gün</div>
+                        <div style="font-size: 12px; margin-top: 5px; display: flex; justify-content: space-between; flex-wrap: wrap;">
+                            <div style="padding: 2px 5px;"><span style="color: #4CAF50;">■</span> Tamamlanan: ${progressBarData.completedDays} gün</div>
+                            <div style="padding: 2px 5px;"><span style="color: #FFC107;">■</span> Erteleme: ${progressBarData.postponementDays} gün</div>
+                            <div style="padding: 2px 5px;"><span style="color: #f44336;">■</span> Gecikme: ${progressBarData.delayedDays} gün</div>
+                            <div style="padding: 2px 5px;"><span style="color: #ccc;">■</span> Kalan: ${progressBarData.remainingDays} gün</div>
                         </div>
                     </div>
 
                     <!-- Tüm Proje İlerleme Adımları -->
-                    ${allStepsHtml.length > 0 ? `
                     <div style="margin-top: 20px; padding-top: 20px;" class="work-progress-section">
                         <div class="pdf-section-title" style='font-size:18px; color:#005c9d; border-bottom:1px solid #e1e5e9; padding-bottom:5px; margin-bottom:15px;'><i class="fas fa-tasks"></i> İş Gidişatı</div>
                         <div>
                             ${allStepsHtml}
                         </div>
                     </div>
-                    ` : ''}
                 </div>
                 <!-- YENİ: Her sayfanın sağ altında referans numarasını gösterecek footer -->
                 <div class="print-footer">${project.reference_no || '-'}</div>
@@ -4625,10 +4660,9 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
     newWindow.document.close();
 
     newWindow.onload = () => {
-        // showToast ve addActivity fonksiyonları ana dosyanızda tanımlı olmalıdır.
+        // Gerekirse burada ek işlemler yapılabilir.
     };
 }
-
 
      
 async function exportAllProjectsToPdf() {
