@@ -4063,7 +4063,7 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
     }
 
 
-    async function generateProjectPdf(project) {
+async function generateProjectPdf(project) {
     // API'den çekilecek veriler için boş diziler ve nesneler tanımla.
     let progressSteps = [];
     let revisionCounts = {};
@@ -4314,13 +4314,22 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
 
     // Adımların HTML listesini oluşturan fonksiyon
     const generateStepHtml = (steps) => {
-        console.log("Step data:", step);
+        
+        // *** DÜZELTME: Hatalı console.log buradan kaldırıldı. ***
 
         if (steps.length === 0) return '';
         return steps.map((step, index) => {
+            
+            // *** DÜZELTME: console.log buraya eklendi. ***
+            // Tarayıcı konsolunda (F12) her bir adım için gelen veriyi kontrol edebilirsiniz.
+            console.log("İş Adımı Verisi (Step):", step);
+
             const stepTitle = step.title || step.name || step.step_name || step.progress_title || 'Başlık bilgisi yok';
             const stepId = step.progress_id || step.id;
             const revisionCountForStep = stepId ? (revisionCounts[String(stepId)] || 0) : 'Bulunamadı';
+            
+            // API'den 'assigned_user_name' alanı bekleniyor.
+            // Eğer bu alan 'null' veya 'undefined' gelirse "Belirtilmemiş" yazacak.
             const responsiblePerson = step.assigned_user_name || 'Belirtilmemiş';
 
 
@@ -4555,6 +4564,7 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
                             <div style="width: 50%; text-align: right;">
                                 <p style="margin: 0; font-weight: bold;">${getProjectStatusHtml(isProjectDelayed)}</p>
                                 <p style="margin-top: 10px;"><strong>Sözleşme imzalanalı:</strong> ${calculateDaysSinceContract(project.contract_date)} gün oldu</p>
+
                             </div>
                         </div>
                     </div>
@@ -4628,7 +4638,6 @@ async function editProgressStep(progressId, projectId, updatedStepData) {
         // showToast ve addActivity fonksiyonları ana dosyanızda tanımlı olmalıdır.
     };
 }
-
 
      
 async function exportAllProjectsToPdf() {
