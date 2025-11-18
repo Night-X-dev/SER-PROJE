@@ -461,5 +461,46 @@ def main():
             connection.close()
             print(f"[{datetime.datetime.now()}] Veritabanı bağlantısı kapatıldı.")
 
+def test_mail_gonder():
+    """Test e-postası göndermek için kullanılır."""
+    try:
+        # Test e-posta bilgileri
+        subject = "Test E-postası"
+        body = "Bu bir test e-postasıdır. Eğer bu e-postayı alıyorsanız, e-posta gönderme işlemi başarılıdır."
+        recipient = "serelektrikotomasyon@gmail.com"  # Kendi e-posta adresinizle değiştirin
+        
+        # SMTP sunucusuna bağlan
+        context = ssl.create_default_context()
+        with smtplib.SMTP(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT) as server:
+            print(f"SMTP sunucusuna bağlanılıyor: {EMAIL_SMTP_SERVER}:{EMAIL_SMTP_PORT}")
+            server.ehlo()
+            server.starttls(context=context)
+            server.ehlo()
+            print("SMTP sunucusuna bağlanıldı, giriş yapılıyor...")
+            server.login(EMAIL_SENDER_ADDRESS, EMAIL_SENDER_PASSWORD)
+            print("Giriş başarılı, e-posta gönderiliyor...")
+            
+            # E-posta oluştur
+            msg = MIMEMultipart()
+            msg['From'] = EMAIL_SENDER_ADDRESS
+            msg['To'] = recipient
+            msg['Subject'] = subject
+            msg.attach(MIMEText(body, 'plain'))
+            
+            # E-postayı gönder
+            server.send_message(msg)
+            print(f"Test e-postası başarıyla gönderildi! Alıcı: {recipient}")
+            return True
+            
+    except Exception as e:
+        error_msg = f"Hata oluştu: {str(e)}\n\nDetaylı Hata:\n{traceback.format_exc()}"
+        print(error_msg)
+        return False
+
 if __name__ == "__main__":
-    main()
+    # Ana fonksiyonu çalıştırmak için:
+    # main()
+    
+    # Test e-postası göndermek için:
+    print("Test e-postası gönderiliyor...")
+    test_mail_gonder()
