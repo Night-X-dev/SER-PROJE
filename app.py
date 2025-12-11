@@ -1569,23 +1569,23 @@ def get_projects():
                 u.id AS project_manager_user_id,
                 -- Toplam gecikme günlerini doğrudan projeler tablosundan alıyoruz
                 (SELECT IFNULL(SUM(pp.delay_days), 0) + IFNULL(SUM(pp.custom_delay_days), 0) FROM project_progress pp WHERE pp.project_id = p.project_id) AS total_delay_days,
-                -- Mevcut tarih aralığına uyan iş gidişatının başlığını al
+                -- Mevcut aktif iş gidişatının başlığını al (Tamamlanmamış ilk adım)
                 (SELECT title FROM project_progress
                  WHERE project_id = p.project_id
-                   AND CURDATE() BETWEEN start_date AND end_date
-                 ORDER BY start_date ASC -- Birden fazla adım aynı anda aktifse en erken başlayanı al
+                   AND (is_completed = 0 OR is_completed IS NULL)
+                 ORDER BY start_date ASC, created_at ASC
                  LIMIT 1) AS current_progress_title,
-                -- Mevcut tarih aralığına uyan iş gidişatının gecikme günlerini al
+                -- Mevcut aktif iş gidişatının gecikme günlerini al
                 (SELECT IFNULL(delay_days, 0) FROM project_progress
                  WHERE project_id = p.project_id
-                   AND CURDATE() BETWEEN start_date AND end_date
-                 ORDER BY start_date ASC
+                   AND (is_completed = 0 OR is_completed IS NULL)
+                 ORDER BY start_date ASC, created_at ASC
                  LIMIT 1) AS current_step_delay_days,
-                -- Mevcut tarih aralığına uyan iş gidişatının özel gecikme günlerini al
+                -- Mevcut aktif iş gidişatının özel gecikme günlerini al
                 (SELECT IFNULL(custom_delay_days, 0) FROM project_progress
                  WHERE project_id = p.project_id
-                   AND CURDATE() BETWEEN start_date AND end_date
-                 ORDER BY start_date ASC
+                   AND (is_completed = 0 OR is_completed IS NULL)
+                 ORDER BY start_date ASC, created_at ASC
                  LIMIT 1) AS current_step_custom_delay_days,
                 -- Yeni eklenen: Projenin ilk iş adımının başlığı (yedek olarak kullanılacak)
                 (SELECT title FROM project_progress
