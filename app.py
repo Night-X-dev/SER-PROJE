@@ -1569,24 +1569,25 @@ def get_projects():
                 u.id AS project_manager_user_id,
                 -- Toplam gecikme günlerini doğrudan projeler tablosundan alıyoruz
                 (SELECT IFNULL(SUM(pp.delay_days), 0) + IFNULL(SUM(pp.custom_delay_days), 0) FROM project_progress pp WHERE pp.project_id = p.project_id) AS total_delay_days,
+                
+                -- İstatistikler: Toplam adım ve Tamamlanan adım sayısı
+                (SELECT COUNT(*) FROM project_progress WHERE project_id = p.project_id) AS total_step_count,
+                (SELECT COUNT(*) FROM project_progress WHERE project_id = p.project_id AND is_completed = 1) AS completed_step_count,
+
                 -- Mevcut aktif iş gidişatının başlığını al (Tamamlanmamış ilk adım)
                 (SELECT title FROM project_progress
                  WHERE project_id = p.project_id
                    AND (is_completed = 0 OR is_completed IS NULL)
                  ORDER BY start_date ASC, created_at ASC
-                 LIMIT 1) AS current_progress_title,
-                -- Mevcut aktif iş gidişatının gecikme günlerini al
-                (SELECT IFNULL(delay_days, 0) FROM project_progress
+                 LIMIT 1) AS first_incomplete_step_title,
+                 
+                -- Mevcut aktif iş gidişatının bitiş tarihini al (Gecikme kontrolü için)
+                (SELECT end_date FROM project_progress
                  WHERE project_id = p.project_id
                    AND (is_completed = 0 OR is_completed IS NULL)
                  ORDER BY start_date ASC, created_at ASC
-                 LIMIT 1) AS current_step_delay_days,
-                -- Mevcut aktif iş gidişatının özel gecikme günlerini al
-                (SELECT IFNULL(custom_delay_days, 0) FROM project_progress
-                 WHERE project_id = p.project_id
-                   AND (is_completed = 0 OR is_completed IS NULL)
-                 ORDER BY start_date ASC, created_at ASC
-                 LIMIT 1) AS current_step_custom_delay_days,
+                 LIMIT 1) AS first_incomplete_step_end_date,
+
                 -- Yeni eklenen: Projenin ilk iş adımının başlığı (yedek olarak kullanılacak)
                 (SELECT title FROM project_progress
                  WHERE project_id = p.project_id
@@ -1600,24 +1601,47 @@ def get_projects():
             cursor.execute(sql)
             projects_data = cursor.fetchall()
 
+            today = datetime.date.today()
+
             for project in projects_data:
                 current_project_status = project['status'] # Bu, DB'den gelen kalıcı durumdur
                 total_delay_days = project['total_delay_days'] if project['total_delay_days'] is not None else 0
-                current_progress_title = project['current_progress_title']
-                current_step_delay_days = project['current_step_delay_days'] if project['current_step_delay_days'] is not None else 0
-                current_step_custom_delay_days = project['current_step_custom_delay_days'] if project['current_step_custom_delay_days'] is not None else 0
-
-                # Mevcut iş adımının toplam gecikmesini hesapla
-                current_step_total_delay = current_step_delay_days + current_step_custom_delay_days
+                
+                total_step_count = project['total_step_count']
+                completed_step_count = project['completed_step_count']
+                first_incomplete_step_title = project['first_incomplete_step_title']
+                first_incomplete_step_end_date = project['first_incomplete_step_end_date']
 
                 # display_status'u belirle
-                if current_project_status == 'Tamamlandı':
+                
+                # 1. Tüm adımlar tamamlandıysa -> Tamamlandı
+                if total_step_count > 0 and total_step_count == completed_step_count:
                     project['display_status'] = 'Tamamlandı'
-                elif current_progress_title: # Mevcut tarih aralığına uyan bir iş gidişatı başlığı varsa
-                    if current_step_total_delay > 0:
-                        project['display_status'] = f"{current_progress_title} (Gecikmeli)"
+                
+                # 2. Tamamlanmamış bir adım varsa -> O adımı göster
+                elif first_incomplete_step_title:
+                    # Gecikme kontrolü
+                    is_delayed = False
+                    if first_incomplete_step_end_date:
+                        # end_date datetime.date objesi mi yoksa string mi kontrol et
+                        step_end_date = first_incomplete_step_end_date
+                        if not isinstance(step_end_date, datetime.date):
+                             try:
+                                 step_end_date = datetime.date.fromisoformat(str(step_end_date))
+                             except:
+                                 step_end_date = None
+                        
+                        if step_end_date and today > step_end_date:
+                            is_delayed = True
+                    
+                    if is_delayed:
+                        project['display_status'] = f"{first_incomplete_step_title} (Gecikmeli)"
                     else:
-                        project['display_status'] = current_progress_title
+                        project['display_status'] = first_incomplete_step_title
+
+                # 3. Hiç adım yoksa veya diğer durumlar
+                elif current_project_status == 'Tamamlandı':
+                     project['display_status'] = 'Tamamlandı'
                 elif total_delay_days > 0: # Aktif bir adım yok ama genel projede gecikme var
                     # Eğer proje genel olarak gecikmeli ve aktif bir adım yoksa,
                     # projenin adını veya ilk iş adımının adını kullan
